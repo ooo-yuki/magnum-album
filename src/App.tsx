@@ -7,6 +7,9 @@ import { DiscographyPage } from "./pages/DiscographyPage";
 import { About42Page } from "./pages/About42Page";
 import { ArtistsPage } from "./pages/ArtistsPage";
 import { GamePage } from "./pages/GamePage";
+import { GamesHub } from "./pages/GamesHub";
+import { MemoryGame } from "./pages/games/MemoryGame";
+import { ClickerGame } from "./pages/games/ClickerGame";
 
 export default function App() {
   return (
@@ -20,6 +23,10 @@ export default function App() {
           <Route path="42" element={<About42Page />} />
           <Route path="artists" element={<ArtistsPage />} />
           <Route path="game" element={<GamePage />} />
+          <Route path="games" element={<GamesHub />} />
+          <Route path="games/memory" element={<MemoryGame />} />
+          <Route path="games/clicker" element={<ClickerGame />} />
+          <Route path="games/quiz" element={<GamePage />} />
         </Route>
       </Routes>
     </BrowserRouter>

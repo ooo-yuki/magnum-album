@@ -9,7 +9,7 @@ const NAV_ITEMS = [
   { to: "/magnum/discography", label: "Дискография" },
   { to: "/magnum/42", label: "42 братухи" },
   { to: "/magnum/last-fit", label: "Последний фит" },
-  { to: "/magnum/game", label: "Игра" },
+  { to: "/magnum/games", label: "Игры" },
 ];
 
 export function Layout() {
@@ -19,17 +19,13 @@ export function Layout() {
     <>
       <Particles />
       <nav className={styles.nav}>
-        <Link to="/magnum" className={styles.logo}>
-          MAGNUM
-        </Link>
+        <Link to="/magnum" className={styles.logo}>MAGNUM</Link>
         <div className={styles.links}>
           {NAV_ITEMS.map((item) => (
             <Link
               key={item.to}
               to={item.to}
-              className={
-                location.pathname === item.to ? styles.active : ""
-              }
+              className={location.pathname === item.to ? styles.active : ""}
             >
               {item.label}
             </Link>

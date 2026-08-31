@@ -1,0 +1,24 @@
+.page { padding-top: 5rem; min-height: 100vh; text-align: center; }
+.hero h1 { font-size: 2.5rem; font-weight: 900; background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.hero p { color: rgba(240,240,240,0.5); margin-bottom: 2rem; }
+.gameArea { max-width: 400px; margin: 0 auto; padding: 0 1.5rem; }
+.stats { display: flex; justify-content: center; gap: 3rem; margin-bottom: 1.5rem; }
+.stat { text-align: center; }
+.statLabel { display: block; font-size: 0.75rem; color: rgba(240,240,240,0.4); text-transform: uppercase; letter-spacing: 0.1em; }
+.statValue { font-size: 2rem; font-weight: 900; }
+.danger { color: var(--accent); }
+.progress { height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; margin-bottom: 2rem; overflow: hidden; }
+.progressFill { height: 100%; background: var(--gradient); border-radius: 3px; transition: width 0.1s; }
+.startBtn { padding: 1rem 3rem; border-radius: 100px; background: var(--accent); color: #fff; font-size: 1.3rem; font-weight: 700; box-shadow: 0 0 30px rgba(255,45,85,0.4); transition: transform 0.2s; cursor: pointer; }
+.startBtn:hover { transform: scale(1.05); }
+.clickBtn { width: 200px; height: 200px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 1rem; font-weight: 700; box-shadow: 0 0 40px rgba(255,45,85,0.5); transition: transform 0.05s; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0 auto; }
+.clickBtn:active { transform: scale(0.92); }
+.clickNum { font-size: 3.5rem; font-weight: 900; line-height: 1; }
+.clickLabel { font-size: 0.9rem; opacity: 0.8; }
+.win, .lose { margin-top: 2rem; }
+.win h2 { font-size: 1.8rem; margin-bottom: 0.5rem; }
+.lose h2 { font-size: 1.8rem; margin-bottom: 0.5rem; color: var(--accent); }
+.win p, .lose p { color: rgba(240,240,240,0.6); margin-bottom: 1.5rem; }
+.presaveBtn { display: inline-block; padding: 0.8rem 1.5rem; border-radius: 100px; background: var(--accent); color: #fff; font-weight: 600; margin-bottom: 0.8rem; box-shadow: 0 0 20px rgba(255,45,85,0.4); }
+.restartBtn { display: inline-block; padding: 0.6rem 1.2rem; border-radius: 100px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); font-size: 0.85rem; color: rgba(240,240,240,0.6); cursor: pointer; margin-left: 0.5rem; }
+.back { display: inline-block; margin-top: 3rem; padding: 0.6rem 1.2rem; border-radius: 100px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); font-size: 0.85rem; color: rgba(240,240,240,0.6); }

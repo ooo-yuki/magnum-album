@@ -1,0 +1,17 @@
+.page { padding-top: 5rem; min-height: 100vh; text-align: center; }
+.page h1 { font-size: 2rem; font-weight: 900; background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 0.5rem; }
+.info { color: rgba(240,240,240,0.5); margin-bottom: 1.5rem; }
+.grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.6rem; max-width: 360px; margin: 0 auto; padding: 0 1rem; }
+.card { aspect-ratio: 1; border-radius: 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); font-size: 1.8rem; color: var(--text); transition: transform 0.2s, background 0.2s; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.card:hover { background: rgba(255,255,255,0.08); }
+.flipped { background: rgba(255,45,85,0.1); border-color: var(--accent); transform: scale(1.05); }
+.matched { background: rgba(0,255,136,0.1); border-color: var(--accent3); }
+.win { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 200; }
+.winCard { padding: 2.5rem; border-radius: 20px; background: var(--bg); border: 1px solid rgba(255,255,255,0.1); text-align: center; }
+.winCard h2 { font-size: 2rem; margin-bottom: 0.5rem; }
+.winCard p { color: rgba(240,240,240,0.6); margin-bottom: 1.5rem; }
+.presaveBtn { display: block; padding: 0.8rem 1.5rem; border-radius: 100px; background: var(--accent); color: #fff; font-weight: 600; margin-bottom: 0.8rem; box-shadow: 0 0 20px rgba(255,45,85,0.4); transition: transform 0.2s; }
+.presaveBtn:hover { transform: scale(1.05); }
+.nav { display: flex; gap: 1rem; justify-content: center; margin-top: 2rem; flex-wrap: wrap; }
+.back { padding: 0.6rem 1.2rem; border-radius: 100px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); font-size: 0.85rem; color: rgba(240,240,240,0.6); }
+.restartBtn { padding: 0.6rem 1.2rem; border-radius: 100px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); font-size: 0.85rem; color: rgba(240,240,240,0.6); cursor: pointer; }
