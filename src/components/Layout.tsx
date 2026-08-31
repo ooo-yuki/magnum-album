@@ -3,6 +3,15 @@ import { Particles } from "./Particles";
 import { Footer } from "./Footer";
 import styles from "./Layout.module.css";
 
+const NAV_ITEMS = [
+  { to: "/magnum", label: "Главная" },
+  { to: "/magnum/artists", label: "Артисты" },
+  { to: "/magnum/discography", label: "Дискография" },
+  { to: "/magnum/42", label: "42 братухи" },
+  { to: "/magnum/last-fit", label: "Последний фит" },
+  { to: "/magnum/game", label: "Игра" },
+];
+
 export function Layout() {
   const location = useLocation();
 
@@ -14,20 +23,17 @@ export function Layout() {
           MAGNUM
         </Link>
         <div className={styles.links}>
-          <Link
-            to="/magnum"
-            className={location.pathname === "/magnum" ? styles.active : ""}
-          >
-            Главная
-          </Link>
-          <Link
-            to="/magnum/last-fit"
-            className={
-              location.pathname === "/magnum/last-fit" ? styles.active : ""
-            }
-          >
-            Последний фит
-          </Link>
+          {NAV_ITEMS.map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              className={
+                location.pathname === item.to ? styles.active : ""
+              }
+            >
+              {item.label}
+            </Link>
+          ))}
         </div>
       </nav>
       <main className={styles.main}>

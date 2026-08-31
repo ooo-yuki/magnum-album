@@ -1,0 +1,231 @@
+.page {
+  padding-top: 5rem;
+  min-height: 100vh;
+}
+
+.header {
+  text-align: center;
+  padding: 4rem 2rem 3rem;
+}
+
+.badge {
+  font-size: 0.85rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 1rem;
+}
+
+.header h1 {
+  font-size: clamp(2.5rem, 8vw, 5rem);
+  font-weight: 900;
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  color: rgba(240, 240, 240, 0.5);
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.albums {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 2rem 4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+}
+
+.albumCard {
+  display: flex;
+  gap: 2rem;
+  padding: 2rem;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: border-color 0.3s;
+}
+
+.albumCard:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.albumCover {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.albumCover img {
+  width: 200px;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+.scoreBadge {
+  position: absolute;
+  bottom: -8px;
+  right: -8px;
+  background: var(--bg);
+  border: 2px solid var(--accent);
+  border-radius: 10px;
+  padding: 0.3rem 0.6rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 50px;
+}
+
+.scoreNumber {
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: var(--accent);
+}
+
+.scoreLabel {
+  font-size: 0.6rem;
+  color: rgba(240, 240, 240, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.albumInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.albumYear {
+  font-size: 0.8rem;
+  color: rgba(240, 240, 240, 0.4);
+  margin-bottom: 0.3rem;
+}
+
+.albumInfo h2 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  margin-bottom: 0.3rem;
+}
+
+.albumArtists {
+  color: rgba(240, 240, 240, 0.6);
+  margin-bottom: 0.3rem;
+}
+
+.albumMeta {
+  font-size: 0.85rem;
+  color: rgba(240, 240, 240, 0.4);
+  margin-bottom: 0.5rem;
+}
+
+.albumStatus {
+  display: inline-block;
+  font-size: 0.8rem;
+  color: var(--accent2);
+  background: rgba(255, 204, 0, 0.1);
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  margin-bottom: 0.8rem;
+}
+
+.albumDesc {
+  font-size: 0.9rem;
+  color: rgba(240, 240, 240, 0.6);
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+
+.tracklist h3 {
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(240, 240, 240, 0.4);
+  margin-bottom: 0.5rem;
+}
+
+.tracklist ol {
+  list-style: none;
+  counter-reset: track;
+}
+
+.tracklist li {
+  counter-increment: track;
+  padding: 0.3rem 0;
+  font-size: 0.9rem;
+  color: rgba(240, 240, 240, 0.7);
+}
+
+.tracklist li::before {
+  content: counter(track) ". ";
+  color: rgba(240, 240, 240, 0.3);
+  font-size: 0.8rem;
+}
+
+.albumLinks {
+  margin-top: 1rem;
+}
+
+.linkBtn {
+  display: inline-flex;
+  padding: 0.6rem 1.2rem;
+  border-radius: 100px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: transform 0.2s;
+}
+
+.linkBtn:hover {
+  transform: scale(1.05);
+}
+
+.presave {
+  text-align: center;
+  padding: 6rem 2rem;
+}
+
+.presave h2 {
+  font-size: 2rem;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+}
+
+.presave p {
+  color: rgba(240, 240, 240, 0.5);
+  margin-bottom: 1.5rem;
+}
+
+.presaveBtn {
+  display: inline-flex;
+  padding: 1rem 2rem;
+  border-radius: 100px;
+  font-size: 1rem;
+  font-weight: 600;
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 0 30px rgba(255, 45, 85, 0.4);
+  transition: transform 0.2s;
+}
+
+.presaveBtn:hover {
+  transform: scale(1.05);
+}
+
+@media (max-width: 700px) {
+  .albumCard {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .albumCover img {
+    width: 160px;
+    height: 160px;
+  }
+}

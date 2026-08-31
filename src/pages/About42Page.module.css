@@ -1,0 +1,215 @@
+.page {
+  padding-top: 5rem;
+  min-height: 100vh;
+}
+
+.hero {
+  text-align: center;
+  padding: 4rem 2rem 6rem;
+}
+
+.bigNumber {
+  font-size: clamp(8rem, 25vw, 16rem);
+  font-weight: 900;
+  line-height: 0.8;
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.5rem;
+}
+
+.hero h1 {
+  font-size: clamp(2rem, 6vw, 4rem);
+  font-weight: 800;
+  margin-bottom: 1rem;
+}
+
+.subtitle {
+  font-size: 1.1rem;
+  color: rgba(240, 240, 240, 0.6);
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.sections {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 2rem 4rem;
+}
+
+.section {
+  margin-bottom: 4rem;
+}
+
+.section h2 {
+  font-size: 0.85rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 1.5rem;
+}
+
+.storyCard {
+  padding: 2rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  line-height: 1.7;
+  color: rgba(240, 240, 240, 0.7);
+}
+
+.storyCard p {
+  margin-bottom: 1rem;
+}
+
+.storyCard blockquote {
+  border-left: 3px solid var(--accent);
+  padding: 1rem 1.5rem;
+  margin: 1.5rem 0;
+  background: rgba(255, 45, 85, 0.05);
+  border-radius: 0 8px 8px 0;
+  font-style: italic;
+}
+
+.storyCard cite {
+  display: block;
+  margin-top: 0.5rem;
+  font-style: normal;
+  color: rgba(240, 240, 240, 0.4);
+  font-size: 0.85rem;
+}
+
+.styleGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+}
+
+.styleCard {
+  padding: 1.5rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  text-align: center;
+  transition: border-color 0.3s;
+}
+
+.styleCard:hover {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.styleIcon {
+  font-size: 2rem;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.styleCard strong {
+  display: block;
+  margin-bottom: 0.3rem;
+}
+
+.styleCard p {
+  font-size: 0.8rem;
+  color: rgba(240, 240, 240, 0.5);
+}
+
+.peopleGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.personCard {
+  padding: 1.5rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  text-align: center;
+}
+
+.personAvatar {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.personCard strong {
+  display: block;
+  margin-bottom: 0.3rem;
+}
+
+.personCard p {
+  font-size: 0.85rem;
+  color: rgba(240, 240, 240, 0.5);
+}
+
+.squadsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.squadCard {
+  padding: 1.5rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  text-align: center;
+}
+
+.squadCard strong {
+  display: block;
+  margin-bottom: 0.3rem;
+  color: var(--accent2);
+}
+
+.squadCard p {
+  font-size: 0.85rem;
+  color: rgba(240, 240, 240, 0.5);
+}
+
+.supporters {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.supporters span {
+  padding: 0.6rem 1.2rem;
+  border-radius: 100px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.9rem;
+}
+
+.trackHighlight {
+  padding: 2rem;
+  border-radius: 16px;
+  background: rgba(255, 45, 85, 0.05);
+  border: 1px solid rgba(255, 45, 85, 0.15);
+  font-size: 1.1rem;
+  line-height: 1.6;
+  color: rgba(240, 240, 240, 0.8);
+}
+
+.sources {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.sources a {
+  padding: 0.6rem 1.2rem;
+  border-radius: 100px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.85rem;
+  color: rgba(240, 240, 240, 0.7);
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.sources a:hover {
+  color: var(--text);
+  border-color: rgba(255, 255, 255, 0.3);
+}
