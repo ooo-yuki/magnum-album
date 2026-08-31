@@ -89,6 +89,9 @@ export function Singles() {
             src={single.cover}
             alt={single.name}
             className={styles.cover}
+            loading="lazy"
+            width={400}
+            height={400}
           />
           <div className={styles.info}>
             <div className={styles.name}>{single.name}</div>
