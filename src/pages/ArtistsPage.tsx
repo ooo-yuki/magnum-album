@@ -45,7 +45,7 @@ export function ArtistsPage() {
       <div className={styles.artists}>
         <div className={styles.artistCard}>
           <div className={styles.photoWrap}>
-            <img src="/magnum/images/artists/5opka.jpg" alt="5opka — Кирилл Баранов" className={styles.photo} loading="lazy" />
+            <img src="/magnum/images/artists/5opka.jpg" alt="5opka — Кирилл Баранов" className={styles.photo} loading="lazy" decoding="async" width={385} height={385} />
             <div className={styles.photoGlow} />
             <div className={styles.photoCaption}>Фото: 5opka / The Fence</div>
           </div>

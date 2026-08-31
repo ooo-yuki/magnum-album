@@ -92,7 +92,7 @@ export function RunnerGame() {
   // load sprite
   useEffect(() => {
     const img = new Image();
-    img.src = "/images/5opka-runner.png";
+    img.src = "/magnum/images/5opka-runner.png";
     img.onload = () => { spriteRef.current = img; spriteLoaded.current = true; };
     img.onerror = () => { spriteLoaded.current = false; };
   }, []);

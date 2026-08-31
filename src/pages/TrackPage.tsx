@@ -172,7 +172,7 @@ export function TrackPage() {
     <div className={styles.page} ref={containerRef}>
       <div className={styles.hero}>
         <div className={styles.coverWrap}>
-          <img src={track.cover} alt={track.name} className={styles.coverImg} loading="lazy" />
+          <img src={track.cover} alt={track.name} className={styles.coverImg} loading="eager" decoding="async" width={500} height={500} fetchPriority="high" />
           <div className={styles.coverGlow} />
         </div>
         <div className={styles.heroInfo}>

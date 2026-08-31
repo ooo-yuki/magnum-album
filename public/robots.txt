@@ -1,3 +1,3 @@
 User-agent: *
 Allow: /
-Sitemap: https://oooyuki.zomb.top:30645/magnum/sitemap.xml
+Sitemap: https://5opka.ru/magnum/sitemap.xml

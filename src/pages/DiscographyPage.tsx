@@ -192,7 +192,7 @@ export function DiscographyPage() {
         {ALBUMS.map((album) => (
           <div key={album.name} className={styles.albumCard}>
             <div className={styles.albumCover}>
-              <img src={album.cover} alt={album.name} loading="lazy" />
+              <img src={album.cover} alt={album.name} loading="lazy" decoding="async" width={400} height={400} />
               <div className={`${styles.scoreBadge} ${styles[album.rzScoreKind]}`}>
                 <span className={styles.scoreNumber}>{album.rzScore}</span>
                 <span className={styles.scoreLabel}>РЗТ</span>
