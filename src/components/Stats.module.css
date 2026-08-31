@@ -19,6 +19,16 @@
   background-clip: text;
 }
 
+.badge {
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
+  font-weight: 900;
+  color: var(--accent);
+  border: 2px solid var(--accent);
+  border-radius: 12px;
+  padding: 0.3rem 1rem;
+  display: inline-block;
+}
+
 .label {
   font-size: 0.9rem;
   color: rgba(240, 240, 240, 0.5);

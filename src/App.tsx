@@ -1,19 +1,17 @@
-import { Hero } from "./components/Hero";
-import { Stats } from "./components/Stats";
-import { Singles } from "./components/Singles";
-import { CTA } from "./components/CTA";
-import { Particles } from "./components/Particles";
-import { Footer } from "./components/Footer";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Layout } from "./components/Layout";
+import { HomePage } from "./pages/HomePage";
+import { LastFitPage } from "./pages/LastFitPage";
 
 export default function App() {
   return (
-    <>
-      <Particles />
-      <Hero />
-      <Stats />
-      <Singles />
-      <CTA />
-      <Footer />
-    </>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/magnum" element={<Layout />}>
+          <Route index element={<HomePage />} />
+          <Route path="last-fit" element={<LastFitPage />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
   );
 }

@@ -7,16 +7,16 @@ gsap.registerPlugin(ScrollTrigger);
 
 interface StatItem {
   target: number;
+  suffix: string;
   label: string;
 }
 
 const STATS: StatItem[] = [
-  { target: 8000, label: "клипов в TikTok" },
-  { target: 200000, label: "просмотров клипа" },
-  { target: 1, label: "в чартах" },
+  { target: 8, suffix: "K+", label: "клипов в TikTok" },
+  { target: 200, suffix: "K+", label: "просмотров клипа" },
 ];
 
-function AnimatedNumber({ target }: { target: number }) {
+function AnimatedNumber({ target, suffix }: { target: number; suffix: string }) {
   const [value, setValue] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -41,12 +41,10 @@ function AnimatedNumber({ target }: { target: number }) {
     return () => ctx.revert();
   }, [target]);
 
-  const formatted =
-    target >= 1000 ? value.toLocaleString("ru-RU") : value.toString();
-
   return (
     <div className={styles.number} ref={ref}>
-      {formatted}
+      {value.toLocaleString("ru-RU")}
+      {suffix}
     </div>
   );
 }
@@ -88,10 +86,19 @@ export function Stats() {
             itemsRef.current[i] = el;
           }}
         >
-          <AnimatedNumber target={stat.target} />
+          <AnimatedNumber target={stat.target} suffix={stat.suffix} />
           <div className={styles.label}>{stat.label}</div>
         </div>
       ))}
+      <div
+        className={styles.stat}
+        ref={(el) => {
+          itemsRef.current[2] = el;
+        }}
+      >
+        <div className={styles.badge}>В чартах</div>
+        <div className={styles.label}>Туса Медуза</div>
+      </div>
     </section>
   );
 }

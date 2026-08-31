@@ -7,22 +7,25 @@ gsap.registerPlugin(ScrollTrigger);
 
 interface Single {
   name: string;
+  artists: string;
   meta: string;
-  emoji: string;
+  cover: string;
   url: string;
 }
 
 const SINGLES: Single[] = [
   {
-    name: "Туса Медуза",
-    meta: "Уже в чартах • 8K клипов в TikTok",
-    emoji: "🪼",
+    name: "ТУСА МЕДУЗА",
+    artists: "5opka, MellSher, Вова Солодков",
+    meta: "Уже в чартах • ~8K клипов в TikTok • ~200K просмотров",
+    cover: "/magnum/images/tusa-meduza.jpg",
     url: "https://youtu.be/Mz69bLRpBEs?si=4ho4wjdN0N-W9w3L",
   },
   {
     name: "VPN",
+    artists: "5opka, MellSher",
     meta: "Сингл из альбома MAGNUM",
-    emoji: "🔒",
+    cover: "/magnum/images/vpn.jpg",
     url: "https://youtu.be/or8Xj5kC1Ho?si=8uLKoXab4xpM9tj4",
   },
 ];
@@ -82,9 +85,14 @@ export function Singles() {
             cardsRef.current[i] = el;
           }}
         >
-          <div className={styles.cover}>{single.emoji}</div>
+          <img
+            src={single.cover}
+            alt={single.name}
+            className={styles.cover}
+          />
           <div className={styles.info}>
             <div className={styles.name}>{single.name}</div>
+            <div className={styles.artists}>{single.artists}</div>
             <div className={styles.meta}>{single.meta}</div>
           </div>
           <div className={styles.play}>
