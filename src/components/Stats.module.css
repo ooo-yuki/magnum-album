@@ -1,0 +1,28 @@
+.stats {
+  padding: 6rem 2rem;
+  display: flex;
+  justify-content: center;
+  gap: 3rem;
+  flex-wrap: wrap;
+}
+
+.stat {
+  text-align: center;
+}
+
+.number {
+  font-size: clamp(2.5rem, 6vw, 4rem);
+  font-weight: 900;
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.label {
+  font-size: 0.9rem;
+  color: rgba(240, 240, 240, 0.5);
+  margin-top: 0.3rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}

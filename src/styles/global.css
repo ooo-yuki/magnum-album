@@ -1,0 +1,40 @@
+:root {
+  --bg: #0a0a0a;
+  --text: #f0f0f0;
+  --accent: #ff2d55;
+  --accent2: #ffcc00;
+  --accent3: #00ff88;
+  --gradient: linear-gradient(135deg, #ff2d55, #ffcc00, #00ff88, #5865f2);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  overflow-x: hidden;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: inherit;
+}
