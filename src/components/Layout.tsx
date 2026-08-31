@@ -6,6 +6,7 @@ import { Footer } from "./Footer";
 import { PageLoader } from "./PageLoader";
 import { PageTransition } from "./PageTransition";
 import { TopProgress } from "./TopProgress";
+import { ScrollToTop } from "./ScrollToTop";
 import styles from "./Layout.module.css";
 
 const NAV_ITEMS = [
@@ -147,6 +148,7 @@ export function Layout() {
           <Outlet />
         </PageTransition>
       </main>
+      <ScrollToTop />
       <Footer />
     </>
   );
