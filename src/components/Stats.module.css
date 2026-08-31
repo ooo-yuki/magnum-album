@@ -1,17 +1,18 @@
 .stats {
-  padding: 6rem 2rem;
+  padding: 4rem 1.5rem;
   display: flex;
   justify-content: center;
-  gap: 3rem;
+  gap: 2rem;
   flex-wrap: wrap;
 }
 
 .stat {
   text-align: center;
+  min-width: 100px;
 }
 
 .number {
-  font-size: clamp(2.5rem, 6vw, 4rem);
+  font-size: clamp(2rem, 5vw, 3.5rem);
   font-weight: 900;
   background: var(--gradient);
   -webkit-background-clip: text;
@@ -20,19 +21,30 @@
 }
 
 .badge {
-  font-size: clamp(1.5rem, 4vw, 2.5rem);
+  font-size: clamp(1.2rem, 3vw, 2rem);
   font-weight: 900;
   color: var(--accent);
   border: 2px solid var(--accent);
-  border-radius: 12px;
-  padding: 0.3rem 1rem;
+  border-radius: 10px;
+  padding: 0.2rem 0.8rem;
   display: inline-block;
 }
 
 .label {
-  font-size: 0.9rem;
+  font-size: 0.75rem;
   color: rgba(240, 240, 240, 0.5);
   margin-top: 0.3rem;
   text-transform: uppercase;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.1em;
+}
+
+@media (max-width: 480px) {
+  .stats {
+    gap: 1.5rem;
+    padding: 3rem 1rem;
+  }
+
+  .stat {
+    min-width: 80px;
+  }
 }
