@@ -11,4 +11,5 @@
 .presaveBtn { display: inline-block; padding: 0.8rem 1.5rem; border-radius: 100px; background: var(--accent); color: #fff; font-weight: 600; box-shadow: 0 0 20px rgba(255,45,85,0.4); margin-bottom: 0.5rem; }
 .restartBtn { padding: 0.6rem 1.2rem; border-radius: 100px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: var(--text); font-size: 0.85rem; cursor: pointer; }
 .hud { display: flex; justify-content: center; gap: 2rem; margin-top: 1rem; font-size: 0.9rem; color: rgba(240,240,240,0.5); }
+.hint { font-size: 0.7rem; color: rgba(240,240,240,0.32); letter-spacing: 0.06em; margin-top: 0.4rem; }
 .back { display: inline-block; margin-top: 2rem; padding: 0.6rem 1.2rem; border-radius: 100px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); font-size: 0.85rem; color: rgba(240,240,240,0.6); }

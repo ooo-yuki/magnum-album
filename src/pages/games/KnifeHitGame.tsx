@@ -138,19 +138,26 @@ export function KnifeHitGame() {
     []
   );
 
-  const spawnParticles = useCallback((x: number, y: number, count: number, color: string) => {
+  const spawnParticles = useCallback((x: number, y: number, count: number, color: string, opts?: { spark?: boolean }) => {
     const g = gameRef.current;
     for (let i = 0; i < count; i++) {
       const angle = Math.random() * Math.PI * 2;
-      const speed = 1 + Math.random() * 3;
+      const speed = opts?.spark ? 2 + Math.random() * 6 : 1 + Math.random() * 3.5;
       g.particles.push({
         x,
         y,
         vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
+        vy: Math.sin(angle) * speed - (opts?.spark ? 1 : 0),
         life: 1,
-        color,
+        color: opts?.spark && Math.random() > 0.5 ? "#ffcc00" : color,
       });
+    }
+    // extra wood chips on clean hit
+    if (!opts?.spark) {
+      for (let i = 0; i < Math.floor(count / 2); i++) {
+        const a = Math.random() * Math.PI - Math.PI / 2;
+        g.particles.push({ x, y, vx: Math.cos(a) * (1 + Math.random() * 2), vy: Math.sin(a) * (2 + Math.random() * 2), life: 1, color: "#8B6914" });
+      }
     }
   }, []);
 
@@ -198,9 +205,9 @@ export function KnifeHitGame() {
 
           if (checkCollision(normalizedAngle)) {
             // Hit an existing knife - game over
-            spawnParticles(cx, cy - TARGET_RADIUS, 15, "#ff2d55");
-            g.shakeTimer = 0.3;
-            g.shakeIntensity = 8;
+            spawnParticles(cx, cy - TARGET_RADIUS, 20, "#ff2d55", { spark: true });
+            g.shakeTimer = 0.45;
+            g.shakeIntensity = 14;
             g.throwingKnife = null;
             g.nextThrowReady = true;
             setGameState("gameover");
@@ -212,7 +219,10 @@ export function KnifeHitGame() {
             g.knivesSinceLastChange++;
             g.knivesRemaining--;
 
-            spawnParticles(cx, cy - TARGET_RADIUS, 8, "#C4A265");
+            spawnParticles(cx, cy - TARGET_RADIUS, 12, "#C4A265");
+            // hit flash
+            g.shakeTimer = 0.12;
+            g.shakeIntensity = 4;
 
             setScore((s) => s + 1);
             setKnivesThrown((k) => k + 1);
@@ -410,16 +420,34 @@ export function KnifeHitGame() {
 
         {/* HUD overlay */}
         {gameState === "playing" && (
-          <div className={styles.hud}>
-            <div className={styles.hudLeft}>
-              <span className={styles.hudLabel}>Ножи</span>
-              <span className={styles.hudValue}>{knivesThrown}/{TOTAL_KNIVES}</span>
+          <>
+            <div className={styles.hud}>
+              <div className={styles.hudLeft}>
+                <span className={styles.hudLabel}>Ножи</span>
+                <span className={styles.hudValue}>{knivesThrown}/{TOTAL_KNIVES}</span>
+              </div>
+              <div className={styles.hudRight}>
+                <span className={styles.hudLabel}>Счёт</span>
+                <span className={styles.hudValue}>{score}</span>
+              </div>
             </div>
-            <div className={styles.hudRight}>
-              <span className={styles.hudLabel}>Счёт</span>
-              <span className={styles.hudValue}>{score}</span>
+            {/* Шкала прогресса 42 */}
+            <div style={{ position: "absolute", top: 58, left: 12, right: 12, height: 8, background: "rgba(255,255,255,0.08)", borderRadius: 999, overflow: "hidden", zIndex: 10, border: "1px solid rgba(255,255,255,0.08)" }}>
+              <div style={{ width: `${(knivesThrown / TOTAL_KNIVES) * 100}%`, height: "100%", background: "linear-gradient(90deg,#ff2d55,#ffcc00,#00ff88)", borderRadius: 999, transition: "width 0.35s ease", boxShadow: knivesThrown > 35 ? "0 0 12px rgba(255,45,85,0.7)" : undefined }} />
+              {/* ticks every 7 */}
+              <div style={{ position: "absolute", inset: 0, display: "flex" }}>
+                {Array.from({ length: 6 }, (_, i) => (
+                  <div key={i} style={{ flex: 1, borderRight: i < 5 ? "1px solid rgba(255,255,255,0.18)" : undefined, position: "relative" }}>
+                    <span style={{ position: "absolute", right: 2, top: 10, fontSize: 7, color: "rgba(255,255,255,0.45)", fontWeight: 700 }}>{(i + 1) * 7}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+            <div style={{ position: "absolute", top: 76, left: 12, right: 12, display: "flex", justifyContent: "space-between", zIndex: 10, pointerEvents: "none" }}>
+              <span style={{ fontSize: 9, color: "rgba(255,255,255,0.35)", letterSpacing: "0.08em", textTransform: "uppercase" }}>Прогресс 42</span>
+              <span style={{ fontSize: 9, color: knivesThrown >= 42 ? "#00ff88" : "rgba(255,255,255,0.45)", fontWeight: 800 }}>{Math.round((knivesThrown / 42) * 100)}%</span>
+            </div>
+          </>
         )}
 
         {/* Knife supply */}

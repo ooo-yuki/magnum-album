@@ -1,12 +1,12 @@
 .section {
-  padding: 4rem 2rem;
-  max-width: 900px;
+  padding: clamp(3rem, 6vw, 5rem) 1.5rem;
+  max-width: 920px;
   margin: 0 auto;
 }
 
 .title {
-  font-size: 0.85rem;
-  letter-spacing: 0.3em;
+  font-size: 0.76rem;
+  letter-spacing: 0.34em;
   text-transform: uppercase;
   color: var(--accent);
   text-align: center;
@@ -15,52 +15,50 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.9rem;
 }
 
 .card {
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 1.2rem 1.5rem;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.03);
+  padding: 1.2rem 1.35rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.032);
   border: 1px solid rgba(255, 255, 255, 0.06);
-  transition: background 0.3s, border-color 0.3s, transform 0.2s;
+  transition: background 0.22s, border-color 0.22s, transform 0.2s;
   text-decoration: none;
   color: var(--text);
 }
 
 .card:hover {
   background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.11);
   transform: translateY(-2px);
 }
 
 .icon {
-  font-size: 1.8rem;
+  font-size: 1.7rem;
   flex-shrink: 0;
+  line-height: 1;
 }
 
 .card strong {
   display: block;
-  font-size: 1rem;
-  margin-bottom: 0.15rem;
+  font-size: 0.98rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-bottom: 0.16rem;
 }
 
 .card p {
-  font-size: 0.8rem;
-  color: rgba(240, 240, 240, 0.45);
-  line-height: 1.3;
+  font-size: 0.81rem;
+  color: rgba(240, 240, 240, 0.48);
+  line-height: 1.4;
 }
 
 @media (max-width: 600px) {
-  .grid {
-    grid-template-columns: 1fr;
-  }
-
-  .card {
-    padding: 1rem 1.2rem;
-  }
+  .grid { grid-template-columns: 1fr; }
+  .card { padding: 1rem 1.1rem; }
 }

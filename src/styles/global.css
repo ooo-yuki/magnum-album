@@ -1,10 +1,16 @@
 :root {
   --bg: #0a0a0a;
+  --bg-elevated: #141414;
   --text: #f0f0f0;
+  --muted: rgba(240, 240, 240, 0.58);
+  --faint: rgba(240, 240, 240, 0.34);
   --accent: #ff2d55;
   --accent2: #ffcc00;
   --accent3: #00ff88;
   --gradient: linear-gradient(135deg, #ff2d55, #ffcc00, #00ff88, #5865f2);
+  --radius: 18px;
+  --container: 1180px;
+  --nav-h: 56px;
 }
 
 * {
@@ -15,16 +21,50 @@
 
 html {
   scroll-behavior: smooth;
+  scrollbar-gutter: stable;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
   overflow-x: hidden;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: rgba(255, 45, 85, 0.42);
+  color: #fff;
+}
+
+/* typographic scale */
+h1, h2, h3 {
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  font-variant-ligatures: common-ligatures;
+  text-wrap: balance;
+}
+
+h1 { font-weight: 900; }
+h2 { font-weight: 800; }
+h3 { font-weight: 700; }
+
+p {
+  text-wrap: pretty;
+  line-height: 1.65;
+  color: var(--muted);
+}
+
+small, .caption {
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  color: var(--faint);
 }
 
 a {
@@ -32,9 +72,41 @@ a {
   text-decoration: none;
 }
 
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid rgba(255, 45, 85, 0.9);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
 button {
   cursor: pointer;
   border: none;
   background: none;
   font-family: inherit;
+}
+
+/* consistent section rhythm */
+section {
+  scroll-margin-top: calc(var(--nav-h) + 16px);
+}
+
+/* container utility — components can opt in */
+.container {
+  width: min(100% - 2rem, var(--container));
+  margin-inline: auto;
+}
+
+/* scrollbar */
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 999px; }
+*::-webkit-scrollbar-track { background: transparent; }
+
+/* reduce motion */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
