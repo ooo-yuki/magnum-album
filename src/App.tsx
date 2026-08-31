@@ -10,6 +10,9 @@ import { GamePage } from "./pages/GamePage";
 import { GamesHub } from "./pages/GamesHub";
 import { MemoryGame } from "./pages/games/MemoryGame";
 import { ClickerGame } from "./pages/games/ClickerGame";
+import { Match3Game } from "./pages/games/Match3Game";
+import { KnifeHitGame } from "./pages/games/KnifeHitGame";
+import { RunnerGame } from "./pages/games/RunnerGame";
 
 export default function App() {
   return (
@@ -24,6 +27,9 @@ export default function App() {
           <Route path="artists" element={<ArtistsPage />} />
           <Route path="game" element={<GamePage />} />
           <Route path="games" element={<GamesHub />} />
+          <Route path="games/runner" element={<RunnerGame />} />
+          <Route path="games/match3" element={<Match3Game />} />
+          <Route path="games/knife" element={<KnifeHitGame />} />
           <Route path="games/memory" element={<MemoryGame />} />
           <Route path="games/clicker" element={<ClickerGame />} />
           <Route path="games/quiz" element={<GamePage />} />

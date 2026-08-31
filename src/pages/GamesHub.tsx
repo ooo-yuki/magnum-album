@@ -4,7 +4,10 @@ import gsap from "gsap";
 import styles from "./GamesHub.module.css";
 
 const GAMES = [
-  { to: "/magnum/games/memory", icon: "🃏", title: "Память", desc: "Найди пары карточек 42" },
+  { to: "/magnum/games/runner", icon: "🏃", title: "Беги, братуха!", desc: "2D раннер — перепрыгивай мухоморы" },
+  { to: "/magnum/games/match3", icon: "🧩", title: "Матч 42", desc: "Собери комбинации из 42-символов" },
+  { to: "/magnum/games/knife", icon: "🔪", title: "Ножи 42", desc: "Кидай ножи в мишень" },
+  { to: "/magnum/games/memory", icon: "🃏", title: "Память", desc: "Найди пары карточек" },
   { to: "/magnum/games/clicker", icon: "⚡", title: "Кликер", desc: "42 клика за 10 секунд" },
   { to: "/magnum/games/quiz", icon: "🧠", title: "Квиз", desc: "8 вопросов про 42 и MAGNUM" },
 ];
@@ -18,7 +21,7 @@ export function GamesHub() {
       gsap.set(`.${styles.card}`, { y: 40, opacity: 0, scale: 0.95 });
       gsap.to(`.${styles.card}`, {
         y: 0, opacity: 1, scale: 1,
-        stagger: 0.12, duration: 0.6, ease: "back.out(1.7)",
+        stagger: 0.1, duration: 0.6, ease: "back.out(1.7)",
       });
     }, ref);
     return () => ctx.revert();

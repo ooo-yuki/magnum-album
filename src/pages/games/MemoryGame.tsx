@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
-import gsap from "gsap";
 import styles from "./MemoryGame.module.css";
 
 const PRESAVE = "https://music.thefence.me/psmagnum";
@@ -33,13 +32,6 @@ export function MemoryGame() {
   const [won, setWon] = useState(false);
   const [moves, setMoves] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!ref.current) return;
-    gsap.from(`.${styles.card}`, {
-      scale: 0, opacity: 0, stagger: 0.03, duration: 0.4, ease: "back.out(1.7)",
-    });
-  }, []);
 
   const handleClick = (id: number) => {
     if (locked || cards[id]!.flipped || cards[id]!.matched) return;
@@ -90,7 +82,7 @@ export function MemoryGame() {
   return (
     <div className={styles.page} ref={ref}>
       <h1>Память</h1>
-      <p className={styles.info}>Ходы: {moves}</p>
+      <p className={styles.info}>Найди все пары • Ходы: {moves}</p>
       <div className={styles.grid}>
         {cards.map((c) => (
           <button
