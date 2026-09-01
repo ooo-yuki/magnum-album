@@ -154,7 +154,10 @@ export function AiBot() {
       {open && (
         <div className={styles.panel} role="dialog" aria-label="БРАТ-БОТ 42">
           <div className={styles.header}>
-            <img src="/magnum/images/ai-bot-avatar.png" alt="" className={styles.avatar} width={40} height={40} />
+            <picture>
+              <source srcSet="/magnum/images/ai-bot-avatar.webp" type="image/webp" />
+              <img src="/magnum/images/ai-bot-avatar.png" alt="" className={styles.avatar} width={40} height={40} loading="eager" decoding="async" fetchPriority="high" />
+            </picture>
             <div className={styles.headerText}>
               <strong>БРАТ-БОТ 42</strong>
               <span className={styles.status}>● онлайн</span>
