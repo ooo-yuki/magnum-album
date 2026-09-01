@@ -3,7 +3,6 @@ name: Build & Deploy MAGNUM
 on:
   push:
     branches: [master]
-
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -19,6 +18,9 @@ jobs:
 
       - name: Type check
         run: bunx tsc --noEmit
+
+      - name: Tests
+        run: bunx vitest run
 
       - name: Build
         run: bun run build.ts

@@ -1,0 +1,30 @@
+.page { padding-top: 5rem; min-height: 100vh; text-align: center; display: flex; flex-direction: column; align-items: center; }
+.page h1 { font-size: clamp(1.8rem, 5vw, 2.6rem); font-weight: 900; background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.sub { color: rgba(240,240,240,0.5); margin: 0.35rem 0 1rem; font-size: 0.95rem; }
+.menu { display: flex; flex-direction: column; align-items: center; gap: 0.9rem; margin-top: 0.5rem; }
+.rules { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 1rem 1.2rem; text-align: left; font-size: 0.88rem; color: rgba(240,240,240,0.72); display: flex; flex-direction: column; gap: 0.25rem; }
+.rules p { margin: 0; }
+.playBtn { padding: 0.85rem 2rem; border-radius: 100px; background: var(--accent); color: #fff; font-weight: 800; font-size: 1.05rem; cursor: pointer; box-shadow: 0 0 22px rgba(255,45,85,0.35); }
+.playBtn:hover { transform: scale(1.03); }
+.hint { font-size: 0.72rem; color: rgba(240,240,240,0.32); }
+.back { display: inline-block; margin-top: 0.3rem; padding: 0.55rem 1.1rem; border-radius: 100px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: rgba(240,240,240,0.6); font-size: 0.85rem; }
+.gameArea { width: 100%; max-width: 440px; display: flex; flex-direction: column; align-items: center; gap: 0.6rem; margin-top: 0.4rem; padding: 0 1rem; }
+.hud { display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; }
+.stat { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; padding: 0.4rem 0.7rem; min-width: 86px; }
+.stat span { display: block; font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(240,240,240,0.45); }
+.stat strong { display: block; font-size: 1rem; font-weight: 900; }
+.progress { width: 100%; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.06); overflow: hidden; }
+.fill { height: 100%; background: linear-gradient(90deg, #ff2d55, #ffcc00); transition: width 0.25s; box-shadow: 0 0 10px rgba(255,45,85,0.5); }
+.streak { font-weight: 900; color: #ffcc00; text-shadow: 0 0 12px rgba(255,204,0,0.6); font-size: 0.95rem; }
+.canvasWrap { position: relative; width: 100%; border-radius: 14px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); background: #08081a; box-shadow: 0 10px 40px rgba(0,0,0,0.45); }
+.canvas { display: block; width: 100%; height: 560px; touch-action: none; cursor: pointer; }
+.tapBtn { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); padding: 0.5rem 1.6rem; border-radius: 100px; background: rgba(255,45,85,0.92); color: #fff; font-weight: 900; font-size: 0.9rem; border: 1px solid rgba(255,255,255,0.18); box-shadow: 0 4px 18px rgba(255,45,85,0.45); cursor: pointer; }
+.tapBtn:active { transform: translateX(-50%) scale(0.96); }
+.navRow { display: flex; gap: 0.6rem; align-items: center; }
+.restartBtn { padding: 0.55rem 1.1rem; border-radius: 100px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); color: var(--text); cursor: pointer; }
+.backInline { color: rgba(240,240,240,0.55); font-size: 0.85rem; padding: 0.4rem 0.8rem; }
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.78); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 1rem; }
+.modalCard { background: #12122a; border: 1px solid rgba(255,255,255,0.10); border-radius: 16px; padding: 2rem 1.5rem; max-width: 420px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 0.7rem; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
+.modalCard h2 { font-size: 1.45rem; }
+.winSub { color: #ffcc00; font-weight: 700; font-size: 0.9rem; }
+.presaveBtn { display: inline-block; padding: 0.8rem 1.6rem; border-radius: 100px; background: var(--accent); color: #fff; font-weight: 700; box-shadow: 0 0 20px rgba(255,45,85,0.4); }

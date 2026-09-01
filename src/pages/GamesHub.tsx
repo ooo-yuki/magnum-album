@@ -10,6 +10,8 @@ const GAMES = [
   { to: "/magnum/games/memory", icon: "🃏", title: "Память", desc: "Найди пары карточек" },
   { to: "/magnum/games/clicker", icon: "⚡", title: "Кликер", desc: "42 клика за 10 секунд" },
   { to: "/magnum/games/quiz", icon: "🧠", title: "Квиз", desc: "8 вопросов про 42 и MAGNUM" },
+  { to: "/magnum/games/rhythm", icon: "🎵", title: "Ритм MAGNUM", desc: "Лови ноты в такт — D F J K" },
+  { to: "/magnum/games/stack", icon: "🧱", title: "Стопка 42", desc: "Строй башню — 15 этажей до победы" },
 ];
 
 export function GamesHub() {
