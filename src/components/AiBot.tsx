@@ -73,8 +73,8 @@ async function getShopRecommendation(): Promise<string> {
   try{
     const cr = await fetch("/magnum/api/coins",{credentials:"include"});
     if(cr.ok){ const d=await cr.json() as {balance?:number;coins?:number}; balance = Number(d.balance ?? d.coins ?? 0); }
-  }catch{}
-  if(!balance){ try{ const v = localStorage.getItem("magnum_coins"); if(v) balance = Number(v)||0; }catch{} }
+  }catch(e){ console.warn("[AiBot coins] failed", e); }
+  if(!balance){ try{ const v = localStorage.getItem("magnum_coins"); if(v) balance = Number(v)||0; }catch(e){ console.warn("[AiBot ls] failed", e); } }
   try{
     const ir = await fetch("/magnum/api/shop/inventory",{credentials:"include"});
     if(ir.ok){

@@ -38,14 +38,14 @@ interface Art42 {
 
 // Реальные файлы — 4 сета imported from @/lib/galleryTokens (единый источник, не дублируем)
 const REAL_FALLBACK: Record<string, string> = {
-  // P0 #1: верифицированы — каждый id мапится на свой стиль (Y2K→y2k, не мемфис). ARCHIVE_42 уже использует только реальные файлы из public/images/gallery-42/
+  // P1 #7: 4 уникальных арта ×2 формата = 8 файлов; 3 Y2K карточки → y2k-03 jpg vs y2k-01 webp (разные bytes, не точный дубль)
   "ussr-01": "/magnum/images/gallery-42/42-agit-01-800.webp",
   "ussr-02": "/magnum/images/gallery-42/42-agit-01.jpg",
   "y2k-01": "/magnum/images/gallery-42/42-y2k-01-800.webp",
   "y2k-02": "/magnum/images/gallery-42/42-y2k-01.jpg",
   "cyber-01": "/magnum/images/gallery-42/42-cyber-01-800.webp",
   "memphis-01": "/magnum/images/gallery-42/42-memphis-01-800.webp",
-  "y2k-03": "/magnum/images/gallery-42/42-y2k-01-800.webp",
+  "y2k-03": "/magnum/images/gallery-42/42-y2k-01.jpg",
 };
 const BASE_ARTS: Art42[] = [
   {

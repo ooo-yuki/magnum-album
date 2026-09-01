@@ -8,10 +8,12 @@ import { Stats } from "../components/Stats";
 import { Singles } from "../components/Singles";
 import { About } from "../components/About";
 import { NavGrid } from "../components/NavGrid";
-import { Timeline } from "../components/Timeline";
-import { PressWall } from "../components/PressWall";
-import { News2026 } from "../components/News2026";
-import { CTA } from "../components/CTA";
+import { lazy, Suspense } from "react";
+// perf 16:34 — lazy below-fold (Timeline 576L + PressWall 207L + News2026 242L + CTA) — main 466→~340K eager
+const Timeline = lazy(() => import("../components/Timeline").then(m => ({ default: m.Timeline })));
+const PressWall = lazy(() => import("../components/PressWall").then(m => ({ default: m.PressWall })));
+const News2026 = lazy(() => import("../components/News2026").then(m => ({ default: m.News2026 })));
+const CTA = lazy(() => import("../components/CTA").then(m => ({ default: m.CTA })));
 
 gsap.registerPlugin(ScrollTrigger);
 function prefersReducedMotion(): boolean { return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches; }
@@ -410,12 +412,12 @@ export function HomePage() {
       <Stats />
       <NavGrid />
       <About />
-      <Timeline />
-      <PressWall />
-      <News2026 />
+      <Suspense fallback={<div style={{minHeight:200}} /> }><Timeline /></Suspense>
+      <Suspense fallback={<div style={{minHeight:200}} /> }><PressWall /></Suspense>
+      <Suspense fallback={<div style={{minHeight:160}} /> }><News2026 /></Suspense>
       <PromoBanners />
       <Singles />
-      <CTA />
+      <Suspense fallback={<div style={{minHeight:120}} /> }><CTA /></Suspense>
       <PopupBanner />
 
       {pct > 0 && pct < TARGET && (
