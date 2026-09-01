@@ -15,10 +15,11 @@
   cursor: pointer;
   color: var(--text);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-  transition: background 0.22s, border-color 0.22s, box-shadow 0.22s;
+  transition: background 0.22s, border-color 0.22s;
   opacity: 0;
   pointer-events: none;
   transform: translateY(12px);
+  will-change: box-shadow, transform, opacity;
 }
 
 .btn:hover {
@@ -53,5 +54,6 @@
 @media (prefers-reduced-motion: reduce) {
   .btn {
     transition: none;
+    will-change: auto;
   }
 }

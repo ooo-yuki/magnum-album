@@ -35,6 +35,19 @@ export function ScrollToTop() {
           });
         },
       });
+
+      // breathing glow pulse on the scroll-to-top button
+      if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        gsap.to(btnRef.current, {
+          boxShadow:
+            "0 0 18px rgba(255,45,85,0.45), 0 0 36px rgba(255,45,85,0.15), 0 4px 20px rgba(0,0,0,0.4)",
+          duration: 1.6,
+          repeat: -1,
+          yoyo: true,
+          ease: "sine.inOut",
+          delay: 1.2,
+        });
+      }
     });
 
     return () => ctx.revert();
