@@ -88,6 +88,27 @@ const COSMETICS: Cosmetic[] = [
   { id:"title-vip", slot:"title", name:"VIP 42", price:1240, rarity:"legendary", style:"#ff2d55" },
   { id:"title-noob", slot:"title", name:"Новичок", price:22, rarity:"common", style:"#aaa" },
   { id:"title-god", slot:"title", name:"Бог 42", price:4242, rarity:"legendary", style:"#ffd700" },
+  { id:"frame-prism-rose", slot:"frame", name:"Призма Роза", price:42, rarity:"common", style:"conic-gradient(from 0deg,#ff44cc,#ffcc00,#00ffcc,#5865f2,#ff44cc)" },
+  { id:"frame-prism-ice", slot:"frame", name:"Призма Лёд", price:142, rarity:"rare", style:"conic-gradient(from 45deg,#7dd8ff,#00ffcc,#9147ff,#7dd8ff)" },
+  { id:"frame-prism-toxic", slot:"frame", name:"Призма Токсик", price:420, rarity:"epic", style:"conic-gradient(from 90deg,#7cff00,#00ffcc,#ffcc00,#7cff00)" },
+  { id:"frame-prism-void", slot:"frame", name:"Призма Войд", price:1420, rarity:"legendary", style:"conic-gradient(from 180deg,#7a1ecb,#ff44cc,#0a0a0a,#7a1ecb)" },
+  { id:"banner-prism-aurora", slot:"banner", name:"Аврора Призм", price:84, rarity:"common", style:"linear-gradient(90deg,#00ffcc,#5865f2 35%,#ff44cc 70%,#ffcc00)" },
+  { id:"banner-prism-neon", slot:"banner", name:"Неон Призм", price:184, rarity:"rare", style:"linear-gradient(90deg,#ff44cc,#9147ff 40%,#00ffcc)" },
+  { id:"banner-prism-sunset", slot:"banner", name:"Призм Закат", price:390, rarity:"epic", style:"linear-gradient(90deg,#ff7b00,#ff44cc 40%,#7a1ecb)" },
+  { id:"banner-prism-abyss", slot:"banner", name:"Призм Бездна", price:1240, rarity:"legendary", style:"linear-gradient(90deg,#0a0a0a,#7a1ecb 30%,#ffcc00 70%,#ff44cc)" },
+  { id:"title-prism-novice", slot:"title", name:"Призм Новичок", price:22, rarity:"common", style:"#7dd8ff" },
+  { id:"title-prism-hype", slot:"title", name:"Призм Хайп", price:142, rarity:"rare", style:"#ff44cc" },
+  { id:"title-prism-aurora", slot:"title", name:"Аврора", price:420, rarity:"epic", style:"#9147ff" },
+  { id:"title-prism-legend", slot:"title", name:"Призм Легенда", price:2042, rarity:"legendary", style:"conic-gradient(from 0deg,#ffcc00,#ff44cc,#00ffcc,#ffcc00)" },
+];
+export const PRISM_IDS_SET=new Set(COSMETICS.filter(c=>c.id.includes("prism")).map(c=>c.id));
+export const PRISM_CATALOG=COSMETICS.filter(c=>c.id.includes("prism"));
+export const PRISM_FAQ: {q:string;a:string;src:string}[]=[
+  {q:"Призм сколько?",a:"12",src:"ShopPage.tsx:PRISM_CATALOG 12"},
+  {q:"Пыль за разбор?",a:"14/42/142/420",src:"server.ts:prismDismantleReward"},
+  {q:"Крафт призм?",a:"POST /shop/craft dust",src:"ShopPage.tsx:craft"},
+  {q:"GET /shop/prism?",a:"12 призм catalog",src:"server.ts:handlePrismCatalog"},
+  {q:"GET /shop/dust?",a:"баланс пыли Neon",src:"server.ts:handleDustGet"},
 ];
 function isValidCosmeticId(v:string):boolean{ return /^[a-z0-9-]{2,64}$/.test(v); }
 export function isValidBundleId(v:string):boolean{ return /^[a-z0-9-]{2,40}$/.test(v); }
@@ -232,8 +253,9 @@ export function ShopPage() {
   const [equipped, setEquipped] = useState<string | null>(null);
   const [cosOwned, setCosOwned] = useState<string[]>([]);
   const [cosEquipped, setCosEquipped] = useState<Record<string,string>>({});
-  const [cosTab, setCosTab] = useState<"all"|CosmeticSlot>("all");
-  const filteredCosmetics = useMemo(()=> cosTab==="all"? COSMETICS : COSMETICS.filter(x=>x.slot===cosTab), [cosTab]);
+  const [cosTab, setCosTab] = useState<"all"|CosmeticSlot|"prism">("all");
+  const filteredCosmetics = useMemo(()=> cosTab==="all"? COSMETICS : cosTab==="prism"? COSMETICS.filter(x=>x.id.includes("prism")) : COSMETICS.filter(x=>x.slot===cosTab), [cosTab]);
+  const [dust, setDust] = useState(0);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const toastId = useRef(0);
   const shownCoins = useRef(getCoins());
@@ -310,6 +332,12 @@ export function ShopPage() {
             setCosEquipped(eq);
           }
         }
+      }catch{}
+    })();
+    void (async()=>{
+      try{
+        const r=await fetch("/magnum/api/shop/dust",{credentials:"include"});
+        if(r.ok){ const d=await r.json() as {dust:number;balance:number}; if(!cancelled) setDust(d.dust??d.balance??0); }
       }catch{}
     })();
     return () => { cancelled = true; };
@@ -549,6 +577,29 @@ export function ShopPage() {
       pushToast("ok",`${b.name} куплен!${got}${skip} · баланс ${ (d as any).balance ?? coins-b.price}`);
     }catch{ pushToast("err","Сеть упала"); }
   };
+  const dismantle = async (co: Cosmetic) => {
+    if(!me){ pushToast("err","Войди — нужен логин для разборки"); window.dispatchEvent(new CustomEvent("magnum:need-auth")); return; }
+    try{
+      const r=await fetch("/magnum/api/shop/dismantle",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({cosmeticId:co.id})});
+      const d=await r.json().catch(()=>({})) as {dust?:number;reward?:number;error?:string};
+      if(!r.ok){ pushToast("err", String((d as any).error||"Разборка не прошла")); return; }
+      setCosOwned(v=>v.filter(x=>x!==co.id));
+      setDust((d as any).dust??0);
+      pushToast("ok",`Разобрано ${co.name} +${(d as any).reward} пыли · dust ${(d as any).dust}`);
+    }catch{ pushToast("err","Сеть упала"); }
+  };
+  const craftPrism = async (co: Cosmetic) => {
+    if(!me){ pushToast("err","Войди — нужен логин для крафта"); window.dispatchEvent(new CustomEvent("magnum:need-auth")); return; }
+    if(dust < co.price){ pushToast("err",`Нужно ${co.price} пыли, у тебя ${dust}`); return; }
+    try{
+      const r=await fetch("/magnum/api/shop/craft",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({cosmeticId:co.id})});
+      const d=await r.json().catch(()=>({})) as {dust?:number;error?:string};
+      if(!r.ok){ pushToast("err", String((d as any).error||"Крафт не прошёл")); return; }
+      setCosOwned(v=>[...v,co.id]);
+      setDust((d as any).dust??0);
+      pushToast("ok",`Скрафчено ${co.name} за ${co.price} пыли`);
+    }catch{ pushToast("err","Сеть упала"); }
+  };
 
   const equippedSkin = useMemo(
     () => SKINS.find((s) => s.id === equipped) ?? null,
@@ -706,10 +757,10 @@ export function ShopPage() {
       <section className={styles.cosmetics} aria-label="Косметика 42">
         <div className={styles.cosHead}>
           <h2 className={styles.cosTitle}>КОСМЕТИКА 42 — рамки · баннеры · титулы</h2>
-          <p className={styles.cosSub}>32 предмета · баланс в Neon · сияющие обводки VIP+/PRO · без localStorage</p>
+          <p className={styles.cosSub}>44 предмета (32 + 12 PRISM) · пыль {dust} ✨ · Neon · без localStorage</p>
           <div className={styles.cosTabs} role="tablist">
-            {(["all","frame","banner","title"] as const).map(t => (
-              <button key={t} type="button" role="tab" aria-selected={cosTab===t} className={`${styles.cosTab} ${cosTab===t?styles.cosTabOn:""}`} onClick={()=>setCosTab(t)}>{t==="all"?"Все":t==="frame"?"Рамки":t==="banner"?"Баннеры":"Титулы"}</button>
+            {(["all","frame","banner","title","prism"] as const).map(t => (
+              <button key={t} type="button" role="tab" aria-selected={cosTab===t} className={`${styles.cosTab} ${cosTab===t?styles.cosTabOn:""}`} onClick={()=>setCosTab(t)}>{t==="all"?"Все":t==="frame"?"Рамки":t==="banner"?"Баннеры":t==="prism"?"PRISM 12 ✨":"Титулы"}</button>
             ))}
           </div>
         </div>
@@ -717,20 +768,26 @@ export function ShopPage() {
           {filteredCosmetics.map(co => {
             const isOwned = cosOwned.includes(co.id);
             const isEq = cosEquipped[co.slot]===co.id;
+            const isPrism = co.id.includes("prism");
             const can = coins >= co.price;
             return (
-              <div key={co.id} className={`${styles.cosCard} ${isEq?styles.cosCardEq:""}`} data-rarity={co.rarity} onMouseEnter={onCardEnter} onMouseLeave={onCardLeave}>
+              <div key={co.id} className={`${styles.cosCard} ${isEq?styles.cosCardEq:""} ${isPrism?styles.cosCardPrism||"":""}`} data-rarity={co.rarity} onMouseEnter={onCardEnter} onMouseLeave={onCardLeave}>
                 <div className={styles.cosPreview} style={co.slot==="banner"?{background:co.style}:{border:co.style, background:"rgba(255,255,255,0.04)"}}>
-                  <span className={styles.cosName}>{co.name}</span>
-                  <span className={styles.cosSlot}>{co.slot}</span>
+                  <span className={styles.cosName}>{co.name}{isPrism?" ✨":""}</span>
+                  <span className={styles.cosSlot}>{co.slot}{isPrism?" · prism":""}</span>
                 </div>
-                <div className={styles.cosMeta}><span className={styles.cosRarity} style={{color:RARITY_META[co.rarity].color}}>{RARITY_META[co.rarity].label}</span><span className={styles.cosPrice}>🪙 {co.price}</span></div>
-                {isOwned ? (isEq ? <button type="button" className={styles.btnWear} onClick={()=>equipCosmetic(co)}>✅ Надет</button> : <button type="button" className={styles.btnWear} onClick={()=>equipCosmetic(co)}>Надеть</button>) : <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>buyCosmetic(co)}>🪙 {co.price}</button>}
+                <div className={styles.cosMeta}><span className={styles.cosRarity} style={{color:RARITY_META[co.rarity].color}}>{RARITY_META[co.rarity].label}</span><span className={styles.cosPrice}>🪙 {co.price}{isPrism?" · пыль":""}</span></div>
+                {isOwned ? (
+                  <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                    {isEq ? <button type="button" className={styles.btnWear} onClick={()=>equipCosmetic(co)}>✅ Надет</button> : <button type="button" className={styles.btnWear} onClick={()=>equipCosmetic(co)}>Надеть</button>}
+                    <button type="button" className={styles.btnGhost} onClick={()=>dismantle(co)} title="Разобрать → пыль">♻️ +{co.rarity==="legendary"?420:co.rarity==="epic"?142:co.rarity==="rare"?42:14}✨</button>
+                  </div>
+                ) : isPrism ? <button type="button" className={`${styles.btnBuy} ${dust>=co.price?"":styles.btnLocked}`} onClick={()=>craftPrism(co)}>✨ {co.price} пыль</button> : <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>buyCosmetic(co)}>🪙 {co.price}</button>}
               </div>
             );
           })}
         </div>
-        {cosOwned.length>0 && <p className={styles.cosHint}>В инвентаре: {cosOwned.length}/32 · экипировано: {Object.values(cosEquipped).filter(Boolean).length} слотов</p>}
+        {cosOwned.length>0 && <p className={styles.cosHint}>В инвентаре: {cosOwned.length}/44 · пыль: {dust} ✨ · разбор: common 14 / rare 42 / epic 142 / legendary 420 · крафт PRISM за пыль</p>}
       </section>
 
       {/* бандлы 8 — со скидкой, Neon-покупка */}
