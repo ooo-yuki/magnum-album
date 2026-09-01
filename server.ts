@@ -920,6 +920,44 @@ async function handleMiningCollect(req: Request): Promise<Response> {
   }
 }
 
+// ---- Mining Vault — лимитированные дропы за 42-коины (Neon magnun_mining_vault) ----
+type VaultItem = { id: string; name: string; price: number; reward: number; rarity: "common"|"rare"|"epic"|"legendary"; icon: string; limit: number };
+const MINING_VAULT_CATALOG: VaultItem[] = [
+  { id: "vault-coal", name: "Ящик угля", price: 420, reward: 142, rarity: "common", icon: "🪨", limit: 99 },
+  { id: "vault-ore", name: "Рудный кейс", price: 840, reward: 420, rarity: "rare", icon: "⛏️", limit: 42 },
+  { id: "vault-gold", name: "Золотой слиток 42", price: 1420, reward: 840, rarity: "epic", icon: "🏆", limit: 14 },
+  { id: "vault-diamond", name: "Алмаз Кузбасса", price: 2042, reward: 1420, rarity: "legendary", icon: "💎", limit: 4 },
+  { id: "vault-belaz", name: "БЕЛАЗ-контейнер", price: 3200, reward: 2042, rarity: "legendary", icon: "🚚", limit: 2 },
+];
+function validateVaultId(v: string): string | null { const s=v.trim().toLowerCase(); return MINING_VAULT_CATALOG.some(x=>x.id===s)?s:null; }
+async function handleMiningVaultGet(req: Request): Promise<Response> {
+  const token=extractToken(req); if(!token) return Response.json({ error:"unauthorized" },{status:401});
+  const user=await getUserByToken(token); if(!user) return Response.json({ error:"unauthorized" },{status:401});
+  try { const sql=getSql(); const rows=await sql`SELECT vault_id FROM magnum_mining_vault WHERE user_id=${user.id}`; const claimed=new Set(rows.map((r:unknown)=>(r as {vault_id:string}).vault_id)); const catalog=MINING_VAULT_CATALOG.map(v=>({...v, claimed:claimed.has(v.id)})); return Response.json({ catalog, claimed:[...claimed] }); } catch(e){ console.error("[vault get] failed",e); return Response.json({ error:"db error" },{status:500}); }
+}
+async function handleMiningVaultClaim(req: Request): Promise<Response> {
+  const token=extractToken(req); if(!token) return Response.json({ error:"unauthorized" },{status:401});
+  const user=await getUserByToken(token); if(!user) return Response.json({ error:"unauthorized" },{status:401});
+  const ip=getClientIp(req); if(!checkRateLimit(`vault:${user.id}:${ip}`,8,60_000)) return Response.json({ error:"rate limited" },{status:429});
+  let body:{vaultId?:string;id?:string}; try{ body=(await req.json()) as typeof body;}catch{ return Response.json({ error:"Invalid JSON" },{status:400});}
+  const raw=validateVaultId(String(body.vaultId??body.id??"")); if(!raw) return Response.json({ error:"unknown vault" },{status:400});
+  const item=MINING_VAULT_CATALOG.find(x=>x.id===raw)!;
+  try {
+    const sql=getSql();
+    const exists=await sql`SELECT id FROM magnum_mining_vault WHERE user_id=${user.id} AND vault_id=${raw} LIMIT 1`;
+    if(exists.length>0) return Response.json({ error:"already claimed", vaultId:raw },{status:409});
+    const m=await ensureMiningRow(user.id); if(m.balance < item.price) return Response.json({ error:"not enough coins", price:item.price, balance:m.balance },{status:402});
+    // глобальный лимит
+    const globalRows=await sql`SELECT count(*)::int as c FROM magnum_mining_vault WHERE vault_id=${raw}`;
+    const globalCount=Number((globalRows[0] as {c:number}).c); if(globalCount >= item.limit) return Response.json({ error:"sold out", vaultId:raw, limit:item.limit },{status:409});
+    await sql`UPDATE magnum_mining SET balance = balance - ${item.price} + ${item.reward}, updated_at=now() WHERE user_id=${user.id}`;
+    await sql`INSERT INTO magnum_mining_vault (user_id, vault_id, claimed_at) VALUES (${user.id}, ${raw}, now())`;
+    const after=await sql`SELECT balance FROM magnum_mining WHERE user_id=${user.id} LIMIT 1`;
+    const balance=Number((after[0] as {balance:number}).balance);
+    return Response.json({ ok:true, vaultId:raw, price:item.price, reward:item.reward, balance });
+  } catch(e){ console.error("[vault claim] failed",e); return Response.json({ error:"db error" },{status:500}); }
+}
+
 // ---- Presave handlers (rate limit + validation, stats) ----
 async function handlePresaveClick(req: Request): Promise<Response> {
   const ip = getClientIp(req);
@@ -1306,6 +1344,8 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/mining/upgrade" && req.method === "POST") return handleMiningUpgrade(req);
     if (url.pathname === "/magnum/api/mining/collect" && req.method === "POST") return handleMiningCollect(req);
     if (url.pathname === "/magnum/api/mining/top" && req.method === "GET") return handleMiningTop();
+    if (url.pathname === "/magnum/api/mining/vault" && req.method === "GET") return handleMiningVaultGet(req);
+    if (url.pathname === "/magnum/api/mining/vault/claim" && req.method === "POST") return handleMiningVaultClaim(req);
 
     if (url.pathname === "/magnum" || url.pathname.startsWith("/magnum/")) {
       const rel = url.pathname.replace(/^\/magnum\/?/, "");

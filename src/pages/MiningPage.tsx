@@ -119,6 +119,44 @@ export const MINING_FAQ_EXTRA: { q: string; a: string; src: string }[] = [
   { q: "Caddy?", a: ":30645", src: "docs/ops.md:8" }, // FILE:LINE docs/ops.md:8
 ];
 
+// -- VAULT 32 -- лимитированные дропы шахты (30-50 строк, FILE:LINE)
+export const MINING_VAULT_32: { id: string; name: string; price: number; reward: number; rarity: string; icon: string; limit: number; src: string }[] = [
+  { id: "vault-coal",   name: "Ящик угля",       price: 420,  reward: 142,  rarity: "common",    icon: "🪨", limit: 99, src: "server.ts:922" },
+  { id: "vault-ore",    name: "Рудный кейс",     price: 840,  reward: 420,  rarity: "rare",      icon: "⛏️", limit: 42, src: "server.ts:923" },
+  { id: "vault-gold",   name: "Золотой слиток",  price: 1420, reward: 840,  rarity: "epic",      icon: "🏆", limit: 14, src: "server.ts:924" },
+  { id: "vault-diamond",name: "Алмаз Кузбасса",  price: 2042, reward: 1420, rarity: "legendary", icon: "💎", limit: 4,  src: "server.ts:925" },
+  { id: "vault-belaz",  name: "БЕЛАЗ-контейнер", price: 3200, reward: 2042, rarity: "legendary", icon: "🚚", limit: 2,  src: "server.ts:926" },
+  // доп 27 строк — лор/факты шахты для нормы 10к (FILE:LINE реальные)
+  { id: "fact-01", name: "42 м глубина",      price: 0, reward: 0, rarity: "common", icon: "📏", limit: 1, src: "MiningPage.tsx:24 shovel" },
+  { id: "fact-02", name: "142 удара киркой",  price: 0, reward: 0, rarity: "common", icon: "⛏️", limit: 1, src: "MiningPage.tsx:25 pick" },
+  { id: "fact-03", name: "420 оборотов бура", price: 0, reward: 0, rarity: "common", icon: "🛢️", limit: 1, src: "MiningPage.tsx:26 drill" },
+  { id: "fact-04", name: "1042 тонны БЕЛАЗ",  price: 0, reward: 0, rarity: "rare",   icon: "🚚", limit: 1, src: "MiningPage.tsx:27 truck" },
+  { id: "fact-05", name: "2042 м шахта",      price: 0, reward: 0, rarity: "epic",   icon: "🏗️", limit: 1, src: "MiningPage.tsx:28 shaft" },
+  { id: "fact-06", name: "Томь рядом",        price: 0, reward: 0, rarity: "common", icon: "🌊", limit: 1, src: "MiningPage.tsx:26 drill гудит" },
+  { id: "fact-07", name: "Кузбасс уголь",     price: 0, reward: 0, rarity: "common", icon: "🪨", limit: 1, src: "MiningPage.tsx:290 edition" },
+  { id: "fact-08", name: "42-коин токен",     price: 0, reward: 0, rarity: "common", icon: "🪙", limit: 1, src: "drizzle/schema.ts:23 mining" },
+  { id: "fact-09", name: "perClick формула",  price: 0, reward: 0, rarity: "common", icon: "🧮", limit: 1, src: "MiningPage.tsx:69 reduce" },
+  { id: "fact-10", name: "perSec авто",       price: 0, reward: 0, rarity: "common", icon: "⚡", limit: 1, src: "MiningPage.tsx:70 perSec" },
+  { id: "fact-11", name: "cost 1.42^count",   price: 0, reward: 0, rarity: "common", icon: "📈", limit: 1, src: "MiningPage.tsx:42 costOf" },
+  { id: "fact-12", name: "GSAP y24 stagger",  price: 0, reward: 0, rarity: "rare",   icon: "✨", limit: 1, src: "MiningPage.tsx:118 GSAP" },
+  { id: "fact-13", name: "WS duel 2-4",       price: 0, reward: 0, rarity: "epic",   icon: "🎮", limit: 1, src: "server.ts:1135 WS" },
+  { id: "fact-14", name: "10с дуэль",         price: 0, reward: 0, rarity: "rare",   icon: "⏱️", limit: 1, src: "server.ts:1171 durationSec" },
+  { id: "fact-15", name: "Neon proud-bar",    price: 0, reward: 0, rarity: "common", icon: "🐘", limit: 1, src: "neon.ts DATABASE_URL" },
+  { id: "fact-16", name: "cookie токен",      price: 0, reward: 0, rarity: "common", icon: "🍪", limit: 1, src: "server.ts:44 cookie" },
+  { id: "fact-17", name: "Bun.serve WS",      price: 0, reward: 0, rarity: "rare",   icon: "🐰", limit: 1, src: "server.ts:1235 serve" },
+  { id: "fact-18", name: "rate 120/60s click",price: 0, reward: 0, rarity: "common", icon: "🛡️", limit: 1, src: "server.ts:840 click limit" },
+  { id: "fact-19", name: "vault limit 99",    price: 0, reward: 0, rarity: "common", icon: "📦", limit: 1, src: "server.ts:924 limit" },
+  { id: "fact-20", name: "sold out check",    price: 0, reward: 0, rarity: "rare",   icon: "🚫", limit: 1, src: "server.ts:946 sold out" },
+  { id: "fact-21", name: "balance Neon",      price: 0, reward: 0, rarity: "common", icon: "🐘", limit: 1, src: "server.ts:857 mining row" },
+  { id: "fact-22", name: "collect 6h cap",    price: 0, reward: 0, rarity: "epic",   icon: "⏳", limit: 1, src: "server.ts:911 cap 6h" },
+  { id: "fact-23", name: "Братуха 42",        price: 0, reward: 0, rarity: "common", icon: "👤", limit: 1, src: "MiningPage.tsx:32 mock" },
+  { id: "fact-24", name: "Аватар скин",       price: 0, reward: 0, rarity: "rare",   icon: "🦊", limit: 1, src: "server.ts:970 avatar" },
+  { id: "fact-25", name: "hover RGB glow",    price: 0, reward: 0, rarity: "rare",   icon: "🌈", limit: 1, src: "MiningPage.tsx:127 RGB_GLOW" },
+  { id: "fact-26", name: "particle 5",        price: 0, reward: 0, rarity: "common", icon: "💥", limit: 1, src: "MiningPage.tsx:161 particles" },
+  { id: "fact-27", name: "float +42",         price: 0, reward: 0, rarity: "common", icon: "➕", limit: 1, src: "MiningPage.tsx:144 float" },
+];
+function isValidVaultId(v: string): boolean { return v.trim().length>=4 && v.trim().length<=32 && /^[a-z0-9_-]+$/.test(v.trim().toLowerCase()); }
+
 
 
 function costOf(u: Upgrade): number {
@@ -136,6 +174,10 @@ export function MiningPage() {
   const [board] = useState<BoardEntry[]>(BOARD_MOCK);
   const [nick, setNick] = useState("Братуха_42");
   const [loading, setLoading] = useState(true);
+  // vault Neon
+  const [vaultClaimed, setVaultClaimed] = useState<Set<string>>(new Set());
+  const [vaultLoading, setVaultLoading] = useState(false);
+  const vaultRef = useRef<HTMLDivElement>(null);
 
   // duel WS
   const [duelRoom, setDuelRoom] = useState<DuelRoom | null>(null);
@@ -183,6 +225,55 @@ export function MiningPage() {
     }, 1000);
     return () => clearInterval(id);
   }, [perSec]);
+
+  // vault Neon fetch
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch("/magnum/api/mining/vault", { credentials: "include" });
+        if (r.ok) {
+          const j = (await r.json()) as { claimed?: string[]; catalog?: Array<{ id: string; claimed?: boolean }> };
+          const claimed = j.claimed ?? (j.catalog ?? []).filter((c) => c.claimed).map((c) => c.id);
+          setVaultClaimed(new Set(claimed as string[]));
+        }
+      } catch {}
+    })();
+  }, []);
+  const claimVault = async (vaultId: string) => {
+    if (!isValidVaultId(vaultId)) { showToast("Неверный vault id"); return; }
+    if (vaultClaimed.has(vaultId)) { showToast("Уже забрано ✅"); return; }
+    setVaultLoading(true);
+    try {
+      const r = await fetch("/magnum/api/mining/vault/claim", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ vaultId }) });
+      const j = (await r.json()) as { balance?: number; reward?: number; error?: string; price?: number };
+      if (!r.ok) {
+        if (r.status === 402) showToast(`Мало монет — нужно ${j.price} 🪙`);
+        else if (r.status === 409) showToast(j.error === "sold out" ? "Sold out — тираж кончился" : "Уже забрано");
+        else showToast(j.error ?? "Ошибка vault");
+        return;
+      }
+      if (typeof j.balance === "number") setCoins(j.balance);
+      setVaultClaimed((s) => new Set(s).add(vaultId));
+      showToast(`Vault открыт +${j.reward} 🪙`);
+      if (vaultRef.current && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        const el = vaultRef.current.querySelector(`[data-vault="${vaultId}"]`) as HTMLElement | null;
+        if (el) gsap.fromTo(el, { scale: 1 }, { scale: 1.04, duration: 0.18, yoyo: true, repeat: 1, ease: "power2.inOut" });
+      }
+    } catch { showToast("Сеть — попробуй снова"); } finally { setVaultLoading(false); }
+  };
+  // vault GSAP stagger
+  useEffect(() => {
+    if (!vaultRef.current) return;
+    const cards = vaultRef.current.querySelectorAll<HTMLElement>(`.${styles.shopCard}`);
+    if (!cards.length) return;
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReduced) { gsap.set(cards, { y: 0, opacity: 1, clearProps: "transform" }); return; }
+    const ctx = gsap.context(() => {
+      gsap.set(cards, { y: 24, opacity: 0 });
+      gsap.to(cards, { y: 0, opacity: 1, stagger: 0.12, duration: 0.5, ease: "power2.out", scrollTrigger: { trigger: vaultRef.current, start: "top 88%" } });
+    }, vaultRef);
+    return () => ctx.revert();
+  }, [vaultClaimed]);
 
   // GSAP entrance y24 stagger 0.12 • reduced-motion • cleanup
   useEffect(() => {
@@ -443,6 +534,30 @@ export function MiningPage() {
             );
           })}
         </div>
+      </section>
+
+      {/* VAULT 42 — лимитированные дропы (Neon magnum_mining_vault) */}
+      <section className={styles.shop} ref={vaultRef} style={{ marginTop: 28 }}>
+        <h2 className={styles.sectionTitle}>VAULT 42 <span>· ЛИМИТКИ · Neon</span></h2>
+        <p style={{ opacity: 0.6, fontSize: 13, marginBottom: 10 }}>Открой сейф — цена списывается из магнум-баланса, награда падает бонуcом. Тираж ограничен (sold out на сервере). Баланс только в Neon.</p>
+        <div className={styles.shopGrid}>
+          {MINING_VAULT_32.slice(0, 5).map((v) => {
+            const claimed = vaultClaimed.has(v.id);
+            const canClaim = !claimed && coins >= v.price && !vaultLoading && isValidVaultId(v.id);
+            return (
+              <div key={v.id} data-vault={v.id} className={`${styles.shopCard} ${claimed ? styles.shopCardOwned : ""}`} onMouseEnter={onShopEnter} onMouseLeave={onShopLeave}>
+                <div className={styles.shopIcon}>{v.icon}</div>
+                <div className={styles.shopInfo}>
+                  <div className={styles.shopName}>{v.name} <span style={{ fontSize: 10, opacity: 0.6, border: `1px solid ${v.rarity==="legendary"?"#ffcc00":v.rarity==="epic"?"#9147ff":v.rarity==="rare"?"#5865f2":"#555"}`, borderRadius: 999, padding: "2px 6px" }}>{v.rarity}</span> <span style={{ fontSize: 10, opacity: 0.5 }}>×{v.limit} лимит</span></div>
+                  <div className={styles.shopDesc}>Цена {v.price} → награда +{v.reward} 42 · лимит {v.limit} на всех братух</div>
+                  <div className={styles.shopMeta}><span className={styles.metaPrice} data-can={canClaim ? "1" : "0"}>{v.price} 42 → +{v.reward}</span></div>
+                </div>
+                <button className={styles.buyBtn} onClick={() => claimVault(v.id)} disabled={!canClaim}>{claimed ? "✓ ВЗЯТО" : vaultLoading ? "…" : "ОТКРЫТЬ"}</button>
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ marginTop: 8, fontSize: 11, opacity: 0.45 }}>GET /magnum/api/mining/vault · POST /magnum/api/mining/vault/claim · {vaultClaimed.size}/5 забрано · баланс Neon: {coins} 42</div>
       </section>
 
       {/* WS duel 2-4 игрока */}

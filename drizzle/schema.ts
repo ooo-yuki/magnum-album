@@ -111,3 +111,10 @@ export const magnumIdeaVotes = pgTable("magnum_idea_votes", {
   ideaId: integer("idea_id").references(() => magnumIdeas.id).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+export const magnumMiningVault = pgTable("magnum_mining_vault", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => magnumUsers.id).notNull(),
+  vaultId: text("vault_id").notNull(),
+  claimedAt: timestamp("claimed_at").defaultNow().notNull(),
+});
