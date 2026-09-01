@@ -266,7 +266,7 @@ export function ShopPage() {
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => setMe(j?.user ?? null))
       .catch(() => setMe(null));
-    const onAuth = () => fetch("/magnum/api/auth/me", { credentials: "include" }).then((r) => (r.ok ? r.json() : null)).then((j) => setMe(j?.user ?? null)).catch(() => {});
+    const onAuth = () => fetch("/magnum/api/auth/me", { credentials: "include" }).then((r) => (r.ok ? r.json() : null)).then((j) => setMe(j?.user ?? null)).catch((e) => { console.warn("[ShopPage onAuth] failed", e); });
     window.addEventListener("magnum:auth" as unknown as string, onAuth as EventListener);
     window.addEventListener("magnum:need-auth" as unknown as string, onAuth as EventListener);
     return () => {
@@ -381,7 +381,7 @@ export function ShopPage() {
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const ctx = gsap.context(() => {
       if (prefersReduced) {
-        ScrollTrigger.batch(document.querySelectorAll('.card'), { onEnter: (batch:any) => gsap.to(batch, { y: 0, opacity: 1, stagger: 0.12, duration: 0.55, ease: "power2.out" }), start: "top 92%", once: true });
+        ScrollTrigger.batch(document.querySelectorAll('.card'), { onEnter: (batch: Element[]) => gsap.to(batch, { y: 0, opacity: 1, stagger: 0.12, duration: 0.55, ease: "power2.out" }), start: "top 92%", once: true });
       gsap.set(`.${styles.header} > *`, { y: 0, opacity: 1, clearProps: "transform" });
         gsap.set(`.${styles.card}`, { y: 0, opacity: 1, clearProps: "transform" });
         return;

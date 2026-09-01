@@ -83,27 +83,36 @@ export function AuthStatus() {
     const ac = new AbortController();
     (async () => {
       try {
-        const r = await fetch("/magnum/api/shop/subscriptions", { credentials: "include", signal: ac.signal });
-        if (!r.ok) {
-          // fallback: derive tier from cosmetic inventory if subscriptions not yet synced
-          const inv = await fetch("/magnum/api/shop/cosmetic/inventory", { credentials: "include", signal: ac.signal });
-          if (inv.ok) {
-            const j = await inv.json() as { inventory?: Array<{ cosmeticId?: string; cosmetic_id?: string }>; items?: Array<{ cosmeticId?: string; cosmetic_id?: string }> };
-            const ids = new Set((j.inventory ?? j.items ?? []).map(x => String(x.cosmeticId ?? x.cosmetic_id ?? "")));
-            if (ids.has("title-god") || ids.has("frame-crown")) setTier("pro");
-            else if ([...ids].some(id => id.startsWith("title-prism-") || id.startsWith("frame-prism-")) && (ids.has("title-vip") || ids.has("frame-void"))) setTier("vip+");
-            else if (ids.has("title-vip") || ids.has("title-prism-legend")) setTier("vip");
-            else setTier(null);
-            return;
-          }
-          setTier(null); return;
+        // primary: real endpoint with tier — GET /magnum/api/frame/status (handleFrameStatus) returns {tier, active}
+        const r = await fetch("/magnum/api/frame/status", { credentials: "include", signal: ac.signal });
+        if (r.ok) {
+          const ct = r.headers.get("content-type") ?? "";
+          if (!ct.includes("application/json")) { setTier(null); return; }
+          let j: unknown = null;
+          try { j = await r.json(); } catch { const txt = await r.text().catch(() => ""); try { j = JSON.parse(txt); } catch { j = null; } }
+          const obj = j as { tier?: string; active?: boolean; status?: string } | null;
+          // handleFrameStatus: {tier: "vip"|"vip+"|"pro"|null, active: boolean}
+          const t = obj?.tier as string | null | undefined;
+          if (typeof t === "string" && t) { setTier(t); return; }
+          if (obj?.active === false) { setTier(null); return; }
+          // if active but no tier string — fall through to inventory fallback
         }
-        let j: unknown = null;
-        try { j = await r.json(); } catch { const txt = await r.text().catch(() => ""); try { j = JSON.parse(txt); } catch { j = null; } }
-        const obj = j as { tier?: string; active?: string; subscription?: string } | null;
-        const t = (obj?.tier ?? obj?.active ?? obj?.subscription) as string | null | undefined;
-        if (t && typeof t === "string") setTier(t);
-        else setTier(null);
+        // fallback: derive tier from cosmetic inventory
+        const inv = await fetch("/magnum/api/shop/inventory", { credentials: "include", signal: ac.signal });
+        if (inv.ok) {
+          const ct2 = inv.headers.get("content-type") ?? "";
+          if (!ct2.includes("application/json")) { setTier(null); return; }
+          const j = await inv.json() as { inventory?: Array<{ cosmeticId?: string; cosmetic_id?: string }>; items?: Array<{ cosmeticId?: string; cosmetic_id?: string }> };
+          const arr = (j.inventory ?? j.items ?? []) as Array<{ cosmeticId?: string; cosmetic_id?: string }>;
+          if (!Array.isArray(arr)) { setTier(null); return; }
+          const ids = new Set(arr.map(x => String(x.cosmeticId ?? x.cosmetic_id ?? "")).filter(Boolean));
+          if (ids.has("title-god") || ids.has("frame-crown")) setTier("pro");
+          else if ([...ids].some(id => id.startsWith("title-prism-") || id.startsWith("frame-prism-")) && (ids.has("title-vip") || ids.has("frame-void"))) setTier("vip+");
+          else if (ids.has("title-vip") || ids.has("title-prism-legend")) setTier("vip");
+          else setTier(null);
+          return;
+        }
+        setTier(null);
       } catch (e) {
         if ((e as Error)?.name === "AbortError") return;
         console.warn("[AuthStatus tier] failed", e);

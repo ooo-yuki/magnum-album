@@ -4,8 +4,8 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import styles from "./CTA.module.css";
 
 gsap.registerPlugin(ScrollTrigger);
-const PRESAVE_URL =
-  "https://music.yandex.ru/artist/7544304?utm_medium=copy_link&ref_id=41b45b35-e5b0-4286-9a53-2c1163828366";
+const PRESAVE_URL = "https://music.thefence.me/psmagnum";
+export { PRESAVE_URL };
 const SPOTIFY_URL = "https://open.spotify.com/artist/5opka";
 const YT_URL = "https://www.youtube.com/@5opka";
 

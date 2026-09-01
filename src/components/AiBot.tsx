@@ -77,8 +77,23 @@ async function getShopRecommendation(): Promise<string> {
   if(!balance){ try{ const v = localStorage.getItem("magnum_coins"); if(v) balance = Number(v)||0; }catch{} }
   try{
     const ir = await fetch("/magnum/api/shop/inventory",{credentials:"include"});
-    if(ir.ok){ const d=await ir.json() as {inventory?:Array<{skin_id:string;skinId:string}>;items?:Array<{skin_id:string}>}; const arr=(d as any).inventory|| (d as any).items|| (Array.isArray(d)?d:[]); owned = arr.map((x:any)=> String(x.skin_id||x.skinId||x)); }
-  }catch{}
+    if(ir.ok){
+      const ct = ir.headers.get("content-type") ?? "";
+      if(ct.includes("application/json")){
+        const d = await ir.json() as { inventory?: unknown; items?: unknown };
+        const raw: unknown = (d as { inventory?: unknown }).inventory ?? (d as { items?: unknown }).items ?? (Array.isArray(d) ? d : null);
+        const arr: unknown[] = Array.isArray(raw) ? raw : [];
+        owned = arr.map((x) => {
+          if (x && typeof x === "object") {
+            const o = x as Record<string, unknown>;
+            const v = o["skin_id"] ?? o["skinId"] ?? o["cosmeticId"] ?? o["cosmetic_id"] ?? o["id"];
+            return typeof v === "string" ? v : String(v ?? "");
+          }
+          return typeof x === "string" ? x : "";
+        }).filter(Boolean);
+      }
+    }
+  }catch(e){ console.warn("[AiBot inventory] failed", e); }
   // pick 3 affordable not owned, closest to balance
   const affordable = SHOP_SKINS_FOR_BOT.filter(s=> !owned.includes(s.id) && s.price <= balance).sort((a,b)=> b.price - a.price);
   let picks: typeof SHOP_SKINS_FOR_BOT = [];

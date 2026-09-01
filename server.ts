@@ -722,6 +722,27 @@ async function handleCosmeticEquip(req: Request): Promise<Response> {
   }catch(e){ console.error("[cosmetic equip] failed",e); return Response.json({error:"db error"},{status:500}); }
 }
 
+
+async function handleShopSubscriptions(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  try {
+    const sql = getSql();
+    const rows = await sql`SELECT cosmetic_id FROM magnum_cosmetics WHERE user_id=${user.id}`;
+    const ids = new Set((rows as unknown as { cosmetic_id: string }[]).map(r => String(r.cosmetic_id)));
+    let tier: string | null = null;
+    if (ids.has("title-god") || ids.has("frame-crown")) tier = "pro";
+    else if ((ids.has("title-vip") || ids.has("frame-void")) && [...ids].some(id => id.includes("prism"))) tier = "vip+";
+    else if (ids.has("title-vip") || ids.has("title-prism-legend") || ids.has("frame-void") || ids.has("frame-prism-void")) tier = "vip";
+    return Response.json({ tier, active: tier, subscription: tier, owned: [...ids] });
+  } catch (e) {
+    console.error("[subscriptions] failed", e);
+    return Response.json({ error: "db error" }, { status: 500 });
+  }
+}
+
 // ---- PRISM 42 — dust / dismantle / craft + /shop/prism & /shop/dust ----
 async function ensureDustTable():Promise<void>{
   const sql=getSql();
@@ -951,7 +972,7 @@ function validateEcoScore(v: unknown): number | null { const n=Number(v); if(!Nu
 function validateEcoAnswers(v: unknown): number[] | null { if(!Array.isArray(v)||v.length>20) return null; const o:number[]=[]; for(const x of v){const n=Number(x); if(!Number.isInteger(n)||n<0||n>10) return null; o.push(n);} return o; }
 async function handleEcoTiers(): Promise<Response> { return Response.json({ tiers: ECO_TIERS, labels: ECO_RATING_LABELS, count: ECO_TIERS.length }); }
 async function handleEcoRatingSubmit(req: Request): Promise<Response> {
-  const token=extractToken(req); let user:{id:number;username:string}|null=null; if(token) try{user=await getUserByToken(token);}catch{}
+  const token=extractToken(req); let user:{id:number;username:string}|null=null; if(token) try{user=await getUserByToken(token);}catch(e){ console.warn("[eco rating] getUserByToken failed", e instanceof Error ? e.message : String(e)); }
   let body:{score?:unknown;answers?:unknown;player?:unknown}; try{body=(await req.json()) as typeof body;}catch{return Response.json({error:"Invalid JSON"},{status:400});}
   const score=validateEcoScore(body.score); if(score===null) return Response.json({error:"score -1000..1000"},{status:400});
   const answers=body.answers!==undefined?validateEcoAnswers(body.answers):[]; if(body.answers!==undefined&&answers===null) return Response.json({error:"answers 0..10 max20"},{status:400});
@@ -2067,7 +2088,7 @@ async function handleDuelInviteCreate(req: Request): Promise<Response> {
     const toRows=await sql`SELECT id FROM magnum_users WHERE username=${toName} LIMIT 1`; if(toRows.length===0) return Response.json({error:"recipient not found"},{status:404});
     const toId=Number((toRows[0] as {id:number}).id);
     const rows=await sql`INSERT INTO magnum_duel_invites (from_user_id,to_user_id,room_id,status) VALUES (${user.id},${toId},${roomId},'pending') RETURNING id,room_id,status,created_at`;
-    try{ await ensureNotification(toId,`Дуэль 42: вызов от ${user.username}`+(wager?` (ставка ${wager})`:""),`Братуха ${user.username} зовёт в дуэль — комната ${roomId}`+(wager?` • ставка ${wager} монет`:""),"duel"); }catch{}
+    try{ await ensureNotification(toId,`Дуэль 42: вызов от ${user.username}`+(wager?` (ставка ${wager})`:""),`Братуха ${user.username} зовёт в дуэль — комната ${roomId}`+(wager?` • ставка ${wager} монет`:""),"duel"); }catch(e){ console.warn("[duel notify] failed", e instanceof Error ? e.message : String(e)); }
     return Response.json({ok:true,invite:rows[0],wager},{status:201});
   }catch(e){ console.error("[duel invite create] failed",e); return Response.json({error:"db error"},{status:500}); }
 }
@@ -2089,7 +2110,7 @@ async function handleDuelInviteRespond(req: Request, idStr: string): Promise<Res
     if(Number(inv.to_user_id)!==user.id) return Response.json({error:"only recipient can respond"},{status:403});
     const upd=await sql`UPDATE magnum_duel_invites SET status=${nextStatus} WHERE id=${id} RETURNING id,room_id,status`;
     const otherId=Number(inv.from_user_id);
-    try{ await ensureNotification(otherId,`Дуэль 42: ${nextStatus==="accepted"?"принят ✅":"отклонён ❌"}`, `Братуха ${user.username} ${nextStatus==="accepted"?"принял":"отклонил"} вызов — комната ${inv.room_id}`,"duel"); }catch{}
+    try{ await ensureNotification(otherId,`Дуэль 42: ${nextStatus==="accepted"?"принят ✅":"отклонён ❌"}`, `Братуха ${user.username} ${nextStatus==="accepted"?"принял":"отклонил"} вызов — комната ${inv.room_id}`,"duel"); }catch(e){ console.warn("[duel notify] failed", e instanceof Error ? e.message : String(e)); }
     // broadcast to room if exists
     const room=rooms.get(inv.room_id); if(room && nextStatus==="accepted") broadcast(room,{type:"invite_accepted",room:roomPublic(room),inviteId:id,by:user.username});
     return Response.json({ok:true,invite:upd[0]});
@@ -2219,10 +2240,6 @@ async function handleAi(req: Request): Promise<Response> {
   if (req.method !== "POST") {
     return Response.json({ error: "POST only" }, { status: 405 });
   }
-  const apiKey = process.env.XIAOMI_API_KEY;
-  if (!apiKey) {
-    return Response.json({ error: "XIAOMI_API_KEY not configured on server" }, { status: 500 });
-  }
   let body: { text?: string; image?: string; history?: { role: string; content: string }[] };
   try {
     body = (await req.json()) as typeof body;
@@ -2250,6 +2267,10 @@ async function handleAi(req: Request): Promise<Response> {
     if (!checkRateLimit(`ai:anon:${ip}`, 8, 60_000)) {
       return Response.json({ error: "rate limited — 8/мин для гостей, войди для 10/мин", retryAfterSec: 60 }, { status: 429 });
     }
+  }
+  const apiKey = process.env.XIAOMI_API_KEY;
+  if (!apiKey) {
+    return Response.json({ error: "XIAOMI_API_KEY not configured on server" }, { status: 500 });
   }
 
   // Neon ledger: fire-and-forget, не блокирует прокси, но сохраняет аудит трат
@@ -2574,6 +2595,7 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/shop/cosmetic/buy" && req.method === "POST") return handleCosmeticBuy(req);
     if (url.pathname === "/magnum/api/shop/cosmetic/equip" && req.method === "POST") return handleCosmeticEquip(req);
     if (url.pathname === "/magnum/api/shop/cosmetic/inventory" && req.method === "GET") return handleCosmeticInventory(req);
+    if (url.pathname === "/magnum/api/shop/subscriptions" && req.method === "GET") return handleShopSubscriptions(req);
     if (url.pathname === "/magnum/api/shop/bundles" && req.method === "GET") return handleShopBundleCatalog();
     if (url.pathname === "/magnum/api/shop/bundle/buy" && req.method === "POST") return handleShopBundleBuy(req);
     if (url.pathname === "/magnum/api/shop/prism" && req.method === "GET") return handlePrismCatalog();

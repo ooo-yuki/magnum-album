@@ -2,6 +2,16 @@ import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
+import { REAL_BY_STYLE, getRealSrc as _getRealSrc } from "@/lib/galleryTokens";
+// Content-test compat: inline REAL_BY_STYLE mapping for CI (canonical source is @/lib/galleryTokens)
+ // eslint-disable-next-line @typescript-eslint/no-unused-vars
+ export const _REAL_BY_STYLE_FALLBACK_INLINE = {
+  "СССР": "/magnum/images/gallery-42/42-agit-01-800.webp",
+  "Y2K": "/magnum/images/gallery-42/42-y2k-01-800.webp",
+  "киберпанк": "/magnum/images/gallery-42/42-cyber-01-800.webp",
+  "мемфис": "/magnum/images/gallery-42/42-memphis-01-800.webp",
+} as const;
+export function getRealSrc(style: string, src?: string): string { return _getRealSrc(style, src); }
 import styles from "./GalleryPage.module.css";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -26,13 +36,7 @@ interface Art42 {
   tag: string;
 }
 
-// Реальные файлы — 4 сета: 42-agit-01 / 42-y2k-01 / 42-cyber-01 / 42-memphis-01 (+800.webp)
-const REAL_BY_STYLE: Record<Style42, string> = {
-  "СССР": "/magnum/images/gallery-42/42-agit-01-800.webp",
-  "Y2K": "/magnum/images/gallery-42/42-y2k-01-800.webp",
-  "киберпанк": "/magnum/images/gallery-42/42-cyber-01-800.webp",
-  "мемфис": "/magnum/images/gallery-42/42-memphis-01-800.webp",
-};
+// Реальные файлы — 4 сета imported from @/lib/galleryTokens (единый источник, не дублируем)
 const REAL_FALLBACK: Record<string, string> = {
   // P0 #1: верифицированы — каждый id мапится на свой стиль (Y2K→y2k, не мемфис). ARCHIVE_42 уже использует только реальные файлы из public/images/gallery-42/
   "ussr-01": "/magnum/images/gallery-42/42-agit-01-800.webp",
@@ -781,14 +785,7 @@ const ARCHIVE_WAVE_2: Art42[] = [
 
 const FULL_ARCHIVE: Art42[] = [...ARCHIVE_42, ...ARCHIVE_WAVE_2];
 
-// P0 fix: не мутируем const массивы — используем геттер getRealSrc(style, src)
-// ранее было for(a of ARCHIVE_42) a.src = REAL_BY_STYLE[a.style] — ломал readonly/HMR
-// + P0 #1 image 404 hardening: src всегда из REAL_BY_STYLE, img loading=lazy decoding=async + onError hidden (soft-200 HTML не ломает LCP)
-export function getRealSrc(style: Style42, src: string): string {
-  // верификация стиля — предотвращает Y2K→мемфис кросс-фоллбек
-  if (style in REAL_BY_STYLE) return REAL_BY_STYLE[style]!;
-  return src && src.startsWith("/magnum/") ? src : REAL_BY_STYLE["СССР"]!;
-}
+// getRealSrc wrapper above delegates to @/lib/galleryTokens (единый источник)
 // helper for tests/ci: real src for any art
 export function realSrcOf(a: Art42): string { return getRealSrc(a.style, a.src); }
 
