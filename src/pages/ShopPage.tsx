@@ -912,18 +912,18 @@ export function ShopPage() {
         })}
       </section>
 
-      {/* косметика 32 — рамки/баннеры/титулы */}
+      {/* косметика 92 — рамки/баннеры/титулы */}
       <section className={styles.cosmetics} aria-label="Косметика 42">
         <div className={styles.cosHead}>
           <h2 className={styles.cosTitle}>КОСМЕТИКА 42 — рамки · баннеры · титулы</h2>
-          <p className={styles.cosSub}>80 предметов (32 + 12 PRISM + 12 GLACIER + 12 CRYSTAL + 12 VOLCANO) · пыль {dust} · Neon · без localStorage</p>
+          <p className={styles.cosSub}>92 предмета (32 + 12 PRISM + 12 GLACIER + 12 CRYSTAL + 12 VOLCANO + 12 OBSIDIAN) · пыль {dust} · Neon · без localStorage</p>
           <div className={styles.cosTabs} role="tablist">
-            {(["all","frame","banner","title","prism","glacier","crystal","volcano"] as const).map(t => (
-              <button key={t} type="button" role="tab" aria-selected={cosTab===t} className={`${styles.cosTab} ${cosTab===t?styles.cosTabOn:""}`} onClick={()=>setCosTab(t)}>{t==="all"?"Все":t==="frame"?"Рамки":t==="banner"?"Баннеры":t==="prism"?"PRISM 12":t==="glacier"?"GLACIER 12":t==="crystal"?"CRYSTAL 12":t==="volcano"?"VOLCANO 12 🌋":"Титулы"}</button>
+            {(["all","frame","banner","title","prism","glacier","crystal","volcano","obsidian"] as const).map(t => (
+              <button key={t} type="button" role="tab" aria-selected={cosTab===t} className={`${styles.cosTab} ${cosTab===t?styles.cosTabOn:""}`} onClick={()=>setCosTab(t)}>{t==="all"?"Все":t==="frame"?"Рамки":t==="banner"?"Баннеры":t==="prism"?"PRISM 12":t==="glacier"?"GLACIER 12":t==="crystal"?"CRYSTAL 12":t==="volcano"?"VOLCANO 12 🌋":t==="obsidian"?"OBSIDIAN 12 ⛏️":"Титулы"}</button>
             ))}
           </div>
         </div>
-        <div className={styles.cosGrid}>
+        <div className={styles.cosGrid} data-forge-reveal>
           {filteredCosmetics.map(co => {
             const isOwned = cosOwned.includes(co.id);
             const isEq = cosEquipped[co.slot]===co.id;
@@ -931,27 +931,29 @@ export function ShopPage() {
             const isGlacier = GLACIER_IDS_SET.has(co.id);
             const isCrystal = CRYSTAL_IDS_SET.has(co.id);
             const isVolcano = VOLCANO_IDS_SET.has(co.id);
+            const isObsidian = OBSIDIAN_IDS_SET.has(co.id);
             const can = coins >= co.price;
             const isCrystalEpic = isCrystal && co.rarity==="legendary";
             const isVolcanoGold = isVolcano && co.rarity==="legendary";
+            const isObsidianGold = isObsidian && co.rarity==="legendary";
             return (
-              <div key={co.id} className={`${styles.cosCard} ${isEq?styles.cosCardEq:""} ${isPrism?styles.cosCardPrism||"":""} ${isGlacier?styles.cosCardGlacier||"":""} ${isGlacier && co.rarity==="legendary"?styles.cosCardFrost||"":""} ${isCrystal?styles.cosCardCrystal||"":""} ${isCrystalEpic?styles.cosCardCrystalSpin||"":""} ${isVolcano?styles.cosCardVolcano||"":""} ${isVolcanoGold?styles.cosCardVolcanoGold||"":""}`} data-rarity={co.rarity} data-crystal={isCrystal?1:0} data-volcano={isVolcano?1:0} onMouseEnter={onCardEnter} onMouseLeave={onCardLeave}>
-                <div className={styles.cosPreview} style={co.slot==="banner"?{background:co.style}:{border:co.style, background:"rgba(255,255,255,0.04)", boxShadow: isEq && isCrystal ? "0 0 24px #38bdf8" : isEq && isVolcano ? "0 0 16px #ff5722, 0 0 28px rgba(255,87,34,0.35)" : isVolcanoGold ? "0 0 16px #ff5722" : undefined, backdropFilter: (isEq && isCrystal) || (isEq && isVolcano) ? "blur(6px)" : undefined} as any}>
-                  <span className={styles.cosName}>{co.name}{isPrism?"":isGlacier?" ❄️":isCrystal?" 💎":isVolcano?" 🌋":""}</span>
-                  <span className={styles.cosSlot}>{co.slot}{isPrism?" · prism":isGlacier?" · glacier":isCrystal?" · crystal":isVolcano?" · volcano":""}</span>
+              <div key={co.id} className={`${styles.cosCard} ${isEq?styles.cosCardEq:""} ${isPrism?styles.cosCardPrism||"":""} ${isGlacier?styles.cosCardGlacier||"":""} ${isGlacier && co.rarity==="legendary"?styles.cosCardFrost||"":""} ${isCrystal?styles.cosCardCrystal||"":""} ${isCrystalEpic?styles.cosCardCrystalSpin||"":""} ${isVolcano?styles.cosCardVolcano||"":""} ${isVolcanoGold?styles.cosCardVolcanoGold||"":""} ${isObsidian?styles.cosCardObsidian||"":""} ${isObsidianGold?styles.cosCardObsidianGold||"":""}`} data-rarity={co.rarity} data-crystal={isCrystal?1:0} data-volcano={isVolcano?1:0} data-obsidian={isObsidian?1:0} onMouseEnter={onCardEnter} onMouseLeave={onCardLeave}>
+                <div className={styles.cosPreview} style={co.slot==="banner"?{background:co.style}:{border:co.style, background:"rgba(255,255,255,0.04)", boxShadow: isEq && isCrystal ? "0 0 24px #38bdf8" : isEq && isVolcano ? "0 0 16px #ff5722, 0 0 28px rgba(255,87,34,0.35)" : isEq && isObsidian ? "0 0 16px #ff4500, 0 0 28px rgba(255,69,0,0.35)" : isVolcanoGold ? "0 0 16px #ff5722" : isObsidianGold ? "0 0 16px #ff4500" : undefined, backdropFilter: (isEq && isCrystal) || (isEq && isVolcano) || (isEq && isObsidian) ? "blur(6px)" : undefined} as any}>
+                  <span className={styles.cosName}>{co.name}{isPrism?"":isGlacier?" ❄️":isCrystal?" 💎":isVolcano?" 🌋":isObsidian?" ⛏️":""}</span>
+                  <span className={styles.cosSlot}>{co.slot}{isPrism?" · prism":isGlacier?" · glacier":isCrystal?" · crystal":isVolcano?" · volcano":isObsidian?" · obsidian":""}</span>
                 </div>
-                <div className={styles.cosMeta}><span className={styles.cosRarity} style={{color:RARITY_META[co.rarity].color}}>{RARITY_META[co.rarity].label}</span><span className={styles.cosPrice}>🪙 {co.price}{isPrism?" · пыль":isGlacier && co.rarity==="legendary"?" · frost ❄️":isCrystal && co.rarity==="legendary"?" · crystal 3s":isVolcano && co.rarity==="legendary"?" · volcano 3s 🌋":isVolcano?" · volcano":""}</span></div>
+                <div className={styles.cosMeta}><span className={styles.cosRarity} style={{color:RARITY_META[co.rarity].color}}>{RARITY_META[co.rarity].label}</span><span className={styles.cosPrice}>🪙 {co.price}{isPrism?" · пыль":isGlacier && co.rarity==="legendary"?" · frost ❄️":isCrystal && co.rarity==="legendary"?" · crystal 3s":isVolcano && co.rarity==="legendary"?" · volcano 3s 🌋":isObsidian && co.rarity==="legendary"?" · molten 3s ⛏️":isObsidian?" · obsidian":isVolcano?" · volcano":""}</span></div>
                 {isOwned ? (
                   <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                     {isEq ? <button type="button" className={styles.btnWear} onClick={()=>equipCosmetic(co)}>✅ Надет</button> : <button type="button" className={styles.btnWear} onClick={()=>equipCosmetic(co)}>Надеть</button>}
-                    <button type="button" className={styles.btnGhost} onClick={()=>dismantle(co)} title="Разобрать → пыль">♻️ +{CRYSTAL_IDS_SET.has(co.id) ? (co.rarity==="legendary"?420:co.rarity==="epic"?100:co.rarity==="rare"?42:14) : GLACIER_IDS_SET.has(co.id) ? (co.rarity==="legendary"?420:co.rarity==="epic"?100:co.rarity==="rare"?42:14) : VOLCANO_IDS_SET.has(co.id) ? (co.rarity==="legendary"?420:co.rarity==="epic"?100:co.rarity==="rare"?42:14) : co.rarity==="legendary"?420:co.rarity==="epic"?142:co.rarity==="rare"?42:14}✨</button>
+                    <button type="button" className={styles.btnGhost} onClick={()=>dismantle(co)} title="Разобрать → пыль">♻️ +{OBSIDIAN_IDS_SET.has(co.id) ? (co.rarity==="legendary"?420:co.rarity==="epic"?100:co.rarity==="rare"?42:14) : CRYSTAL_IDS_SET.has(co.id) ? (co.rarity==="legendary"?420:co.rarity==="epic"?100:co.rarity==="rare"?42:14) : GLACIER_IDS_SET.has(co.id) ? (co.rarity==="legendary"?420:co.rarity==="epic"?100:co.rarity==="rare"?42:14) : VOLCANO_IDS_SET.has(co.id) ? (co.rarity==="legendary"?420:co.rarity==="epic"?100:co.rarity==="rare"?42:14) : co.rarity==="legendary"?420:co.rarity==="epic"?142:co.rarity==="rare"?42:14}✨</button>
                   </div>
-                ) : isPrism ? <button type="button" className={`${styles.btnBuy} ${dust>=co.price?"":styles.btnLocked}`} onClick={()=>craftPrism(co)}>✨ {co.price} пыль</button> : isGlacier ? <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>craftGlacier(co)}>❄️ {co.price} {co.rarity==="rare"?"· крафт 3×common 42":""}</button> : isCrystal ? <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>craftCrystal(co)}>💎 {co.price} {co.rarity==="rare"?"· крафт 3×common 42":co.rarity==="epic"?"· крафт 3×uncommon 142":""}</button> : isVolcano ? <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>craftVolcano(co)}>🌋 {co.price}{co.rarity==="rare"?" · крафт 3×common 42 🌋":""}</button> : <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>buyCosmetic(co)}>🪙 {co.price}</button>}
+                ) : isPrism ? <button type="button" className={`${styles.btnBuy} ${dust>=co.price?"":styles.btnLocked}`} onClick={()=>craftPrism(co)}>✨ {co.price} пыль</button> : isGlacier ? <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>craftGlacier(co)}>❄️ {co.price} {co.rarity==="rare"?"· крафт 3×common 42":""}</button> : isCrystal ? <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>craftCrystal(co)}>💎 {co.price} {co.rarity==="rare"?"· крафт 3×common 42":co.rarity==="epic"?"· крафт 3×uncommon 142":""}</button> : isVolcano ? <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>craftVolcano(co)}>🌋 {co.price}{co.rarity==="rare"?" · крафт 3×common 42 🌋":""}</button> : isObsidian ? <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>craftObsidian(co)}>⛏️ {co.price}{co.rarity==="rare"?" · крафт 3×common 42 ⛏️":""}</button> : <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>buyCosmetic(co)}>🪙 {co.price}</button>}
               </div>
             );
           })}
         </div>
-        {cosOwned.length>0 && <p className={styles.cosHint}>В инвентаре: {cosOwned.length}/80 · пыль: {dust} · разбор: common 14 / rare 42 / epic 100(142 PRISM)/420 · крафт PRISM за пыль · GLACIER 3×common→uncommon 42 · CRYSTAL 3×common→uncommon 42 / 3×uncommon→rare 142 · VOLCANO 3×common→uncommon 42 🌋 · verified -42/нед 💎</p>}
+        {cosOwned.length>0 && <p className={styles.cosHint}>В инвентаре: {cosOwned.length}/92 · пыль: {dust} · разбор: common 14 / rare 42 / epic 100(142 PRISM)/420 · крафт PRISM за пыль · GLACIER 3×common→uncommon 42 · CRYSTAL 3×common→uncommon 42 / 3×uncommon→rare 142 · VOLCANO 3×common→uncommon 42 🌋 · OBSIDIAN 3×common→uncommon 42 ⛏️ · verified -42/нед 💎</p>}
       </section>
 
       {/* бандлы 8 — со скидкой, Neon-покупка */}

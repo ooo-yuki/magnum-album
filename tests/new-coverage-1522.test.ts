@@ -50,12 +50,11 @@ describe("1522: Flappy42 difficulty + skins", () => {
     expect(src).toContain('KeyW');
   });
 
-  it("persist diff/skin/best в localStorage", () => {
+  it("persist diff/skin в localStorage (UI-only), рекорд в Neon", () => {
     expect(src).toContain("flappy42-diff");
     expect(src).toContain("flappy42-skin");
-    expect(src).toContain("flappy42-best");
-    expect(src).toContain("localStorage.getItem");
-    expect(src).toContain("localStorage.setItem");
+    expect(src).not.toContain("flappy42-best"); // best больше не в LS
+    expect(src).toContain("games/submit"); // рекорд в Neon magnum_game_scores
   });
 
   it("WebAudio 6 звуков flap/score/hit/win/coin/pause с rampTo/expFade", () => {

@@ -12,8 +12,8 @@ describe("🎵 RhythmGame MAGNUM 5 пуль — 2026 усиление", () => {
     const count = (src.match(/5 пуль/g) || []).length;
     expect(count).toBeGreaterThanOrEqual(4);
   });
-  it("LS ключи best + tut + FEVER 5", () => {
-    expect(src).toContain("rhythm42-best");
+  it("tut/ключи: рекорд в Neon (не LS), tut-v1 в LS UI-only, FEVER 5", () => {
+    expect(src).not.toContain("rhythm42-best"); // best в magnum_game_scores
     expect(src).toContain("rhythm42-tut-v1");
     expect(src).toContain("FEVER_NEED = 5");
     expect(src).toContain("FEVER_MS = 6000");
@@ -35,9 +35,9 @@ describe("🎵 RhythmGame MAGNUM 5 пуль — 2026 усиление", () => {
     expect(src).toContain('easy:');
     expect(src).toContain('hard:');
   });
-  it("tut overlay с localStorage и кнопка Понятно", () => {
+  it("tut overlay с LS (UI-only pref) и кнопка Понятно", () => {
     expect(src).toContain("Как играть");
     expect(src).toContain("Понятно");
-    expect(src).toContain("localStorage.setItem(LS_TUT");
+    expect(src).toContain("LS_TUT"); // UI-only dismiss, рекорды в Neon
   });
 });

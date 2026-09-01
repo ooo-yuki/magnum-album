@@ -49,9 +49,9 @@ describe("content: Snake42Game.tsx", () => {
     expect(src).toContain("GRID = 20");
   });
 
-  it("сохраняет рекорд в localStorage", () => {
-    expect(src).toContain("snake42-best");
-    expect(src).toContain("localStorage");
+  it("сохраняет рекорд в Neon magnum_game_scores (games/submit), не в LS", () => {
+    expect(src).not.toContain("snake42-best");
+    expect(src).toContain("games/submit");
   });
 });
 

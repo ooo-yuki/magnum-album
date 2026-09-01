@@ -98,9 +98,10 @@ describe("1540: TypingGame — 2026 лор, WPM, FEVER, presave", () => {
     expect(src).toContain('ScrollTrigger');
     expect(src).toContain('music.thefence.me/psmagnum');
   });
-  it("localStorage typing42-diff + typing42-best (без Neon — офлайн игра)", () => {
+  it("typing42: diff в LS (UI-only) + рекорд в Neon magnum_game_scores (no fake best)", () => {
     expect(src).toContain('typing42-diff');
-    expect(src).toContain('typing42-best');
+    expect(src).not.toContain('typing42-best'); // рекорд больше не в LS
+    expect(src).toContain('games/submit'); // сохранение результата в Neon
   });
 });
 
