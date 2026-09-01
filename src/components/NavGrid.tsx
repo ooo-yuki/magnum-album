@@ -53,6 +53,8 @@ const NAV_ITEMS = [
 
 export function NavGrid() {
   const sectionRef = useRef<HTMLElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const shimmerRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     if (!sectionRef.current) return;
@@ -71,6 +73,37 @@ export function NavGrid() {
           start: "top 80%",
         },
       });
+
+      // shimmer sweep + glow pulse on the "Исследуй" heading
+      if (titleRef.current && shimmerRef.current && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        gsap.to(titleRef.current, {
+          textShadow: "0 0 14px rgba(255,45,85,0.5), 0 0 32px rgba(255,45,85,0.2)",
+          duration: 1.8,
+          repeat: -1,
+          yoyo: true,
+          ease: "sine.inOut",
+          scrollTrigger: {
+            trigger: sectionRef.current,
+            start: "top 80%",
+            toggleActions: "play pause resume pause",
+          },
+        });
+        const shimmerTl = gsap.timeline({
+          repeat: -1,
+          delay: 1.2,
+          scrollTrigger: {
+            trigger: sectionRef.current,
+            start: "top 80%",
+            toggleActions: "play pause resume pause",
+          },
+        });
+        shimmerTl.fromTo(
+          shimmerRef.current,
+          { x: "-120%" },
+          { x: "220%", duration: 1.6, ease: "power2.inOut" },
+        );
+        shimmerTl.to({}, { duration: 4 }); // pause between sweeps
+      }
     }, sectionRef);
 
     return () => ctx.revert();
@@ -95,7 +128,10 @@ export function NavGrid() {
 
   return (
     <section className={styles.section} ref={sectionRef}>
-      <h2 className={styles.title}>Исследуй</h2>
+      <h2 className={styles.title} ref={titleRef}>
+        Исследуй
+        <span className={styles.shimmer} ref={shimmerRef} aria-hidden />
+      </h2>
       <div className={styles.grid}>
         {NAV_ITEMS.map((item) => (
           <Link

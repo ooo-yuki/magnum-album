@@ -2,6 +2,7 @@
   padding: clamp(3rem, 6vw, 5rem) 1.5rem;
   max-width: 920px;
   margin: 0 auto;
+  text-align: center;
 }
 
 .title {
@@ -11,12 +12,27 @@
   color: var(--accent);
   text-align: center;
   margin-bottom: 2rem;
+  position: relative;
+  overflow: hidden;
+  display: inline-block;
+}
+
+.shimmer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+  pointer-events: none;
+  transform: translateX(-120%);
 }
 
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 0.9rem;
+  text-align: left;
 }
 
 .card {
