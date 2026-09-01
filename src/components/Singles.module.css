@@ -46,6 +46,7 @@
 }
 
 /* singles polish v2 — hover depth 3D */
+/* singles polish v3 — refined shadow + cover lift */
 .card {
   display: flex;
   align-items: center;
@@ -91,7 +92,7 @@
   background: rgba(255, 255, 255, 0.055);
   border-color: transparent;
   transform: translateY(-4px) scale(1.01);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 32px rgba(255, 45, 85, 0.22), 0 0 56px rgba(88, 101, 242, 0.14);
+  box-shadow: 0 12px 36px rgba(0,0,0,0.55), 0 0 34px rgba(255, 45, 85, 0.24), 0 0 60px rgba(88, 101, 242, 0.16);
 }
 
 .card:hover::before {
