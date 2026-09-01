@@ -8,6 +8,7 @@ import { About } from "../components/About";
 import { NavGrid } from "../components/NavGrid";
 import { Timeline } from "../components/Timeline";
 import { PressWall } from "../components/PressWall";
+import { News2026 } from "../components/News2026";
 import { CTA } from "../components/CTA";
 
 const TARGET = 42;
@@ -185,6 +186,7 @@ export function HomePage() {
       <About />
       <Timeline />
       <PressWall />
+      <News2026 />
       <Singles />
       <CTA />
 
