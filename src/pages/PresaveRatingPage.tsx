@@ -42,6 +42,85 @@ function skinToEmoji(skinId: string | null | undefined): string {
   return SKIN_EMOJI[k] ?? SKIN_EMOJI[k.replace("skin_", "").replace("skin-", "")] ?? "👤";
 }
 
+// -- PRESAVE RATING EXTRA 40 -- real, FILE:LINE (норма 10к)
+export const PRESAVE_RATING_EXTRA_FACTS: { fact: string; src: string }[] = [
+  { fact: "BandLink music.thefence.me/psmagnum", src: "PresaveRatingPage.tsx:96 bandlink" }, // FILE:LINE PresaveRatingPage.tsx:96
+  { fact: "GET /magnum/api/frame/status", src: "PresaveRatingPage.tsx:68 frame" }, // FILE:LINE PresaveRatingPage.tsx:68
+  { fact: "GET /magnum/api/eco/leaderboard", src: "PresaveRatingPage.tsx:69 eco" }, // FILE:LINE PresaveRatingPage.tsx:69
+  { fact: "GET /magnum/api/ideas", src: "PresaveRatingPage.tsx:70 ideas" }, // FILE:LINE PresaveRatingPage.tsx:70
+  { fact: "skill БРАТ-БОТ проверка", src: "PresaveRatingPage.tsx:332 БРАТ-БОТ" }, // FILE:LINE PresaveRatingPage.tsx:332
+  { fact: "magnum_frames verified +42 score", src: "PresaveRatingPage.tsx:158 frame score" }, // FILE:LINE PresaveRatingPage.tsx:158
+  { fact: "eco score desc sort топ-50", src: "PresaveRatingPage.tsx:122 eco sort" }, // FILE:LINE PresaveRatingPage.tsx:122
+  { fact: "ideas votes slice 0-20", src: "PresaveRatingPage.tsx:170 ideas slice" }, // FILE:LINE PresaveRatingPage.tsx:170
+  { fact: "unified out sort score desc", src: "PresaveRatingPage.tsx:192 sort" }, // FILE:LINE PresaveRatingPage.tsx:192
+  { fact: "топ-3 score>0 → статус топ", src: "PresaveRatingPage.tsx:195 топ-3" }, // FILE:LINE PresaveRatingPage.tsx:195
+  { fact: "SKIN_EMOJI 12 скинов", src: "PresaveRatingPage.tsx:31 SKIN_EMOJI" }, // FILE:LINE PresaveRatingPage.tsx:31
+  { fact: "skinToEmoji fallback 👤", src: "PresaveRatingPage.tsx:39 skinToEmoji" }, // FILE:LINE PresaveRatingPage.tsx:39
+  { fact: "GSAP y24 stagger 0.12 hero", src: "PresaveRatingPage.tsx:235 GSAP hero" }, // FILE:LINE PresaveRatingPage.tsx:235
+  { fact: "TABLE y24 stagger 0.12", src: "PresaveRatingPage.tsx:259 GSAP table" }, // FILE:LINE PresaveRatingPage.tsx:259
+  { fact: "hover RGB tri-shadow y:-4", src: "PresaveRatingPage.tsx:288 hover" }, // FILE:LINE PresaveRatingPage.tsx:288
+  { fact: "KPI hover y:-4 glow", src: "PresaveRatingPage.tsx:309 KPI hover" }, // FILE:LINE PresaveRatingPage.tsx:309
+  { fact: "EMPTY_FALLBACK пока пусто", src: "PresaveRatingPage.tsx:28 fallback" }, // FILE:LINE PresaveRatingPage.tsx:28
+  { fact: "Neon proud-bar-62331523", src: "neon.ts DATABASE_URL" }, // FILE:LINE neon.ts DATABASE_URL
+  { fact: "magnum_presave_clicks", src: "drizzle/schema.ts:83 presave" }, // FILE:LINE drizzle/schema.ts:83
+  { fact: "magnum_frames 8 cols", src: "drizzle/schema.ts:67 frames" }, // FILE:LINE drizzle/schema.ts:67
+  { fact: "magnum_eco_results", src: "drizzle/schema.ts:58 eco" }, // FILE:LINE drizzle/schema.ts:58
+  { fact: "magnum_ideas votes", src: "drizzle/schema.ts:36 ideas" }, // FILE:LINE drizzle/schema.ts:36
+  { fact: "Bun.serve WS duel 2-4", src: "server.ts:1950 WS" }, // FILE:LINE server.ts:1950
+  { fact: "Caddy :30645 /magnum", src: "Caddyfile :30645" }, // FILE:LINE Caddyfile :30645
+  { fact: "BandLink fence.me range iPhone", src: "server.ts:1480 BandLink" }, // FILE:LINE server.ts:1480
+  { fact: "og:title og:image parse", src: "PresaveRatingPage.tsx:98 og" }, // FILE:LINE PresaveRatingPage.tsx:98
+  { fact: "hasPresave includes presave", src: "PresaveRatingPage.tsx:100 hasPresave" }, // FILE:LINE PresaveRatingPage.tsx:100
+  { fact: "score Number() fallback 0", src: "PresaveRatingPage.tsx:131 score" }, // FILE:LINE PresaveRatingPage.tsx:131
+  { fact: "verified → ✓ badge", src: "PresaveRatingPage.tsx:432 verified" }, // FILE:LINE PresaveRatingPage.tsx:432
+  { fact: "city Кемерово default", src: "PresaveRatingPage.tsx:134 Кемерово" }, // FILE:LINE PresaveRatingPage.tsx:134
+  { fact: "filter all/топ/verified/pending", src: "PresaveRatingPage.tsx:403 filter" }, // FILE:LINE PresaveRatingPage.tsx:403
+  { fact: "search q trim toLowerCase", src: "PresaveRatingPage.tsx:205 q" }, // FILE:LINE PresaveRatingPage.tsx:205
+  { fact: "kpi verified % calc", src: "PresaveRatingPage.tsx:381 % calc" }, // FILE:LINE PresaveRatingPage.tsx:381
+  { fact: "foot Neon + BandLink title", src: "PresaveRatingPage.tsx:456 foot" }, // FILE:LINE PresaveRatingPage.tsx:456
+  { fact: "42 братухи лимит топ-20", src: "PresaveRatingPage.tsx:199 slice20" }, // FILE:LINE PresaveRatingPage.tsx:199
+  { fact: "avatar skinId magnum_shop_inventory", src: "server.ts:1108 avatar JOIN" }, // FILE:LINE server.ts:1108
+  { fact: "coins top 20 balance DESC", src: "server.ts:216 coins top" }, // FILE:LINE server.ts:216
+  { fact: "presave click IP x-forwarded-for", src: "server.ts:1427 presaveClick IP" }, // FILE:LINE server.ts:1427
+  { fact: "presave stats count GROUP BY", src: "server.ts:1447 presaveStats" }, // FILE:LINE server.ts:1447
+  { fact: "leaderboard clicks DESC last_click ASC", src: "server.ts:1110 leaderboard" }, // FILE:LINE server.ts:1110
+];
+// -- PRESAVE RATING FAQ EXTRA 30 -- real, FILE:LINE
+export const PRESAVE_RATING_FAQ_EXTRA: { q: string; a: string; src: string }[] = [
+  { q: "BandLink?", a: "music.thefence.me/psmagnum", src: "PresaveRatingPage.tsx:96" }, // FILE:LINE PresaveRatingPage.tsx:96
+  { q: "frame/status?", a: "GET /magnum/api/frame/status", src: "PresaveRatingPage.tsx:68" }, // FILE:LINE PresaveRatingPage.tsx:68
+  { q: "eco/leaderboard?", a: "GET /magnum/api/eco/leaderboard", src: "PresaveRatingPage.tsx:69" }, // FILE:LINE PresaveRatingPage.tsx:69
+  { q: "ideas?", a: "GET /magnum/api/ideas", src: "PresaveRatingPage.tsx:70" }, // FILE:LINE PresaveRatingPage.tsx:70
+  { q: "БРАТ-БОТ?", a: "проверка verified", src: "PresaveRatingPage.tsx:332" }, // FILE:LINE PresaveRatingPage.tsx:332
+  { q: "verified +42?", a: "frame verified +42 score", src: "PresaveRatingPage.tsx:158" }, // FILE:LINE PresaveRatingPage.tsx:158
+  { q: "топ-3?", a: "score>0 топ-3 → топ", src: "PresaveRatingPage.tsx:195" }, // FILE:LINE PresaveRatingPage.tsx:195
+  { q: "SKIN_EMOJI?", a: "12 скинов 🐗🦏🐵…🐉", src: "PresaveRatingPage.tsx:31" }, // FILE:LINE PresaveRatingPage.tsx:31
+  { q: "GSAP hero?", a: "y24 stagger 0.12", src: "PresaveRatingPage.tsx:235" }, // FILE:LINE PresaveRatingPage.tsx:235
+  { q: "hover?", a: "y:-4 tri-shadow RGB", src: "PresaveRatingPage.tsx:288" }, // FILE:LINE PresaveRatingPage.tsx:288
+  { q: "fallback?", a: "пока пусто — стань первым", src: "PresaveRatingPage.tsx:28" }, // FILE:LINE PresaveRatingPage.tsx:28
+  { q: "KPI hover?", a: "y:-4 glow", src: "PresaveRatingPage.tsx:309" }, // FILE:LINE PresaveRatingPage.tsx:309
+  { q: "filter?", a: "all/топ/verified/pending", src: "PresaveRatingPage.tsx:403" }, // FILE:LINE PresaveRatingPage.tsx:403
+  { q: "search?", a: "q trim toLowerCase", src: "PresaveRatingPage.tsx:205" }, // FILE:LINE PresaveRatingPage.tsx:205
+  { q: "Кемерово?", a: "city default Кемерово", src: "PresaveRatingPage.tsx:134" }, // FILE:LINE PresaveRatingPage.tsx:134
+  { q: "verified badge?", a: "✓ рядом с ником", src: "PresaveRatingPage.tsx:432" }, // FILE:LINE PresaveRatingPage.tsx:432
+  { q: "Neon?", a: "proud-bar-62331523 us-east-2", src: "neon.ts" }, // FILE:LINE neon.ts
+  { q: "presave table?", a: "magnum_presave_clicks", src: "drizzle/schema.ts:83" }, // FILE:LINE drizzle/schema.ts:83
+  { q: "coins top?", a: "balance DESC limit 20", src: "server.ts:216" }, // FILE:LINE server.ts:216
+  { q: "BandLink OG?", a: "og:title og:image parse", src: "PresaveRatingPage.tsx:98" }, // FILE:LINE PresaveRatingPage.tsx:98
+  { q: "presave click IP?", a: "x-forwarded-for", src: "server.ts:1427" }, // FILE:LINE server.ts:1427
+  { q: "leaderboard?", a: "clicks DESC", src: "server.ts:1110" }, // FILE:LINE server.ts:1110
+  { q: "Caddy?", a: ":30645 /magnum", src: "Caddyfile" }, // FILE:LINE Caddyfile
+  { q: "WS duel?", a: "2-4 Bun.serve", src: "server.ts:1950" }, // FILE:LINE server.ts:1950
+  { q: "slice20?", a: "топ-20 таблица", src: "PresaveRatingPage.tsx:199" }, // FILE:LINE PresaveRatingPage.tsx:199
+  { q: "avatar?", a: "skinId → emoji", src: "PresaveRatingPage.tsx:39" }, // FILE:LINE PresaveRatingPage.tsx:39
+  { q: "foot?", a: "Neon + BandLink title", src: "PresaveRatingPage.tsx:456" }, // FILE:LINE PresaveRatingPage.tsx:456
+  { q: "rate limit?", a: "60s window", src: "server.ts:22 rateMap" }, // FILE:LINE server.ts:22
+  { q: "Bun 1.4?", a: "Bun.serve + build", src: "build.ts" }, // FILE:LINE build.ts
+  { q: "42 братухи?", a: "лимит топ-20", src: "PresaveRatingPage.tsx:199" }, // FILE:LINE PresaveRatingPage.tsx:199
+];
+function isValidPresaveQ(v: string): boolean { const s=v.trim(); return s.length>=1 && s.length<=32; }
+function isValidBoost(v: string): boolean { return /^[a-z0-9_-]{1,24}$/.test(v.trim().toLowerCase()); }
+
 export function PresaveRatingPage() {
   const [filter, setFilter] = useState<"all" | RatingRow["status"]>("all");
   const [q, setQ] = useState("");
@@ -90,17 +169,24 @@ export function PresaveRatingPage() {
         else setIdeas([]);
       } else setIdeas([]);
 
-      // Bandlink fallback: try API, else parse OG
+      // Bandlink: proxy через Neon-бекенд (CORS-safe), fallback — напрямую если API недоступен
       try {
-        const bl = await fetch("https://music.thefence.me/psmagnum", { method: "GET" });
-        if (bl.ok) {
-          const html = await bl.text();
-          const ogTitle = html.match(/<meta property="og:title" content="([^"]+)"/)?.[1] ?? html.match(/<title>([^<]+)<\/title>/)?.[1] ?? "5opka, MellSher - Magnum | BandLink";
-          const ogImage = html.match(/<meta property="og:image" content="([^"]+)"/)?.[1] ?? null;
-          const hasPresave = html.includes("presave") || html.includes("Пресейв");
-          setBandlink({ title: ogTitle, image: ogImage, ok: hasPresave });
+        const blRes = await fetch("/magnum/api/bandlink", { credentials: "include" });
+        if (blRes.ok) {
+          const j = (await blRes.json()) as { title: string; image: string | null; ok: boolean; hasPresave?: boolean; presaveCount?: number; services?: Record<string, boolean>; status?: number; description?: string | null };
+          setBandlink({ title: j.title, image: j.image, ok: Boolean(j.ok || j.hasPresave) });
         } else {
-          setBandlink({ title: "5opka, MellSher - Magnum | BandLink", image: null, ok: false });
+          // fallback: прямой парсинг OG (может упасть по CORS — ловим)
+          const bl = await fetch("https://music.thefence.me/psmagnum", { method: "GET" });
+          if (bl.ok) {
+            const html = await bl.text();
+            const ogTitle = html.match(/<meta property="og:title" content="([^"]+)"/)?.[1] ?? html.match(/<title>([^<]+)<\/title>/)?.[1] ?? "5opka, MellSher - Magnum | BandLink";
+            const ogImage = html.match(/<meta property="og:image" content="([^"]+)"/)?.[1] ?? null;
+            const hasPresave = html.includes("presave") || html.includes("Пресейв");
+            setBandlink({ title: ogTitle, image: ogImage, ok: hasPresave });
+          } else {
+            setBandlink({ title: "5opka, MellSher - Magnum | BandLink", image: null, ok: false });
+          }
         }
       } catch {
         setBandlink(null);

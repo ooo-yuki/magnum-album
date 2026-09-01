@@ -1467,6 +1467,33 @@ async function handlePresaveStats(req: Request): Promise<Response> {
   }
 }
 
+async function handleBandlink(): Promise<Response> {
+  const url = "https://music.thefence.me/psmagnum";
+  try {
+    const res = await fetch(url, { headers: { "User-Agent": "MAGNUM/42 (+https://magnum.thefence.me)" }, signal: AbortSignal.timeout(8000) });
+    const html = await res.text().catch(() => "");
+    const ogTitle = html.match(/<meta property="og:title" content="([^"]+)"/)?.[1] ?? html.match(/<title>([^<]+)<\/title>/)?.[1] ?? "5opka, MellSher - Magnum | BandLink";
+    const ogImage = html.match(/<meta property="og:image" content="([^"]+)"/)?.[1] ?? null;
+    const ogDesc = html.match(/<meta property="og:description" content="([^"]+)"/)?.[1] ?? html.match(/<meta name="description" content="([^"]+)"/)?.[1] ?? null;
+    const hasPresave = html.includes("presave") || html.includes("Пресейв") || html.includes("Пре-сейв");
+    // счётчики: парсим yandex/vk/spotify/apple/mts ссылки если есть
+    const services = {
+      yandex: html.includes("yandex") || html.includes("Яндекс"),
+      vk: html.includes("vkmusic") || html.includes("VK Музыка"),
+      spotify: html.includes("spotify"),
+      apple: html.includes("apple"),
+      mts: html.includes("mts") || html.includes("КИОН"),
+    };
+    const ok = res.ok && !html.includes("This page could not be found") && !html.includes("404");
+    const sql = getSql();
+    let presaveCount = 0;
+    try { const r = await sql`SELECT count(*)::int as c FROM magnum_presave_clicks`; presaveCount = Number((r[0] as { c: number }).c); } catch {}
+    return Response.json({ ok, status: res.status, title: ogTitle, image: ogImage, description: ogDesc, hasPresave, services, presaveCount, url });
+  } catch (e) {
+    return Response.json({ ok: false, title: "5opka, MellSher - Magnum | BandLink", image: null, description: null, hasPresave: false, services: {}, presaveCount: 0, url, error: String(e).slice(0, 200) });
+  }
+}
+
 async function handleMiningTop(): Promise<Response> {
   try {
     const sql = getSql();
@@ -1621,6 +1648,103 @@ async function handleDuelHistory(req: Request): Promise<Response> {
     const rows = await sql`SELECT room_id, winner, scores, duration_sec, player_count, created_at FROM magnum_duel_history ORDER BY created_at DESC LIMIT ${limit}`;
     return Response.json({ history: rows.map((r: unknown) => { const x=r as {room_id:string;winner:string|null;scores:unknown;duration_sec:number;player_count:number;created_at:string}; return { roomId:String(x.room_id), winner:x.winner, scores:x.scores, durationSec:Number(x.duration_sec), playerCount:Number(x.player_count), created_at:x.created_at }; }), count: rows.length });
   } catch (e) { console.error("[duel history] failed", e); return Response.json({ error: "db error" }, { status: 500 }); }
+}
+
+// ---- Reports + Moderation queue + Idea status workflow + Public profile + Unified search ----
+const REPORT_REASONS = new Set(["spam","insult","nsfw","fake","other"]);
+const REPORT_TARGETS = new Set(["idea","comment","profile","duel"]);
+const IDEA_STATUSES = new Set(["pending","approved","rejected","done","archived"]);
+function validateReportTarget(v: unknown): string | null { if(typeof v!==\"string\") return null; const s=v.trim().toLowerCase().slice(0,16); return REPORT_TARGETS.has(s)?s:null; }
+function validateReportReason(v: unknown): string | null { if(typeof v!==\"string\") return null; const s=v.trim().toLowerCase().slice(0,32); return REPORT_REASONS.has(s)?s:null; }
+async function logModeration(actorId: number|null, action: string, targetType: string, targetId: string|number, meta: Record<string,unknown>={}): Promise<void> {
+  try{ const sql=getSql(); await sql`INSERT INTO magnum_moderation_log (actor_id, action, target_type, target_id, meta) VALUES (${actorId}, ${action.trim().slice(0,32)}, ${targetType.trim().slice(0,32)}, ${String(targetId).slice(0,64)}, ${JSON.stringify(meta)}::jsonb)`; }catch(e){ console.error(\"[mod log] failed\",e); }
+}
+async function handleReportCreate(req: Request): Promise<Response> {
+  const token=extractToken(req); if(!token) return Response.json({error:\"unauthorized\"},{status:401});
+  const user=await getUserByToken(token); if(!user) return Response.json({error:\"unauthorized\"},{status:401});
+  const ip=getClientIp(req); if(!checkRateLimit(`report:create:${user.id}:${ip}`,8,60_000)) return Response.json({error:\"rate limited\"},{status:429});
+  let body:{targetType?:unknown;targetId?:unknown;reason?:unknown;details?:unknown};
+  try{ body=(await req.json()) as typeof body; }catch{ return Response.json({error:\"Invalid JSON\"},{status:400}); }
+  const targetType=validateReportTarget(body.targetType); if(!targetType) return Response.json({error:\"targetType idea|comment|profile|duel\"},{status:400});
+  const targetId=Number(body.targetId); if(!Number.isInteger(targetId)||targetId<=0||targetId>9999999) return Response.json({error:\"targetId integer 1..9M\"},{status:400});
+  const reason=validateReportReason(body.reason); if(!reason) return Response.json({error:\"reason spam|insult|nsfw|fake|other\"},{status:400});
+  const details=typeof body.details===\"string\"?body.details.trim().slice(0,300):\"\"; if(details.includes(\"<\")||details.includes(\">\")) return Response.json({error:\"details no <>\"},{status:400});
+  try{ const sql=getSql(); await sql`CREATE TABLE IF NOT EXISTS magnum_reports (id serial PRIMARY KEY, reporter_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, target_type text NOT NULL, target_id integer NOT NULL, reason text NOT NULL, details text, status text DEFAULT 'pending' NOT NULL, created_at timestamp DEFAULT now() NOT NULL)`;
+    await sql`CREATE TABLE IF NOT EXISTS magnum_moderation_log (id serial PRIMARY KEY, actor_id integer REFERENCES magnum_users(id) ON DELETE SET NULL, action text NOT NULL, target_type text NOT NULL, target_id text NOT NULL, meta jsonb DEFAULT '{}'::jsonb NOT NULL, created_at timestamp DEFAULT now() NOT NULL)`;
+    const dup=await sql`SELECT id FROM magnum_reports WHERE reporter_id=${user.id} AND target_type=${targetType} AND target_id=${targetId} LIMIT 1`;
+    if(dup.length>0) return Response.json({error:\"already reported\",targetType,targetId},{status:409});
+    const rows=await sql`INSERT INTO magnum_reports (reporter_id,target_type,target_id,reason,details) VALUES (${user.id},${targetType},${targetId},${reason},${details||null}) RETURNING id,target_type,target_id,reason,status,created_at`;
+    await logModeration(user.id,\"report\",targetType,targetId,{reason,details:details||null});
+    return Response.json({ok:true,report:rows[0]},{status:201});
+  }catch(e){ console.error(\"[report create] failed\",e); return Response.json({error:\"db error\"},{status:500}); }
+}
+async function handleReportsGet(req: Request): Promise<Response> {
+  const token=extractToken(req); if(!token) return Response.json({error:\"unauthorized\"},{status:401});
+  const user=await getUserByToken(token); if(!user) return Response.json({error:\"unauthorized\"},{status:401});
+  try{ const sql=getSql(); await sql`CREATE TABLE IF NOT EXISTS magnum_reports (id serial PRIMARY KEY, reporter_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, target_type text NOT NULL, target_id integer NOT NULL, reason text NOT NULL, details text, status text DEFAULT 'pending' NOT NULL, created_at timestamp DEFAULT now() NOT NULL)`;
+    const url=new URL(req.url); const status=url.searchParams.get(\"status\")?.trim().toLowerCase()||\"\"; const limit=Math.min(50,Math.max(1,Number(url.searchParams.get(\"limit\")||20)));
+    const mine=url.searchParams.get(\"mine\")===\"1\"||url.searchParams.get(\"mine\")===\"true\";
+    const rows=mine?await sql`SELECT r.id,r.target_type,r.target_id,r.reason,r.status,r.created_at,u.username as reporter FROM magnum_reports r JOIN magnum_users u ON u.id=r.reporter_id WHERE r.reporter_id=${user.id} ORDER BY r.created_at DESC LIMIT ${limit}`
+      :status&&[\"pending\",\"reviewed\",\"rejected\",\"actioned\"].includes(status)?await sql`SELECT r.id,r.target_type,r.target_id,r.reason,r.status,r.created_at,u.username as reporter FROM magnum_reports r JOIN magnum_users u ON u.id=r.reporter_id WHERE r.status=${status} ORDER BY r.created_at DESC LIMIT ${limit}`
+      :await sql`SELECT r.id,r.target_type,r.target_id,r.reason,r.status,r.created_at,u.username as reporter FROM magnum_reports r JOIN magnum_users u ON u.id=r.reporter_id ORDER BY r.created_at DESC LIMIT ${limit}`;
+    return Response.json({reports:rows.map((r:unknown)=>{const x=r as {id:number;target_type:string;target_id:number;reason:string;status:string;created_at:string;reporter:string}; return {id:Number(x.id),targetType:String(x.target_type),targetId:Number(x.target_id),reason:String(x.reason),status:String(x.status),created_at:x.created_at,reporter:String(x.reporter)};}),count:rows.length});
+  }catch(e){ console.error(\"[reports get] failed\",e); return Response.json({error:\"db error\"},{status:500}); }
+}
+async function handleIdeaStatusPatch(req: Request, idStr: string): Promise<Response> {
+  const id=Number(idStr); if(!Number.isInteger(id)||id<=0) return Response.json({error:\"invalid id\"},{status:400});
+  const token=extractToken(req); if(!token) return Response.json({error:\"unauthorized\"},{status:401});
+  const user=await getUserByToken(token); if(!user) return Response.json({error:\"unauthorized\"},{status:401});
+  const ip=getClientIp(req); if(!checkRateLimit(`idea:status:${user.id}:${ip}`,10,60_000)) return Response.json({error:\"rate limited\"},{status:429});
+  let body:{status?:unknown}; try{ body=(await req.json()) as typeof body; }catch{ return Response.json({error:\"Invalid JSON\"},{status:400}); }
+  const nextStatus=typeof body.status===\"string\"?body.status.trim().toLowerCase():\"\"; if(!IDEA_STATUSES.has(nextStatus)) return Response.json({error:\"status pending|approved|rejected|done|archived\",allowed:[...IDEA_STATUSES]},{status:400});
+  try{ const sql=getSql(); const coinsR=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`; const bal=coinsR.length?Number((coinsR[0] as {balance:number}).balance):0;
+    const isPrivileged=bal>=5000||user.username.toLowerCase().includes(\"admin\")||user.username.toLowerCase()===\"5opka\";
+    if(!isPrivileged) return Response.json({error:\"moderation requires 5000 coins or admin\",balance:bal},{status:403});
+    const exists=await sql`SELECT id,status FROM magnum_ideas WHERE id=${id} LIMIT 1`; if(exists.length===0) return Response.json({error:\"idea not found\"},{status:404});
+    const prev=String((exists[0] as {status:string}).status||\"pending\");
+    const rows=await sql`UPDATE magnum_ideas SET status=${nextStatus} WHERE id=${id} RETURNING *`;
+    await sql`CREATE TABLE IF NOT EXISTS magnum_moderation_log (id serial PRIMARY KEY, actor_id integer REFERENCES magnum_users(id) ON DELETE SET NULL, action text NOT NULL, target_type text NOT NULL, target_id text NOT NULL, meta jsonb DEFAULT '{}'::jsonb NOT NULL, created_at timestamp DEFAULT now() NOT NULL)`;
+    await logModeration(user.id,\"idea_status\", \"idea\", id, {from:prev,to:nextStatus});
+    return Response.json({ok:true,idea:rows[0],prevStatus:prev});
+  }catch(e){ console.error(\"[idea status] failed\",e); return Response.json({error:\"db error\"},{status:500}); }
+}
+async function handleModerationLog(req: Request): Promise<Response> {
+  try{ const sql=getSql(); await sql`CREATE TABLE IF NOT EXISTS magnum_moderation_log (id serial PRIMARY KEY, actor_id integer REFERENCES magnum_users(id) ON DELETE SET NULL, action text NOT NULL, target_type text NOT NULL, target_id text NOT NULL, meta jsonb DEFAULT '{}'::jsonb NOT NULL, created_at timestamp DEFAULT now() NOT NULL)`;
+    const url=new URL(req.url); const limit=Math.min(50,Math.max(1,Number(url.searchParams.get(\"limit\")||30)));
+    const action=url.searchParams.get(\"action\")?.trim().slice(0,32)||\"\"; const rows=action?await sql`SELECT l.id,l.action,l.target_type,l.target_id,l.meta,l.created_at,COALESCE(u.username,'system') as actor FROM magnum_moderation_log l LEFT JOIN magnum_users u ON u.id=l.actor_id WHERE l.action=${action} ORDER BY l.created_at DESC LIMIT ${limit}`:await sql`SELECT l.id,l.action,l.target_type,l.target_id,l.meta,l.created_at,COALESCE(u.username,'system') as actor FROM magnum_moderation_log l LEFT JOIN magnum_users u ON u.id=l.actor_id ORDER BY l.created_at DESC LIMIT ${limit}`;
+    return Response.json({log:rows.map((r:unknown)=>{const x=r as {id:number;action:string;target_type:string;target_id:string;meta:unknown;created_at:string;actor:string}; return {id:Number(x.id),action:String(x.action),targetType:String(x.target_type),targetId:String(x.target_id),meta:x.meta,actor:String(x.actor),created_at:x.created_at};}),count:rows.length});
+  }catch(e){ console.error(\"[mod log get] failed\",e); return Response.json({error:\"db error\"},{status:500}); }
+}
+async function handlePublicProfile(req: Request, username: string): Promise<Response> {
+  const name=decodeURIComponent(username).trim().slice(0,32); if(!name||name.length<2) return Response.json({error:\"username 2..32\"},{status:400});
+  try{ const sql=getSql(); const u=await sql`SELECT id,username,created_at FROM magnum_users WHERE username=${name} LIMIT 1`; if(u.length===0) return Response.json({error:\"not found\"},{status:404});
+    const uid=Number((u[0] as {id:number}).id);
+    const [coinsR,miningR,shopR,cosR,achR,frameR,txR]=await Promise.all([
+      sql`SELECT balance FROM magnum_coins WHERE user_id=${uid} LIMIT 1`,
+      sql`SELECT balance,upgrades FROM magnum_mining WHERE user_id=${uid} LIMIT 1`,
+      sql`SELECT skin_id,equipped FROM magnum_shop_inventory WHERE user_id=${uid} AND equipped=true LIMIT 1`,
+      sql`SELECT cosmetic_id,slot FROM magnum_cosmetics WHERE user_id=${uid} AND equipped=true`,
+      sql`SELECT count(*)::int as c FROM magnum_user_achievements WHERE user_id=${uid}`,
+      sql`SELECT verified FROM magnum_frames WHERE user_id=${uid} ORDER BY created_at DESC LIMIT 1`,
+      sql`SELECT count(*)::int as c FROM magnum_transactions WHERE user_id=${uid}`,
+    ]);
+    const coins=coinsR.length?Number((coinsR[0] as {balance:number}).balance):1000;
+    const mining=miningR.length?{balance:Number((miningR[0] as {balance:number}).balance),upgrades:(miningR[0] as {upgrades:unknown}).upgrades}:null;
+    const avatar=shopR.length?String((shopR[0] as {skin_id:string}).skin_id):null;
+    const cosmetics=(cosR as unknown[]).map((r:unknown)=>{const x=r as {cosmetic_id:string;slot:string}; return {cosmeticId:String(x.cosmetic_id),slot:String(x.slot)};});
+    return Response.json({user:{id:uid,username:name,created_at:(u[0] as {created_at:string}).created_at},coins,balance:coins,mining,avatar,cosmetics,verified:frameR.length?Boolean((frameR[0] as {verified:boolean}).verified):false,counts:{achievements:Number(((achR[0] as {c:number}).c)),transactions:Number(((txR[0] as {c:number}).c))}});
+  }catch(e){ console.error(\"[public profile] failed\",e); return Response.json({error:\"db error\"},{status:500}); }
+}
+async function handleSearch(req: Request): Promise<Response> {
+  const url=new URL(req.url); const q=url.searchParams.get(\"q\")?.trim().slice(0,64)||\"\"; if(!q||q.length<2) return Response.json({error:\"q 2..64 required\"},{status:400});
+  const ip=getClientIp(req); if(!checkRateLimit(`search:${ip}`,20,60_000)) return Response.json({error:\"rate limited\"},{status:429});
+  const like=`%${q}%`; const limit=Math.min(20,Math.max(1,Number(url.searchParams.get(\"limit\")||10)));
+  try{ const sql=getSql(); const [ideas,users]=await Promise.all([
+    sql`SELECT id,title,votes,status FROM magnum_ideas WHERE title ILIKE ${like} OR description ILIKE ${like} ORDER BY votes DESC LIMIT ${limit}`,
+    sql`SELECT username,created_at FROM magnum_users WHERE username ILIKE ${like} ORDER BY created_at DESC LIMIT ${limit}`,
+  ]);
+    return Response.json({q,ideas:ideas.map((r:unknown)=>{const x=r as {id:number;title:string;votes:number;status:string}; return {id:Number(x.id),title:String(x.title),votes:Number(x.votes||0),status:String(x.status||\"pending\")};}),users:users.map((r:unknown)=>{const x=r as {username:string;created_at:string}; return {username:String(x.username),created_at:x.created_at};}),count:{ideas:ideas.length,users:users.length}});
+  }catch(e){ console.error(\"[search] failed\",e); return Response.json({error:\"db error\"},{status:500}); }
 }
 
 async function handleHealth(): Promise<Response> {
@@ -1945,6 +2069,7 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/presave/click" && req.method === "POST") return handlePresaveClick(req);
     if (url.pathname === "/magnum/api/presave/stats" && req.method === "GET") return handlePresaveStats(req);
     if (url.pathname === "/magnum/api/presave/leaderboard" && req.method === "GET") return handlePresaveLeaderboard();
+    if (url.pathname === "/magnum/api/bandlink" && req.method === "GET") return handleBandlink();
 
     // ideas
     if (url.pathname === "/magnum/api/ideas/bookmarks" && req.method === "GET") return handleIdeaBookmarksGet(req);

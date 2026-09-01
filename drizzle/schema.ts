@@ -215,3 +215,24 @@ export const magnumIdeaComments = pgTable("magnum_idea_comments", {
   body: text("body").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+export const magnumReports = pgTable("magnum_reports", {
+  id: serial("id").primaryKey(),
+  reporterId: integer("reporter_id").references(() => magnumUsers.id).notNull(),
+  targetType: text("target_type").notNull(),
+  targetId: integer("target_id").notNull(),
+  reason: text("reason").notNull(),
+  details: text("details"),
+  status: text("status").default("pending").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const magnumModerationLog = pgTable("magnum_moderation_log", {
+  id: serial("id").primaryKey(),
+  actorId: integer("actor_id").references(() => magnumUsers.id),
+  action: text("action").notNull(),
+  targetType: text("target_type").notNull(),
+  targetId: text("target_id").notNull(),
+  meta: jsonb("meta").default({}).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});

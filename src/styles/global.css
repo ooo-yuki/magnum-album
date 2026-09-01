@@ -110,3 +110,6 @@ section {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* perf 2026-09-01 15:23 — content-visibility for below-fold sections (LCP: Hero eager, rest auto) */
+#singles, #about, #discography, #press, #news { content-visibility: auto; contain-intrinsic-size: 0 600px; }

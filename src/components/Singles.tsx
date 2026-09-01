@@ -139,7 +139,8 @@ export function Singles() {
             src={single.cover}
             alt={single.name}
             className={styles.cover}
-            loading="lazy"
+            loading={i === 0 ? "eager" : "lazy"}
+            fetchPriority={i === 0 ? "high" : "low"}
             decoding="async"
             width={640}
             height={360}
