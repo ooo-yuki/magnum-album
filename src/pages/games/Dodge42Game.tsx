@@ -31,6 +31,32 @@ const BULLET_R = 7;
 const ARENA_W = 400;
 const ARENA_H = 560;
 
+// ── 5opka/MAGNUM контент 50+ строк + баланс ──
+const DODGE_TIPS: string[] = [
+  "5 ПУЛЬ — 5 треков MAGNUM: каждый цвет пуль — пульс альбома!",
+  "Свайп в сторону от пули = Near Miss + звук + очко уклонения!",
+  "Волна каждые 2.5с — к 42-й секунде ад из 5× пуль!",
+  "Зелёный 42 — твой щит: держи центр арены, не жмись к стенам!",
+  "Пресейв MAGNUM — награда выжившим 42 секунды!",
+  "Близкий пролёт (<12px) — триггер near-miss, фармит счёт!",
+  "WASD/стрелки — точный контроль, тап/мышь — плавное следование!",
+  "Изи: 60с выживания, Хард: 30с но пуль вдвое больше — выбирай!",
+  "Двойной даш: свайп быстро → рывок, R — рестарт!",
+  "42 — ответ, 5 пуль — вопрос. Уклонись от всех!",
+  "Freakland 2025 — Freak Rush → 5 пуль → MAGNUM!",
+  "Мультиплеер скоро — дуэли уклонений!",
+  "Звук WebAudio: near-miss писк, смерть басс, победа арпеджио!",
+  "Частицы 42: взрыв на 30 частиц при смерти, 50 при победе!",
+  "Рекорд локально — бей свой best dodged!",
+];
+const DIFFICULTY = {
+  easy: { label: "Изи", survive: 60, bulletMul: 0.7, speedMul: 0.85, win: 2500, hint: "дольше, но медленнее" },
+  normal: { label: "Нормал", survive: 42, bulletMul: 1, speedMul: 1, win: 4200, hint: "канон 42с" },
+  hard: { label: "Хард", survive: 30, bulletMul: 1.6, speedMul: 1.25, win: 6000, hint: "ад 30с" },
+} as const;
+type DiffKey = keyof typeof DIFFICULTY;
+const LS_DIFF = "dodge42-diff";
+
 interface Particle {
   x: number; y: number; vx: number; vy: number;
   life: number; color: string; size: number;
@@ -71,14 +97,42 @@ function playWin() {
     o.start(ctx.currentTime + d); o.stop(ctx.currentTime + d + 0.4);
   });
 }
+function safeRamp(param: AudioParam, fn: () => void, fb: number) { try { fn(); } catch { param.value = fb; } }
+function playDash() {
+  const ctx = ensureAC(); if (!ctx) return;
+  const o = ctx.createOscillator(); const g = ctx.createGain();
+  o.connect(g); g.connect(ctx.destination);
+  o.type = "triangle"; o.frequency.value = 380; safeRamp(o.frequency, () => o.frequency.linearRampToValueAtTime(900, ctx.currentTime + 0.09), 900);
+  g.gain.setValueAtTime(0.11, ctx.currentTime); safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.16), 0.001);
+  o.start(); o.stop(ctx.currentTime + 0.18);
+}
+function playSlowMo() {
+  const ctx = ensureAC(); if (!ctx) return;
+  const o = ctx.createOscillator(); const g = ctx.createGain(); const f = ctx.createBiquadFilter();
+  o.connect(f); f.connect(g); g.connect(ctx.destination);
+  f.type = "lowpass"; f.frequency.value = 1800; o.type = "sine"; o.frequency.value = 660;
+  safeRamp(f.frequency, () => f.frequency.linearRampToValueAtTime(600, ctx.currentTime + 0.35), 600);
+  g.gain.setValueAtTime(0.12, ctx.currentTime); safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4), 0.001);
+  o.start(); o.stop(ctx.currentTime + 0.42);
+}
 
 export function Dodge42Game() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const scorePopRef = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<"menu" | "playing" | "win" | "dead">("menu");
   const [elapsed, setElapsed] = useState(0);
   const [dodged, setDodged] = useState(0);
   const [bestDodged, setBestDodged] = useState(() => { try { return Number(localStorage.getItem("dodge42-best")) || 0; } catch { return 0; } });
   const [wave, setWave] = useState(0);
+  const [diff, setDiff] = useState<DiffKey>(() => { try { const v = localStorage.getItem(LS_DIFF) as DiffKey | null; return v && DIFFICULTY[v] ? v : "normal"; } catch { return "normal"; } });
+  const [tipIdx, setTipIdx] = useState(0);
+  const [dashCd, setDashCd] = useState(false);
+  const [slowMo, setSlowMo] = useState(false);
+  const diffRef = useRef<DiffKey>(diff);
+  const slowRef = useRef(false);
+  useEffect(() => { diffRef.current = diff; try { localStorage.setItem(LS_DIFF, diff); } catch {} }, [diff]);
+  useEffect(() => { const id = setInterval(() => setTipIdx(i => (i + 1) % DODGE_TIPS.length), 3200); return () => clearInterval(id); }, []);
+  useEffect(() => { slowRef.current = slowMo; }, [slowMo]);
 
   const playerRef = useRef({ x: ARENA_W / 2, y: ARENA_H * 0.78 });
   const bulletsRef = useRef<Bullet[]>([]);
@@ -101,8 +155,29 @@ export function Dodge42Game() {
     nearMissRef.current = 0; shakeRef.current = 0;
     startRef.current = performance.now();
     setElapsed(0); setDodged(0); setWave(0);
+    setSlowMo(false);
     setState("playing");
   }, []);
+
+  const doDash = useCallback((dx: number, dy: number) => {
+    if (dashCd || state !== "playing") return;
+    const p = playerRef.current;
+    const len = Math.sqrt(dx*dx + dy*dy) || 1;
+    p.x += (dx/len) * 52; p.y += (dy/len) * 52;
+    p.x = Math.max(PLAYER_R, Math.min(ARENA_W - PLAYER_R, p.x));
+    p.y = Math.max(PLAYER_R, Math.min(ARENA_H - PLAYER_R, p.y));
+    playDash();
+    setDashCd(true);
+    if (scorePopRef.current && !prefersReducedMotion()) gsap.fromTo(scorePopRef.current, { scale: 1.25 }, { scale: 1, duration: 0.28, ease: "back.out(1.5)" });
+    if (navigator.vibrate) navigator.vibrate(20);
+    setTimeout(() => setDashCd(false), 1200);
+  }, [dashCd, state]);
+
+  const toggleSlowMo = useCallback(() => {
+    if (state !== "playing") return;
+    setSlowMo(v => { const nv = !v; if (nv) playSlowMo(); return nv; });
+    setTimeout(() => setSlowMo(false), 2200);
+  }, [state]);
 
   // keyboard input
   useEffect(() => {
@@ -111,6 +186,9 @@ export function Dodge42Game() {
       if (e.code === "ArrowDown" || e.code === "KeyS") keysRef.current.down = true;
       if (e.code === "ArrowLeft" || e.code === "KeyA") keysRef.current.left = true;
       if (e.code === "ArrowRight" || e.code === "KeyD") keysRef.current.right = true;
+      if (e.code === "Space") { e.preventDefault(); doDash(keysRef.current.right ? 1 : keysRef.current.left ? -1 : 0, keysRef.current.down ? 1 : keysRef.current.up ? -1 : -1); }
+      if (e.code === "ShiftLeft" || e.code === "ShiftRight") { e.preventDefault(); toggleSlowMo(); }
+      if (e.code === "KeyR") { e.preventDefault(); startGame(); }
     };
     const onUp = (e: KeyboardEvent) => {
       if (e.code === "ArrowUp" || e.code === "KeyW") keysRef.current.up = false;
@@ -183,23 +261,37 @@ export function Dodge42Game() {
 
       if (state === "playing") {
         const now = performance.now();
-        const dt = Math.min((now - startRef.current) / 1000, SURVIVE_SEC);
-        const sec = Math.floor(dt);
+        const cfg = DIFFICULTY[diffRef.current];
+        const surv = cfg.survive;
+        const dtRaw = Math.min((now - startRef.current) / 1000, surv);
+        const dt = slowRef.current ? dtRaw * 0.55 : dtRaw;
+        const sec = Math.floor(dtRaw);
         setElapsed(sec);
 
-        // spawn waves every ~2.5s
-        const currentWave = Math.floor(dt / 2.5);
+        // spawn waves every ~2.5s (хард чаще)
+        const waveEvery = diffRef.current === "hard" ? 2.0 : 2.5;
+        const currentWave = Math.floor(dtRaw / waveEvery);
         if (currentWave > lastWaveRef.current) {
           lastWaveRef.current = currentWave;
           waveRef.current = currentWave;
           setWave(currentWave);
           const newBullets = spawnWave(currentWave, w, h);
+          // баланс сложности
+          const mul = cfg.bulletMul;
+          const extra = mul > 1 ? Math.floor(newBullets.length * (mul - 1)) : 0;
+          for (let i = 0; i < extra; i++) {
+            const src = newBullets[i % newBullets.length]!;
+            newBullets.push({ ...src, x: src.x + (Math.random()-0.5)*40, vx: src.vx * cfg.speedMul, vy: src.vy * cfg.speedMul, trail: [] });
+          }
+          if (mul < 1) newBullets.splice(Math.floor(newBullets.length * mul));
+          // скорость пуль
+          if (cfg.speedMul !== 1) newBullets.forEach(b => { b.vx *= cfg.speedMul; b.vy *= cfg.speedMul; });
           bulletsRef.current.push(...newBullets);
         }
 
         // move player
         const p = playerRef.current;
-        const spd = 3.8;
+        const spd = slowRef.current ? 2.2 : 3.8;
         if (keysRef.current.left) p.x -= spd;
         if (keysRef.current.right) p.x += spd;
         if (keysRef.current.up) p.y -= spd;
@@ -265,7 +357,7 @@ export function Dodge42Game() {
         }
 
         // win check
-        if (dt >= SURVIVE_SEC) {
+        if (dtRaw >= surv) {
           playWin();
           for (let i = 0; i < 50; i++) {
             particlesRef.current.push({
@@ -274,6 +366,8 @@ export function Dodge42Game() {
               life: 1, color: BULLET_COLORS[i % 5]!, size: 3 + Math.random() * 5,
             });
           }
+          if (scorePopRef.current && !prefersReducedMotion()) gsap.fromTo(scorePopRef.current, { scale: 1.35, rotation: -2 }, { scale: 1, rotation: 0, duration: 0.45, ease: "back.out(1.4)" });
+          if (navigator.vibrate) navigator.vibrate([40,30,60]);
           const nb = Math.max(bestDodged, dodgedRef.current);
           setBestDodged(nb);
           try { localStorage.setItem("dodge42-best", String(nb)); } catch {}
@@ -367,21 +461,29 @@ export function Dodge42Game() {
   }, [state, bestDodged]);
 
   return (
-    <div className={styles.page}>
-      <h1>5 ПУЛЬ</h1>
-      <p className={styles.sub}>Уклоняйся от пуль {SURVIVE_SEC} секунд — выживи ради MAGNUM!</p>
+    <div className={styles.page} data-gsap-root>
+      <h1 ref={scorePopRef as unknown as React.RefObject<HTMLHeadingElement>}>5 ПУЛЬ</h1>
+      <p className={styles.sub} data-gsap-root>Уклоняйся от пуль {DIFFICULTY[diff].survive}с — {DIFFICULTY[diff].hint} — выживи ради MAGNUM! {slowMo ? "🐢 SLOW-MO!" : ""}</p>
+      <div style={{ fontSize: "0.78rem", color: "rgba(255,204,0,0.88)", background: "rgba(255,204,0,0.07)", border: "1px solid rgba(255,204,0,0.16)", borderRadius: 10, padding: "0.45rem 0.75rem", maxWidth: 560, textAlign: "center", margin: "0 auto 0.6rem" }}>{DODGE_TIPS[tipIdx % DODGE_TIPS.length]}</div>
+      <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap", marginBottom: 8 }}>
+        {(Object.keys(DIFFICULTY) as DiffKey[]).map((k) => (
+          <button key={k} onClick={() => setDiff(k)} style={{ padding: "0.42rem 0.85rem", borderRadius: 999, fontSize: "0.82rem", fontWeight: 800, cursor: "pointer", border: "1px solid", borderColor: diff === k ? "rgba(255,45,85,0.6)" : "rgba(255,255,255,0.12)", background: diff === k ? "rgba(255,45,85,0.14)" : "rgba(255,255,255,0.06)", color: diff === k ? "#ffcc00" : "rgba(240,240,240,0.7)" }}>{DIFFICULTY[k].label} · {DIFFICULTY[k].survive}с</button>
+        ))}
+      </div>
 
       {state === "menu" && (
         <div className={styles.menu}>
           <div className={styles.rules}>
-            <p>🎯 Управляй зелёным 42 — WASD / стрелки / тап</p>
-            <p>💥 5 цветных пуль летят со всех сторон</p>
-            <p>🌊 Каждые 2.5с новая волна — больше пуль, быстрее</p>
-            <p>⭐ Свайп в сторону от пули = Near Miss + очко</p>
-            <p>🏆 Продержись {SURVIVE_SEC} секунд — победа!</p>
+            <p>🎯 WASD/стрелки — движение · Space — рывок 52px {dashCd ? "⌛" : "⚡"}</p>
+            <p>👆 Тап/мышь — следование · Свайп быстро → даш в сторону</p>
+            <p>💥 5 цветных пуль со всех сторон — пульс MAGNUM</p>
+            <p>🌊 Волна каждые {diff === "hard" ? "2.0" : "2.5"}с — {diff === "hard" ? "ад ×1.6" : diff === "easy" ? "мягче ×0.7" : "баланс"}</p>
+            <p>⭐ Near Miss &lt;12px = писк + очко</p>
+            <p>🐢 Shift — Slow-Mo 2.2с (замедляет время) · R — рестарт</p>
+            <p>🏆 Продержись {DIFFICULTY[diff].survive}с — {DIFFICULTY[diff].win} очков!</p>
           </div>
-          <button className={styles.playBtn} onClick={startGame}>Начать!</button>
-          <p className={styles.hint}>Рекорд: {bestDodged} уклонений</p>
+          <button className={styles.playBtn} onClick={startGame}>Начать! — {DIFFICULTY[diff].label}</button>
+          <p className={styles.hint}>Рекорд: {bestDodged} уклонений • {DIFFICULTY[diff].label}</p>
           <Link to="/magnum/games" className={styles.back}>← К играм</Link>
         </div>
       )}
@@ -389,11 +491,12 @@ export function Dodge42Game() {
       {state === "playing" && (
         <div className={styles.gameArea}>
           <div className={styles.hud}>
-            <div className={styles.stat}><span>Время</span><strong>{elapsed}s</strong></div>
+            <div className={styles.stat}><span>Время</span><strong>{elapsed} / {DIFFICULTY[diff].survive}s</strong></div>
             <div className={styles.stat}><span>Волна</span><strong>{wave}</strong></div>
-            <div className={styles.stat}><span>Уклонений</span><strong>{dodged}</strong></div>
+            <div className={styles.stat}><span>Уклонений</span><strong ref={scorePopRef}>{dodged}</strong></div>
+            <div className={styles.stat}><span>Даш</span><strong style={{ color: dashCd ? "rgba(240,240,240,0.35)" : "#00ff88" }}>{dashCd ? "⌛" : "⚡ Готов"}</strong></div>
           </div>
-          <div className={styles.canvasWrap}>
+          <div className={styles.canvasWrap} style={slowMo ? { boxShadow: "0 0 22px rgba(88,101,242,0.35)" } : undefined}>
             <canvas
               ref={canvasRef}
               className={styles.canvas}
@@ -405,10 +508,26 @@ export function Dodge42Game() {
               onPointerDown={(e) => {
                 const rect = (e.target as HTMLCanvasElement).getBoundingClientRect();
                 pointerRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+                (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+                const t = e as unknown as { clientX: number; clientY: number };
+                // @ts-ignore store start for swipe
+                (canvasRef.current as unknown as { _sx?: number; _sy?: number })._sx = t.clientX;
+                (canvasRef.current as unknown as { _sx?: number; _sy?: number })._sy = t.clientY;
+              }}
+              onPointerUp={(e) => {
+                const c = canvasRef.current as unknown as { _sx?: number; _sy?: number } | null;
+                if (c && c._sx !== undefined) {
+                  const dx = e.clientX - c._sx!, dy = e.clientY - c._sy!;
+                  if (Math.sqrt(dx*dx + dy*dy) > 48) doDash(dx, dy);
+                  c._sx = undefined; c._sy = undefined;
+                }
+                pointerRef.current = null;
               }}
             />
           </div>
-          <div className={styles.navRow}>
+          <div className={styles.navRow} style={{ gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
+            <button onClick={() => doDash(0, -52)} disabled={dashCd} style={{ padding: "0.42rem 0.9rem", borderRadius: 10, border: "1px solid rgba(255,255,255,0.12)", background: dashCd ? "rgba(255,255,255,0.04)" : "rgba(0,255,136,0.10)", color: dashCd ? "rgba(240,240,240,0.35)" : "#00ff88", fontWeight: 800, cursor: dashCd ? "not-allowed" : "pointer" }}>⚡ Даш ↑</button>
+            <button onClick={toggleSlowMo} disabled={slowMo} style={{ padding: "0.42rem 0.9rem", borderRadius: 10, border: "1px solid rgba(88,101,242,0.22)", background: slowMo ? "rgba(88,101,242,0.10)" : "rgba(88,101,242,0.08)", color: slowMo ? "rgba(240,240,240,0.35)" : "#5865f2", fontWeight: 800, cursor: slowMo ? "not-allowed" : "pointer" }}>🐢 Slow-Mo</button>
             <Link to="/magnum/games" className={styles.backInline}>← К играм</Link>
           </div>
         </div>
@@ -417,9 +536,10 @@ export function Dodge42Game() {
       {state === "win" && (
         <div className={styles.modal}>
           <div className={styles.modalCard}>
-            <h2>🎉 Выжил! 42 секунды!</h2>
-            <p>{SURVIVE_SEC}с • {dodged} уклонений • волна {wave}</p>
-            <p className={styles.winSub}>Ты — неуязвимый братуха!</p>
+            <h2>🎉 Выжил! {DIFFICULTY[diff].survive}с!</h2>
+            <p>{DIFFICULTY[diff].survive}с • {dodged} уклонений • волна {wave} • {DIFFICULTY[diff].label}</p>
+            <p className={styles.winSub}>Ты — неуязвимый братуха! +{DIFFICULTY[diff].win} монет</p>
+            <p style={{ fontSize: "0.76rem", color: "rgba(240,240,240,0.5)" }}>{DODGE_TIPS[tipIdx % DODGE_TIPS.length]}</p>
             <a href={PRESAVE} target="_blank" rel="noreferrer" className={styles.presaveBtn}>Пресейв MAGNUM →</a>
             <button className={styles.playBtn} onClick={startGame}>Ещё раз</button>
           </div>
@@ -430,9 +550,10 @@ export function Dodge42Game() {
         <div className={styles.modal}>
           <div className={styles.modalCard}>
             <h2>💥 Попал!</h2>
-            <p>{elapsed}с / {SURVIVE_SEC}с • {dodged} уклонений • рекорд {bestDodged}</p>
-            <p className={styles.failHint}>Двигайся быстрее — 5 пуль не прощают!</p>
-            <button className={styles.playBtn} onClick={startGame}>Ещё попытка</button>
+            <p>{elapsed}с / {DIFFICULTY[diff].survive}с • {dodged} уклонений • рекорд {bestDodged}</p>
+            <p className={styles.failHint}>Двигайся быстрее — 5 пуль не прощают! Space-даш спасёт.</p>
+            <p style={{ fontSize: "0.76rem", color: "rgba(240,240,240,0.5)" }}>{DODGE_TIPS[tipIdx % DODGE_TIPS.length]}</p>
+            <button className={styles.playBtn} onClick={startGame}>Ещё попытка (R)</button>
             <Link to="/magnum/games" className={styles.backInline}>← К играм</Link>
           </div>
         </div>
