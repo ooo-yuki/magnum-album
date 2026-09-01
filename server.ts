@@ -1706,6 +1706,141 @@ async function handleDuelHistory(req: Request): Promise<Response> {
   } catch (e) { console.error("[duel history] failed", e); return Response.json({ error: "db error" }, { status: 500 }); }
 }
 
+// ---- Global Chat 42 (magnum_chat_messages) + Social Follows (magnum_follows) ----
+function validateChatBody(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const s = v.trim();
+  if (s.length < 1 || s.length > 500) return null;
+  if (s.includes("<") || s.includes(">")) return null;
+  return s;
+}
+async function handleChatHistory(req: Request): Promise<Response> {
+  try {
+    const sql = getSql();
+    await sql`CREATE TABLE IF NOT EXISTS magnum_chat_messages (id serial PRIMARY KEY, user_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, body text NOT NULL, reply_to integer, created_at timestamp DEFAULT now() NOT NULL)`;
+    const url = new URL(req.url);
+    const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit") || 30)));
+    const offset = Math.max(0, Math.min(5000, Number(url.searchParams.get("offset") || 0)));
+    const since = url.searchParams.get("since")?.trim() || "";
+    const rows = since
+      ? await sql`SELECT m.id,m.body,m.reply_to,m.created_at,u.username,s.skin_id as avatar FROM magnum_chat_messages m JOIN magnum_users u ON u.id=m.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id=m.user_id AND s.equipped=true WHERE m.created_at > ${since}::timestamp ORDER BY m.created_at ASC LIMIT ${limit} OFFSET ${offset}`
+      : await sql`SELECT m.id,m.body,m.reply_to,m.created_at,u.username,s.skin_id as avatar FROM magnum_chat_messages m JOIN magnum_users u ON u.id=m.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id=m.user_id AND s.equipped=true ORDER BY m.created_at DESC LIMIT ${limit} OFFSET ${offset}`;
+    const list = rows.map((r: unknown) => {
+      const x = r as { id: number; body: string; reply_to: number | null; created_at: string; username: string; avatar: string | null };
+      return { id: Number(x.id), body: String(x.body), replyTo: x.reply_to ? Number(x.reply_to) : null, created_at: x.created_at, username: String(x.username), avatar: x.avatar || null };
+    });
+    const ordered = since ? list : list.reverse();
+    return Response.json({ messages: ordered, count: ordered.length, limit, offset });
+  } catch (e) { console.error("[chat history] failed", e); return Response.json({ error: "db error" }, { status: 500 }); }
+}
+async function handleChatSend(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`chat:send:${user.id}:${ip}`, 12, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
+  let body: { body?: unknown; text?: unknown; message?: unknown; replyTo?: unknown; reply_to?: unknown };
+  try { body = (await req.json()) as typeof body; } catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
+  const text = validateChatBody(body.body ?? body.text ?? body.message);
+  if (!text) return Response.json({ error: "body 1..500 chars, no <>" }, { status: 400 });
+  const rawReply = body.replyTo ?? body.reply_to;
+  const replyTo = rawReply != null ? Number(rawReply) : null;
+  if (replyTo != null && (!Number.isInteger(replyTo) || replyTo <= 0)) return Response.json({ error: "replyTo must be integer id" }, { status: 400 });
+  try {
+    const sql = getSql();
+    await sql`CREATE TABLE IF NOT EXISTS magnum_chat_messages (id serial PRIMARY KEY, user_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, body text NOT NULL, reply_to integer, created_at timestamp DEFAULT now() NOT NULL)`;
+    if (replyTo) {
+      const ex = await sql`SELECT id FROM magnum_chat_messages WHERE id=${replyTo} LIMIT 1`;
+      if (ex.length === 0) return Response.json({ error: "reply target not found" }, { status: 404 });
+    }
+    const rows = await sql`INSERT INTO magnum_chat_messages (user_id, body, reply_to) VALUES (${user.id}, ${text}, ${replyTo}) RETURNING id, body, reply_to, created_at`;
+    const msg = rows[0] as { id: number; body: string; reply_to: number | null; created_at: string };
+    return Response.json({ ok: true, message: { id: Number(msg.id), body: String(msg.body), replyTo: msg.reply_to ? Number(msg.reply_to) : null, username: user.username, created_at: msg.created_at } }, { status: 201 });
+  } catch (e) { console.error("[chat send] failed", e); return Response.json({ error: "db error" }, { status: 500 }); }
+}
+async function handleChatDelete(req: Request, idStr: string): Promise<Response> {
+  const id = Number(idStr);
+  if (!Number.isInteger(id) || id <= 0) return Response.json({ error: "invalid id" }, { status: 400 });
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  try {
+    const sql = getSql();
+    const target = await sql`SELECT user_id FROM magnum_chat_messages WHERE id=${id} LIMIT 1`;
+    if (target.length === 0) return Response.json({ error: "not found" }, { status: 404 });
+    const ownerId = Number((target[0] as { user_id: number }).user_id);
+    const isOwner = ownerId === user.id;
+    const coinsR = await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+    const bal = coinsR.length ? Number((coinsR[0] as { balance: number }).balance) : 0;
+    const isMod = bal >= 5000 || user.username.toLowerCase().includes("admin");
+    if (!isOwner && !isMod) return Response.json({ error: "only author or mod (5000 coins)" }, { status: 403 });
+    await sql`DELETE FROM magnum_chat_messages WHERE id=${id}`;
+    await logModeration(user.id, "chat_delete", "chat", id, { ownerId });
+    return Response.json({ ok: true, deleted: id });
+  } catch (e) { console.error("[chat delete] failed", e); return Response.json({ error: "db error" }, { status: 500 }); }
+}
+async function handleFollowToggle(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`follow:toggle:${user.id}:${ip}`, 20, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
+  let body: { username?: unknown; to?: unknown; target?: unknown };
+  try { body = (await req.json()) as typeof body; } catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
+  const raw = typeof body.username === "string" ? body.username : typeof body.to === "string" ? body.to : typeof body.target === "string" ? body.target : "";
+  const name = String(raw).trim().slice(0, 32);
+  if (!name || name.length < 2) return Response.json({ error: "username 2..32 required" }, { status: 400 });
+  if (name.toLowerCase() === user.username.toLowerCase()) return Response.json({ error: "cannot follow self" }, { status: 400 });
+  try {
+    const sql = getSql();
+    await sql`CREATE TABLE IF NOT EXISTS magnum_follows (id serial PRIMARY KEY, follower_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, following_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, created_at timestamp DEFAULT now() NOT NULL, CONSTRAINT magnum_follows_no_self CHECK (follower_id <> following_id), CONSTRAINT magnum_follows_unique UNIQUE (follower_id, following_id))`;
+    const target = await sql`SELECT id FROM magnum_users WHERE username=${name} LIMIT 1`;
+    if (target.length === 0) return Response.json({ error: "user not found" }, { status: 404 });
+    const targetId = Number((target[0] as { id: number }).id);
+    const ex = await sql`SELECT id FROM magnum_follows WHERE follower_id=${user.id} AND following_id=${targetId} LIMIT 1`;
+    if (ex.length > 0) {
+      await sql`DELETE FROM magnum_follows WHERE follower_id=${user.id} AND following_id=${targetId}`;
+      return Response.json({ ok: true, following: false, target: name });
+    }
+    await sql`INSERT INTO magnum_follows (follower_id, following_id) VALUES (${user.id}, ${targetId})`;
+    try { await ensureNotification(targetId, `Новый фолловер 42`, `Братуха ${user.username} подписался на тебя`, "follow"); } catch {}
+    return Response.json({ ok: true, following: true, target: name });
+  } catch (e) { console.error("[follow toggle] failed", e); return Response.json({ error: "db error" }, { status: 500 }); }
+}
+async function handleFollowsList(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  try {
+    const sql = getSql();
+    await sql`CREATE TABLE IF NOT EXISTS magnum_follows (id serial PRIMARY KEY, follower_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, following_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, created_at timestamp DEFAULT now() NOT NULL, CONSTRAINT magnum_follows_no_self CHECK (follower_id <> following_id), CONSTRAINT magnum_follows_unique UNIQUE (follower_id, following_id))`;
+    const url = new URL(req.url);
+    const box = url.searchParams.get("box") === "followers" ? "followers" : "following";
+    const limit = Math.min(50, Math.max(1, Number(url.searchParams.get("limit") || 20)));
+    const rows = box === "followers"
+      ? await sql`SELECT u.username, f.created_at, s.skin_id as avatar FROM magnum_follows f JOIN magnum_users u ON u.id=f.follower_id LEFT JOIN magnum_shop_inventory s ON s.user_id=u.id AND s.equipped=true WHERE f.following_id=${user.id} ORDER BY f.created_at DESC LIMIT ${limit}`
+      : await sql`SELECT u.username, f.created_at, s.skin_id as avatar FROM magnum_follows f JOIN magnum_users u ON u.id=f.following_id LEFT JOIN magnum_shop_inventory s ON s.user_id=u.id AND s.equipped=true WHERE f.follower_id=${user.id} ORDER BY f.created_at DESC LIMIT ${limit}`;
+    return Response.json({ box, list: rows.map((r: unknown) => { const x = r as { username: string; created_at: string; avatar: string | null }; return { username: String(x.username), avatar: x.avatar || null, created_at: x.created_at }; }), count: rows.length });
+  } catch (e) { console.error("[follows list] failed", e); return Response.json({ error: "db error" }, { status: 500 }); }
+}
+async function handleFeed(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  try {
+    const sql = getSql();
+    const url = new URL(req.url);
+    const limit = Math.min(50, Math.max(1, Number(url.searchParams.get("limit") || 20)));
+    const rows = await sql`SELECT m.id,m.body,m.created_at,u.username,s.skin_id as avatar FROM magnum_chat_messages m JOIN magnum_users u ON u.id=m.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id=m.user_id AND s.equipped=true WHERE m.user_id IN (SELECT following_id FROM magnum_follows WHERE follower_id=${user.id}) ORDER BY m.created_at DESC LIMIT ${limit}`;
+    return Response.json({ feed: rows.map((r: unknown) => { const x = r as { id: number; body: string; created_at: string; username: string; avatar: string | null }; return { id: Number(x.id), body: String(x.body), username: String(x.username), avatar: x.avatar || null, created_at: x.created_at }; }), count: rows.length });
+  } catch (e) { console.error("[feed] failed", e); return Response.json({ error: "db error" }, { status: 500 }); }
+}
+
 // ---- Reports + Moderation queue + Idea status workflow + Public profile + Unified search ----
 const REPORT_REASONS = new Set(["spam","insult","nsfw","fake","other"]);
 const REPORT_TARGETS = new Set(["idea","comment","profile","duel"]);
@@ -1951,11 +2086,13 @@ async function handleHealth(): Promise<Response> {
       sql`SELECT count(*)::int as c FROM magnum_referrals`,
       sql`SELECT count(*)::int as c FROM magnum_duel_history`,
     ]);
-    let exchangesCount = 0; let commentsCount = 0; let reportsCount = 0; let modLogCount = 0;
+    let exchangesCount = 0; let commentsCount = 0; let reportsCount = 0; let modLogCount = 0; let chatCount = 0; let followsCount = 0;
     try { const r = await sql`SELECT count(*)::int as c FROM magnum_mining_exchanges`; exchangesCount = Number((r[0] as {c:number}).c); } catch {}
     try { const r = await sql`SELECT count(*)::int as c FROM magnum_idea_comments`; commentsCount = Number((r[0] as {c:number}).c); } catch {}
     try { const r = await sql`SELECT count(*)::int as c FROM magnum_reports`; reportsCount = Number((r[0] as {c:number}).c); } catch {}
     try { const r = await sql`SELECT count(*)::int as c FROM magnum_moderation_log`; modLogCount = Number((r[0] as {c:number}).c); } catch {}
+    try { const r = await sql`SELECT count(*)::int as c FROM magnum_chat_messages`; chatCount = Number((r[0] as {c:number}).c); } catch {}
+    try { const r = await sql`SELECT count(*)::int as c FROM magnum_follows`; followsCount = Number((r[0] as {c:number}).c); } catch {}
     return Response.json({
       ok: true,
       ts: new Date().toISOString(),
@@ -1978,6 +2115,8 @@ async function handleHealth(): Promise<Response> {
         ideaComments: commentsCount,
         reports: reportsCount,
         moderationLog: modLogCount,
+        chatMessages: chatCount,
+        follows: followsCount,
       },
       uptime: process.uptime(),
     });
@@ -2356,6 +2495,14 @@ const server = Bun.serve<WSData>({
     if (url.pathname.startsWith("/magnum/api/duel/seasons/") && url.pathname.endsWith("/top") && req.method === "GET") { const parts=url.pathname.split("/"); const idStr=parts[4] ?? ""; return handleDuelSeasonTop(req,idStr); }
     if (url.pathname === "/magnum/api/mining/boost" && req.method === "POST") return handleMiningBoost(req);
     if (url.pathname === "/magnum/api/mining/boost" && req.method === "GET") return handleMiningBoost(req);
+    // chat 42 persisted (Neon, rate limit 12/min, 1..500 char, no <>)
+    if (url.pathname === "/magnum/api/chat" && req.method === "GET") return handleChatHistory(req);
+    if (url.pathname === "/magnum/api/chat" && req.method === "POST") return handleChatSend(req);
+    if (url.pathname.startsWith("/magnum/api/chat/") && req.method === "DELETE") { const parts=url.pathname.split("/"); const idStr=parts[4] ?? ""; return handleChatDelete(req,idStr); }
+    // follows + feed (Neon, toggles, notifications)
+    if (url.pathname === "/magnum/api/follow" && req.method === "POST") return handleFollowToggle(req);
+    if (url.pathname === "/magnum/api/follows" && req.method === "GET") return handleFollowsList(req);
+    if (url.pathname === "/magnum/api/feed" && req.method === "GET") return handleFeed(req);
     // reports + moderation + status workflow + public profile + search
     if (url.pathname === "/magnum/api/reports" && req.method === "POST") return handleReportCreate(req);
     if (url.pathname === "/magnum/api/reports" && req.method === "GET") return handleReportsGet(req);

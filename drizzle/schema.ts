@@ -269,3 +269,18 @@ export const magnumMiningBoosts = pgTable("magnum_mining_boosts", {
   price: integer("price").default(142).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+export const magnumChatMessages = pgTable("magnum_chat_messages", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => magnumUsers.id).notNull(),
+  body: text("body").notNull(),
+  replyTo: integer("reply_to"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const magnumFollows = pgTable("magnum_follows", {
+  id: serial("id").primaryKey(),
+  followerId: integer("follower_id").references(() => magnumUsers.id).notNull(),
+  followingId: integer("following_id").references(() => magnumUsers.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
