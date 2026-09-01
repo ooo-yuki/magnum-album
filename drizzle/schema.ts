@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, boolean, jsonb, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, boolean, jsonb, primaryKey, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const magnumUsers = pgTable("magnum_users", {
   id: serial("id").primaryKey(),
@@ -111,7 +111,7 @@ export const magnumIdeaVotes = pgTable("magnum_idea_votes", {
   userId: integer("user_id").references(() => magnumUsers.id).notNull(),
   ideaId: integer("idea_id").references(() => magnumIdeas.id).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (t) => [uniqueIndex("magnum_idea_votes_user_idea_unique").on(t.userId, t.ideaId)]);
 
 export const magnumUserAchievements = pgTable("magnum_user_achievements", {
   id: serial("id").primaryKey(),
@@ -142,7 +142,7 @@ export const magnumIdeaBookmarks = pgTable("magnum_idea_bookmarks", {
   userId: integer("user_id").references(() => magnumUsers.id).notNull(),
   ideaId: integer("idea_id").references(() => magnumIdeas.id).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (t) => [uniqueIndex("magnum_idea_bookmarks_user_idea_unique").on(t.userId, t.ideaId)]);
 
 export const magnumPromoCodes = pgTable("magnum_promo_codes", {
   code: text("code").primaryKey(),
@@ -384,7 +384,21 @@ export const magnumBoardShares = pgTable("magnum_board_shares", {
   userId: integer("user_id").references(() => magnumUsers.id, { onDelete: "cascade" }).notNull(),
   dayId: text("day_id").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => [uniqueIndex("magnum_board_shares_user_day_unique").on(t.userId, t.dayId)]);
+export const magnumGachaHistory = pgTable("magnum_gacha_history", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => magnumUsers.id, { onDelete: "cascade" }).notNull(),
+  bannerType: text("banner_type").notNull(),
+  rarity: text("rarity").notNull(),
+  cosmeticId: text("cosmetic_id").notNull(),
+  isNew: boolean("is_new").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+export const magnumGachaFreeRolls = pgTable("magnum_gacha_free_rolls", {
+  userId: integer("user_id").references(() => magnumUsers.id, { onDelete: "cascade" }).notNull(),
+  dayId: text("day_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => [primaryKey({ columns: [t.userId, t.dayId] })]);
 
 export const magnumPity = pgTable("magnum_pity", {
   userId: integer("user_id").notNull().references(() => magnumUsers.id, { onDelete: "cascade" }),
@@ -395,3 +409,22 @@ export const magnumPity = pgTable("magnum_pity", {
   pulls: integer("pulls").default(0).notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (t) => [primaryKey({ columns: [t.userId, t.bannerType] })]);
+export const magnumFlashmobDays = pgTable("magnum_flashmob_days", {
+  day: text("day").primaryKey(),
+  type: text("type").notNull(),
+  title: text("title").notNull(),
+  seed: integer("seed").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+export const magnumFlashmobScores = pgTable("magnum_flashmob_scores", {
+  userId: integer("user_id").notNull().references(() => magnumUsers.id, { onDelete: "cascade" }),
+  day: text("day").notNull(),
+  score: integer("score").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => [primaryKey({ columns: [t.userId, t.day] })]);
+export const magnumFlashmobShares = pgTable("magnum_flashmob_shares", {
+  userId: integer("user_id").notNull().references(() => magnumUsers.id, { onDelete: "cascade" }),
+  day: text("day").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => [primaryKey({ columns: [t.userId, t.day] })]);
+
