@@ -226,6 +226,10 @@ export function CTA({ variant: variantProp }: { variant?: ABVariant }) {
           <span className={styles.proofDot}>•</span>
           <span className={styles.proofItem}>The Fence / Drumedy</span>
         </div>
+        <div style={{ marginTop: 14, display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+          <a href="/magnum/share-card" style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,204,0,0.12)", border: "1px solid rgba(255,204,0,0.32)", color: "#ffcc00", fontWeight: 800, fontSize: 13, padding: "8px 14px", borderRadius: 999, textDecoration: "none" }}>Я в 42 — шаринг 1080×1080 →</a>
+          <span style={{ color: "rgba(255,255,255,0.45)", fontSize: 12, alignSelf: "center" }}>QR music.thefence.me/psmagnum · Web Share → PNG</span>
+        </div>
         <p className={styles.fine}>Пресейв бесплатный. Никакого спама — только уведомление о релизе.</p>
       </div>
     </section>
