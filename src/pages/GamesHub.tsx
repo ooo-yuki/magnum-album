@@ -1,7 +1,10 @@
 import { Link } from "react-router-dom";
 import { useRef, useEffect, useCallback } from "react";
 import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import styles from "./GamesHub.module.css";
+
+gsap.registerPlugin(ScrollTrigger);
 
 const GAMES = [
   { to: "/magnum/games/runner", icon: "🏃", title: "Беги, братуха!", desc: "2D раннер — перепрыгивай мухоморы" },
@@ -26,18 +29,28 @@ export function GamesHub() {
   const ref = useRef<HTMLDivElement>(null);
   const badgeRef = useRef<HTMLDivElement>(null);
 
-  // GSAP entrance stagger + badge glow-pulse
+  // GSAP 24/7: y24 stagger 0.12 • ScrollTrigger • reduced-motion • context cleanup
   useEffect(() => {
     if (!ref.current) return;
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const ctx = gsap.context(() => {
-      gsap.set(`.${styles.card}`, { y: 40, opacity: 0, scale: 0.95 });
+      if (prefersReduced) {
+        gsap.set(`.${styles.card}`, { y: 0, opacity: 1, scale: 1, clearProps: "transform" });
+        if (badgeRef.current) gsap.set(badgeRef.current, { y: 0, boxShadow: "none", clearProps: "transform" });
+        return;
+      }
+      gsap.set(`.${styles.card}`, { y: 24, opacity: 0, scale: 0.96 });
       gsap.to(`.${styles.card}`, {
         y: 0, opacity: 1, scale: 1,
-        stagger: 0.1, duration: 0.6, ease: "back.out(1.7)",
+        stagger: 0.12, duration: 0.55, ease: "back.out(1.4)",
+        scrollTrigger: { trigger: ref.current, start: "top 85%", toggleActions: "play none none none" },
+        overwrite: true,
       });
-
-      // badge float + glow pulse
-      if (badgeRef.current && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      // header entrance
+      gsap.set(`.${styles.header} > *`, { y: 24, opacity: 0 });
+      gsap.to(`.${styles.header} > *`, { y: 0, opacity: 1, stagger: 0.12, duration: 0.5, ease: "power2.out", delay: 0.04 });
+      // badge float + glow pulse (respects reduced-motion above)
+      if (badgeRef.current) {
         gsap.to(badgeRef.current, {
           y: -3,
           boxShadow: "0 0 18px rgba(255,45,85,0.45), 0 0 36px rgba(255,45,85,0.15)",
@@ -45,46 +58,42 @@ export function GamesHub() {
           repeat: -1,
           yoyo: true,
           ease: "sine.inOut",
+          scrollTrigger: { trigger: ref.current, start: "top 90%", toggleActions: "play pause resume pause" },
         });
       }
+      ScrollTrigger.refresh();
     }, ref);
     return () => ctx.revert();
   }, []);
 
-  // Magnetic 3D tilt on hover
+  // Magnetic 3D tilt + RGB-neon hover (tri-shadow)
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const card = e.currentTarget;
     const rect = card.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
-    const rotateX = ((y - centerY) / centerY) * -8;
-    const rotateY = ((x - centerX) / centerX) * 8;
-
-    gsap.to(card, {
-      rotateX,
-      rotateY,
-      duration: 0.35,
-      ease: "power2.out",
-    });
+    const rotateX = ((y - centerY) / centerY) * -7;
+    const rotateY = ((x - centerX) / centerX) * 7;
+    gsap.to(card, { rotateX, rotateY, duration: 0.32, ease: "power2.out", overwrite: true });
   }, []);
-
   const handleMouseLeave = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     gsap.to(e.currentTarget, {
-      rotateX: 0,
-      rotateY: 0,
-      y: 0,
-      duration: 0.5,
-      ease: "elastic.out(1, 0.5)",
+      rotateX: 0, rotateY: 0, y: 0,
+      boxShadow: "0 0 0 transparent", borderColor: "rgba(255,255,255,0.08)",
+      duration: 0.45, ease: "elastic.out(1, 0.5)", overwrite: true,
     });
   }, []);
-
   const handleMouseEnter = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     gsap.to(e.currentTarget, {
-      y: -6,
-      duration: 0.3,
-      ease: "power2.out",
+      y: -4,
+      boxShadow: "0 12px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,45,85,0.20), 0 0 22px rgba(255,45,85,0.20), 0 0 22px rgba(0,255,136,0.12), 0 0 28px rgba(255,204,0,0.10)",
+      borderColor: "rgba(255,45,85,0.35)",
+      duration: 0.28, ease: "power2.out", overwrite: true,
     });
   }, []);
 

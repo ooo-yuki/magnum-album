@@ -58,19 +58,25 @@ export function NavGrid() {
 
   useEffect(() => {
     if (!sectionRef.current) return;
-
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const ctx = gsap.context(() => {
-      gsap.set(`.${styles.card}`, { y: 40, opacity: 0, scale: 0.95 });
+      if (prefersReduced) {
+        gsap.set(`.${styles.card}`, { y: 0, opacity: 1, scale: 1, clearProps: "transform" });
+        if (titleRef.current) gsap.set(titleRef.current, { textShadow: "none", clearProps: "textShadow" });
+        return;
+      }
+      gsap.set(`.${styles.card}`, { y: 24, opacity: 0, scale: 0.96 });
       gsap.to(`.${styles.card}`, {
         y: 0,
         opacity: 1,
         scale: 1,
-        stagger: 0.08,
-        duration: 0.6,
+        stagger: 0.12,
+        duration: 0.55,
         ease: "power2.out",
         scrollTrigger: {
           trigger: sectionRef.current,
-          start: "top 80%",
+          start: "top 85%",
+          toggleActions: "play none none none",
         },
       });
 
@@ -109,21 +115,40 @@ export function NavGrid() {
     return () => ctx.revert();
   }, []);
 
-  // cursor-tracking glow spotlight
+  // cursor-tracking glow + RGB-neon lift
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const card = e.currentTarget;
+    // glow spotlight
     const glow = card.querySelector(`.${styles.glow}`) as HTMLElement | null;
-    if (!glow) return;
-    const rect = card.getBoundingClientRect();
-    const x = e.clientX - rect.left - 80;
-    const y = e.clientY - rect.top - 80;
-    gsap.to(glow, { x, y, opacity: 1, duration: 0.35, ease: "power2.out" });
+    if (glow) {
+      const rect = card.getBoundingClientRect();
+      const x = e.clientX - rect.left - 80;
+      const y = e.clientY - rect.top - 80;
+      gsap.to(glow, { x, y, opacity: 1, duration: 0.35, ease: "power2.out", overwrite: true });
+    }
+    // subtle RGB lift
+    gsap.to(card, { y: -2, duration: 0.28, ease: "power2.out", overwrite: true });
   }, []);
-
+  const handleMouseEnter = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    gsap.to(e.currentTarget, {
+      y: -4,
+      boxShadow: "0 12px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,45,85,0.20), 0 0 22px rgba(255,45,85,0.20), 0 0 22px rgba(0,255,136,0.12), 0 0 28px rgba(255,204,0,0.10)",
+      borderColor: "rgba(255,45,85,0.35)",
+      duration: 0.28, ease: "power2.out", overwrite: true,
+    });
+  }, []);
   const handleMouseLeave = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const glow = e.currentTarget.querySelector(`.${styles.glow}`) as HTMLElement | null;
-    if (!glow) return;
-    gsap.to(glow, { opacity: 0, duration: 0.3, ease: "power2.in" });
+    if (glow) gsap.to(glow, { opacity: 0, duration: 0.3, ease: "power2.in", overwrite: true });
+    gsap.to(e.currentTarget, {
+      y: 0,
+      boxShadow: "0 0 0 transparent",
+      borderColor: "rgba(255,255,255,0.06)",
+      duration: 0.35, ease: "power2.out", overwrite: true,
+    });
   }, []);
 
   return (
@@ -139,6 +164,7 @@ export function NavGrid() {
             to={item.to}
             className={styles.card}
             onMouseMove={handleMouseMove}
+            onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
           >
             <div className={styles.glow} aria-hidden />
