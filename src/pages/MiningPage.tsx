@@ -64,6 +64,7 @@ export function MiningPage() {
   const floatRootRef = useRef<HTMLDivElement>(null);
   const coinsRef = useRef<HTMLDivElement>(null);
   const boardRef = useRef<HTMLDivElement>(null);
+  const pageRef = useRef<HTMLDivElement>(null);
 
   const perClick = upgrades.reduce((s, u) => s + u.power * u.count, 1);
   const perSec = upgrades.reduce((s, u) => s + u.auto * u.count, 0);
@@ -101,16 +102,33 @@ export function MiningPage() {
     return () => clearInterval(id);
   }, [perSec]);
 
-  // GSAP entrance
+  // GSAP entrance y24 stagger 0.12 • reduced-motion • cleanup
   useEffect(() => {
+    if (!pageRef.current) return;
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const ctx = gsap.context(() => {
-      gsap.fromTo(`.${styles.heroTitle}`, { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power3.out" });
-      gsap.fromTo(`.${styles.statCard}`, { y: 16, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.07, duration: 0.5, ease: "power2.out", delay: 0.15 });
-      gsap.fromTo(`.${styles.rockWrap}`, { scale: 0.92, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.6, ease: "back.out(1.4)", delay: 0.3 });
-      if (rockRef.current && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      if (prefersReduced) {
+        gsap.set(`.${styles.header} > *`, { y: 0, opacity: 1, clearProps: "transform" });
+        gsap.set(`.${styles.statCard}`, { y: 0, opacity: 1, clearProps: "transform" });
+        gsap.set(`.${styles.shopCard}`, { y: 0, opacity: 1, clearProps: "transform" });
+        gsap.set(`.${styles.rockWrap}`, { y: 0, opacity: 1, clearProps: "transform" });
+        gsap.set(`.${styles.boardRow}`, { y: 0, opacity: 1, clearProps: "transform" });
+        return;
+      }
+      gsap.set(`.${styles.header} > *`, { y: 24, opacity: 0 });
+      gsap.to(`.${styles.header} > *`, { y: 0, opacity: 1, stagger: 0.12, duration: 0.55, ease: "power2.out", delay: 0.05 });
+      gsap.set(`.${styles.statCard}`, { y: 24, opacity: 0 });
+      gsap.to(`.${styles.statCard}`, { y: 0, opacity: 1, stagger: 0.12, duration: 0.5, ease: "power2.out", delay: 0.28 });
+      gsap.set(`.${styles.shopCard}`, { y: 24, opacity: 0 });
+      gsap.to(`.${styles.shopCard}`, { y: 0, opacity: 1, stagger: 0.12, duration: 0.5, ease: "power2.out", delay: 0.42 });
+      gsap.set(`.${styles.rockWrap}`, { y: 24, opacity: 0 });
+      gsap.to(`.${styles.rockWrap}`, { y: 0, opacity: 1, duration: 0.6, ease: "back.out(1.4)", delay: 0.55 });
+      if (rockRef.current) {
         gsap.to(rockRef.current, { y: -4, duration: 1.6, repeat: -1, yoyo: true, ease: "sine.inOut" });
       }
-    });
+      gsap.set(`.${styles.boardRow}`, { y: 24, opacity: 0 });
+      gsap.to(`.${styles.boardRow}`, { y: 0, opacity: 1, stagger: 0.12, duration: 0.45, ease: "power2.out", delay: 0.65 });
+    }, pageRef);
     return () => ctx.revert();
   }, []);
 
@@ -242,8 +260,32 @@ export function MiningPage() {
     wsRef.current?.send(JSON.stringify({ type: "start" }));
   };
 
+  // hover RGB — chromatic lift
+  const onShopEnter = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    gsap.to(e.currentTarget, {
+      y: -4,
+      boxShadow: "0 12px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,45,85,0.20), 0 0 22px rgba(255,45,85,0.20), 0 0 22px rgba(0,255,136,0.12), 0 0 28px rgba(255,204,0,0.10)",
+      borderColor: "rgba(255,45,85,0.35)",
+      duration: 0.28,
+      ease: "power2.out",
+      overwrite: true,
+    });
+  }, []);
+  const onShopLeave = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    gsap.to(e.currentTarget, {
+      y: 0,
+      boxShadow: "0 0 0 transparent",
+      borderColor: "rgba(255,255,255,0.08)",
+      duration: 0.35,
+      ease: "power2.out",
+      overwrite: true,
+    });
+  }, []);
+
   return (
-    <div className={styles.page}>
+    <div className={styles.page} ref={pageRef}>
       <header className={styles.header}>
         <div className={styles.badge}>⛏️ ИРОНИЧНЫЙ МАЙНИНГ · 42-COIN · КУЗБАСС EDITION</div>
         <h1 className={styles.heroTitle}>МАЙНИ 42-КОИНЫ<br /><span>КОПАЙ КАК ШАХТЁР</span></h1>
@@ -303,7 +345,7 @@ export function MiningPage() {
             const price = costOf(u);
             const canBuy = coins >= price;
             return (
-              <div key={u.id} className={`${styles.shopCard} ${u.count > 0 ? styles.shopCardOwned : ""}`}>
+              <div key={u.id} className={`${styles.shopCard} ${u.count > 0 ? styles.shopCardOwned : ""}`} onMouseEnter={onShopEnter} onMouseLeave={onShopLeave}>
                 <div className={styles.shopIcon}>{u.icon}</div>
                 <div className={styles.shopInfo}>
                   <div className={styles.shopName}>{u.name} {u.count > 0 && <span className={styles.countBadge}>×{u.count}</span>}</div>

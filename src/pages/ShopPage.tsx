@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import gsap from "gsap";
 import styles from "./ShopPage.module.css";
@@ -110,7 +110,7 @@ export function ShopPage() {
     return () => { cancelled = true; };
   }, []);
 
-  /* анимация баланса при покупке (GSAP count-up) */
+  /* анимация баланса при покупке (GSAP count-up) — reduced-motion: instant */
   useEffect(() => {
     const el = coinsRef.current;
     if (!el) return;
@@ -118,8 +118,12 @@ export function ShopPage() {
     const to = coins;
     if (from === to) return;
     shownCoins.current = to;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      el.textContent = String(to);
+      return;
+    }
     const proxy = { v: from };
-    gsap.to(proxy, {
+    const tween = gsap.to(proxy, {
       v: to,
       duration: 0.7,
       ease: "power2.out",
@@ -127,29 +131,57 @@ export function ShopPage() {
         if (coinsRef.current) coinsRef.current.textContent = String(Math.round(proxy.v));
       },
     });
-    gsap.fromTo(
+    const flash = gsap.fromTo(
       el,
       { scale: 1.35, color: to >= from ? "#00ff88" : "#ff2d55" },
       { scale: 1, color: "#ffcc00", duration: 0.6, ease: "power2.out" },
     );
+    return () => {
+      tween.kill();
+      flash.kill();
+    };
   }, [coins]);
 
-  /* вход карточек */
+  /* вход карточек — y24 stagger 0.12, reduced-motion, cleanup */
   useEffect(() => {
     if (!rootRef.current) return;
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const ctx = gsap.context(() => {
-      gsap.set(cardsRef.current, { y: 32, opacity: 0, scale: 0.96 });
-      gsap.to(cardsRef.current, {
-        y: 0,
-        opacity: 1,
-        scale: 1,
-        duration: 0.55,
-        stagger: 0.05,
-        ease: "back.out(1.4)",
-        delay: 0.1,
-      });
+      if (prefersReduced) {
+        gsap.set(`.${styles.header} > *`, { y: 0, opacity: 1, clearProps: "transform" });
+        gsap.set(`.${styles.card}`, { y: 0, opacity: 1, clearProps: "transform" });
+        return;
+      }
+      gsap.set(`.${styles.header} > *`, { y: 24, opacity: 0 });
+      gsap.to(`.${styles.header} > *`, { y: 0, opacity: 1, stagger: 0.12, duration: 0.55, ease: "power2.out", delay: 0.05 });
+      gsap.set(`.${styles.card}`, { y: 24, opacity: 0 });
+      gsap.to(`.${styles.card}`, { y: 0, opacity: 1, stagger: 0.12, duration: 0.55, ease: "power2.out", delay: 0.28 });
     }, rootRef);
     return () => ctx.revert();
+  }, []);
+
+  /* hover RGB — chromatic lift */
+  const onCardEnter = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    gsap.to(e.currentTarget, {
+      y: -4,
+      boxShadow: "0 12px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,45,85,0.20), 0 0 22px rgba(255,45,85,0.20), 0 0 22px rgba(0,255,136,0.12), 0 0 28px rgba(255,204,0,0.10)",
+      borderColor: "rgba(255,45,85,0.35)",
+      duration: 0.28,
+      ease: "power2.out",
+      overwrite: true,
+    });
+  }, []);
+  const onCardLeave = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    gsap.to(e.currentTarget, {
+      y: 0,
+      boxShadow: "0 0 0 transparent",
+      borderColor: "rgba(255,255,255,0.08)",
+      duration: 0.35,
+      ease: "power2.out",
+      overwrite: true,
+    });
   }, []);
 
   const pushToast = (kind: Toast["kind"], text: string) => {
@@ -354,6 +386,8 @@ export function ShopPage() {
               ref={(el) => { cardsRef.current[i] = el; }}
               style={{ ["--rc" as string]: meta.color, ["--rg" as string]: meta.color }}
               data-rarity={skin.rarity}
+              onMouseEnter={onCardEnter}
+              onMouseLeave={onCardLeave}
             >
               <div className={styles.cardGlow} aria-hidden />
               <div className={styles.cardFace} style={{ background: skin.bg }}>
