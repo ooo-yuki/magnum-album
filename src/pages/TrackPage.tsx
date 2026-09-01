@@ -123,9 +123,12 @@ export function TrackPage() {
   const { slug } = useParams<{ slug: string }>();
   const track = slug ? TRACKS[slug] : null;
   const containerRef = useRef<HTMLDivElement>(null);
+  const statsRef = useRef<HTMLDivElement>(null);
+  const factsRef = useRef<HTMLUListElement>(null);
 
   useEffect(() => {
     if (!containerRef.current || !track) return;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const ctx = gsap.context(() => {
       gsap.set(`.${styles.hero} > *`, { y: 30, opacity: 0 });
       gsap.set(`.${styles.section}`, { y: 40, opacity: 0 });
@@ -152,6 +155,43 @@ export function TrackPage() {
           scrub: 1,
         },
       });
+
+      // staggered scroll-reveal on stats cards
+      if (!reducedMotion && statsRef.current) {
+        const cards = statsRef.current.querySelectorAll(`.${styles.statCard}`);
+        gsap.set(cards, { y: 24, opacity: 0, scale: 0.92 });
+        gsap.to(cards, {
+          scrollTrigger: {
+            trigger: statsRef.current,
+            start: "top 85%",
+            toggleActions: "play none none none",
+          },
+          y: 0,
+          opacity: 1,
+          scale: 1,
+          stagger: 0.08,
+          duration: 0.5,
+          ease: "back.out(1.4)",
+        });
+      }
+
+      // staggered scroll-reveal on facts list items
+      if (!reducedMotion && factsRef.current) {
+        const items = factsRef.current.querySelectorAll("li");
+        gsap.set(items, { x: -20, opacity: 0 });
+        gsap.to(items, {
+          scrollTrigger: {
+            trigger: factsRef.current,
+            start: "top 85%",
+            toggleActions: "play none none none",
+          },
+          x: 0,
+          opacity: 1,
+          stagger: 0.06,
+          duration: 0.45,
+          ease: "power2.out",
+        });
+      }
     }, containerRef);
     return () => ctx.revert();
   }, [track]);
@@ -208,7 +248,7 @@ export function TrackPage() {
 
       <div className={styles.section}>
         <h2>Факты — только из research.md</h2>
-        <ul className={styles.factsList}>
+        <ul className={styles.factsList} ref={factsRef}>
           {track.facts.map((f) => (
             <li key={f}>{f}</li>
           ))}
@@ -218,7 +258,7 @@ export function TrackPage() {
 
       <div className={styles.section}>
         <h2>Статистика</h2>
-        <div className={styles.statsGrid}>
+        <div className={styles.statsGrid} ref={statsRef}>
           {track.stats.map((stat) => (
             <div key={stat.label} className={styles.statCard}>
               <div className={styles.statValue}>{stat.value}</div>
