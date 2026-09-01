@@ -323,6 +323,48 @@ frontend: localStorage.setItem('magnum-frame-verified','1'), setItem('magnum-fra
 **Файлы:** `src/hooks/useTts.ts`, `src/pages/RecapsPage.tsx`.
 **Edge:** iOS не авто-плей — только по клику; длинный текст >5K — чанкуем по предложениям.
 
+### 7.4 Freakland Timeline — интерактивная лента 42
+**Идея:** На `RecapsPage` сверху — горизонтальный таймлайн Freakland Create (11.07 → 19.07.2026): точки-дни с превью, клик скроллит к карточке, активная точка подсвечена `conic-gradient`. Прогресс «7/9 дней просмотрено» в `magnum-timeline-seen:{ids[]}` LS, GSAP `scrollTo` + `ScrollTrigger` подсветка.
+**Файлы:** `src/components/FreaklandTimeline.tsx`, `src/lib/timeline.ts`, `src/pages/RecapsPage.tsx` (якоря `id`), `RecapsPage.module.css` (лента, точки).
+**Edge:** `prefers-reduced-motion` — без скролл-анимации; LS битый — fallback `[]`; мобилка — свайп `overflow-x:auto` + snap; если карточка отфильтрована — точка dimmed 0.4.
+
+### 7.5 Clip Battle 42 — голосование за нарезки
+**Идея:** Еженедельный баттл 2 нарезок: юзер голосует «🔥 Завоз» vs «💤 Скучно», голос стоит 42 `magnum-coins`, победитель получает бейдж `clip-battle-winner` на карточке. Итоги в `magnum-clip-battle:{week, aId, bId, votesA, votesB, voted}` LS, в будущем — серверный подсчёт.
+**Файлы:** `src/components/ClipBattle.tsx`, `src/lib/clipBattle.ts`, `src/pages/RecapsPage.tsx` (виджет над гридом), `src/lib/coins.ts` (списание/начисление).
+**Edge:** повторный голос — блок + тост «уже голосовал, братуха»; недостаточно монет — дизейбл + линк в казино; LS переполнен — `try/catch` + fallback в память; читерский накрут — `voted` флаг 1/неделя.
+
+### 7.6 Recap Quest 42 — квест по пересказам
+**Идея:** Квест-цепочка из 5 шагов: открыть 3 пересказа → проголосовать в Clip Battle → пройти EcoQuiz 4/8 → открыть Freakland таймлайн → забрать 420 `magnum-coins` + бейдж `quest-42`. Прогресс в `magnum-quest:{stepsDone:Record<string,boolean>, claimed}` LS, GSAP чек-анимация `scale 0→1`.
+**Файлы:** `src/components/RecapQuest.tsx`, `src/lib/quest.ts`, `src/pages/HomePage.tsx` (виджет), `src/pages/RecapsPage.tsx` (триггеры `quest:open`).
+**Edge:** `claimed` true — показываем «уже забрал»; сброс LS — квест с нуля; приватный режим — `try/catch`; `prefers-reduced-motion` — без GSAP scale; награда NaN — кламп 420.
+
+### 7.7 Магнум-викторина 42 — быстрый квиз по трекам
+**Идея:** Мини-викторина на `HomePage`: 5 рандомных вопросов про MAGNUM-треки (VPN дата, CLAY РЗТ, SUPER PUPER NOVA баллы, ТУСА МЕДУЗА клипы/просмотры, «что значит 42»). 30 сек на ответ, 3 жизни, награда 42/142 монет. Результаты в `magnum-magnum-quiz:{score,best,date}` LS, шаринг «Я набрал 5/5, братуха!».
+**Файлы:** `src/components/MagnumQuiz.tsx`, `src/lib/magnumQuiz.ts` (вопросы + `calcScore`), `src/pages/HomePage.tsx` (виджет), `src/lib/coins.ts`.
+**Edge:** таймер на `setInterval` + `visibilitychange` пауза; LS битый — fallback `{score:0}`; повтор в тот же день — награда 1/сутки; `prefers-reduced-motion` — без тряски на неверный ответ; звук опционален WebAudio.
+
+### 7.8 Братуха-стрик 42 — календарь активности
+**Идея:** Календарь-сетка 30 дней на `HomePage`/`IdeasPage`: каждый день захода — клетка закрашивается градиентом `common→epic` по streak, пропуск — серая. Streak в `magnum-streak:{count,lastDate,grid:number[]}` LS, награда 42 каждый день + 420 на 7-й день + рамка `streak-7` conic-gold.
+**Файлы:** `src/components/StreakCalendar.tsx`, `src/lib/streak.ts`, `src/pages/HomePage.tsx`.
+**Edge:** часовой пояс — `toDateString()` локально; читерский `lastDate` в будущем — сброс; LS quota — `try/catch`; `prefers-reduced-motion` — без пульсации клетки; сервер v2 — `magnum_streak` таблица.
+
+### 7.9 Промо-баннер «Пресейв гонит» — FOMO-таймер
+**Идея:** Липкий баннер над `Layout` с обратным отсчётом до релиза MAGNUM (дата из `src/config/release.ts`), текстом «Услышишь последним — пресейв сейчас →» + кнопка `PRESAVE`. При клике `magnum-presave-banner:{dismissed,clicked}` LS, GSAP `y:-20→0` появление, `prefers-reduced-motion` — без анимации. После релиза — автозамена на «Слушать MAGNUM →».
+**Файлы:** `src/components/PresaveBanner.tsx`, `src/lib/presaveBanner.ts`, `src/components/Layout.tsx`, `src/config/release.ts`.
+**Edge:** дата прошла — показываем «релиз вышел»; LS битый — fallback не dismissed; SSR — `typeof window` guard; баннер не мешает кликеру — `pointer-events` + `z-index` 42; мобилка — компакт 32px высота.
+
+### 7.10 Шеринг-прогресс 42 — карточка достижений
+**Идея:** OG-картинка достижений: юзер жмёт «Поделиться прогрессом» на `HomePage` — генерируем canvas 1080×1080 с градиентом, аватаркой, статой (клики, квиз, стрик, пресейв-рамка). Кнопка «Скачать PNG» + Web Share API, награда 42 `magnum-coins` за первый шаринг (`magnum-share-claimed` LS).
+**Файлы:** `src/components/ShareCard.tsx`, `src/lib/shareCard.ts` (canvas), `src/pages/HomePage.tsx`, `src/lib/coins.ts`.
+**Edge:** canvas CORS — только локальные градиенты; iOS Share недоступен — fallback download; LS битый — `try/catch`; `prefers-reduced-motion` — без confetti; генерация >2s — показываем спиннер.
+
+### 7.11 Звук 42 — эмбиент плеер MAGNUM
+**Идея:** Мини-плеер на `HomePage` с 3 лупами (медуза-вейв, вайб Кемерово, 42-дрон) на WebAudio, громкость в `magnum-audio:{vol,mute,track}` LS, GSAP пульсация обложки `scale 1→1.02`. Автоплей только по клику (iOS), пауза при `visibilitychange`.
+**Файлы:** `src/components/AmbientPlayer.tsx`, `src/lib/audio.ts`, `src/pages/HomePage.tsx`.
+**Edge:** AudioContext suspended — `resume()` по клику; LS битый — дефолт `vol:0.3`; несколько вкладок — `storage` sync; `prefers-reduced-motion` — без пульсации; файл не грузится — тост «звук отдыхает».
+
 ---
 
 > 42 — кринжа не существует. Делай, братуха. 🔥
+
+<!-- 42: братуха, не забудь пресейв https://music.thefence.me/psmagnum -->
