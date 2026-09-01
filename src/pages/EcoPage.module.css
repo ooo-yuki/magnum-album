@@ -1,0 +1,31 @@
+.page { padding-top: 5rem; min-height: 100vh; text-align: center; max-width: 900px; margin: 0 auto; padding-left: 1.5rem; padding-right: 1.5rem; }
+.header { padding: 2rem 0 1.5rem; }
+.badge { font-size: 0.8rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--accent); }
+.badgePop, .badgeEmoji, .badgeTitle { display: inline-block; }
+.progressWrap { margin: 1rem 0; }
+.progressTrack { height: 6px; background: rgba(255,255,255,0.08); border-radius: 100px; overflow: hidden; }
+.progressFill { height: 100%; background: var(--gradient); }
+.progressShine, .progressLabel, .progressMeta, .progressPct { font-size: 0.8rem; color: rgba(240,240,240,0.6); }
+.grid { display: grid; gap: 1rem; text-align: left; }
+.card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 1.2rem; }
+.cardDone { opacity: 0.9; }
+.cardHead { display: flex; gap: 0.6rem; align-items: center; }
+.cardNum { font-weight: 800; color: var(--accent); }
+.cardEmoji { font-size: 1.4rem; }
+.cardQ { font-weight: 600; }
+.options { display: grid; gap: 0.5rem; margin-top: 0.8rem; }
+.opt { display: flex; justify-content: space-between; padding: 0.7rem 0.9rem; border-radius: 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); cursor: pointer; }
+.optActive { border-color: var(--accent); background: rgba(255,45,85,0.08); }
+.optLabel, .optMeta, .optHint, .optPos, .optNeg, .optPts { font-size: 0.85rem; }
+.ptsPos { color: #00ff88; }
+.ptsNeg { color: #ff2d55; }
+.actions { display: flex; gap: 1rem; justify-content: center; margin: 2rem 0; flex-wrap: wrap; }
+.btnPrimary, .btnGhost, .btnSave { padding: 0.7rem 1.4rem; border-radius: 100px; font-weight: 700; cursor: pointer; }
+.btnPrimary { background: var(--gradient); color: #fff; border: none; }
+.btnGhost { background: transparent; border: 1px solid rgba(255,255,255,0.15); color: var(--text); }
+.nickInput { padding: 0.6rem 1rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.06); color: #fff; }
+.board { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 1.2rem; margin-top: 2rem; }
+.boardTitle { font-weight: 800; }
+.boardSub { color: rgba(240,240,240,0.5); font-size: 0.85rem; }
+.boardList, .boardRow, .boardPos, .boardName, .boardScore, .boardRank, .boardDate, .boardTop, .boardEmpty, .boardFoot { font-size: 0.85rem; }
+.footer { padding: 2rem 0; color: rgba(240,240,240,0.5); }
