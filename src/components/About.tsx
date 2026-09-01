@@ -10,9 +10,11 @@ export function About() {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
   const highlightsRef = useRef<(HTMLDivElement | null)[]>([]);
+  const prefersReduced = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  // Magnetic 3D tilt on highlight cards
+  // Magnetic 3D tilt on highlight cards - disabled for reduced-motion
   const handleHighlightMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (prefersReduced()) return;
     const card = e.currentTarget;
     const rect = card.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -21,27 +23,35 @@ export function About() {
     const cy = rect.height / 2;
     const rotateX = ((y - cy) / cy) * -6;
     const rotateY = ((x - cx) / cx) * 6;
-    gsap.to(card, { rotateX, rotateY, duration: 0.3, ease: "power2.out" });
+    gsap.to(card, { rotateX, rotateY, duration: 0.3, ease: "power2.out", overwrite: "auto" });
   }, []);
 
   const handleHighlightLeave = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (prefersReduced()) { gsap.set(e.currentTarget, { clearProps: "transform" }); return; }
     gsap.to(e.currentTarget, {
       rotateX: 0, rotateY: 0, y: 0,
-      duration: 0.45, ease: "elastic.out(1, 0.5)",
+      duration: 0.45, ease: "elastic.out(1, 0.5)", overwrite: "auto",
     });
   }, []);
 
   const handleHighlightEnter = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    gsap.to(e.currentTarget, { y: -3, duration: 0.25, ease: "power2.out" });
+    if (prefersReduced()) return;
+    gsap.to(e.currentTarget, { y: -3, boxShadow: "0 10px 28px rgba(0,0,0,0.35), 0 0 18px rgba(255,45,85,0.18)", duration: 0.25, ease: "power2.out", overwrite: "auto" });
   }, []);
 
   useEffect(() => {
     if (!sectionRef.current) return;
 
     const ctx = gsap.context(() => {
-      gsap.set(headingRef.current, { y: 20, opacity: 0 });
-      gsap.set(textRef.current, { y: 30, opacity: 0 });
-      gsap.set(highlightsRef.current, { y: 28, opacity: 0, scale: 0.96 });
+      const highlights = highlightsRef.current.filter(Boolean) as HTMLElement[];
+      if (prefersReduced()) {
+        gsap.set([headingRef.current, textRef.current].filter(Boolean), { y: 0, opacity: 1, clearProps: "transform" });
+        gsap.set(highlights, { y: 0, opacity: 1, scale: 1, clearProps: "transform" });
+        return;
+      }
+      gsap.set(headingRef.current, { y: 24, opacity: 0 });
+      gsap.set(textRef.current, { y: 24, opacity: 0 });
+      gsap.set(highlights, { y: 24, opacity: 0, scale: 0.96 });
 
       gsap.to(headingRef.current, {
         scrollTrigger: {
@@ -52,6 +62,7 @@ export function About() {
         y: 0,
         opacity: 1,
         duration: 0.6,
+        ease: "power3.out",
       });
 
       gsap.to(textRef.current, {
@@ -64,10 +75,11 @@ export function About() {
         opacity: 1,
         duration: 0.8,
         delay: 0.2,
+        ease: "power3.out",
       });
 
-      // staggered reveal for each highlight card
-      gsap.to(highlightsRef.current, {
+      // stagger 0.12 spec + ScrollTrigger once
+      gsap.to(highlights, {
         scrollTrigger: {
           trigger: `.${styles.highlights}`,
           start: "top 85%",
@@ -76,13 +88,28 @@ export function About() {
         y: 0,
         opacity: 1,
         scale: 1,
-        stagger: 0.1,
+        stagger: 0.12,
         duration: 0.55,
         ease: "back.out(1.4)",
+        overwrite: "auto",
+      });
+
+      // RGB-neon hover glow via ScrollTrigger context — extra shimmer on highlights
+      highlights.forEach((el) => {
+        const enter = () => { if (prefersReduced()) return; gsap.to(el, { y: -4, boxShadow: "0 12px 32px rgba(0,0,0,0.4), 0 0 20px rgba(255,45,85,0.18), 0 0 24px rgba(0,255,136,0.12)", duration: 0.28, ease: "power2.out", overwrite: "auto" }); };
+        const leave = () => gsap.to(el, { y: 0, boxShadow: "0 0 0 transparent", duration: 0.4, ease: "power2.out", overwrite: "auto" });
+        el.addEventListener("mouseenter", enter);
+        el.addEventListener("mouseleave", leave);
+        // cleanup via revert is automatic for listeners? store for manual removal
+        (el as unknown as { _hoverCleanup?: () => void })._hoverCleanup = () => { el.removeEventListener("mouseenter", enter); el.removeEventListener("mouseleave", leave); };
       });
     }, sectionRef);
 
-    return () => ctx.revert();
+    return () => {
+      // manual hover cleanup before context revert
+      highlightsRef.current.forEach((el) => { try { (el as unknown as { _hoverCleanup?: () => void })?._hoverCleanup?.(); } catch {} });
+      ctx.revert();
+    };
   }, []);
 
   return (

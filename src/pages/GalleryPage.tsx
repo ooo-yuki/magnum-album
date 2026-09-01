@@ -1258,6 +1258,40 @@ export const GALLERY_EXTRA_FACTS: { fact: string; src: string; style: "СССР"
   { fact: "Флипфон 42 пропущенных", src: "GalleryPage.tsx:84", style: "Y2K" }, // FILE:LINE GalleryPage.tsx:84
   { fact: "Неон-бейдж 42 лайка", src: "GalleryPage.tsx:114", style: "Y2K" }, // FILE:LINE GalleryPage.tsx:114
 ];
+// -- GLOSSARY EXTRA 30 -- real, FILE:LINE
+export const GALLERY_GLOSSARY_EXTRA: { term: string; src: string }[] = [
+  { term: "Агитплакат", src: "GalleryPage.tsx:47" }, // FILE:LINE GalleryPage.tsx:47
+  { term: "СССР", src: "GalleryPage.tsx:14" }, // FILE:LINE GalleryPage.tsx:14
+  { term: "Y2K", src: "GalleryPage.tsx:14" }, // FILE:LINE GalleryPage.tsx:14
+  { term: "Киберпанк 2142", src: "GalleryPage.tsx:89" }, // FILE:LINE GalleryPage.tsx:89
+  { term: "Мемфис", src: "GalleryPage.tsx:14" }, // FILE:LINE GalleryPage.tsx:14
+  { term: "Неон-Кузбасс", src: "GalleryPage.tsx:89" }, // FILE:LINE GalleryPage.tsx:89
+  { term: "Bling", src: "GalleryPage.tsx:70" }, // FILE:LINE GalleryPage.tsx:70
+  { term: "Дрон 42", src: "GalleryPage.tsx:145" }, // FILE:LINE GalleryPage.tsx:145
+  { term: "Мопс", src: "GalleryPage.tsx:99" }, // FILE:LINE GalleryPage.tsx:99
+  { term: "Братуха", src: "ShopPage.tsx:37" }, // FILE:LINE ShopPage.tsx:37
+  { term: "Туса Медуза", src: "DiscographyPage.tsx:62" }, // FILE:LINE DiscographyPage.tsx:62
+  { term: "VPN", src: "DiscographyPage.tsx:63" }, // FILE:LINE DiscographyPage.tsx:63
+  { term: "XXL", src: "DiscographyPage.tsx:129" }, // FILE:LINE DiscographyPage.tsx:129
+  { term: "Слава Боссу", src: "DiscographyPage.tsx:95" }, // FILE:LINE DiscographyPage.tsx:95
+  { term: "Хайп", src: "ShopPage.tsx:48" }, // FILE:LINE ShopPage.tsx:48
+  { term: "Лопата", src: "MiningPage.tsx:24" }, // FILE:LINE MiningPage.tsx:24
+  { term: "Кирка", src: "MiningPage.tsx:25" }, // FILE:LINE MiningPage.tsx:25
+  { term: "Бур", src: "MiningPage.tsx:26" }, // FILE:LINE MiningPage.tsx:26
+  { term: "БЕЛАЗ", src: "MiningPage.tsx:27" }, // FILE:LINE MiningPage.tsx:27
+  { term: "Шахта 2042", src: "MiningPage.tsx:28" }, // FILE:LINE MiningPage.tsx:28
+  { term: "ЭкоЛегенда", src: "EcoPage.tsx:123" }, // FILE:LINE EcoPage.tsx:123
+  { term: "Братуха эко", src: "EcoPage.tsx:124" }, // FILE:LINE EcoPage.tsx:124
+  { term: "Томь", src: "EcoPage.tsx:487" }, // FILE:LINE EcoPage.tsx:487
+  { term: "Сосновый бор", src: "EcoPage.tsx:487" }, // FILE:LINE EcoPage.tsx:487
+  { term: "Красное озеро", src: "EcoPage.tsx:68" }, // FILE:LINE EcoPage.tsx:68
+  { term: "Фандомат", src: "EcoPage.tsx:103" }, // FILE:LINE EcoPage.tsx:103
+  { term: "Presave", src: "AiBot.tsx:20" }, // FILE:LINE AiBot.tsx:20
+  { term: "MiMo v2.5", src: "server.ts:787" }, // FILE:LINE server.ts:787
+  { term: "Neon", src: "drizzle/schema.ts:3" }, // FILE:LINE drizzle/schema.ts:3
+  { term: "Caddy", src: "docs/ops.md:8" }, // FILE:LINE docs/ops.md:8
+];
+
 
 const STYLE_GUIDE = `
 # Style Guide — Галерея 42

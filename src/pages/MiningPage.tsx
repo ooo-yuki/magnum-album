@@ -85,6 +85,40 @@ export const MINING_EXTRA_FACTS: { fact: string; src: string }[] = [
   { fact: "42-коины топ", src: "server.ts:213" }, // FILE:LINE server.ts:213
   { fact: "Кнопка КОПАТЬ", src: "MiningPage.tsx:328" }, // FILE:LINE MiningPage.tsx:328
 ];
+// -- MINING FAQ EXTRA 30 -- real, FILE:LINE
+export const MINING_FAQ_EXTRA: { q: string; a: string; src: string }[] = [
+  { q: "Лопата?", a: "+1/клик 42", src: "MiningPage.tsx:24" }, // FILE:LINE MiningPage.tsx:24
+  { q: "Кирка?", a: "+3/клик 142", src: "MiningPage.tsx:25" }, // FILE:LINE MiningPage.tsx:25
+  { q: "Бур?", a: "+1/сек 420", src: "MiningPage.tsx:26" }, // FILE:LINE MiningPage.tsx:26
+  { q: "БЕЛАЗ?", a: "+5/сек 1042", src: "MiningPage.tsx:27" }, // FILE:LINE MiningPage.tsx:27
+  { q: "Шахта?", a: "+12/сек 2042", src: "MiningPage.tsx:28" }, // FILE:LINE MiningPage.tsx:28
+  { q: "cost?", a: "base*1.42^count", src: "MiningPage.tsx:42" }, // FILE:LINE MiningPage.tsx:42
+  { q: "perClick?", a: "reduce power+1", src: "MiningPage.tsx:69" }, // FILE:LINE MiningPage.tsx:69
+  { q: "perSec?", a: "reduce auto", src: "MiningPage.tsx:70" }, // FILE:LINE MiningPage.tsx:70
+  { q: "GET mining?", a: "/magnum/api/mining", src: "MiningPage.tsx:77" }, // FILE:LINE MiningPage.tsx:77
+  { q: "POST click?", a: "/mining/click", src: "MiningPage.tsx:181" }, // FILE:LINE MiningPage.tsx:181
+  { q: "POST upgrade?", a: "/mining/upgrade", src: "MiningPage.tsx:204" }, // FILE:LINE MiningPage.tsx:204
+  { q: "WS?", a: "2-4 duel", src: "MiningPage.tsx:369" }, // FILE:LINE MiningPage.tsx:369
+  { q: "Топ шахтёр?", a: "Шахтёр_42 42042", src: "MiningPage.tsx:32" }, // FILE:LINE MiningPage.tsx:32
+  { q: "Кузбасс?", a: "Кузбасс edition", src: "MiningPage.tsx:290" }, // FILE:LINE MiningPage.tsx:290
+  { q: "Без скама?", a: "без крипты", src: "MiningPage.tsx:292" }, // FILE:LINE MiningPage.tsx:292
+  { q: "Авто майнинг?", a: "tick perSec", src: "MiningPage.tsx:98" }, // FILE:LINE MiningPage.tsx:98
+  { q: "GSAP?", a: "y24 stagger 0.12", src: "MiningPage.tsx:118" }, // FILE:LINE MiningPage.tsx:118
+  { q: "Rock?", a: "float y-4", src: "MiningPage.tsx:127" }, // FILE:LINE MiningPage.tsx:127
+  { q: "Float?", a: "spawnFloat", src: "MiningPage.tsx:144" }, // FILE:LINE MiningPage.tsx:144
+  { q: "Частицы?", a: "5 при клике", src: "MiningPage.tsx:161" }, // FILE:LINE MiningPage.tsx:161
+  { q: "Магаз?", a: "апгрейды", src: "MiningPage.tsx:342" }, // FILE:LINE MiningPage.tsx:342
+  { q: "Дуэль 10с?", a: "broadcast", src: "MiningPage.tsx:368" }, // FILE:LINE MiningPage.tsx:368
+  { q: "Лидерборд?", a: "топ шахтёров", src: "MiningPage.tsx:388" }, // FILE:LINE MiningPage.tsx:388
+  { q: "Токен?", a: "cookie", src: "MiningPage.tsx:294" }, // FILE:LINE MiningPage.tsx:294
+  { q: "Кнопка?", a: "КОПАТЬ", src: "MiningPage.tsx:328" }, // FILE:LINE MiningPage.tsx:328
+  { q: "Баланс?", a: "42-коин", src: "MiningPage.tsx:303" }, // FILE:LINE MiningPage.tsx:303
+  { q: "Hero?", a: "Копай как шахтёр", src: "MiningPage.tsx:291" }, // FILE:LINE MiningPage.tsx:291
+  { q: "Table?", a: "magnum_mining", src: "drizzle/schema.ts:23" }, // FILE:LINE drizzle/schema.ts:23
+  { q: "RateLimit?", a: "20/60s", src: "server.ts:234" }, // FILE:LINE server.ts:234
+  { q: "Caddy?", a: ":30645", src: "docs/ops.md:8" }, // FILE:LINE docs/ops.md:8
+];
+
 
 
 function costOf(u: Upgrade): number {

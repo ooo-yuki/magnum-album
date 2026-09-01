@@ -66,6 +66,40 @@ export const RECAPS_EXTRA_FACTS: { fact: string; src: string }[] = [
   { fact: "parovoj 16384 SU 28.07", src: "RecapsPage.tsx:441" }, // FILE:LINE RecapsPage.tsx:441
   { fact: "tunnel 29.07", src: "RecapsPage.tsx:460" }, // FILE:LINE RecapsPage.tsx:460
 ];
+// -- RECAPS FAQ EXTRA 30 -- real, FILE:LINE
+export const RECAPS_FAQ_EXTRA: { q: string; a: string; src: string }[] = [
+  { q: "Сколько рекапов?", a: "6+ карточек", src: "RecapsPage.tsx:28" }, // FILE:LINE RecapsPage.tsx:28
+  { q: "Теги?", a: "СП/Нарезка/Ивент/Freakland/Музыка", src: "RecapsPage.tsx:9" }, // FILE:LINE RecapsPage.tsx:9
+  { q: "tAi6?", a: "стрип-клуб 18:42", src: "RecapsPage.tsx:30" }, // FILE:LINE RecapsPage.tsx:30
+  { q: "ksc?", a: "ТикТок 12:05", src: "RecapsPage.tsx:48" }, // FILE:LINE RecapsPage.tsx:48
+  { q: "X2n?", a: "TerraFirma 03:06:02", src: "RecapsPage.tsx:65" }, // FILE:LINE RecapsPage.tsx:65
+  { q: "Yjtu?", a: "Киношка 03:15", src: "RecapsPage.tsx:122" }, // FILE:LINE RecapsPage.tsx:122
+  { q: "Freakland 11.07?", a: "Create", src: "RecapsPage.tsx:84" }, // FILE:LINE RecapsPage.tsx:84
+  { q: "Transkript?", a: "скоро", src: "RecapsPage.tsx:93" }, // FILE:LINE RecapsPage.tsx:93
+  { q: "Жюри 06.07?", a: "5opka VIPSSS", src: "RecapsPage.tsx:98" }, // FILE:LINE RecapsPage.tsx:98
+  { q: "Хаос 12.07?", a: "шестерни", src: "RecapsPage.tsx:138" }, // FILE:LINE RecapsPage.tsx:138
+  { q: "Автофермы 13.07?", a: "завод", src: "RecapsPage.tsx:157" }, // FILE:LINE RecapsPage.tsx:157
+  { q: "Ночной рейд 14.07?", a: "оборона", src: "RecapsPage.tsx:176" }, // FILE:LINE RecapsPage.tsx:176
+  { q: "PvP 15.07?", a: "арена", src: "RecapsPage.tsx:195" }, // FILE:LINE RecapsPage.tsx:195
+  { q: "Поезд 16.07?", a: "железная дорога", src: "RecapsPage.tsx:213" }, // FILE:LINE RecapsPage.tsx:213
+  { q: "Депо 17.07?", a: "склад", src: "RecapsPage.tsx:232" }, // FILE:LINE RecapsPage.tsx:232
+  { q: "Плавильня 18.07?", a: "кинетика", src: "RecapsPage.tsx:251" }, // FILE:LINE RecapsPage.tsx:251
+  { q: "Латунный 19.07?", a: "завод", src: "RecapsPage.tsx:270" }, // FILE:LINE RecapsPage.tsx:270
+  { q: "Редстоун 20.07?", a: "линк", src: "RecapsPage.tsx:289" }, // FILE:LINE RecapsPage.tsx:289
+  { q: "Ветряк 21.07?", a: "8192 SU", src: "RecapsPage.tsx:308" }, // FILE:LINE RecapsPage.tsx:308
+  { q: "Фильтр?", a: "Все по tag", src: "RecapsPage.tsx:3190" }, // FILE:LINE RecapsPage.tsx:3190
+  { q: "GSAP?", a: "y24 stagger 0.12", src: "RecapsPage.tsx:3194" }, // FILE:LINE RecapsPage.tsx:3194
+  { q: "Кальян?", a: "01:01:15", src: "RecapsPage.tsx:76" }, // FILE:LINE RecapsPage.tsx:76
+  { q: "Киношка?", a: "дисс", src: "RecapsPage.tsx:130" }, // FILE:LINE RecapsPage.tsx:130
+  { q: "Gen3 22.07?", a: "sortirovka", src: "RecapsPage.tsx:328" }, // FILE:LINE RecapsPage.tsx:328
+  { q: "lavovoe 23.07?", a: "ozero", src: "RecapsPage.tsx:346" }, // FILE:LINE RecapsPage.tsx:346
+  { q: "cactus 24.07?", a: "farm", src: "RecapsPage.tsx:364" }, // FILE:LINE RecapsPage.tsx:364
+  { q: "chasovoj 25.07?", a: "meh", src: "RecapsPage.tsx:384" }, // FILE:LINE RecapsPage.tsx:384
+  { q: "andozit 26.07?", a: "zavod", src: "RecapsPage.tsx:403" }, // FILE:LINE RecapsPage.tsx:403
+  { q: "rukav 27.07?", a: "meh-rukav", src: "RecapsPage.tsx:422" }, // FILE:LINE RecapsPage.tsx:422
+  { q: "parovoj 28.07?", a: "16384 SU", src: "RecapsPage.tsx:441" }, // FILE:LINE RecapsPage.tsx:441
+];
+
 
 
 

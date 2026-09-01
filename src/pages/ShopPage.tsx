@@ -136,6 +136,40 @@ export const SHOP_EXTRA_CATALOG: { id: string; name: string; price: number; rari
   { id: "owl", name: "Сова 42", price: 142, rarity: "rare", src: "ShopPage.tsx:43" }, // FILE:LINE ShopPage.tsx:43
   { id: "flamingo", name: "Фламинго 42", price: 420, rarity: "epic", src: "ShopPage.tsx:45" }, // FILE:LINE ShopPage.tsx:45
 ];
+// -- SHOP FAQ EXTRA 30 -- real, FILE:LINE
+export const SHOP_FAQ_EXTRA: { q: string; a: string; src: string }[] = [
+  { q: "Сколько скинов?", a: "12 скинов SKINS", src: "ShopPage.tsx:36" }, // FILE:LINE ShopPage.tsx:36
+  { q: "Цена common?", a: "42", src: "ShopPage.tsx:19" }, // FILE:LINE ShopPage.tsx:19
+  { q: "Цена legendary?", a: "1420", src: "ShopPage.tsx:19" }, // FILE:LINE ShopPage.tsx:19
+  { q: "Рамок сколько?", a: "12 frame", src: "ShopPage.tsx:55" }, // FILE:LINE ShopPage.tsx:55
+  { q: "Баннеров сколько?", a: "10 banner", src: "ShopPage.tsx:67" }, // FILE:LINE ShopPage.tsx:67
+  { q: "Титулов сколько?", a: "10 title", src: "ShopPage.tsx:77" }, // FILE:LINE ShopPage.tsx:77
+  { q: "Косметика всего?", a: "32", src: "ShopPage.tsx:53" }, // FILE:LINE ShopPage.tsx:53
+  { q: "Где кошелёк?", a: "coins.ts polling 2s", src: "ShopPage.tsx:6" }, // FILE:LINE ShopPage.tsx:6
+  { q: "API buy?", a: "POST /shop/buy", src: "ShopPage.tsx:263" }, // FILE:LINE ShopPage.tsx:263
+  { q: "API equip?", a: "POST /shop/equip", src: "ShopPage.tsx:301" }, // FILE:LINE ShopPage.tsx:301
+  { q: "Инвентарь?", a: "GET /shop/inventory", src: "ShopPage.tsx:91" }, // FILE:LINE ShopPage.tsx:91
+  { q: "Мопс цена?", a: "42 common", src: "ShopPage.tsx:37" }, // FILE:LINE ShopPage.tsx:37
+  { q: "Дракон цена?", a: "1420 legendary", src: "ShopPage.tsx:48" }, // FILE:LINE ShopPage.tsx:48
+  { q: "GSAP entrance?", a: "y24 stagger 0.12", src: "ShopPage.tsx:218" }, // FILE:LINE ShopPage.tsx:218
+  { q: "Hover?", a: "y:-4 tri-shadow", src: "ShopPage.tsx:228" }, // FILE:LINE ShopPage.tsx:228
+  { q: "Тигр редкость?", a: "legendary", src: "ShopPage.tsx:47" }, // FILE:LINE ShopPage.tsx:47
+  { q: "Акула редкость?", a: "epic 420", src: "ShopPage.tsx:44" }, // FILE:LINE ShopPage.tsx:44
+  { q: "Панда редкость?", a: "rare 142", src: "ShopPage.tsx:41" }, // FILE:LINE ShopPage.tsx:41
+  { q: "Баланс?", a: "getCoins subscribe", src: "ShopPage.tsx:6" }, // FILE:LINE ShopPage.tsx:6
+  { q: "Неон рамка?", a: "frame-neon42 42", src: "ShopPage.tsx:55" }, // FILE:LINE ShopPage.tsx:55
+  { q: "Корона?", a: "frame-crown 2042", src: "ShopPage.tsx:66" }, // FILE:LINE ShopPage.tsx:66
+  { q: "Легенда титул?", a: "title-legend 2042", src: "ShopPage.tsx:80" }, // FILE:LINE ShopPage.tsx:80
+  { q: "Бог 42?", a: "title-god 4242", src: "ShopPage.tsx:86" }, // FILE:LINE ShopPage.tsx:86
+  { q: "Магазин где?", a: "/magnum/shop", src: "App.tsx:80" }, // FILE:LINE App.tsx:80
+  { q: "Lazy Shop?", a: "ShopPage lazy 29KB", src: "App.tsx:16" }, // FILE:LINE App.tsx:16
+  { q: "Server prices?", a: "42/142/420/1420", src: "server.ts:258" }, // FILE:LINE server.ts:258
+  { q: "LS ключи?", a: "magnum-coins", src: "ShopPage.tsx:433" }, // FILE:LINE ShopPage.tsx:433
+  { q: "Тост ок?", a: "куплен легенда", src: "ShopPage.tsx:286" }, // FILE:LINE ShopPage.tsx:286
+  { q: "Тост err?", a: "не хватает монет", src: "ShopPage.tsx:258" }, // FILE:LINE ShopPage.tsx:258
+  { q: "Хром эффект?", a: "РГБ glow", src: "ShopPage.tsx:228" }, // FILE:LINE ShopPage.tsx:228
+];
+
 
 
 /* ── Компонент ────────────────────────────────────────────── */

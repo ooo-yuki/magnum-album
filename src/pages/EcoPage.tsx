@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import styles from "./EcoPage.module.css";
+
+gsap.registerPlugin(ScrollTrigger);
+const prefersReduced = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /* ── Типы ─────────────────────────────────────────────────── */
 
@@ -231,27 +235,52 @@ export function EcoPage() {
   const rank = useMemo(() => getRank(score as number), [score]);
   const allAnswered = answeredCount === QUESTIONS.length;
 
-  /* GSAP stagger вход вопросов */
+  /* GSAP entrance y24 stagger 0.12 + ScrollTrigger + reduced-motion + RGB hover */
   useEffect(() => {
     if (!rootRef.current) return;
     const ctx = gsap.context(() => {
-      gsap.set(cardsRef.current, { y: 28, opacity: 0, scale: 0.97 });
-      gsap.to(cardsRef.current, {
-        y: 0,
-        opacity: 1,
-        scale: 1,
-        duration: 0.55,
-        stagger: 0.07,
-        ease: "back.out(1.5)",
-        delay: 0.15,
+      const cards = cardsRef.current.filter(Boolean) as HTMLElement[];
+      const headerEls = rootRef.current!.querySelectorAll(`.${styles.header} > *`);
+      if (prefersReduced()) {
+        gsap.set(cards, { y: 0, opacity: 1, scale: 1, clearProps: "transform" });
+        gsap.set(headerEls, { y: 0, opacity: 1, clearProps: "transform" });
+        gsap.set(`.${styles.progressFill}`, { clearProps: "all" });
+        return;
+      }
+      // header entrance
+      gsap.set(headerEls, { y: 24, opacity: 0 });
+      gsap.to(headerEls, { y: 0, opacity: 1, duration: 0.6, stagger: 0.12, ease: "power3.out" });
+      // cards: ScrollTrigger batch stagger 0.12
+      gsap.set(cards, { y: 24, opacity: 0, scale: 0.97 });
+      ScrollTrigger.batch(cards, {
+        onEnter: (batch) => gsap.to(batch, { y: 0, opacity: 1, scale: 1, duration: 0.55, stagger: 0.12, ease: "back.out(1.5)", overwrite: "auto" }),
+        start: "top 92%",
+        once: true,
       });
-      gsap.fromTo(
-        `.${styles.progressFill}`,
-        { backgroundPosition: "0% 50%" },
-        { backgroundPosition: "200% 50%", duration: 2, repeat: -1, ease: "none" }
-      );
+      // fallback for cards already in viewport on load
+      gsap.to(cards.slice(0, 3), { y: 0, opacity: 1, scale: 1, duration: 0.55, stagger: 0.12, ease: "back.out(1.5)", delay: 0.2, overwrite: "auto" });
+      gsap.fromTo(`.${styles.progressFill}`, { backgroundPosition: "0% 50%" }, { backgroundPosition: "200% 50%", duration: 2, repeat: -1, ease: "none" });
+      // RGB-neon hover on cards + option buttons
+      const cleanups: Array<() => void> = [];
+      cards.forEach((card) => {
+        const onEnter = () => {
+          if (prefersReduced()) return;
+          gsap.to(card, { y: -4, boxShadow: "0 12px 36px rgba(0,0,0,0.4), 0 0 22px rgba(0,255,136,0.18), 0 0 28px rgba(255,45,85,0.14)", borderColor: "rgba(0,255,136,0.35)", duration: 0.28, ease: "power2.out", overwrite: "auto" });
+        };
+        const onLeave = () => {
+          gsap.to(card, { y: 0, boxShadow: "0 0 0 transparent", borderColor: "rgba(255,255,255,0.06)", duration: 0.4, ease: "power2.out", overwrite: "auto" });
+        };
+        card.addEventListener("mouseenter", onEnter);
+        card.addEventListener("mouseleave", onLeave);
+        cleanups.push(() => { card.removeEventListener("mouseenter", onEnter); card.removeEventListener("mouseleave", onLeave); });
+      });
+      // store cleanups on context revert via scope
+      (rootRef.current as unknown as { _ecoCleanups?: () => void })._ecoCleanups = () => cleanups.forEach((fn) => fn());
     }, rootRef);
-    return () => ctx.revert();
+    return () => {
+      try { (rootRef.current as unknown as { _ecoCleanups?: () => void })?._ecoCleanups?.(); } catch {}
+      ctx.revert();
+    };
   }, []);
 
   /* Прогресс-бар анимация ширины */

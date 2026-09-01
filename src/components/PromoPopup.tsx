@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import gsap from "gsap";
 
 const OFFERS = [
   { id: "mops", label: "Мопс 42", emoji: "🐗", price: 42 },
@@ -12,6 +13,8 @@ export function PromoPopup() {
   const [buying, setBuying] = useState<string | null>(null);
   const discount = sec > 0 ? 0.1 : 0;
   const seenKey = "magnum-offer-seen";
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     try {
@@ -20,6 +23,32 @@ export function PromoPopup() {
       return () => clearTimeout(t);
     } catch {}
   }, []);
+
+  // GSAP entrance + reduced-motion fallback + context cleanup (no white screen)
+  useEffect(() => {
+    if (!visible || !overlayRef.current || !cardRef.current) return;
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const ctx = gsap.context(() => {
+      if (prefersReduced) {
+        gsap.set(overlayRef.current, { opacity: 1, clearProps: "transform" });
+        if (cardRef.current) gsap.set(cardRef.current, { y: 0, opacity: 1, scale: 1, clearProps: "transform" });
+        if (cardRef.current) gsap.set(cardRef.current.querySelectorAll("div"), { y: 0, opacity: 1 });
+        return;
+      }
+      gsap.set(overlayRef.current, { opacity: 0 });
+      gsap.set(cardRef.current, { y: 24, opacity: 0, scale: 0.97 });
+      gsap.to(overlayRef.current, { opacity: 1, duration: 0.35, ease: "power2.out" });
+      gsap.to(cardRef.current, { y: 0, opacity: 1, scale: 1, duration: 0.55, ease: "back.out(1.4)", delay: 0.08 });
+      // stagger inner offer cards
+      const offers = cardRef.current!.querySelectorAll("div");
+      gsap.set(offers, { y: 12, opacity: 0 });
+      gsap.to(offers, { y: 0, opacity: 1, duration: 0.4, stagger: 0.08, ease: "power2.out", delay: 0.25 });
+      // RGB-neon pulse on primary button
+      const primary = cardRef.current!.querySelector("a") as HTMLElement | null;
+      if (primary) gsap.to(primary, { boxShadow: "0 0 22px rgba(255,45,85,0.35), 0 0 36px rgba(255,204,0,0.12)", duration: 1.2, repeat: -1, yoyo: true, ease: "sine.inOut" });
+    }, overlayRef);
+    return () => ctx.revert();
+  }, [visible]);
 
   useEffect(() => {
     if (!visible) return;
@@ -72,8 +101,8 @@ export function PromoPopup() {
   if (!visible) return null;
 
   return (
-    <div style={{ position:"fixed", inset:0, zIndex:9999, display:"grid", placeItems:"center", background:"rgba(0,0,0,.62)", backdropFilter:"blur(6px)" }} onClick={close}>
-      <div onClick={(e)=>e.stopPropagation()} style={{ width:"min(560px,92vw)", background:"#121216", border:"1px solid rgba(255,255,255,.1)", borderRadius:20, padding:20, boxShadow:"0 24px 64px rgba(0,0,0,.6), 0 0 32px rgba(255,45,85,.25)" }}>
+    <div ref={overlayRef} style={{ position:"fixed", inset:0, zIndex:9999, display:"grid", placeItems:"center", background:"rgba(0,0,0,.62)", backdropFilter:"blur(6px)" }} onClick={close}>
+      <div ref={cardRef} onClick={(e)=>e.stopPropagation()} style={{ width:"min(560px,92vw)", background:"#121216", border:"1px solid rgba(255,255,255,.1)", borderRadius:20, padding:20, boxShadow:"0 24px 64px rgba(0,0,0,.6), 0 0 32px rgba(255,45,85,.25)" }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
           <span style={{ fontWeight:900, letterSpacing:".06em", background:"linear-gradient(90deg,#ff2d55,#ffcc00)", WebkitBackgroundClip:"text", color:"transparent", fontSize:18 }}>СПЕЦОФФЕР 42 🔥</span>
           <button onClick={close} aria-label="Закрыть" style={{ width:32, height:32, borderRadius:10, border:"1px solid rgba(255,255,255,.1)", background:"rgba(255,255,255,.06)", color:"#fff", cursor:"pointer" }}>×</button>

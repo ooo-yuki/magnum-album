@@ -1,7 +1,7 @@
 // MAGNUM App — perf: 16 games code-split via React.lazy + Suspense
 // Fallback: GameFallback; vendor chunk split in build.ts
 import { Suspense, lazy } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { HomePage } from "./pages/HomePage";
 import { LastFitPage } from "./pages/LastFitPage";
@@ -57,6 +57,7 @@ export default function App() {
           <Route path="track/:slug" element={<TrackPage />} />
           <Route path="discography" element={<Suspense fallback={<PageFallback />}><DiscographyPage /></Suspense>} />
           <Route path="42" element={<About42Page />} />
+          <Route path="about" element={<Navigate to="/magnum/42" replace />} />  {/* P2-1: AboutPage vs About42Page dedupe, redirect /about -> /42 */}
           <Route path="artists" element={<Suspense fallback={<PageFallback />}><ArtistsPage /></Suspense>} />
           <Route path="game" element={<GamePage />} />
           <Route path="games" element={<GamesHub />} />

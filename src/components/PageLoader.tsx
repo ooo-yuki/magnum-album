@@ -11,10 +11,19 @@ export function PageLoader() {
 
   useEffect(() => {
     if (!containerRef.current) return;
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     // failsafe: hide even if GSAP stalls (Obscura / headless / reduced-motion)
-    const fallback = window.setTimeout(() => setVisible(false), 2200);
+    const fallback = window.setTimeout(() => setVisible(false), prefersReduced ? 900 : 2200);
 
     const ctx = gsap.context(() => {
+      if (prefersReduced) {
+        gsap.set([titleRef.current, barTrackRef.current, labelRef.current].filter(Boolean), { opacity: 1, y: 0, scale: 1, clearProps: "transform" });
+        gsap.set(barTrackRef.current, { scaleX: 1 });
+        window.setTimeout(() => {
+          gsap.to(containerRef.current, { opacity: 0, duration: 0.3, ease: "power2.in", onComplete: () => setVisible(false) });
+        }, 400);
+        return;
+      }
       // initial states
       gsap.set(titleRef.current, { opacity: 0, y: 12, scale: 0.92 });
       gsap.set(barTrackRef.current, { opacity: 0, scaleX: 0.6 });
