@@ -10,6 +10,7 @@ import { ScrollToTop } from "./ScrollToTop";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { AiBot } from "./AiBot";
 import { AuthStatus } from "./AuthStatus";
+import { PromoPopup } from "./PromoPopup";
 import { usePresaveTracker } from "../lib/presaveTracker";
 import styles from "./Layout.module.css";
 
@@ -186,6 +187,7 @@ export function Layout() {
       <ScrollToTop />
       <Footer />
       <AiBot />
+      <PromoPopup />
     </>
   );
 }

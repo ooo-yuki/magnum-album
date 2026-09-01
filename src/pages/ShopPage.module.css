@@ -497,6 +497,22 @@
 
 /* ── адаптив ───────────────────────────────────────────── */
 
+/* ── VIP тарифы ────────────────────────────────────────── */
+.vipBlock{margin:0 0 36px;padding:22px;border:1px solid #23232b;border-radius:18px;background:#121216}
+.vipHead{margin-bottom:16px;text-align:center}
+.vipTitle{margin:0 0 6px;font-size:22px;font-weight:900;letter-spacing:.04em;background:linear-gradient(90deg,#ff2d55,#ffcc00,#00ff88);-webkit-background-clip:text;background-clip:text;color:transparent}
+.vipSub{margin:0;color:#9aa4b2;font-size:13px}
+.vipActive{margin:8px 0 0;color:#00ff88;font-size:14px;font-weight:700}
+.vipGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.vipCard{border-radius:16px;padding:2px;position:relative;overflow:hidden}
+.vipCardActive{box-shadow:0 0 24px rgba(255,204,0,.35)}
+.vipInner{background:#17171d;border-radius:14px;padding:18px;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center}
+.vipLabel{font-size:20px;font-weight:900;letter-spacing:.08em}
+.vipPerk{font-size:12px;color:#9aa4b2}
+.vipPrice{font-size:18px;font-weight:900;color:#ffcc00}
+.vipOn{padding:6px 12px;border-radius:999px;background:#00ff88;color:#04140c;font-size:12px;font-weight:900}
+@media (max-width: 820px) {.vipGrid{grid-template-columns:1fr} }
+
 @media (max-width: 820px) {
   .setup {
     grid-template-columns: 1fr;

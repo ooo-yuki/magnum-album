@@ -383,7 +383,17 @@ async function handleShopEquip(req: Request): Promise<Response> {
   let body: { skinId?: string; skin_id?: string; id?: string };
   try { body = (await req.json()) as typeof body; } catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
   const skinId = typeof body.skinId === "string" ? body.skinId.trim() : typeof body.skin_id === "string" ? body.skin_id.trim() : typeof body.id === "string" ? body.id.trim() : "";
-  if (!skinId) return Response.json({ error: "skinId required" }, { status: 400 });
+  if (!skinId) {
+    // empty → unequip
+    try {
+      const sql = getSql();
+      await sql`UPDATE magnum_shop_inventory SET equipped = false WHERE user_id = ${user.id}`;
+      return Response.json({ ok: true, equipped: null });
+    } catch (e) {
+      console.error("[shop equip unequip] failed", e);
+      return Response.json({ error: "db error" }, { status: 500 });
+    }
+  }
   try {
     const sql = getSql();
     const owned = await sql`SELECT id FROM magnum_shop_inventory WHERE user_id = ${user.id} AND skin_id = ${skinId} LIMIT 1`;
@@ -413,9 +423,50 @@ async function handleShopInventory(req: Request): Promise<Response> {
       const x = r as { id: number; skin_id: string; equipped: boolean; purchased_at: string };
       return { id: Number(x.id), skinId: String(x.skin_id), skin_id: String(x.skin_id), equipped: Boolean(x.equipped), purchased_at: x.purchased_at };
     });
-    return Response.json({ inventory, items: inventory });
+    // also fetch coins and equipped single value for backward-compat with old client expecting {coins, equipped}
+    const coinsRows = await sql`SELECT balance FROM magnum_coins WHERE user_id = ${user.id} LIMIT 1`;
+    const coinsVal = coinsRows.length ? Number((coinsRows[0] as { balance: number }).balance) : 1000;
+    const equippedItem = inventory.find(v => v.equipped);
+    const equipped = equippedItem ? equippedItem.skinId : null;
+    return Response.json({ inventory, items: inventory, coins: coinsVal, balance: coinsVal, equipped });
   } catch (e) {
     console.error("[shop inventory] failed", e);
+    return Response.json({ error: "db error" }, { status: 500 });
+  }
+}
+
+async function handleShopState(req: Request): Promise<Response> {
+  // alias to inventory+coins for legacy client: GET /shop/state → {inventory, equipped, coins}
+  return handleShopInventory(req);
+}
+
+async function handleShopEquipped(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  try {
+    const sql = getSql();
+    const rows = await sql`SELECT skin_id FROM magnum_shop_inventory WHERE user_id = ${user.id} AND equipped = true LIMIT 1`;
+    const equipped = rows.length ? String((rows[0] as { skin_id: string }).skin_id) : null;
+    return Response.json({ equipped, skinId: equipped });
+  } catch (e) {
+    console.error("[shop equipped] failed", e);
+    return Response.json({ error: "db error" }, { status: 500 });
+  }
+}
+
+async function handleShopUnequip(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  try {
+    const sql = getSql();
+    await sql`UPDATE magnum_shop_inventory SET equipped = false WHERE user_id = ${user.id}`;
+    return Response.json({ ok: true, equipped: null });
+  } catch (e) {
+    console.error("[shop unequip] failed", e);
     return Response.json({ error: "db error" }, { status: 500 });
   }
 }
@@ -1024,6 +1075,30 @@ function startDuel(room: DuelRoom) {
   }, room.durationSec * 1000);
 }
 
+// ---- Coins set (P0-2) ----
+async function handleCoinsSet(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`coins:set:${user.id}:${ip}`, 20, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
+  let body: { coins?: number; balance?: number; amount?: number; target?: number };
+  try { body = (await req.json()) as typeof body; } catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
+  const raw = body.coins ?? body.balance ?? body.amount ?? body.target;
+  const target = Number(raw);
+  if (!Number.isFinite(target)) return Response.json({ error: "coins/target must be number" }, { status: 400 });
+  const clamped = Math.max(0, Math.min(9_999_999, Math.round(target)));
+  try {
+    const sql = getSql();
+    await sql`INSERT INTO magnum_coins (user_id, balance) VALUES (${user.id}, ${clamped}) ON CONFLICT (user_id) DO UPDATE SET balance = ${clamped}`;
+    return Response.json({ balance: clamped, coins: clamped });
+  } catch (e) {
+    console.error("[coins set] failed", e);
+    return Response.json({ error: "db error" }, { status: 500 });
+  }
+}
+
 const server = Bun.serve<WSData>({
   port: Number(process.env.PORT) || 3000,
   development: process.env.NODE_ENV !== "production",
@@ -1055,6 +1130,7 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/coins" && req.method === "GET") return handleCoinsGet(req);
     if (url.pathname === "/magnum/api/coins/top" && req.method === "GET") return handleCoinsTop();
     if (url.pathname === "/magnum/api/coins/add" && req.method === "POST") return handleCoinsAdd(req);
+    if (url.pathname === "/magnum/api/coins/set" && req.method === "POST") return handleCoinsSet(req);
     if (url.pathname === "/magnum/api/presave/click" && req.method === "POST") return handlePresaveClick(req);
     if (url.pathname === "/magnum/api/presave/stats" && req.method === "GET") return handlePresaveStats(req);
 
@@ -1077,6 +1153,10 @@ const server = Bun.serve<WSData>({
     // shop
     if (url.pathname === "/magnum/api/shop/buy" && req.method === "POST") return handleShopBuy(req);
     if (url.pathname === "/magnum/api/shop/equip" && req.method === "POST") return handleShopEquip(req);
+    if (url.pathname === "/magnum/api/shop/unequip" && req.method === "POST") return handleShopUnequip(req);
+    if (url.pathname === "/magnum/api/shop/purchase" && req.method === "POST") return handleShopBuy(req);
+    if (url.pathname === "/magnum/api/shop/state" && req.method === "GET") return handleShopState(req);
+    if (url.pathname === "/magnum/api/shop/equipped" && req.method === "GET") return handleShopEquipped(req);
     if (url.pathname === "/magnum/api/shop/inventory" && req.method === "GET") return handleShopInventory(req);
     if (url.pathname === "/magnum/api/shop/catalog" && req.method === "GET") return handleCosmeticCatalog();
     if (url.pathname === "/magnum/api/shop/cosmetic/buy" && req.method === "POST") return handleCosmeticBuy(req);

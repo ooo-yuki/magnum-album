@@ -1,7 +1,13 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import styles from "./ClickerGame.module.css";
+gsap.registerPlugin(ScrollTrigger);
+function prefersReducedMotion():boolean{return typeof window!=="undefined"&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;}
+const RGB_GLOW="0 12px 36px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,45,85,0.22), 0 0 28px rgba(255,45,85,0.22), 0 0 28px rgba(0,255,136,0.14), 0 0 32px rgba(255,204,0,0.10)";
+function hoverIn(el:HTMLElement){ if(prefersReducedMotion()) return; gsap.to(el,{y: -4, boxShadow:RGB_GLOW, duration:0.3}); }
+function hoverOut(el:HTMLElement){ if(prefersReducedMotion()){gsap.set(el,{clearProps:"boxShadow"});return;} gsap.to(el,{y:0, duration:0.3}); }
 
 const PRESAVE = "https://music.thefence.me/psmagnum";
 const MILESTONES = [42, 100, 420, 4200] as const;
@@ -215,7 +221,7 @@ export function ClickerGame() {
 
   useEffect(() => {
     if (!pageRef.current) return;
-    gsap.from(`.${styles.hero} > *`, { y: 20, opacity: 0, stagger: 0.1, duration: 0.6 });
+    gsap.from(`.${styles.hero} > *`, { y: 20, opacity: 0, stagger: 0.12, duration: 0.6 });
   }, []);
 
   // modal ESC
@@ -225,7 +231,16 @@ export function ClickerGame() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
+  }, [])
+  // GSAP spec batch
+  useEffect(() => {
+    const root: HTMLElement = document.querySelector<HTMLElement>("[data-gsap-root]") || (document.body as unknown as HTMLElement);
+    if (!root) return;
+    if (prefersReducedMotion()) { const els=root.querySelectorAll(".card"); if(els.length) gsap.set(els,{y:0,opacity:1,clearProps:"transform"}); return; }
+    const ctx=gsap.context(()=>{ const cards=root.querySelectorAll<HTMLElement>(".card,[data-card],.tile"); if(cards.length){ gsap.set(cards,{y:24,opacity:0}); ScrollTrigger.batch(cards,{onEnter:(batch:any)=>gsap.to(batch,{y:0,opacity:1,stagger:0.12,duration:0.55,ease:"power2.out"}),start:"top 92%",once:true}); } }, root);
+    return ()=>ctx.revert();
   }, []);
+;
 
   const startGame = useCallback(() => {
     setStarted(true);
@@ -682,4 +697,3 @@ export function ClickerGame() {
     </div>
   );
 }
-

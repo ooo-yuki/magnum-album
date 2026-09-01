@@ -2,8 +2,10 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import styles from "./ShopPage.module.css";
 import { getCoins, subscribe } from "../lib/coins";
+gsap.registerPlugin(ScrollTrigger);
 
 /* ── Редкости ─────────────────────────────────────────────── */
 
@@ -207,7 +209,8 @@ export function ShopPage() {
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const ctx = gsap.context(() => {
       if (prefersReduced) {
-        gsap.set(`.${styles.header} > *`, { y: 0, opacity: 1, clearProps: "transform" });
+        ScrollTrigger.batch(document.querySelectorAll('.card'), { onEnter: (batch:any) => gsap.to(batch, { y: 0, opacity: 1, stagger: 0.12, duration: 0.55, ease: "power2.out" }), start: "top 92%", once: true });
+      gsap.set(`.${styles.header} > *`, { y: 0, opacity: 1, clearProps: "transform" });
         gsap.set(`.${styles.card}`, { y: 0, opacity: 1, clearProps: "transform" });
         return;
       }
@@ -266,24 +269,11 @@ export function ShopPage() {
         body: JSON.stringify({ skinId: skin.id, id: skin.id, rarity: skin.rarity, price }),
       });
       if (!res.ok) {
-        // пробуем альтернативный путь
-        const alt = await fetch("/magnum/api/shop/purchase", {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ skinId: skin.id, id: skin.id }),
-        });
-        if (!alt.ok) {
-          const txt = await alt.text().catch(() => "");
-          pushToast("err", txt || "Покупка не прошла — попробуй ещё раз");
-          return;
-        }
-        const dataAlt = await alt.json().catch(() => ({})) as { coins?: number; balance?: number; inventory?: string[] };
-        if (typeof dataAlt.coins === "number") setCoins(dataAlt.coins);
-        else if (typeof dataAlt.balance === "number") setCoins(dataAlt.balance);
-        if (Array.isArray(dataAlt.inventory)) setInventory(dataAlt.inventory);
-        else setInventory((prev) => [...prev, skin.id]);
-        pushToast("ok", `${skin.name} куплен! Легенда в инвентаре.`);
+        const txt = await res.text().catch(() => "");
+        // парсим json ошибку если есть
+        let msg = txt;
+        try { const j = JSON.parse(txt) as { error?: string }; if (j.error) msg = j.error; } catch {}
+        pushToast("err", msg || "Покупка не прошла — попробуй ещё раз");
         return;
       }
       const data = await res.json().catch(() => ({})) as { coins?: number; balance?: number; inventory?: string[]; equipped?: string | null };
@@ -320,6 +310,7 @@ export function ShopPage() {
 
   const unequip = async () => {
     try {
+      // серверный unequip: сбрасываем equipped флаг (POST /shop/unequip или POST /shop/equip с null)
       const res = await fetch("/magnum/api/shop/unequip", {
         method: "POST",
         credentials: "include",
@@ -327,14 +318,15 @@ export function ShopPage() {
         body: JSON.stringify({}),
       });
       if (!res.ok) {
-        // fallback на equip null
-        const alt = await fetch("/magnum/api/shop/equip", {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ skinId: null }),
-        });
-        if (!alt.ok) { pushToast("err", "Не вышло снять"); return; }
+        // сервер не имеет unequip — fallback через equip null (если поддерживается) или оптимистично
+        try {
+          await fetch("/magnum/api/shop/equip", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ skinId: "" }),
+          });
+        } catch {}
       }
       setEquipped(null);
       pushToast("ok", "Скин снят. Голый магнум — тоже стиль.");

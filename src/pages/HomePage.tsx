@@ -14,6 +14,9 @@ import { News2026 } from "../components/News2026";
 import { CTA } from "../components/CTA";
 
 gsap.registerPlugin(ScrollTrigger);
+function prefersReducedMotion(): boolean { return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches; }
+const RGB_GLOW = "0 12px 36px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,45,85,0.22), 0 0 28px rgba(255,45,85,0.22), 0 0 28px rgba(0,255,136,0.14), 0 0 32px rgba(255,204,0,0.10)";
+function hoverIn(el: HTMLElement){ if(prefersReducedMotion()) return; gsap.to(el,{y: -4, boxShadow:RGB_GLOW, borderColor:"rgba(255,45,85,0.45)", duration:0.3, ease:"power2.out", overwrite:true}); }
 
 const TARGET = 42;
 
@@ -123,6 +126,7 @@ function PromoBanners() {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!ref.current) return;
+    ScrollTrigger.batch(ref.current.querySelectorAll('.card'), { onEnter: (batch:any)=>gsap.to(batch,{y:0, opacity:1, stagger:0.12, duration:0.55, ease:'power2.out'}), start:'top 92%', once:true});
     const cards = ref.current.querySelectorAll<HTMLElement>("[data-promo]");
     if (!cards.length) return;
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;

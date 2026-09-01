@@ -41,6 +41,54 @@ const NAGS = [
 
 const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
+const SHOP_SKINS_FOR_BOT: Array<{id:string;name:string;price:number;emoji:string}> = [
+  {id:"mops",name:"Мопс 42",price:42,emoji:"🐗"},
+  {id:"rhino",name:"Носорог 42",price:42,emoji:"🦏"},
+  {id:"monkey",name:"Обезьяна 42",price:42,emoji:"🐵"},
+  {id:"frog",name:"Лягуха 42",price:42,emoji:"🐸"},
+  {id:"panda",name:"Панда 42",price:142,emoji:"🐼"},
+  {id:"fox",name:"Лиса 42",price:142,emoji:"🦊"},
+  {id:"owl",name:"Сова 42",price:142,emoji:"🦉"},
+  {id:"shark",name:"Акула 42",price:420,emoji:"🦈"},
+  {id:"flamingo",name:"Фламинго 42",price:420,emoji:"🦩"},
+  {id:"wolf",name:"Волк 42",price:420,emoji:"🐺"},
+  {id:"tiger",name:"Тигр 42",price:1420,emoji:"🐯"},
+  {id:"dragon",name:"Дракон 42",price:1420,emoji:"🐉"},
+];
+function isShopQuery(text:string): boolean {
+  const s=text.toLowerCase();
+  return s.includes("что купить") || s.includes("что брать") || (s.includes("посоветуй") && (s.includes("скин")||s.includes("магазин")||s.includes("купить"))) || s.includes("что выбрать");
+}
+async function getShopRecommendation(): Promise<string> {
+  let balance = 0;
+  let owned: string[] = [];
+  try{
+    const cr = await fetch("/magnum/api/coins",{credentials:"include"});
+    if(cr.ok){ const d=await cr.json() as {balance?:number;coins?:number}; balance = Number(d.balance ?? d.coins ?? 0); }
+  }catch{}
+  if(!balance){ try{ const v = localStorage.getItem("magnum_coins"); if(v) balance = Number(v)||0; }catch{} }
+  try{
+    const ir = await fetch("/magnum/api/shop/inventory",{credentials:"include"});
+    if(ir.ok){ const d=await ir.json() as {inventory?:Array<{skin_id:string;skinId:string}>;items?:Array<{skin_id:string}>}; const arr=(d as any).inventory|| (d as any).items|| (Array.isArray(d)?d:[]); owned = arr.map((x:any)=> String(x.skin_id||x.skinId||x)); }
+  }catch{}
+  // pick 3 affordable not owned, closest to balance
+  const affordable = SHOP_SKINS_FOR_BOT.filter(s=> !owned.includes(s.id) && s.price <= balance).sort((a,b)=> b.price - a.price);
+  let picks: typeof SHOP_SKINS_FOR_BOT = [];
+  if(affordable.length>=3) picks = affordable.slice(0,3);
+  else if(affordable.length>0) {
+    picks = [...affordable];
+    const rest = SHOP_SKINS_FOR_BOT.filter(s=> !owned.includes(s.id) && !picks.find(p=>p.id===s.id)).sort((a,b)=> a.price-b.price);
+    while(picks.length<3 && rest.length) picks.push(rest.shift()!);
+  } else {
+    picks = SHOP_SKINS_FOR_BOT.filter(s=> !owned.includes(s.id)).sort((a,b)=> a.price-b.price).slice(0,3);
+  }
+  if(picks.length===0) picks = SHOP_SKINS_FOR_BOT.slice(0,3);
+  const sum = picks.reduce((s,x)=>s+x.price,0);
+  const lines = picks.map((s,i)=> `${i+1}. ${s.emoji} ${s.name} — 🪙 ${s.price}`).join("\n");
+  if(balance>0 && sum>balance) return `Братуха, у тебя 🪙 ${balance}. Вот 3 варианта под баланс — бери пока не разобрали:\n${lines}\n\nФарми в играх до 4200 и залетай в /magnum/shop — пресейв MAGNUM ждёт: https://music.thefence.me/psmagnum`;
+  return `Братуха, у тебя 🪙 ${balance}. Советую 3 скина под твой кошелёк:\n${lines}\n\nЗалетай в магазин /magnum/shop, а пока — ставь пресейв MAGNUM: https://music.thefence.me/psmagnum 🔥`;
+}
+
 /* ───────────────── debounce hook ───────────────── */
 function useDebounce<T>(value: T, delayMs: number): T {
   const [debounced, setDebounced] = useState<T>(value);
@@ -226,6 +274,20 @@ export function AiBot() {
   const send = useCallback(
     async (text: string, image: string | null) => {
       if (busy) return;
+      // shop recommendation interceptor — не дергаем AI если спрашивают что купить
+      if (!image && isShopQuery(text)) {
+        setBusy(true);
+        setMessages((m) => [...m, { role: "user", text, image: image ?? undefined }]);
+        setInput("");
+        setPendingImage(null);
+        try {
+          const rec = await getShopRecommendation();
+          setMessages((m) => [...m, { role: "bot", text: rec }]);
+        } catch {
+          setMessages((m) => [...m, { role: "bot", text: "Братуха, загляни в /magnum/shop — там 12 скинов от 42 до 1420. Фарми 🪙 и бери пока дают!" }]);
+        } finally { setBusy(false); }
+        return;
+      }
       setBusy(true);
       setMessages((m) => [...m, { role: "user", text, image: image ?? undefined }]);
       setInput("");
