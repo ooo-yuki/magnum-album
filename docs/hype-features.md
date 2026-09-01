@@ -363,6 +363,143 @@ frontend: localStorage.setItem('magnum-frame-verified','1'), setItem('magnum-fra
 **Файлы:** `src/components/AmbientPlayer.tsx`, `src/lib/audio.ts`, `src/pages/HomePage.tsx`.
 **Edge:** AudioContext suspended — `resume()` по клику; LS битый — дефолт `vol:0.3`; несколько вкладок — `storage` sync; `prefers-reduced-motion` — без пульсации; файл не грузится — тост «звук отдыхает».
 
+### 7.12 Мультиплеер Арена 42 — онлайн-арена 1v1 + сезоны
+
+**Идея:**
+Полноценная онлайн-арена на `Bun.serve WebSocket /magnum/api/ws` — лобби, матчмейкинг 1v1, сезоны 7 дней, рейтинг ELO 42.
+Матч — 10с кликер-дуэль с анти-читом на сервере (CPS>20 → бан раунда, `suspect:true`).
+Победитель забирает `wager` из `magnum-coins` + `+42` рейтинга, лузер −12, draw — возврат.
+Топ-3 сезона получают лимитку `arena-crown-42` (conic-gold рамка + `box-shadow: 0 0 22px gold`).
+Сезонный вайп — `magnum-arena-season:{id,rating,wins,season}` LS, сервер `magnum_leaderboard(game='arena')`.
+**LS/Server ключи:**
+- `magnum-arena-rating:number` — локальный кэш ELO (инициал 1000)
+- `magnum-arena-season:{id,rating,wins,season:number}` — прогресс сезона
+- `magnum-arena-last:ISO` — кулдаун 3с между поисками матча
+- сервер: `magnum_leaderboard(game='arena', score=rating)` + `magnum_arena_matches{id,p1,p2,winner,wager,ts}`
+- `magnum-coins` — единый кошелёк `src/lib/coins.ts` (списание/начисление ставки)
+**UI блоки:**
+- `ArenaLobby` — кнопка «Найти братуху ⚔️», счётчик онлайн `ws:online`, селект ставки 0/42/142/420
+- `ArenaDuel` — два прогресс-бара, таймер 10с, `+1` burst + `navigator.vibrate(20)` на клик, GSAP shake на контесте
+- `ArenaResult` — конфетти 160 частиц (canvas), `rating ±N`, кнопки «Реванш»/`ws:rematch` / «В лобби»
+- `ArenaSeasonBoard` — топ-20 сезона + твой ранг, бейдж `TOP 42` с `conic-gradient` рамкой
+- `ArenaBadge` в `GamesHub` — `⚔️ ARENA LIVE` с RGB пульсом `animation: pulse 1.2s infinite`
+- `ArenaHistory` — последние 20 матчей из LS + сервер, фильтр по `wager` и `winner`
+**Файлы:**
+- `src/pages/games/Arena.tsx` — state-machine `lobby→search→duel→result` + `useGSAP` анимации
+- `src/lib/arena.ts` — `findMatch()`, `calcElo(winner,loser)`, `canAfford(wager)`, `isSuspect(cps)`
+- `src/lib/ws.ts` — `WebSocket wss://.../magnum/api/ws`, реконнект + heartbeat 25с + `subscribe('arena')`
+- `server.ts` — `websocket:{open→subscribe('arena'), message→duel:challenge/broadcast, close→unsubscribe}`
+- `src/components/ArenaBoard.tsx` — таблица топ-20 reuse `Leaderboard.tsx` + `EquippedFrame` для корон
+**Edge:**
+- WS отвал — fallback на `DuelClicker` hot-seat + тост «арена оффлайн, дерёмся локально»
+- читер CPS>20 или `clicks>150/10с` — `suspect:true`, матч не в рейтинг, «братуха, ты робот? 🤖»
+- ставка > баланса — `getCoins()<wager` блок, подсказка «не хватает, сходи в казино»
+- две вкладки — `storage` sync рейтинга + `BroadcastChannel('arena')` для instant
+- `prefers-reduced-motion` — без shake/confetti, `animation:none`
+- `beforeunload` mid-duel — возврат ставки `addCoins(wager)` если дуэль не завершена
+- отрицательный wager — `Math.max(0,Number(v))`, NaN→0, кламп 0..1420
+**Награда:**
+- `+42` за первую победу в день, `+420` за 5 побед подряд (streak в `magnum-arena-season`)
+- `arena-crown-42` скин за топ-3 сезона + `+1420` монет бонус
+- аналитика: `console.log('[magnum] arena:', {rating,wager,winner})` без внешних трекеров
+**SEO/роадмап:**
+- `/magnum/arena` в `sitemap.xml` + `robots.txt` allow, OG-теги `og:title=Арена 42`
+- MVP — мок WS локально (hot-seat), v2 — реальный `Bun.serve` + `magnum_leaderboard` + ELO
+- кросс-фича: победа триггерит `StreakCalendar` + `RecapQuest` шаг
+
+### 7.13 Эко-Челлендж 42 — еженедельный челлендж Кузбасса + стрик
+
+**Идея:**
+Еженедельный эко-челлендж на 7 дней: каждый день 1 задание про Кузбасс/Томь/сортировку мусора.
+Каждый таск с фактом MAGNUM: VPN 28.04 в чартах, CLAY РЗТ73 03.04, SUPER PUPER NOVA РЗТ80/XXL86, ТУСА МЕДУЗА 8K клипов/200K просмотров.
+Пропуск дня — стрик сгорает, но «заморозка» за 420 монет (1/неделю, `magnum-eco-freeze-used`).
+Финал недели (вс) — босс-квиз 8Q из `EcoQuizPage` с наградой до 1420 + бейдж `Эко-Легенда 42`.
+Пропаганда: «Томь — артерия Кемерово, 42 братухи чистят берега — сортируй, братуха!».
+**LS ключи:**
+- `magnum-eco-challenge:{weekId,streak,lastDate,completed:number[],frozen:boolean}` LS
+- `magnum-eco-history:{score,level,date}[]` reuse из §2.2 (последние 10 квизов)
+- `magnum-coins:number` — награда 42/142/420 из `src/lib/coins.ts`
+- `magnum-eco-freeze-used:boolean` — 1 заморозка в неделю, сброс по `weekId`
+- `weekId=ISO week (YYYY-Www)` для авто-сброса челленджа в пн 00:00 локально
+**UI блоки:**
+- `EcoChallengeGrid` — 7 клеток пн-вс с иконками `🌿♻️🌊🏭🌲💧🔥`, выполненная `linear-gradient(135deg,#00ff88,#5865f2)`, пропуск серая `dashed`
+- `EcoTaskCard` — задание дня + факт «А знаешь ли ты…» про Кемерово/MAGNUM, кнопка «Сделать» (чек `IntersectionObserver` или квиз-ответ)
+- `EcoStreakBar` — «🔥 5/7 братуха, не сливай!» + таймер до сброса `23:59:59`, GSAP `scale 1→1.02` пульс
+- `EcoBossQuiz` — в вс открывается босс-квиз 8Q, награда `streak*42 + bonus 420` если 7/7, иначе `streak*42`
+- `EcoRewardModal` — конфетти + `addCoins(reward)` + шаринг «Я закрыл ЭКО-челлендж 7/7! 🌱» + `PRESAVE` CTA
+- `EcoFreezeBtn` — «Заморозить стрик за 420 🧊» — `if(getCoins()<420) disabled` + тост
+**Файлы:**
+- `src/pages/EcoChallengePage.tsx` — grid + boss + freeze + GSAP stagger
+- `src/lib/ecoChallenge.ts` — `TASKS_7:Task[]`, `calcStreak()`, `canFreeze()`, `getWeekId()`, `isBossUnlocked()`
+- `src/lib/ecoQuiz.ts` — reuse `QUESTIONS:Question[]`, `calcLevel(score)`, `getReward(level)`
+- `src/components/EcoChallengeGrid.module.css` — grid 7 (десктоп) / 4+3 (мобилка), `conic-gradient` бейджи
+- `src/lib/coins.ts` — `getCoins/addCoins/subscribe` для наград, `window.addEventListener('storage')` sync
+- `public/eco-challenge.json` (опционально) — JSON с 7 заданиями для правки без деплоя
+**Edge:**
+- часовой пояс — `toDateString()` локально, `lastDate` в будущем → сброс + тост «время шалят, стрик сброшен»
+- LS битый JSON — `try{JSON.parse}catch→fallback {streak:0,completed:[]}` + `removeItem` битого
+- повтор задания — идемпотентно `if(completed.includes(day)) return`, без двойной награды
+- награда NaN — `Number.isFinite(reward)?reward:0`, кламп через `addCoins`
+- приватный режим — `try/catch` вокруг LS + «прогресс не сохранится в этом браузере»
+- `prefers-reduced-motion` — без GSAP scale/pulse, статичные карточки
+- две вкладки — `storage` event на `magnum-eco-challenge`, синхронизируем grid
+- `weekId` смена — авто-сброс `completed=[]`, но `freeze-used` тоже сброс
+**Награда:**
+- 42 за день, 142 за 3/7, 420 за 7/7, 1420 за босс-квиз 8/8 + бейдж `Эко-Легенда 42` conic-gold
+- `+42` бонус за шаринг результата + `magnum-share-claimed` LS
+- кросс-фича: прогресс триггерит `RecapQuest` шаг + `StreakCalendar` sync + пост в `magnum_ideas`
+
+### 7.14 Магазин Лимиток 42 — дропы, аукционы, FOMO-таймер
+
+**Идея:**
+Лимитированный дроп-шоп: 6 скинов/рамок дропаются раз в 72ч, FOMO-таймер `72:00:00`, тираж 42 штуки каждый.
+Цена 142/420/1420, покупка за `magnum-coins` + `magnum-inventory` LS, после солд-аута — аукцион за монеты (топ-ставка забирает).
+Дроп `magnum-limited-042` — «Медуза Gold» `conic-gradient(from 0deg,#ffd700,#ff8c00,#ffd700)` epic 1420 с эмодзи 🪼.
+FOMO-текст: «тираж 42 — кринжа не существует, делай, братуха! Успей до `endsAt`».
+После дропа — автозамена на следующий `dropId+1` с новым каталогом (ротация 4 дропа/месяц).
+**Каталог дропа #1 (6 лимиток, тираж 42 каждый):**
+- `meduza-gold-42` 🪼 `conic-gradient(from 0deg,#ffd700,#ff8c00,#ffd700)` epic 1420 — «Медуза Gold»
+- `tusa-8k-holo` 🎬 `linear-gradient(135deg,#00ccff,#ff2d55)` rare 420 — «Туса Holo 8K»
+- `vpn-neon-42` 📡 `linear-gradient(135deg,#ff2d55,#5865f2)` rare 420 — «VPN Neon»
+- `clay-73-brown` 🧱 `linear-gradient(135deg,#8b4513,#ffcc00)` uncommon 142 — «CLAY 73»
+- `nova-80-purple` 💜 `conic-gradient(from 180deg,#9b59b6,#ff2d55)` rare 420 — «Nova 80»
+- `fence-42-black` 🏴 `linear-gradient(135deg,#111,#444)` epic 1420 — «The Fence 42»
+- редкости как в §3: `common 42` · `uncommon 142` · `rare 420` · `epic 1420` — отсылка к 42
+**LS/Server ключи:**
+- `magnum-limited:{dropId,items:{id,left,price}[],endsAt:ISO}` LS — кэш дропа
+- `magnum-inventory:string[]` + `magnum-equipped:string|null` reuse §3.3 (инвариант `equipped∈inventory`)
+- `magnum-limited-bids:{dropId,bid:number,leader:string}` LS — топ-ставка аукциона
+- сервер v2: `magnum_shop_inventory(skin_id, equipped)` + `magnum_limited_drops{dropId, skinId, left, price}`
+- `magnum-coins` — единый кошелёк, `getCoins()/addCoins()` с `subscribe()` live
+**UI блоки:**
+- `LimitedGrid` — 6 карточек `grid 3×2` (мобилка 2×3) с бейджем `LEFT 12/42` + прогресс-бар `width: left/42*100%`
+- `FomoTimer` — липкий `72:00:00` над гридом, GSAP пульс `scale 1→1.04` каждую сек, `prefers-reduced-motion` — без пульса
+- `BuyOrBid` — если `left>0` → «Купить за N» / «Надето ✓» / «Надеть», иначе аукцион «Ставка +42» + топ-ставка `bid`
+- `LimitedPreview` — модалка 200px градиент-блок + эмодзи 48px + «тираж 42, братуха, успеешь?» + шаринг
+- `InventoryBar` — горизонтальный скролл купленных лимиток над гридом, клик → `equipSkin(id)` + `EquippedFrame`
+- `SoldOutBadge` — `SOLD OUT` с `conic-gradient` + `filter: grayscale(0.6)` + аукционная кнопка
+**Файлы:**
+- `src/pages/LimitedShopPage.tsx` — grid + timer + bid + GSAP confetti
+- `src/lib/limitedShop.ts` — `DROPS:LimitedSkin[]`, `getLimited()`, `buyLimited(id)`, `placeBid(n)`, `timeLeft(endsAt)`
+- `src/components/LimitedCard.tsx` — карточка лимитки (проп `skin, left, owned, equipped, onBuy, onBid`)
+- `src/lib/shop.ts` — reuse `canAfford(price)`, `SKINS` каталог, `getInventory()` хелперы
+- `src/lib/coins.ts` — без изменений, `getCoins/addCoins/subscribe` + `storage` sync
+- `server.ts` — будущее `GET /magnum/api/limited` → `{dropId, items, endsAt}` + `POST /magnum/api/limited/bid`
+**Edge:**
+- недостаточно монет — дизейбл + тултип «нужно ещё X монет» + линк «Как заработать? → GamesHub»
+- двойная покупка — `if(inventory.includes(id)) return {ok:false,reason:'owned'}` идемпотентно
+- подделка цены в LS — цена только из `DROPS` в коде, LS хранит лишь `id`, не цену
+- LS quota exceeded — `try/catch` вокруг `setItem` + тост «не удалось сохранить инвентарь»
+- одновременные вкладки — `storage` sync на `magnum-limited`/`magnum-inventory`/`magnum-coins`
+- градиент не грузится — fallback `background:#1a1a1a` + эмодзи видно
+- солд-аут гонка — сервер v2 транзакция `SELECT FOR UPDATE`, MVP `left=Math.max(0,left-1)` + рефреш 2с
+- `endsAt` прошёл — автопоказываем «дроп завершён, следующий через 42ч» + `FomoTimer` 00:00:00
+**Награда/хайп:**
+- первый покупатель дропа `left 42→41` получает `+142` бонус + бейдж `OG 42` в `Leaderboard`
+- шаринг «Я урвал лимитку 42/42! 🏴» + OG-картинка canvas 1080×1080 + Web Share API
+- FOMO: «тираж 42 — кринжа не существует, делай!» + `PRESAVE https://music.thefence.me/psmagnum` CTA
+- аналитика: `console.log('[magnum] limited:', {dropId, id, left})` без внешних трекеров
+
 ---
 
 > 42 — кринжа не существует. Делай, братуха. 🔥
