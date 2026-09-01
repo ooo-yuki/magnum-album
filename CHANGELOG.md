@@ -10,8 +10,11 @@
 ### 🎮 Игры
 
 - 🐍 **Snake 42** — 14-я мини-игра: canvas-змейка с WASD/тач/свайп, WebAudio, победа при длине 42, 12 новых тестов
-- 🧱 **Stack42** — комбо ×2 множитель (3 perfect → ×2 очков/частиц/звука), MEGA 5× + хил ширины, баланс: мягкий старт 1.85 / рост 0.14 + потолок 6.2, окно perfect 7px
+- 🧱 **Stack42** — комбо ×2 множитель (3 perfect → ×2 очков/частиц/звука), MEGA 5× + хил ширины, баланс: мягкий старт 1.85 / рост 0.14 + потолок 6.2, окно perfect 7px · **полировка** GSAP-анимаций и UX
 - ⌨️ **Скоропечатание 42** (TypingGame) — 12 фраз MAGNUM 2026, WPM-трекинг, кнопка пресейва в конце
+- 🧠 **Memory** — полировка: GSAP flip-анимации карт, улучшенный UX таймера
+- 🔪 **Knife Hit** — полировка: визуальные эффекты попаданий, баланс скоростей
+- 🥁 **Rhythm + Stack** — полировка обеих игр: плавность анимаций, скоринг
 
 ### 🤖 БРАТ-БОТ
 
@@ -26,25 +29,35 @@
 - 🛒 **Магазин / Эко / Рамка** — Neon-эндпоинты shop/eco/frame
 - 📊 **Рейтинг пресейва** — реальный Neon-рейтинг, трекер кликов `magnum_presave_clicks`
 - 🔐 **AuthStatus в шапке** — Neon `me`-эндпоинт, без localStorage, 826KB
-- 💡 **Ideas 42** — голосование за идеи через Neon (`magnum_ideas`), форма отправки, навигация расширена до 10 пунктов
+- 💡 **Ideas 42** — голосование за идеи через Neon (`magnum_ideas`), форма отправки, навигация расширена до 10 пунктов · **батч идей** + GSAP-анимации карточек и рейтинга
 - ⛏️ **Майнинг 42-коинов** — ироничный GSAP-кликер: лопата 42 / кирка 142, авто-майнинг, лидерборд в localStorage
 - 📊 **Рейтинг пресейва** — топ-20 братух (8K клипов / 200K просмотров), эмодзи-аватары, проверка через БРАТ-БОТ
 - 🛒 **Магазин / Эко / Майнинг** — все эндпоинты перенесены на `/magnum/api/*`, баланс теперь серверный (убран localStorage)
 - 🏠 **Главная + навигация** — 14 пунктов меню, 4 RGB промо-баннера + popup (закрытие через `magnum-banner-closed`), GamesHub очищен до мини-игр
 - ⛏️💡🎮 **Mining + Ideas + WebSocket** — `magnum_mining` (user_id, balance, upgrades jsonb), `/magnum/api/ideas` GET/POST/vote, `/magnum/api/mining` GET/click/upgrade, WS `/magnum/api/ws` 2-4 duel realtime broadcast, `magnum_leaderboard`, без localStorage
+- 🎬 **GSAP Timeline scrub** — интерактивный скролл-тайлайн с drag-ползунком
+- 🏠 **GSAP Home/CTA** — полировка hero-секции и CTA-блоков на главной
+- 🛒⛏️ **GSAP Shop/Mining** — анимации магазина и майнинга
 
 ### ⚡ Перфоманс
 
 - ✨ **GSAP entrance** — stagger 0.12, y 24→0, hover RGB glow, reduced-motion fallback, context cleanup — HomePage PromoBanners, GalleryPage header/cards, IdeasPage header/form/cards
-- 🔄 Рефакторинг фронта: coins/shop/eco/mining → серверные API-маршруты, отказ от клиентского localStorage для баланса
+- 🔄 Рефакторинг фонта: coins/shop/eco/mining → серверные API-маршруты, отказ от клиентского localStorage для баланса
+- 🦥 **App lazy loading** — весь App.tsx лениво, code-split по страницам
+- 🔗 **Preconnect + sitemap** — preconnect к Neon API, обновлённый sitemap.xml
+- 🗺️ **Sitemap + lazy** — множественные оптимизации: sitemap для всех роутов, lazy-загрузка изображений галереи
+- 🖼️ **Gallery lazy** — ленивая загрузка тяжёлых артов галереи
+- 👤 **Avatar sitemap** — оптимизация загрузки аватаров + sitemap обновления
 
 ### 🐛 Фиксы
 
 - 🚫 **Ideas/Рейтинг** — убраны фейки, только реальные зарегистрированные (Neon 0/0/0 пусто → «стань первым»)
+- 🐍 **Snake42 import** — фикс lazy-паттерна для code-split тестов
 
 ### 📖 Документация
 
 - 📝 **README** — продакшн уровень 000 (Live/Presave бейджи, стек, Neon, кроны 24/7, структура)
+- 📝 **README keeper** — +5 страниц, +2 игры (snake/dodge), 14→15 роутов
 
 ---
 
