@@ -5,6 +5,28 @@
 > Промо-сайт альбома **MAGNUM Пятерки** (5opka × 42 братухи). React + TypeScript + GSAP + Bun.
 > Формат: [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/). Версионирование — SemVer.
 
+## [0.3.16] — 2026-09-01 🧹 Honesty Guard + TEAM 10 + Neon Top — 8/10
+
+> **2 коммита** `48016bc` → `34f7249` · **+4256 / −722** · **53 файла** · BOARD_MOCK (8 фейк-шахтёров) удалён → Neon `coins/top` + honest empty state + `duelHint` онбординг · Gallery MOCK_POOL удалён → честный `RANDOM_REAL` из архива + `REAL_BY_STYLE` Y2K-02 distinct + `42-y2k-02-800.webp` · guard `tests/fake-players-guard.test.ts` 3 кейса (BOARD_MOCK/сиды/кавычки) · TEAM.md +coder-d (страницы/UI) +coder-e (контент-данные) WIP 10 · рейтинг **8/10** (4256 строк/45м, норма 5000+ = 10/10) · `tsc 0` · `3165 PASS`
+
+### 🧹 Честность — BOARD_MOCK + MOCK_POOL удалены, только Neon
+
+- 🪓 **BOARD_MOCK 8 фейков — удалён (приказ хозяина)** — `34f7249` **MiningPage** `BOARD_MOCK: 8` (`Шахтёр_42 42042` … `142_клика 3142`) **удалён**, `const [board, setBoard]` теперь `[]` + `useEffect fetch /magnum/api/coins/top` → `top.slice(0,10).map({name:username, coins:balance})`, `MINING_EXTRA_FACTS`/`MINING_FAQ_EXTRA` `Шахтёр_42/Томь_братуха/Мок 8 топ → Топ из Neon coins/top`, honest empty state без фейков, `BOARD_MOCK` литерал запрещён — `src/pages/MiningPage.tsx` +23/−16
+- 🖼️ **MOCK_POOL 6 фейк-артов — удалён** — `34f7249` **GalleryPage** `MOCK_POOL 6` (`Ковёр 42/Тетрисуй/Шахта/Геометрия/Автомат/Тамагочи`) **удалён**, `«Сгенерить ещё»` теперь честный `RANDOM_REAL` из `ARCHIVE_42`/`BASE_ARTS` (только реальные `REAL_BY_STYLE`), `REAL_FALLBACK` теперь `REAL_BY_STYLE[СССР/Y2K/Y2K-02/киберпанк/мемфис]` (был хардкод `agit-01/cyber-01`), `y2k-02 distinct` `42-y2k-02-800.webp 68K` (был reuse y2k-01), `_REAL_FALLBACK` re-export для тестов — `src/pages/GalleryPage.tsx` +8/−63, `src/lib/galleryTokens.ts` +10, `public/images/gallery-42/42-y2k-02-800.webp` +68K
+- 🛡️ **Guard — `tests/fake-players-guard.test.ts` 3 кейса** — `34f7249` **новый** `51L` — `MiningPage не содержит BOARD_MOCK/Шахтёр_42/Томь_братуха/Кузбасс_топ/БЕЛАЗ` + `server.ts не содержит 15 сидов (freak_42/bratukha_mops/panda42 … hypebot42)` + `walk src/** + server.ts — никакой файл не содержит "seedName" в кавычках` — будущие сиды падают в CI, `tests/new-coverage-1625.test.ts` обновлён под `_REAL_FALLBACK` — `tests/fake-players-guard.test.ts` +51, `tests/new-coverage-1625.test.ts` +4/−2 — `tsc 0` `3165 PASS`
+
+### ✨ Фичи — TEAM WIP 10 + Neon топ + Duel онбординг
+
+- 👥 **TEAM.md — +coder-d +coder-e, WIP 10** — `48016bc` **coder-d** `новые страницы/разделы, UI/UX, Layout/Drawer, GSAP-анимации страниц` + **coder-e** `контент-данные (карточки/скины/вопросы/факты), попапы, магазины`, `backlog keeper` `WIP-лимит ready = 10 (5 кодеров ×2)`, `coder-a` +idle-механики, `coder-b` +эко — `docs/TEAM.md` +5/−3
+- 🎮 **Mining Duel онбординг — автоконнект + hint + finish coin** — `34f7249` `MiningPage` `connectDuel` guard `OPEN||CONNECTING`, `duelHintDismissed + duelPromptShownRef`, `msg.type room/lobby:created/finish` → `setDuelRoom`, `myScore ×10` coin, `duelVolcano` +9 — `src/pages/MiningPage.tsx` +~60, `src/lib/duelVolcano.ts` +20, `src/lib/ws.ts` +12, `src/lib/duelMagma.ts` +5
+
+### 🐛 Фиксы — honesty 0 фейков + gallery distinct + tsc 0
+
+- 🩹 **Фейки 0 — лидерборд и галерея честные** — `34f7249` `BOARD_MOCK 8 → 0`, `MOCK_POOL 6 → 0`, `server.ts` сиды 15 → 0 (guard), `Gallery y2k-02` теперь distinct webp (был дубль y2k-01) — честный `GET /magnum/api/coins/top` + `REAL_BY_STYLE` — carry из 0.3.15 `REAL_FALLBACK дубль` закрыт
+- 🩹 **tsc 0 + 3165 PASS** — `34f7249` `tsc 0`, `tests/fake-players-guard` +1625 обновлены, `build.ts` +4 `public/map-kuzbass.svg` +15 `drizzle 0019_magnum_dust.sql` +8 (dirty `sitemap/server/AiBot/duelVolcano` остаются — carry → 0.3.17)
+
+---
+
 ## [0.3.15] — 2026-09-01 🧊 GLACIER VAULT 12 + DUEL MAGMA 42 + Health 500 + Subs 42703 — 3/10
 
 > **4 коммита** `552ecc3` → `6fbf866` · **+873 / −53** · **19 файлов** · GLACIER VAULT 12 glacier скинов + frost epic 1420 + dust (magnum_dust, magnum_subscriptions) + DuelMagma 42 ×204L + Health честный 500 (follows/ai_usage 42P01 → 500) + Subs 42703 `ends_at/started_at/id` + §16 5 фактов + 3 recaps · рейтинг **3/10** (873 строки/30м, норма 5000+ = 10/10) · `tsc 0` · `magnum-bun` `caddy` (200)
