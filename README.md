@@ -10,14 +10,14 @@
 
 ## Что это
 
-Промо-сайт альбома **MAGNUM** уровня $5000 — не лендинг, а платформа 42-движения. 14 игровых роутов, AI-бот на `mimo-v2.5` vision, магазин косметики, эко-рейтинг, майнинг, галерея 42-артов, рейтинг пресейва и генератор идей на **Neon Lakebase**.
+Промо-сайт альбома **MAGNUM** уровня $5000 — не лендинг, а платформа 42-движения. 14 игровых роутов, AI-бот, магазин косметики, эко-рейтинг, майнинг, галерея 42-артов, рейтинг пресейва и генератор идей.
 
 ## Фичи
 
 | Блок | Что внутри |
 |---|---|
 | 🎮 **Игры 42** | Runner / Match-3 / Knife Hit / Memory / Clicker / Quiz / Blackjack 42 (4200 монет → открытка) / Roulette 42 / Rhythm / Stack / Flappy 42 / 2042 / Typing — победа → пресейв |
-| 🤖 **БРАТ-БОТ 42** | `mimo-v2.5` + vision, `POST /magnum/api/ai` через Bun прокси (ключ не в бандле), кидаешь скрин пресейва — хвалит, нет — уговаривает, сжатие до 1280 JPEG |
+| 🤖 **БРАТ-БОТ 42** | AI-бот с проверкой скрина пресейва через прокси (ключ не в бандле), кидаешь скрин — хвалит, нет — уговаривает, сжатие до 1280 JPEG |
 | 🛒 **Магазин** | 12 скинов (CSS-градиенты+эмодзи) редкости 42/142/420/1420, единый `magnum-coins` (миграция из blackjack/roulette) |
 | 🌿 **Эко-рейтинг** | 8 вопросов Кемерово/Кузбасса, ранги Нормис→Легенда, `magnum-eco-leaderboard` |
 | ⛏️ **Майнинг** | Кликер + апгрейды лопата 42 → шахта 2042, авто-майнинг |
@@ -30,7 +30,7 @@
 
 **Frontend:** React 19 + TS strict + GSAP ScrollTrigger + CSS Modules + React Router 7  
 **Build/Runtime:** `Bun.build` (splitting, vendor `chunk-9s3rb6k3.js 143KB` + `main ~788KB`, `modulepreload`), `Bun.serve` (SPA `try_files` + `/magnum/api/*`)  
-**Backend:** Lakebase Postgres (Neon `proud-bar-62331523` us-east-2, `drizzle-orm` + `neon.ts` infra-as-code), `@neondatabase/serverless`, `mimo-v2.5` via `token-plan-sgp.xiaomimimo.com`  
+**Backend:** Postgres (`drizzle-orm` + `neon.ts` infra-as-code), `@neondatabase/serverless`  
 **Infra:** `magnum-caddy` (Caddy `omniroute-caddy:latest` + Cloudflare DNS) `:30645` TLS, `bun:30646` HTTP для Obscura (30MB, порт 9222), GitHub Actions SSH deploy
 
 ## Быстрый старт

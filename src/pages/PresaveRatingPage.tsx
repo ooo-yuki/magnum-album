@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import gsap from "gsap";
 import styles from "./PresaveRatingPage.module.css";
 
-/* ── API types (Neon real) ─────────────────────── */
+/* ── API types ─────────────────────── */
 type FrameRow = { id: number; username: string; verified: boolean; status: string; created_at: string };
 type EcoRow = { username: string; player: string; score: number; rank: string; status: string; created_at: string };
 type IdeaRow = { id: number; title: string; description: string; votes: number; status: string; created_at: string };
