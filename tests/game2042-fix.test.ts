@@ -62,4 +62,15 @@ describe("2042 FIX 15:00 — nested useEffect bug fixed + daily challenge + 2026
     expect(s).toContain("gsap.registerPlugin(ScrollTrigger)");
     expect(s).toContain("from \"gsap\"");
   });
+  it("micro-feat 15:05 — floats + haptics + spawn pop + 42 pulse", ()=>{
+    const s = read("src/pages/games/Game2042.tsx");
+    expect(s).toContain("floats");
+    expect(s).toContain("floatIdRef");
+    expect(s).toContain("navigator.vibrate");
+    expect(s).toContain("spawnIdx");
+    expect(s).toContain("boxShadow");
+    expect(s).toContain("floatUp");
+    const css = read("src/pages/games/Game2042.module.css");
+    expect(css).toContain("floatUp");
+  });
 });
