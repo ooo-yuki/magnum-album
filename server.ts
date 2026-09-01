@@ -17,6 +17,32 @@ function getSql() {
   return neon(url);
 }
 
+// ---- Rate limit (in-memory token bucket) ----
+const rateMap = new Map<string, number[]>();
+function checkRateLimit(key: string, limit: number, windowMs: number): boolean {
+  const now = Date.now();
+  const arr = rateMap.get(key) ?? [];
+  const fresh = arr.filter((t) => now - t < windowMs);
+  if (fresh.length >= limit) {
+    rateMap.set(key, fresh);
+    return false;
+  }
+  fresh.push(now);
+  rateMap.set(key, fresh);
+  if (rateMap.size > 4000) {
+    const toDel = Math.floor(rateMap.size * 0.2);
+    let i = 0;
+    for (const k of rateMap.keys()) {
+      if (i++ >= toDel) break;
+      rateMap.delete(k);
+    }
+  }
+  return true;
+}
+function getClientIp(req: Request): string {
+  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "0.0.0.0";
+}
+
 // ---- Cookie / Token helpers ----
 function getCookie(req: Request, name: string): string | null {
   const raw = req.headers.get("cookie");
@@ -365,6 +391,90 @@ async function handleShopInventory(req: Request): Promise<Response> {
   }
 }
 
+// ---- Cosmetics shop (magnum_cosmetics) — 32 предмета: рамки/баннеры/титулы ----
+export type CosmeticSlot = "frame" | "banner" | "title";
+export type CosmeticItem = { id: string; slot: CosmeticSlot; name: string; price: number; rarity: "common"|"rare"|"epic"|"legendary"; style: string };
+export const COSMETICS_CATALOG: CosmeticItem[] = [
+  { id: "frame-neon42", slot: "frame", name: "Неон 42", price: 42, rarity: "common", style: "2px solid #ff44cc" },
+  { id: "frame-gold", slot: "frame", name: "Золото 42", price: 142, rarity: "rare", style: "3px solid #ffcc00" },
+  { id: "frame-rgb", slot: "frame", name: "RGB-пульс", price: 420, rarity: "epic", style: "3px solid #00ffcc" },
+  { id: "frame-dragon", slot: "frame", name: "Драконьи когти", price: 1420, rarity: "legendary", style: "4px solid #ff2d55" },
+  { id: "frame-ice", slot: "frame", name: "Лёд MAGNUM", price: 84, rarity: "common", style: "2px solid #7dd8ff" },
+  { id: "frame-fire", slot: "frame", name: "Пламя", price: 184, rarity: "rare", style: "3px solid #ff6a00" },
+  { id: "frame-toxic", slot: "frame", name: "Токсик", price: 390, rarity: "epic", style: "3px solid #7cff00" },
+  { id: "frame-void", slot: "frame", name: "Войд", price: 1240, rarity: "legendary", style: "4px solid #7a1ecb" },
+  { id: "frame-paper", slot: "frame", name: "Бумажный", price: 42, rarity: "common", style: "2px dashed #aaa" },
+  { id: "frame-pixel", slot: "frame", name: "Пиксель 42", price: 142, rarity: "rare", style: "3px solid #5865f2" },
+  { id: "frame-holo", slot: "frame", name: "Голо-рамка", price: 520, rarity: "epic", style: "3px solid #9147ff" },
+  { id: "frame-crown", slot: "frame", name: "Корона", price: 2042, rarity: "legendary", style: "4px solid #ffd700" },
+  { id: "banner-42wave", slot: "banner", name: "Волна 42", price: 42, rarity: "common", style: "linear-gradient(90deg,#ff44cc,#00ffcc)" },
+  { id: "banner-magnum", slot: "banner", name: "MAGNUM fire", price: 142, rarity: "rare", style: "linear-gradient(90deg,#ff2d55,#ffcc00)" },
+  { id: "banner-glitch", slot: "banner", name: "Глитч", price: 420, rarity: "epic", style: "linear-gradient(90deg,#5865f2,#9147ff)" },
+  { id: "banner-voidstar", slot: "banner", name: "Звезда войда", price: 1420, rarity: "legendary", style: "linear-gradient(90deg,#0a0a0a,#7a1ecb 50%,#ff44cc)" },
+  { id: "banner-ocean", slot: "banner", name: "Океан", price: 84, rarity: "common", style: "linear-gradient(90deg,#0c2e57,#2b7fd4)" },
+  { id: "banner-sunset", slot: "banner", name: "Закат", price: 184, rarity: "rare", style: "linear-gradient(90deg,#ff7b00,#ff44cc)" },
+  { id: "banner-forest", slot: "banner", name: "Лес 42", price: 390, rarity: "epic", style: "linear-gradient(90deg,#14401a,#8fe06a)" },
+  { id: "banner-nebula", slot: "banner", name: "Туманность", price: 1240, rarity: "legendary", style: "linear-gradient(90deg,#1b0a3a,#ff2d55)" },
+  { id: "banner-grid", slot: "banner", name: "Сетка", price: 62, rarity: "common", style: "linear-gradient(90deg,#2e3238,#b8bcc4)" },
+  { id: "banner-tiger", slot: "banner", name: "Тигр", price: 520, rarity: "epic", style: "linear-gradient(90deg,#8a3c00,#ffd76a)" },
+  { id: "title-bra", slot: "title", name: "Братуха", price: 42, rarity: "common", style: "#9aa4b2" },
+  { id: "title-42", slot: "title", name: "42 навсегда", price: 142, rarity: "rare", style: "#5865f2" },
+  { id: "title-magnum", slot: "title", name: "MAGNUM", price: 420, rarity: "epic", style: "#ff44cc" },
+  { id: "title-legend", slot: "title", name: "Легенда", price: 2042, rarity: "legendary", style: "#ffcc00" },
+  { id: "title-neon", slot: "title", name: "Неоновый", price: 84, rarity: "common", style: "#00ffcc" },
+  { id: "title-hype", slot: "title", name: "Хайп", price: 184, rarity: "rare", style: "#9147ff" },
+  { id: "title-toxic", slot: "title", name: "Токсичный", price: 390, rarity: "epic", style: "#7cff00" },
+  { id: "title-vip", slot: "title", name: "VIP 42", price: 1240, rarity: "legendary", style: "#ff2d55" },
+  { id: "title-noob", slot: "title", name: "Новичок", price: 22, rarity: "common", style: "#aaa" },
+  { id: "title-god", slot: "title", name: "Бог 42", price: 4242, rarity: "legendary", style: "#ffd700" },
+];
+function getCosmeticPrice(id: string): number | null { return COSMETICS_CATALOG.find(c=>c.id===id)?.price ?? null; }
+function getCosmeticSlot(id: string): CosmeticSlot | null { return COSMETICS_CATALOG.find(c=>c.id===id)?.slot ?? null; }
+function validateCosmeticId(id: unknown): string | null { if(typeof id!=="string") return null; const sv=id.trim(); if(!sv||sv.length>64||!/^[a-z0-9-]+$/.test(sv)) return null; return sv; }
+async function handleCosmeticCatalog(): Promise<Response> { return Response.json({ catalog: COSMETICS_CATALOG, count: COSMETICS_CATALOG.length }); }
+async function handleCosmeticInventory(req: Request): Promise<Response> {
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
+  const user=await getUserByToken(token); if(!user) return Response.json({error:"unauthorized"},{status:401});
+  try{ const sql=getSql(); const rows=await sql`SELECT id, cosmetic_id, slot, equipped, purchased_at FROM magnum_cosmetics WHERE user_id=${user.id} ORDER BY purchased_at ASC`;
+    const inv=rows.map((r:unknown)=>{ const x=r as {id:number;cosmetic_id:string;slot:string;equipped:boolean;purchased_at:string}; return {id:Number(x.id),cosmeticId:String(x.cosmetic_id),cosmetic_id:String(x.cosmetic_id),slot:String(x.slot),equipped:Boolean(x.equipped),purchased_at:x.purchased_at};});
+    return Response.json({inventory:inv,items:inv}); }catch(e){ console.error("[cosmetic inv] failed",e); return Response.json({error:"db error"},{status:500}); }
+}
+async function handleCosmeticBuy(req: Request): Promise<Response> {
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
+  const user=await getUserByToken(token); if(!user) return Response.json({error:"unauthorized"},{status:401});
+  let body:{cosmeticId?:string;id?:string}; try{body=(await req.json()) as typeof body;}catch{return Response.json({error:"Invalid JSON"},{status:400});}
+  const raw=validateCosmeticId(body.cosmeticId ?? body.id ?? ""); if(!raw) return Response.json({error:"cosmeticId required"},{status:400});
+  const price=getCosmeticPrice(raw); if(price==null) return Response.json({error:"unknown cosmetic",cosmeticId:raw},{status:400});
+  const slot=getCosmeticSlot(raw)!;
+  try{ const sql=getSql();
+    const ex=await sql`SELECT id FROM magnum_cosmetics WHERE user_id=${user.id} AND cosmetic_id=${raw} LIMIT 1`;
+    if(ex.length>0) return Response.json({error:"already owned",cosmeticId:raw},{status:409});
+    const coins=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+    let bal=0; if(coins.length===0){ await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${user.id},1000) ON CONFLICT (user_id) DO NOTHING`; bal=1000; } else bal=Number((coins[0] as {balance:number}).balance);
+    if(bal<price) return Response.json({error:"not enough coins",price,balance:bal,required:price},{status:402});
+    await sql`UPDATE magnum_coins SET balance=balance-${price} WHERE user_id=${user.id}`;
+    const upd=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+    const newBal=Number((upd[0] as {balance:number}).balance);
+    await sql`INSERT INTO magnum_cosmetics (user_id,cosmetic_id,slot,equipped,purchased_at) VALUES (${user.id},${raw},${slot},false,now())`;
+    return Response.json({ok:true,cosmeticId:raw,slot,price,balance:newBal});
+  }catch(e){ console.error("[cosmetic buy] failed",e); return Response.json({error:"db error"},{status:500}); }
+}
+async function handleCosmeticEquip(req: Request): Promise<Response> {
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
+  const user=await getUserByToken(token); if(!user) return Response.json({error:"unauthorized"},{status:401});
+  let body:{cosmeticId?:string;id?:string}; try{body=(await req.json()) as typeof body;}catch{return Response.json({error:"Invalid JSON"},{status:400});}
+  const raw=validateCosmeticId(body.cosmeticId ?? body.id ?? ""); if(!raw) return Response.json({error:"cosmeticId required"},{status:400});
+  try{ const sql=getSql();
+    const owned=await sql`SELECT slot FROM magnum_cosmetics WHERE user_id=${user.id} AND cosmetic_id=${raw} LIMIT 1`;
+    if(owned.length===0) return Response.json({error:"not owned",cosmeticId:raw},{status:404});
+    const slot=String((owned[0] as {slot:string}).slot);
+    await sql`UPDATE magnum_cosmetics SET equipped=false WHERE user_id=${user.id} AND slot=${slot}`;
+    await sql`UPDATE magnum_cosmetics SET equipped=true WHERE user_id=${user.id} AND cosmetic_id=${raw}`;
+    const rows=await sql`SELECT cosmetic_id,slot,equipped FROM magnum_cosmetics WHERE user_id=${user.id} ORDER BY purchased_at ASC`;
+    return Response.json({ok:true,equipped:raw,slot,inventory:rows.map((r:unknown)=>{ const x=r as {cosmetic_id:string;slot:string;equipped:boolean}; return {cosmeticId:x.cosmetic_id,slot:x.slot,equipped:x.equipped};})});
+  }catch(e){ console.error("[cosmetic equip] failed",e); return Response.json({error:"db error"},{status:500}); }
+}
+
 // ---- Frame handlers (magnum_frames) ----
 async function handleFrameVerify(req: Request): Promise<Response> {
   const token = extractToken(req);
@@ -577,6 +687,80 @@ async function handleMiningUpgrade(req: Request): Promise<Response> {
     return Response.json({ balance: Number(r.balance), upgrades: parseUpgrades(r.upgrades), price });
   } catch (e) {
     console.error("[mining upgrade] failed", e);
+    return Response.json({ error: "db error" }, { status: 500 });
+  }
+}
+
+// ---- Mining collect (offline/idle accrual, cap 6h) ----
+async function handleMiningCollect(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`mining:collect:${user.id}:${ip}`, 12, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
+  try {
+    const sql = getSql();
+    const rows = await sql`SELECT balance, upgrades, updated_at FROM magnum_mining WHERE user_id = ${user.id} LIMIT 1`;
+    if (rows.length === 0) return Response.json({ error: "no mining row" }, { status: 404 });
+    const r = rows[0] as { balance: number; upgrades: unknown; updated_at: string };
+    const upgrades = parseUpgrades(r.upgrades);
+    const perSec = upgrades.reduce((s, u) => s + (UPGRADES_DEF[u.id]?.auto ?? 0) * u.count, 0);
+    if (perSec <= 0) return Response.json({ balance: Number(r.balance), upgrades, perSec, collected: 0, idleSec: 0 });
+    const last = r.updated_at ? new Date(r.updated_at).getTime() : Date.now();
+    const elapsedSec = Math.max(0, Math.floor((Date.now() - last) / 1000));
+    const cappedSec = Math.min(elapsedSec, 6 * 3600);
+    if (cappedSec < 5) return Response.json({ balance: Number(r.balance), upgrades, perSec, collected: 0, idleSec: cappedSec });
+    const collected = perSec * cappedSec;
+    const updated = await sql`UPDATE magnum_mining SET balance = balance + ${collected}, updated_at = now() WHERE user_id = ${user.id} RETURNING balance, updated_at`;
+    const nb = Number((updated[0] as { balance: number }).balance);
+    return Response.json({ balance: nb, upgrades, perSec, collected, idleSec: cappedSec });
+  } catch (e) {
+    console.error("[mining collect] failed", e);
+    return Response.json({ error: "db error" }, { status: 500 });
+  }
+}
+
+// ---- Presave handlers (rate limit + validation, stats) ----
+async function handlePresaveClick(req: Request): Promise<Response> {
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`presave:${ip}`, 6, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
+  let body: { url?: string };
+  try { body = (await req.json().catch(() => ({}))) as typeof body; } catch { body = {}; }
+  const url = typeof body.url === "string" ? body.url.trim().slice(0, 300) : "/magnum";
+  if (url.length > 300 || url.includes("<") || url.includes("\"")) return Response.json({ error: "invalid url" }, { status: 400 });
+  const token = extractToken(req);
+  let userId: number | null = null;
+  if (token) { try { const u = await getUserByToken(token); if (u) userId = u.id; } catch {} }
+  try {
+    const sql = getSql();
+    await sql`INSERT INTO magnum_presave_clicks (user_id, url, ip, created_at) VALUES (${userId}, ${url}, ${ip}, now())`;
+    return Response.json({ ok: true });
+  } catch (e) {
+    console.error("[presave click] failed", e);
+    return Response.json({ ok: true });
+  }
+}
+
+async function handlePresaveStats(req: Request): Promise<Response> {
+  try {
+    const sql = getSql();
+    const totalRows = await sql`SELECT count(*)::int as c FROM magnum_presave_clicks`;
+    const dayRows = await sql`SELECT count(*)::int as c FROM magnum_presave_clicks WHERE created_at > now() - interval '24 hours'`;
+    const weekRows = await sql`SELECT count(*)::int as c FROM magnum_presave_clicks WHERE created_at > now() - interval '7 days'`;
+    const topRows = await sql`SELECT url, count(*)::int as c FROM magnum_presave_clicks GROUP BY url ORDER BY c DESC LIMIT 5`;
+    const token = extractToken(req);
+    let myClicks: number | null = null;
+    if (token) { try { const u = await getUserByToken(token); if (u) { const mine = await sql`SELECT count(*)::int as c FROM magnum_presave_clicks WHERE user_id = ${u.id}`; myClicks = Number((mine[0] as { c: number }).c); } } catch {} }
+    return Response.json({
+      total: Number((totalRows[0] as { c: number }).c),
+      last24h: Number((dayRows[0] as { c: number }).c),
+      last7d: Number((weekRows[0] as { c: number }).c),
+      topUrls: topRows.map((r: unknown) => { const x = r as { url: string; c: number }; return { url: String(x.url), count: Number(x.c) }; }),
+      myClicks,
+    });
+  } catch (e) {
+    console.error("[presave stats] failed", e);
     return Response.json({ error: "db error" }, { status: 500 });
   }
 }
@@ -821,6 +1005,10 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/shop/buy" && req.method === "POST") return handleShopBuy(req);
     if (url.pathname === "/magnum/api/shop/equip" && req.method === "POST") return handleShopEquip(req);
     if (url.pathname === "/magnum/api/shop/inventory" && req.method === "GET") return handleShopInventory(req);
+    if (url.pathname === "/magnum/api/shop/catalog" && req.method === "GET") return handleCosmeticCatalog();
+    if (url.pathname === "/magnum/api/shop/cosmetic/buy" && req.method === "POST") return handleCosmeticBuy(req);
+    if (url.pathname === "/magnum/api/shop/cosmetic/equip" && req.method === "POST") return handleCosmeticEquip(req);
+    if (url.pathname === "/magnum/api/shop/cosmetic/inventory" && req.method === "GET") return handleCosmeticInventory(req);
 
     // mining
     if (url.pathname === "/magnum/api/mining" && req.method === "GET") return handleMiningGet(req);

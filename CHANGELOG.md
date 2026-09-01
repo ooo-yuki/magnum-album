@@ -5,6 +5,31 @@
 > Промо-сайт альбома **MAGNUM Пятерки** (5opka × 42 братухи). React + TypeScript + GSAP + Bun.
 > Формат: [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/). Версионирование — SemVer.
 
+## [0.3.0] — 2026-09-01
+
+> **8 коммитов** с `8c241b3` (13:44 UTC) → `2866803` (13:55 UTC) · **+1 938 / −241** · **26 файлов** · инкремент Roulette + Auth + GSAP + Gallery
+
+### 🔥 Инкремент 13:51–13:55 — 8 коммитов (с `8c241b3` → `2866803`)
+
+#### 🎮 Игры — Roulette42 ×10 + эффекты
+- 🎰 **Roulette42 пресеты** — `8ccb5b7` + `786084e` пресеты ставок ×10, hot/cold статистика, кнопки ×2/↻ (удвоить/повтор), конфетти-канвас + WebAudio выигрыша, свайп-ставка — `src/pages/games/RouletteGame.tsx` +154/−43, `drizzle/schema.ts` +8 — казино теперь как в Лас-Вегасе
+- 🧪 **Roulette тесты** — `786084e` +72/−5 `tests/content.test.ts`, правки `massive42*.test.ts` — покрытие пресетов и hot/cold
+
+#### ⚡ Перфоманс — GSAP polish
+- ✨ **GamesHub + NavGrid polish** — `825c0a6` y24 → 0 stagger **0.12** ScrollTrigger, RGB-неон tri-shadow, `prefers-reduced-motion` gate, `gsap.context` cleanup — `src/pages/GamesHub.tsx` +35/−26, `src/components/NavGrid.tsx` +40/−14 — 60 fps без дёрга
+
+#### 🔐 Фиксы — Auth gate + Gallery
+- 🔒 **Auth gate multiplayer** — `55de093` WS **401 без токена**, `AuthStatus` модалка Вход/Регистрация, `auth-guardian` 12/11 — `drizzle/migrations/0004_presave_mining_collect.sql` +22 — мультиплеер теперь за замком
+- 🖼️ **Gallery real images** — `2866803` фикс soft-404: реальные `archive-*.jpg` вместо `text/html`, + апгрейд ревьюера — `src/pages/GalleryPage.tsx` +1/−1, `src/pages/PresaveRatingPage.tsx` +88/−38 в батче `786084e`
+
+#### 📖 Дока / CI / Тесты
+- 🧪 **2850 passed** — `786084e` vitest **13/13**, `tsc` 0, **+16 new** — `tests/bun-setup.ts` +98, `tests/gallery-real.test.ts` +93, `bunfig.toml` +2, `docs/SPEC-42.md` +697, `docs/spec-audit-2026-09-01.md` +273 — спека 42 теперь канон
+- 📊 **watchdog 13:51** — `4dd07eb` OK (**200/200/200**, Up, 6 файлов, 2850 тестов, 0 рестартов) — `reports/watchdog-2026-09-01-1351.md` +65
+- 🔍 **review 13:54** — `b53bc0d` rating **4/10** 🟡 (было 2/10) — `reports/review-2026-09-01-1354.md` +78 — прогресс +2, остался Gallery/WS до 8/10
+- 📝 **changelog investor update** — `7790c8e` +28/−31 `CHANGELOG.md` — предыдущий инкремент задокументирован
+
+---
+
 ## [0.2.0] — 2026-09-01
 
 > **23 коммита** с `9733759` (12:35 UTC) → `8c241b3` (13:44 UTC) · **+28 366 / −588** · **30 файлов** · инкремент +266/−25 за последние 20 мин
@@ -157,5 +182,6 @@
 ### 🐛 Фиксы
 - 🔧 Vite base `/magnum/`, 📐 responsive + NavGrid, 🎯 focus-visible, ♿ skip-to-content
 
+[0.3.0]: https://github.com/ooo-yuki/magnum-album/releases/tag/v0.3.0
 [0.2.0]: https://github.com/ooo-yuki/magnum-album/releases/tag/v0.2.0
 [0.1.0]: https://github.com/ooo-yuki/magnum-album/releases/tag/v0.1.0

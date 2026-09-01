@@ -48,6 +48,45 @@ const SKINS: Skin[] = [
   { id: "dragon",  name: "Дракон 42",   emoji: "🐉", rarity: "legendary", bg: "linear-gradient(135deg,#ff2d55,#8a1ecb 55%,#1b0a3a)", tagline: "Жжёт чарты как MAGNUM" },
 ];
 
+/* ── 32 косметики: рамки 12 / баннеры 10 / титулы 10 ── */
+type CosmeticSlot = "frame"|"banner"|"title";
+type Cosmetic = { id:string; slot:CosmeticSlot; name:string; price:number; rarity:Rarity; style:string };
+const COSMETICS: Cosmetic[] = [
+  { id:"frame-neon42", slot:"frame", name:"Неон 42", price:42, rarity:"common", style:"2px solid #ff44cc" },
+  { id:"frame-gold", slot:"frame", name:"Золото 42", price:142, rarity:"rare", style:"3px solid #ffcc00" },
+  { id:"frame-rgb", slot:"frame", name:"RGB-пульс", price:420, rarity:"epic", style:"3px solid #00ffcc" },
+  { id:"frame-dragon", slot:"frame", name:"Драконьи когти", price:1420, rarity:"legendary", style:"4px solid #ff2d55" },
+  { id:"frame-ice", slot:"frame", name:"Лёд MAGNUM", price:84, rarity:"common", style:"2px solid #7dd8ff" },
+  { id:"frame-fire", slot:"frame", name:"Пламя", price:184, rarity:"rare", style:"3px solid #ff6a00" },
+  { id:"frame-toxic", slot:"frame", name:"Токсик", price:390, rarity:"epic", style:"3px solid #7cff00" },
+  { id:"frame-void", slot:"frame", name:"Войд", price:1240, rarity:"legendary", style:"4px solid #7a1ecb" },
+  { id:"frame-paper", slot:"frame", name:"Бумажный", price:42, rarity:"common", style:"2px dashed #aaa" },
+  { id:"frame-pixel", slot:"frame", name:"Пиксель 42", price:142, rarity:"rare", style:"3px solid #5865f2" },
+  { id:"frame-holo", slot:"frame", name:"Голо-рамка", price:520, rarity:"epic", style:"3px solid #9147ff" },
+  { id:"frame-crown", slot:"frame", name:"Корона", price:2042, rarity:"legendary", style:"4px solid #ffd700" },
+  { id:"banner-42wave", slot:"banner", name:"Волна 42", price:42, rarity:"common", style:"linear-gradient(90deg,#ff44cc,#00ffcc)" },
+  { id:"banner-magnum", slot:"banner", name:"MAGNUM fire", price:142, rarity:"rare", style:"linear-gradient(90deg,#ff2d55,#ffcc00)" },
+  { id:"banner-glitch", slot:"banner", name:"Глитч", price:420, rarity:"epic", style:"linear-gradient(90deg,#5865f2,#9147ff)" },
+  { id:"banner-voidstar", slot:"banner", name:"Звезда войда", price:1420, rarity:"legendary", style:"linear-gradient(90deg,#0a0a0a,#7a1ecb 50%,#ff44cc)" },
+  { id:"banner-ocean", slot:"banner", name:"Океан", price:84, rarity:"common", style:"linear-gradient(90deg,#0c2e57,#2b7fd4)" },
+  { id:"banner-sunset", slot:"banner", name:"Закат", price:184, rarity:"rare", style:"linear-gradient(90deg,#ff7b00,#ff44cc)" },
+  { id:"banner-forest", slot:"banner", name:"Лес 42", price:390, rarity:"epic", style:"linear-gradient(90deg,#14401a,#8fe06a)" },
+  { id:"banner-nebula", slot:"banner", name:"Туманность", price:1240, rarity:"legendary", style:"linear-gradient(90deg,#1b0a3a,#ff2d55)" },
+  { id:"banner-grid", slot:"banner", name:"Сетка", price:62, rarity:"common", style:"linear-gradient(90deg,#2e3238,#b8bcc4)" },
+  { id:"banner-tiger", slot:"banner", name:"Тигр", price:520, rarity:"epic", style:"linear-gradient(90deg,#8a3c00,#ffd76a)" },
+  { id:"title-bra", slot:"title", name:"Братуха", price:42, rarity:"common", style:"#9aa4b2" },
+  { id:"title-42", slot:"title", name:"42 навсегда", price:142, rarity:"rare", style:"#5865f2" },
+  { id:"title-magnum", slot:"title", name:"MAGNUM", price:420, rarity:"epic", style:"#ff44cc" },
+  { id:"title-legend", slot:"title", name:"Легенда", price:2042, rarity:"legendary", style:"#ffcc00" },
+  { id:"title-neon", slot:"title", name:"Неоновый", price:84, rarity:"common", style:"#00ffcc" },
+  { id:"title-hype", slot:"title", name:"Хайп", price:184, rarity:"rare", style:"#9147ff" },
+  { id:"title-toxic", slot:"title", name:"Токсичный", price:390, rarity:"epic", style:"#7cff00" },
+  { id:"title-vip", slot:"title", name:"VIP 42", price:1240, rarity:"legendary", style:"#ff2d55" },
+  { id:"title-noob", slot:"title", name:"Новичок", price:22, rarity:"common", style:"#aaa" },
+  { id:"title-god", slot:"title", name:"Бог 42", price:4242, rarity:"legendary", style:"#ffd700" },
+];
+function isValidCosmeticId(v:string):boolean{ return /^[a-z0-9-]{2,64}$/.test(v); }
+
 /* ── Компонент ────────────────────────────────────────────── */
 
 type Toast = { id: number; kind: "ok" | "err"; text: string };
@@ -60,6 +99,10 @@ export function ShopPage() {
   const [coins, setCoins] = useState(() => getCoins());
   const [inventory, setInventory] = useState<string[]>([]);
   const [equipped, setEquipped] = useState<string | null>(null);
+  const [cosOwned, setCosOwned] = useState<string[]>([]);
+  const [cosEquipped, setCosEquipped] = useState<Record<string,string>>({});
+  const [cosTab, setCosTab] = useState<"all"|CosmeticSlot>("all");
+  const filteredCosmetics = useMemo(()=> cosTab==="all"? COSMETICS : COSMETICS.filter(x=>x.slot===cosTab), [cosTab]);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const toastId = useRef(0);
   const shownCoins = useRef(getCoins());
@@ -108,6 +151,21 @@ export function ShopPage() {
       } catch { /* ignore */ }
     }
     void load();
+    void (async()=>{
+      try{
+        const r=await fetch("/magnum/api/shop/cosmetic/inventory",{credentials:"include"});
+        if(r.ok){
+          const d=await r.json() as {inventory?:Array<{cosmeticId:string;cosmetic_id:string;slot:string;equipped:boolean}>};
+          const arr=d.inventory||[];
+          if(!cancelled){
+            setCosOwned(arr.map(x=>x.cosmeticId||x.cosmetic_id));
+            const eq:Record<string,string>={};
+            for(const it of arr) if(it.equipped) eq[it.slot]=it.cosmeticId||it.cosmetic_id;
+            setCosEquipped(eq);
+          }
+        }
+      }catch{}
+    })();
     return () => { cancelled = true; };
   }, []);
 
@@ -157,6 +215,8 @@ export function ShopPage() {
       gsap.to(`.${styles.header} > *`, { y: 0, opacity: 1, stagger: 0.12, duration: 0.55, ease: "power2.out", delay: 0.05 });
       gsap.set(`.${styles.card}`, { y: 24, opacity: 0 });
       gsap.to(`.${styles.card}`, { y: 0, opacity: 1, stagger: 0.12, duration: 0.55, ease: "power2.out", delay: 0.28 });
+      gsap.set(`.${styles.cosCard}`, { y: 24, opacity: 0 });
+      gsap.to(`.${styles.cosCard}`, { y: 0, opacity: 1, stagger: 0.08, duration: 0.5, ease: "power2.out", delay: 0.42 });
     }, rootRef);
     return () => ctx.revert();
   }, []);
@@ -283,6 +343,29 @@ export function ShopPage() {
       setEquipped(null);
       pushToast("ok", "Скин снят. Голый магнум — тоже стиль.");
     }
+  };
+
+  const buyCosmetic = async (co: Cosmetic) => {
+    if(!isValidCosmeticId(co.id)) return;
+    if(cosOwned.includes(co.id)) return;
+    if(coins < co.price){ pushToast("err",`Нужно ${co.price}, у тебя ${coins}. Фарми в играх!`); return; }
+    try{
+      const r=await fetch("/magnum/api/shop/cosmetic/buy",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({cosmeticId:co.id})});
+      const d=await r.json().catch(()=>({})) as {balance?:number;error?:string};
+      if(!r.ok){ pushToast("err", String((d as any).error||"Покупка не прошла")); return; }
+      if(typeof (d as any).balance==="number") setCoins((d as any).balance);
+      setCosOwned(v=>[...v,co.id]);
+      pushToast("ok",`${co.name} куплен!`);
+    }catch{ pushToast("err","Сеть упала"); }
+  };
+  const equipCosmetic = async (co: Cosmetic) => {
+    try{
+      const r=await fetch("/magnum/api/shop/cosmetic/equip",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({cosmeticId:co.id})});
+      const d=await r.json().catch(()=>({})) as {equipped?:string;slot?:string;error?:string};
+      if(!r.ok){ pushToast("err", String((d as any).error||"Не надеть")); return; }
+      setCosEquipped(prev=>({...prev,[co.slot]:co.id}));
+      pushToast("ok",`${co.name} надет · слот ${co.slot}`);
+    }catch{ pushToast("err","Сеть упала"); }
   };
 
   const equippedSkin = useMemo(
@@ -428,6 +511,37 @@ export function ShopPage() {
             </div>
           );
         })}
+      </section>
+
+      {/* косметика 32 — рамки/баннеры/титулы */}
+      <section className={styles.cosmetics} aria-label="Косметика 42">
+        <div className={styles.cosHead}>
+          <h2 className={styles.cosTitle}>КОСМЕТИКА 42 — рамки · баннеры · титулы</h2>
+          <p className={styles.cosSub}>32 предмета · баланс в Neon · сияющие обводки VIP+/PRO · без localStorage</p>
+          <div className={styles.cosTabs} role="tablist">
+            {(["all","frame","banner","title"] as const).map(t => (
+              <button key={t} type="button" role="tab" aria-selected={cosTab===t} className={`${styles.cosTab} ${cosTab===t?styles.cosTabOn:""}`} onClick={()=>setCosTab(t)}>{t==="all"?"Все":t==="frame"?"Рамки":t==="banner"?"Баннеры":"Титулы"}</button>
+            ))}
+          </div>
+        </div>
+        <div className={styles.cosGrid}>
+          {filteredCosmetics.map(co => {
+            const isOwned = cosOwned.includes(co.id);
+            const isEq = cosEquipped[co.slot]===co.id;
+            const can = coins >= co.price;
+            return (
+              <div key={co.id} className={`${styles.cosCard} ${isEq?styles.cosCardEq:""}`} data-rarity={co.rarity} onMouseEnter={onCardEnter} onMouseLeave={onCardLeave}>
+                <div className={styles.cosPreview} style={co.slot==="banner"?{background:co.style}:{border:co.style, background:"rgba(255,255,255,0.04)"}}>
+                  <span className={styles.cosName}>{co.name}</span>
+                  <span className={styles.cosSlot}>{co.slot}</span>
+                </div>
+                <div className={styles.cosMeta}><span className={styles.cosRarity} style={{color:RARITY_META[co.rarity].color}}>{RARITY_META[co.rarity].label}</span><span className={styles.cosPrice}>🪙 {co.price}</span></div>
+                {isOwned ? (isEq ? <button type="button" className={styles.btnWear} onClick={()=>equipCosmetic(co)}>✅ Надет</button> : <button type="button" className={styles.btnWear} onClick={()=>equipCosmetic(co)}>Надеть</button>) : <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>buyCosmetic(co)}>🪙 {co.price}</button>}
+              </div>
+            );
+          })}
+        </div>
+        {cosOwned.length>0 && <p className={styles.cosHint}>В инвентаре: {cosOwned.length}/32 · экипировано: {Object.values(cosEquipped).filter(Boolean).length} слотов</p>}
       </section>
 
       {/* футер-намёк */}
