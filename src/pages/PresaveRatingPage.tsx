@@ -1,6 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import styles from "./PresaveRatingPage.module.css";
+
+gsap.registerPlugin(ScrollTrigger);
 
 /* ── API types ─────────────────────── */
 type FrameRow = { id: number; username: string; verified: boolean; status: string; created_at: string };
@@ -34,7 +37,9 @@ export function PresaveRatingPage() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
+  const rootRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
+  const kpiRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLDivElement>(null);
 
   const loadAll = async () => {
@@ -165,19 +170,113 @@ export function PresaveRatingPage() {
     };
   }, [frames, eco, ideas]);
 
+  // ── GSAP entrance y24 stagger 0.12 • reduced-motion • context cleanup
   useEffect(() => {
+    if (!rootRef.current) return;
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const ctx = gsap.context(() => {
-      gsap.fromTo(`.${styles.kpi}`, { y: 16, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.08, duration: 0.5, ease: "power2.out", delay: 0.1 });
-      gsap.fromTo(heroRef.current, { y: 14, opacity: 0 }, { y: 0, opacity: 1, duration: 0.55, ease: "power3.out" });
-      gsap.fromTo(`.${styles.row}`, { y: 10, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.03, duration: 0.35, ease: "power2.out", delay: 0.22 });
-    });
+      if (prefersReduced) {
+        if (heroRef.current) gsap.set(heroRef.current, { y: 0, opacity: 1, clearProps: "transform" });
+        gsap.set(`.${styles.kpi}`, { y: 0, opacity: 1, clearProps: "transform" });
+        gsap.set(`.${styles.controls}`, { y: 0, opacity: 1, clearProps: "transform" });
+        return;
+      }
+      if (heroRef.current) {
+        gsap.set(heroRef.current, { y: 24, opacity: 0 });
+        gsap.to(heroRef.current, { y: 0, opacity: 1, duration: 0.55, ease: "power2.out", delay: 0.05 });
+      }
+      gsap.set(`.${styles.kpi}`, { y: 24, opacity: 0 });
+      gsap.to(`.${styles.kpi}`, { y: 0, opacity: 1, stagger: 0.12, duration: 0.5, ease: "power2.out", delay: 0.22 });
+      gsap.set(`.${styles.controls}`, { y: 24, opacity: 0 });
+      gsap.to(`.${styles.controls}`, { y: 0, opacity: 1, duration: 0.45, ease: "power2.out", delay: 0.48 });
+    }, rootRef);
     return () => ctx.revert();
   }, []);
 
+  // table rows stagger on scroll — y24 stagger 0.12 ScrollTrigger
   useEffect(() => {
     if (!tableRef.current) return;
-    gsap.fromTo(tableRef.current.querySelectorAll(`.${styles.row}`), { y: 8, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.025, duration: 0.3, ease: "power2.out", overwrite: "auto" });
-  }, [filtered.length, filter, q]);
+    if (loading) return;
+    const rows = tableRef.current.querySelectorAll<HTMLElement>(`.${styles.row}`);
+    if (!rows.length) return;
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReduced) {
+      gsap.set(rows, { y: 0, opacity: 1, clearProps: "transform" });
+      return;
+    }
+    const ctx = gsap.context(() => {
+      gsap.set(rows, { y: 24, opacity: 0 });
+      gsap.to(rows, {
+        y: 0,
+        opacity: 1,
+        stagger: 0.12,
+        duration: 0.5,
+        ease: "power2.out",
+        overwrite: true,
+        scrollTrigger: { trigger: tableRef.current, start: "top 85%", toggleActions: "play none none none" },
+      });
+    }, tableRef);
+    return () => ctx.revert();
+  }, [filtered, loading]);
+
+  // re-animate table on filter/search change (overwrite)
+  useEffect(() => {
+    if (!tableRef.current || loading) return;
+    const rows = tableRef.current.querySelectorAll<HTMLElement>(`.${styles.row}`);
+    if (!rows.length) return;
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReduced) return;
+    gsap.fromTo(rows, { y: 24, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.12, duration: 0.35, ease: "power2.out", overwrite: true });
+  }, [filter, q, loading]);
+
+  // hover RGB — chromatic lift + tri-color shadow
+  const onRowEnter = useCallback((e: React.MouseEvent<HTMLElement>) => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    gsap.to(e.currentTarget, {
+      y: -2,
+      boxShadow: "0 12px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,45,85,0.20), 0 0 22px rgba(255,45,85,0.20), 0 0 22px rgba(0,255,136,0.12), 0 0 28px rgba(255,204,0,0.10)",
+      borderColor: "rgba(255,45,85,0.35)",
+      backgroundColor: "rgba(255,255,255,0.05)",
+      duration: 0.28,
+      ease: "power2.out",
+      overwrite: true,
+    });
+  }, []);
+  const onRowLeave = useCallback((e: React.MouseEvent<HTMLElement>) => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    gsap.to(e.currentTarget, {
+      y: 0,
+      boxShadow: "0 0 0 transparent",
+      borderColor: "rgba(35,35,43,0.9)",
+      backgroundColor: "transparent",
+      duration: 0.35,
+      ease: "power2.out",
+      overwrite: true,
+    });
+  }, []);
+  const onKpiEnter = useCallback((e: React.MouseEvent<HTMLElement>) => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    gsap.to(e.currentTarget, {
+      y: -4,
+      boxShadow: "0 12px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,45,85,0.20), 0 0 22px rgba(255,45,85,0.20), 0 0 22px rgba(0,255,136,0.12), 0 0 28px rgba(255,204,0,0.10)",
+      borderColor: "rgba(255,45,85,0.35)",
+      duration: 0.28,
+      ease: "power2.out",
+      overwrite: true,
+    });
+  }, []);
+  const onKpiLeave = useCallback((e: React.MouseEvent<HTMLElement>) => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const isAccent = e.currentTarget.classList.contains(styles.kpiAccent);
+    gsap.to(e.currentTarget, {
+      y: 0,
+      boxShadow: isAccent ? "0 0 18px rgba(255,204,0,0.10)" : "0 0 0 transparent",
+      borderColor: isAccent ? "rgba(255,204,0,0.32)" : "rgba(35,35,43,1)",
+      duration: 0.35,
+      ease: "power2.out",
+      overwrite: true,
+    });
+  }, []);
 
   const runCheck = async () => {
     setCheck("checking");
@@ -198,7 +297,7 @@ export function PresaveRatingPage() {
   const isEmpty = !loading && ratingRows.length === 0;
 
   return (
-    <div className={styles.page}>
+    <div className={styles.page} ref={rootRef}>
       <header ref={heroRef} className={styles.header}>
         <div className={styles.badge}>★ РЕЙТИНГ ПРЕСЕЙВА · MAGNUM · 42 БРАТУХИ</div>
         <h1 className={styles.title}>КТО ПОСТАВИЛ<br />ПРЕСЕЙВ — ТОТ БРАТУХА</h1>
@@ -210,23 +309,23 @@ export function PresaveRatingPage() {
 
       {toast && <div className={styles.toast} role="status">{toast}</div>}
 
-      <div className={styles.kpiRow}>
-        <div className={styles.kpi}>
+      <div className={styles.kpiRow} ref={kpiRef}>
+        <div className={styles.kpi} onMouseEnter={onKpiEnter} onMouseLeave={onKpiLeave}>
           <div className={styles.kpiNum}>{loading ? "…" : stats.frames}</div>
           <div className={styles.kpiLbl}>рамок выдано</div>
           <div className={styles.kpiHint}>magnum_frames</div>
         </div>
-        <div className={`${styles.kpi} ${styles.kpiAccent}`}>
+        <div className={`${styles.kpi} ${styles.kpiAccent}`} onMouseEnter={onKpiEnter} onMouseLeave={onKpiLeave}>
           <div className={styles.kpiNum}>{loading ? "…" : stats.ecoCount}</div>
           <div className={styles.kpiLbl}>эко-результатов</div>
           <div className={styles.kpiHint}>magnum_eco_results</div>
         </div>
-        <div className={styles.kpi}>
+        <div className={styles.kpi} onMouseEnter={onKpiEnter} onMouseLeave={onKpiLeave}>
           <div className={styles.kpiNum}>{loading ? "…" : stats.ideasCount}</div>
           <div className={styles.kpiLbl}>идей</div>
           <div className={styles.kpiHint}>{stats.totalVotes} голосов</div>
         </div>
-        <div className={styles.kpi}>
+        <div className={styles.kpi} onMouseEnter={onKpiEnter} onMouseLeave={onKpiLeave}>
           <div className={styles.kpiNum}>{loading ? "…" : stats.verified}</div>
           <div className={styles.kpiLbl}>верифицировано</div>
           <div className={styles.kpiHint}>{stats.frames ? Math.round((stats.verified / Math.max(1, stats.frames)) * 100) : 0}% · БРАТ-БОТ</div>
@@ -274,7 +373,7 @@ export function PresaveRatingPage() {
           {!loading && !err && isEmpty && <div className={styles.empty}>{EMPTY_FALLBACK}</div>}
           {!loading && !err && !isEmpty && filtered.length === 0 && <div className={styles.empty}>{EMPTY_FALLBACK}</div>}
           {!loading && !err && filtered.map((r) => (
-            <div key={`${r.source}-${r.rank}-${r.username}`} className={`${styles.row} ${r.rank <= 3 ? styles.topRow : ""}`}>
+            <div key={`${r.source}-${r.rank}-${r.username}`} className={`${styles.row} ${r.rank <= 3 ? styles.topRow : ""}`} onMouseEnter={onRowEnter} onMouseLeave={onRowLeave}>
               <span className={styles.rank}>
                 {r.rank === 1 ? "🥇" : r.rank === 2 ? "🥈" : r.rank === 3 ? "🥉" : `#${r.rank}`}
               </span>

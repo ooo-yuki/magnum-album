@@ -1,6 +1,9 @@
-import { useMemo, useState, useEffect, useRef } from "react";
+import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import styles from "./RecapsPage.module.css";
+
+gsap.registerPlugin(ScrollTrigger);
 
 // ───────── типы ─────────
 type Tag = "СП" | "Нарезка" | "Ивент" | "Freakland" | "Музыка";
@@ -156,6 +159,7 @@ const FILTERS: FilterTag[] = ["Все", "СП", "Нарезка", "Ивент", 
 export function RecapsPage() {
   const [filter, setFilter] = useState<FilterTag>("Все");
   const [q, setQ] = useState("");
+  const rootRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
 
   const filtered = useMemo(() => {
@@ -166,16 +170,85 @@ export function RecapsPage() {
     });
   }, [filter, q]);
 
-  // entrance animation
+  // ── GSAP entrance y24 stagger 0.12 • ScrollTrigger • reduced-motion • cleanup
+  useEffect(() => {
+    if (!rootRef.current) return;
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const ctx = gsap.context(() => {
+      if (prefersReduced) {
+        gsap.set(`.${styles.header} > *`, { y: 0, opacity: 1, clearProps: "transform" });
+        gsap.set(`.${styles.toolbar}`, { y: 0, opacity: 1, clearProps: "transform" });
+        gsap.set(`.${styles.how}`, { y: 0, opacity: 1, clearProps: "transform" });
+        return;
+      }
+      gsap.set(`.${styles.header} > *`, { y: 24, opacity: 0 });
+      gsap.to(`.${styles.header} > *`, { y: 0, opacity: 1, stagger: 0.12, duration: 0.55, ease: "power2.out", delay: 0.05 });
+      gsap.set(`.${styles.toolbar}`, { y: 24, opacity: 0 });
+      gsap.to(`.${styles.toolbar}`, { y: 0, opacity: 1, duration: 0.5, ease: "power2.out", delay: 0.28 });
+      gsap.set(`.${styles.how}`, { y: 24, opacity: 0 });
+      gsap.to(`.${styles.how}`, {
+        y: 0,
+        opacity: 1,
+        duration: 0.5,
+        ease: "power2.out",
+        scrollTrigger: { trigger: `.${styles.how}`, start: "top 90%", toggleActions: "play none none none" },
+      });
+    }, rootRef);
+    return () => ctx.revert();
+  }, []);
+
+  // cards stagger on filter/search — y24 ScrollTrigger stagger 0.12
   useEffect(() => {
     if (!gridRef.current) return;
+    const cards = gridRef.current.querySelectorAll<HTMLElement>(`.${styles.card}`);
+    if (!cards.length) return;
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReduced) {
+      gsap.set(cards, { y: 0, opacity: 1, clearProps: "transform" });
+      return;
+    }
+    const ctx = gsap.context(() => {
+      gsap.set(cards, { y: 24, opacity: 0 });
+      gsap.to(cards, {
+        y: 0,
+        opacity: 1,
+        stagger: 0.12,
+        duration: 0.5,
+        ease: "power2.out",
+        overwrite: true,
+        scrollTrigger: { trigger: gridRef.current, start: "top 85%", toggleActions: "play none none none" },
+      });
+    }, gridRef);
+    return () => ctx.revert();
+  }, [filtered]);
+
+  // hover RGB — chromatic lift + tri-color shadow
+  const onCardEnter = useCallback((e: React.MouseEvent<HTMLElement>) => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const cards = gridRef.current.querySelectorAll(`.${styles.card}`);
-    gsap.fromTo(cards, { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, stagger: 0.07, ease: "power2.out", overwrite: "auto" });
-  }, [filter, q]);
+    gsap.to(e.currentTarget, {
+      y: -4,
+      boxShadow: "0 12px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,45,85,0.20), 0 0 22px rgba(255,45,85,0.20), 0 0 22px rgba(0,255,136,0.12), 0 0 28px rgba(255,204,0,0.10)",
+      borderColor: "rgba(255,45,85,0.35)",
+      duration: 0.28,
+      ease: "power2.out",
+      overwrite: true,
+    });
+  }, []);
+  const onCardLeave = useCallback((e: React.MouseEvent<HTMLElement>) => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const isDashed = e.currentTarget.getAttribute("data-transcript") === "no";
+    gsap.to(e.currentTarget, {
+      y: 0,
+      boxShadow: "0 0 0 transparent",
+      borderColor: isDashed ? "rgba(255,204,0,0.22)" : "rgba(255,255,255,0.08)",
+      duration: 0.35,
+      ease: "power2.out",
+      overwrite: true,
+    });
+  }, []);
 
   return (
-    <div className={styles.page}>
+    <div className={styles.page} ref={rootRef}>
       <div className={styles.header}>
         <span className={styles.badge}>Freakland • СП • Нарезки • 5opka</span>
         <h1>Пересказы &amp; нарезки</h1>
@@ -229,7 +302,7 @@ export function RecapsPage() {
       ) : (
         <div className={styles.grid} ref={gridRef}>
           {filtered.map((r) => (
-            <article key={r.id} className={styles.card} data-transcript={r.transcript ? "yes" : "no"}>
+            <article key={r.id} className={styles.card} data-transcript={r.transcript ? "yes" : "no"} onMouseEnter={onCardEnter} onMouseLeave={onCardLeave}>
               <div className={styles.cardTop}>
                 <div className={styles.tags}>
                   <span className={styles.tag}>{r.tag}</span>
@@ -269,7 +342,6 @@ export function RecapsPage() {
           ))}
         </div>
       )}
-
       <div className={styles.how}>
         <h3>Как это работает</h3>
         <ol>
