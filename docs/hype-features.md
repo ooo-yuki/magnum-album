@@ -500,6 +500,95 @@ FOMO-текст: «тираж 42 — кринжа не существует, д�
 - FOMO: «тираж 42 — кринжа не существует, делай!» + `PRESAVE https://music.thefence.me/psmagnum` CTA
 - аналитика: `console.log('[magnum] limited:', {dropId, id, left})` без внешних трекеров
 
+### 7.15 Братуха-Стрик Календарь 42 — ежедневный огонёк активности
+
+**Идея:**
+Календарь-стрик на 42 дня: зашёл на `/magnum/` — клетка закрасилась, пропустил — серая трещина. Держа держит 42 дня → рамка `streak-42` conic-gold + 1420 монет.
+Сетка 6×7 (42 клетки) как GitHub-контрибьют, цвет-интенсивность по стрик-лену: `1-6 серо-мятный`, `7-13 неон`, `14-29 fire`, `30-42 epic conic-gradient`.
+Мотивация: «Братуха, 42 дня — кринжа не существует, делай каждый день!» + пуш FOMO в `PresaveBanner`.
+
+**LS ключи:**
+- `magnum-streak-calendar:{count:number,lastDate:string(ISO date),grid:boolean[42],best:number,freezeUsed:boolean}` LS — стрик и сетка
+- `magnum-streak-freeze:1|0` — 1 заморозка в 7 дней за 420 монет (`magnum-eco-freeze-used` reuse паттерн, но отдельный ключ)
+- `magnum-streak-claimed:{'7':bool,'14':bool,'30':bool,'42':bool}` — какие награды уже выданы, без повтора
+- `magnum-coins:number` — единый кошелёк `src/lib/coins.ts` (`getCoins/addCoins/subscribe`)
+- сервер v2: `magnum_streak_calendar(user_id, count, last_date, best)` + `magnum_coins(balance)` — серверный анти-чит по `last_date`
+
+**UI блоки:**
+- `StreakCalendarGrid` — 42 клетки `grid 7×6` (мобилка `overflow-x:auto` + `snap`), каждая `12px` с `border-radius: 3px`, пустая `bg:#1a1a1a dashed`, активная — градиент уровня + `box-shadow` по редкости, сегодня пульс `scale 1→1.08`
+- `StreakCounter` — «🔥 18/42 братуха, не сливай!» + `FomoTimer` до 00:00 «до сброса 05:42:11», GSAP `scale 1→1.02` каждый тик, `prefers-reduced-motion` — без пульса
+- `StreakRewardTrack` — чекпоинты 7/14/30/42 с наградами `142/420/1000/1420` + иконки `🌿🔥👑💿`, пройденные — чек `✓` + `conic-gradient` рамка, будущие — `opacity:.4`
+- `StreakFreezeBtn` — «🧊 Заморозить за 420» disabled если `getCoins()<420` или `freezeUsed`, тост «заморозка спасла стрик!»
+- `StreakShareCard` — кнопка «Поделиться стриком → ShareCard 1080×1080» reuse §7.10 canvas, текст «У меня 🔥 42 дня, братуха!»
+- `StreakBadge` в `NavGrid/HomePage` — мини-огонёк `🔥×count` с RGB-обводкой, клик → модалка календаря
+
+**Файлы:**
+- `src/components/StreakCalendar.tsx` — grid + counter + freeze + GSAP stagger `from .cell: y:8 opacity:0 stagger:0.02`
+- `src/lib/streakCalendar.ts` — `getStreak():Streak`, `tickStreak():{count,reward}`, `canFreeze():bool`, `calcReward(day):42|142|420`, `getIntensity(count):'common'|'uncommon'|'rare'|'epic'`
+- `src/components/StreakCalendar.module.css` — сетка, `cell-common/uncommon/rare/epic`, `@keyframes pulse`, `prefers-reduced-motion` guard
+- `src/pages/HomePage.tsx` — виджет над `RecapQuest`, `useEffect → tickStreak()` на маунте (1 раз/сутки)
+- `src/lib/coins.ts` — без изменений, `addCoins(reward)` + `storage` sync, `BroadCastChannel('streak')` для многовкладок
+- `server.ts` (будущее) — `GET /magnum/api/streak` → `{count,best}` + `POST /magnum/api/streak/tick` с валидацией `lastDate` на сервере
+
+**Edge:**
+- часовой пояс — `new Date().toDateString()` локально, `lastDate` в будущем → сброс + тост «время шалят, стрик сброшен, братуха»
+- LS битый JSON — `try{JSON.parse}catch→fallback {count:0,grid:Array(42).fill(false),best:0}` + `removeItem` битого ключа
+- пропуск дня без заморозки — `count→0`, `grid` сбрасываем только визуально? Нет, храним историю, но `count` 0, показываем «снова с 1, делай!»
+- две вкладки — `window.addEventListener('storage')` на `magnum-streak-calendar` + `BroadcastChannel('streak')` instant sync
+- `prefers-reduced-motion` — без `pulse`/`stagger`, статичный `conic-gradient` только бордер
+- приватный режим — `try/catch` вокруг LS, fallback в память + тост «прогресс не сохранится в этом браузере»
+- награда NaN — `Number.isFinite(reward)?reward:0`, кламп, `addCoins` идемпотентно через `claimed` флаг
+- читерский инкремент — сервер v2 сравнивает `lastDate` и `count`, клиентский `count` не доверяем, пересчитываем из `grid` + дат
+
+**Награда/хайп:**
+- 7д → 142, 14д → 420, 30д → 1000, 42д → 1420 + скин `streak-42-fire` `conic-gradient(from 0deg,#ff2d55,#ffcc00,#00ff88)` epic
+- шаринг «🔥 42/42 братуха-календарь, кринжа не существует!» + OG-картинка canvas 1080×1080 + `PRESAVE` CTA
+- кросс-фича: `tickStreak()` триггерит `Daily42` + `EcoChallenge` freeze sync + `Leaderboard` бейдж `STREAK 42`
+
+### 7.16 Шеринг-Карточка 42 — OG-картинка достижений + Web Share
+
+**Идея:**
+Кнопка «Поделиться прогрессом 📤» генерирует OG-картинку 1080×1080 на `<canvas>` без внешних ассетов — только CSS-градиенты + эмодзи.
+Картинка собирает статы братухи: стрик, эко-уровень, купленные скины, дуэль `bestClicks`, пресейв-рамка `verified`. Виралка: «Я — Легенда 42 👑 8/8 ЭКО + 🔥18 стрик».
+Шаринг — `navigator.share({files:[png]})` если доступен, иначе «Скачать PNG». Первый шаринг → +42 монет (`magnum-share-claimed`).
+
+**LS ключи:**
+- `magnum-share-claimed:'1'|null` — 1 награда за первый шаринг, анти-абуз, `magnum-coins` +42 через `addCoins`
+- `magnum-share-prefs:{bg:'neon'|'gold'|'fence', showStreak:bool}` LS — выбор фона карточки, дефолт `neon`
+- `magnum-share-cache:string|null` (опционально, base64 512px превью последней карточки для инстант-показа без перегенерации, TTL 1ч)
+- `magnum-streak-calendar`, `magnum-eco-quiz`, `magnum-inventory`, `magnum-duel-history`, `magnum-frame-verified` — read-only источники статы (не пишем)
+- сервер v2: `POST /magnum/api/share` → `{url, imageId}` для серверного OG (будущее), MVP — чисто клиентский canvas
+
+**UI блоки:**
+- `ShareCardBtn` — градиент `linear-gradient(135deg,#ff2d55,#5865f2)` + `box-shadow: 0 0 18px rgba(255,45,85,.5)`, иконка 📤, `GSAP scale 1→1.02 hover`
+- `ShareCardPreview` — модалка 360×360 превью (scale 0.33 от 1080), спиннер `…генерируем 42…` пока `<canvas>.toBlob` <2с, затем `<img src=blobUrl>`
+- `ShareCardCanvas` (скрытый `<canvas width=1080 height=1080>`) — слои: фон `conic-gradient` → аватар-эмодзи 120px → статы-плитки `streak/eco/duel/coins` → `PRESAVE` QR/текст `music.thefence.me/psmagnum` → вотермарка `42 — кринжа не существует`
+- `ShareActions` — «📥 Скачать PNG» (a[download]) + «📤 Поделиться» (`navigator.canShare({files})`) + «Копировать текст» (`navigator.clipboard.writeText`)
+- `ShareRewardToast` — после первого шаринга `addCoins(42)` + конфетти 120 частиц canvas + «+42 монеты, братуха, спасибо за хайп!»
+
+**Файлы:**
+- `src/components/ShareCard.tsx` — модалка + превью + share/download + GSAP `from .card: y:20 opacity:0`
+- `src/lib/shareCard.ts` — `generateShareCard(stats:ShareStats):Promise<Blob>`, `buildStats():ShareStats` (читает все LS), `shareOrDownload(blob, text)`
+- `src/lib/shareStats.ts` — `getShareStats():{streak, ecoLevel, bestClicks, coins, skins, verified, duelWins}` чистые селекторы LS
+- `src/components/ShareCard.module.css` — модалка, `backdrop: blur(8px)`, `card: border conic-gradient`, `prefers-reduced-motion` → без GSAP
+- `src/pages/HomePage.tsx` + `src/pages/EcoQuizPage.tsx` + `src/pages/games/DuelClicker.tsx` — кнопка «Поделиться прогрессом» в `Result`/`EcoResult`/`DuelResult`
+- `public/share-qr.png` (опционально) — QR на `PRESAVE`, если нет — рисуем текстом `psmagnum` на canvas
+
+**Edge:**
+- canvas CORS — только `fillStyle` градиенты / `fillText` эмодзи, без `drawImage` с внешних URL → taint отсутствует
+- iOS Share без файлов — `if(!navigator.canShare({files:[file]}))` → fallback «Скачать» + `clipboard.writeText` + тост «поделись вручную, братуха»
+- `toBlob` >2с — показываем спиннер + `setTimeout 2с` → «почти готово…», не блокируем UI, `requestIdleCallback` для генерации
+- LS битый — `try/catch` вокруг каждого `getItem`, fallback `0/'Нормис'/[]`, карточка всё равно рендерится с дефолтами
+- приватный режим — `try/catch` + генерация без кеша, `magnum-share-claimed` в памяти (1 сессия)
+- `prefers-reduced-motion` — без конфетти/GSAP, статичное превью
+- длинный ник >16 — `ctx.fillText` кламп `slice(0,16)+'…'`, `measureText` → `fontSize 36→28`
+- одновременные генерации — `AbortController` на предыдущий `generateShareCard`, только последний blob в `<img>`
+
+**Награда/хайп:**
+- первый шаринг +42, каждый шаринг — OG-картинка для твиттера/тг/вк, виралка «Туса Медуза 8K клипов — я в деле!»
+- шаринг-текст: `«Я — {level} 42! 🔥{streak} стрик · 🧱CLAY РЗТ73 · 📡VPN 28.04 · presave → music.thefence.me/psmagnum #MAGNUM42»`
+- аналитика: `console.log('[magnum] share:', {streak, ecoLevel, verified})` без внешних трекеров, кросс-фича → `StreakCalendar` + `Leaderboard`
+
 ---
 
 > 42 — кринжа не существует. Делай, братуха. 🔥
