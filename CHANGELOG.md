@@ -5,6 +5,58 @@
 > Промо-сайт альбома **MAGNUM Пятерки** (5opka × 42 братухи). React + TypeScript + GSAP + Bun.
 > Формат: [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/). Версионирование — SemVer.
 
+## [0.3.9] — 2026-09-01 🎹 Rhythm Tape 32 + Dodge 42 + Duel 2.0 + Ideas 💬 — 5/10
+
+> **11 коммитов** `1296b9e` → `5921e0b` · **+1581 / −156** · **21 файл** (+1 dirty `RhythmGame.tsx` tape 32) · Rhythm judgement tape 32 + mute + share + breakdown + Dodge 3 сложности×даш/slow-mo + Ideas 💬 Neon + Duel 2.0 + auth-gate + 3086 tests · рейтинг **5/10** (1711 строк/10м, норма 5000+ = 10/10) · `tsc` ⚠️ 5 ошибок RunnerGame dirty · `magnum-bun active` `caddy Up` (recovered 502→200, 000→200)
+
+### 🎮 Игры — Dodge 42 (Изи/Нормал/Хард) + Rhythm Tape 32 (dirty)
+
+- 🛸 **Dodge 42 — 3 сложности + даш 52px + slow-mo 2.2с + свайп + GSAP pop + WebAudio + 15 советов** — `ba93734` **DIFFICULTIES 3×** (Изи/Нормал/Хард — скорость врагов/частота спавна/bulletMul), **даш 52px** (Shift/пробел/свайп `dx>40` + `dashCD 420мс` + `invulnerable 180мс`), **slow-mo 2.2с** (замедление `0.35×` + `slowMoCharges 2` + `recharge 8с`), **свайп** `touchstart→touchend dx/dy`, **GSAP pop** `scale 1→1.22 back.out 0.22` на dodge/coin, **WebAudio** `dash 620Hz→180Hz 0.12с` + `slowmo 180Hz tri 0.4с`, **15 лор-советов** MAGNUM/42/5 пуль ротация — трудный баланс — `src/pages/games/Dodge42Game.tsx` +147/−26 (1 файл)
+- 🥁 **Rhythm 42 — judgement tape 32 + mute + share + breakdown — 5 пуль хронология 2026** — `5921e0b` (в коммите `IdeasPage.tsx` +85, фактически Ideas-комменты) + **dirty `RhythmGame.tsx` +68/−4** (uncommitted) **tapeStats** `p*1+g*0.6/tot*100`, **TAPE 32** `Array(32)` `perfect=#ffcc00/good=#00ff88/miss=#ff2d55` + `P/G/M` счётчики, **mute 🔊/🔇** `rhythm42-muted` + `mutedRef` guard `playHit(j, mutedRef)`, **breakdown-лента** `flex p/g/m` + `judgeTape.length` бар, **share** `navigator.clipboard` `РИТМ MAGNUM — {song} {score} pts • {acc}% • FEVER x{N} — пресейв https://music.thefence.me/psmagnum`, **win/fail модалки** `Perfect/Good/Miss` карточка + 5 пуль lore — `src/pages/games/RhythmGame.tsx` dirty +68/−4 (tape + mute + breakdown + share), `tests/rhythm42-enhanced.test.ts` +90 (см. 🧪)
+- 🏆 **Rhythm tape breakdown — win/fail карточки** — dirty `RhythmGame.tsx` **win** `score • макс комбо {maxCombo} • {accuracy}% • FEVER x{N}` + **breakdown** `Perfect {p} / Good {g} / Miss {m} • {tot} нот` + `5 пуль MAGNUM: {song} · {diff} · music.thefence.me/psmagnum` + **fail** та же карточка + hint — модалки теперь с аналитикой партии
+
+### ✨ Фичи — Ideas 💬 Neon + Presave share (Магазин/Эко/Майнинг/Идеи)
+
+- 💬 **Ideas комменты Neon — валидатор isValidComment 2-200, GET/POST /magnum/api/ideas/:id/comments, тред 💬, GSAP y12 stagger 0.08 + hover y:-4** — `899a910` + `5921e0b` **валидатор** `isValidComment(v)` `2..200`, `/(.)\1{5,}/` анти-спам, `/<script|javascript:/i` XSS-guard, `trim 2..200`, **Neon** `magnum_idea_comments` `GET :id/comments` 50шт `ORDER BY created_at ASC JOIN users` + `POST :id/comments` auth + `10/мин` + `idea exists 404` + `INSERT RETURNING`, **UI** `expandedId` + `comments/commentsLoading/commentDraft/commentSending` + `toggleComments` + `loadComments` + `postComment`, **тред** `data-comments` + `data-comment` + `GSAP stagger y12→0 0.08 power2.out` + `hover y:-4 RGB_GLOW`, **баланс Neon без localStorage** — `src/pages/IdeasPage.tsx` +85, `tests/rhythm42-enhanced.test.ts` +90 (валидатор/tapeStats/share URL, см. 🧪), `server.ts` уже имел эндпоинты в `0c47e1f` — фронт догнал
+- 💡 **Hype +3 идеи (RUSH/KEDR/CHROME) +5 очередь** — `1026bdf` **RUSH** `DUEL RUSH 42 — WS 2-4 + rush x7 + heat-bar + ELO` (wager 0/42/142/420, rush <0.25с +12%/x7, heat 0→100, CPS>20 suspect), **KEDR** `ECO KEDR 42 — 8Q Кедр/Томь/Кузбасс + bio 7дн` (+1420 босс 8/8, freeze 420), **CHROME** `CHROME VAULT 42 — 12 скинов chrome + prism epic` (42/142/420/1420, крафт 3×common→uncommon 42, dust +100) + queue 5 — `docs/hype-queue.md` +7/−1, `reports/hype-2026-09-01-1539.md` +52
+
+### 🤖 БРАТ-БОТ — стабилен
+
+- 🤖 без изменений в окне — бот стабилен, задачи ушли в **Dodge 42 + Rhythm tape + Ideas 💬 + Duel 2.0** (след. инкремент — подсказки по **TAPE 32 + mute/share + breakdown + Dodge даш/slow-mo + Vault**)
+
+### 🖼️ Открытка / Галерея — 8 файлов (WARN y2k/dup + archive HTML)
+
+- 🖼️ **8 файлов — без изменений в окне, WARN сохраняется** — watchdog 15:30 **8 файлов** `42-{agit,cyber,memphis,y2k}-01.{jpg,800.webp}` (12M, webp 67-133K valid), `tsc` dirty · `REAL_BY_STYLE`/`REAL_FALLBACK` (`y2k→memphis/cyber` § BUG review 15:30 п.1) + **archive 210× 200 html** SPA fallback — без рестарта (`magnum-bun active`, `caddy Up`)
+
+### ⚡ Перфоманс — рекавери + dirty Runner
+
+- 🟢 **Health recovered 502→200, 000→200 — рестарт magnum-bun** — watchdog 15:30:30 **до** `HTTPS /magnum/ 200 ok` но `HTTPS /magnum/api/ideas 502 + HTTP :3000 000 Connection refused` (`magnum-bun inactive dead since 15:28:48`, `EADDRINUSE` crash-loop 25× `server.ts:2112` + SIGTERM), **после** `systemctl restart magnum-bun` PID 262459 `LISTEN *:3000` + `caddy Up 31m` → **200/200/200** все идеи 89шт — journal `MAGNUM server running at http://localhost:3000/magnum/` — без `dist` изменений
+- ⚠️ **Dirty RunnerGame — 5 ошибок TS18047** — watchdog 15:30 `M src/pages/games/RunnerGame.tsx + src/components/Marquee/TopProgress` — `tsc 5 ошибок TS18047` (Runner `possibly null`), тесты при этом 3086 passed — P2 к фиксу (null-guard), `bun test` не блокирует
+- 🟢 **Health 15:25 — OK** — `1296b9e` `reports/health-2026-09-01-1525.md` +61 — **200/200/200** до падения
+
+### 🧪 Тесты / CI — 3086 passed (31 файл, 9651 expects)
+
+- ✅ **3086 passed (31 файл, 9651 expects, 2.05s → 27.91s watchdog)** — `00557a3` `reports/test-2026-09-01-1529.md` +95, `tests/new-coverage-1527.test.ts` +131 — **3071→3086 +15**, `tsc` (clean HEAD) `0` / dirty `5 ошибок RunnerGame`, **Bun 1.4.0 + vitest 3.1.1 jsdom** · покрытие **tapeStats + FEVER + Dodge + duel 2.0 + ideas комменты**
+- 🥁 **rhythm42-enhanced — tapeStats + judgement tape + share** — `899a910` `tests/rhythm42-enhanced.test.ts` +90 — **12 тестов** `tapeStats` `empty→100%`, `perfect 100%`, `good 60% weight` (`p*1+g*0.6/tot`), `miss 50%`, `nulls ignored`, `slice -32 invariant`, `share text presave URL` `https://music.thefence.me/psmagnum` + `РИТМ MAGNUM`, `muted guard`, `breakdown acc` — фронт-валидатор ленты 32
+- 🩹 **new-coverage-1527 — ideas/duel/sharing** — `00557a3` `tests/new-coverage-1527.test.ts` +131 — **+15 тестов** 3086-й рубеж (presaveClick + duel rooms + ideas comments + Dodge)
+- 🟢 **Watchdog 15:30 — 200/200/200 active Up (recovered)** — `0b761ac` `reports/watchdog-2026-09-01-1530.md` +109 — **200/200/200**, `magnum-bun active PID 262459`, `magnum-caddy Up 31m`, **8 gallery**, `tsc 5 ошибок dirty` ⚠️, **3086 tests** 27.91s — рекавери после crash-loop `EADDRINUSE` 15:28-15:30
+- 👁️ **Review 5/10 — 1711 строк/10м** — `14abb10` `reports/review-2026-09-01-1530.md` +90 — **5/10** (1500-1999 = 5/10) — рост **2/10 → 5/10**, **9 коммитов/10м (6 продуктивных+3 отчёта)** + 1 uncommitted, **ADDED 1652 / REMOVED 59**, `tsc PASS(clean)/FAIL(dirty)`, `3086 pass`, `8 галерея WARN`, `health PASS(recovered)`, `services PASS` — **WARN** `archive HTML fallback` + `y2k alias` + `RunnerGame TS18047` + `Flappy/Rhythm localStorage` + `historyRef`
+
+### 🔐 Auth / Neon — gate держится, Duel 2.0 + auth-gate фикс, +2 таблицы (0014)
+
+- ⚔️ **Duel 2.0 — rooms/stats/leaderboard/invites/seasons + WS ready broadcast — Neon, валидация, rate limit** — `f16d51a` **Neon 0014** `magnum_duel_seasons` (id, name, starts_at, ends_at) + `magnum_duel_invites` (from_user, to_user, room_id, status pending/accepted/declined/expired, 3 индекса + `starts_at DESC`), **итого 30 таблиц** (было 28) + **server.ts +133/−45** `handleDuelHistory` + `REPORT_REASONS/TARGETS` + `validateReportTarget/Reason` + `logModeration` + `handleReportCreate` + **rooms/stats/leaderboard/invites/seasons** + **WS ready broadcast** `ready` → `broadcast roomPublic()` — `drizzle/migrations/0014_duel_seasons_invites.sql` +25, `drizzle/schema.ts` +17, `drizzle/migrations/meta/_journal.json` idx14, `server.ts` +133/−45
+- 🔐 **Auth-gate fix — кнопки без логина → форма входа, без голых 401** — `cd171b4` **до:** `Shop Mining Layout` кнопки слали `401` без модалки — **после:** `ShopPage.tsx` +45 + `MiningPage.tsx` +30 `me` state `GET /magnum/api/auth/me` + `magnum:auth / magnum:need-auth` listener + **guard** `if(!me){ showToast("Войди, братуха — …"); dispatch need-auth; return; }` + `wsUrl без username` (auth via cookie), `WS /magnum/api/ws` теперь требует залогина — `src/pages/MiningPage.tsx` +20 (me + auth listener + `connectDuel` guard), `src/pages/ShopPage.tsx` +45 (аналогичный guard) — gate держится
+- 🩹 **P0 crash-loop — server.ts:1433 presaveClick string literal + EADDRINUSE** — `e8fa558` `reports/auth-2026-09-01-1529.md` +133 — **auth check 15:29** + **fix** `server.ts:1433` `presaveClick` string literal крашил `magnum-bun` (`EADDRINUSE` 25× в 15:28:25-15:28:48 → `inactive dead`), после фикса `bun test 3086` + `systemctl start` 15:29-15:30 успех — gate + duel 2.0 держится, `caddy Up`
+- 🔐 **Auth 15:29 — check OK** — `e8fa558` **4/4 защищённых 401** + WS 401 без токена ✅ — gate держится после duel 2.0
+
+### 🐛 Фиксы — auth-gate + P0 presaveClick + EADDRINUSE
+
+- 🔒 **Auth-gate WS + Shop/Mining** — `cd171b4` см. 🔐 выше — P1 закрыт, кнопки без входа теперь ведут в модалку `AuthStatus` вместо 401
+- 🩹 **P0 presaveClick string literal** — `e8fa558` `server.ts:1433` — crash-loop 25× `EADDRINUSE at server.ts:2112:20` — фикс литерала + `SO_REUSEPORT` проверка + `journalctl` clean — `magnum-bun active` восстановлен
+- ⚠️ **Остались P1/P2 → 0.3.10:** `RunnerGame TS18047 5 ошибок` (dirty, null-guard) + `DAILY_KEY void` + `historyRef.length` + `TOCTOU 1278-1297` 5 SQL без BEGIN + `UNIQUE(user_id,code)` + `gallery y2k alias` + `archive 210× 200 html` + `Memory/Rhythm localStorage` + `Flappy diff` (уже в 0.3.8) + `y2k 67K/2.4M недоступен`
+
+---
+
 ## [0.3.8] — 2026-09-01 🦩 Flappy 42 + Rhythm MAGNUM FEVER + Presave 40 фактов + BandLink — 6/10
 
 > **8 коммитов** `91a9702` → `2c3f39b` · **+1250 / −58** · **21 файл** · Flappy 3 сложности×5 скинов + Rhythm 5 пуль FEVER + Presave 40 фактов/30 FAQ/BandLink proxy/reports moderation + LCP high + content-visibility · рейтинг **6/10** (2293 строк/20м, норма 5000+ = 10/10) · `tsc 0` · `magnum-bun active` `caddy Up`
