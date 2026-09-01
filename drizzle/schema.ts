@@ -158,3 +158,32 @@ export const magnumPromoRedemptions = pgTable("magnum_promo_redemptions", {
   code: text("code").references(() => magnumPromoCodes.code).notNull(),
   redeemedAt: timestamp("redeemed_at").defaultNow().notNull(),
 });
+
+export const magnumGameScores = pgTable("magnum_game_scores", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => magnumUsers.id).notNull(),
+  game: text("game").notNull(),
+  score: integer("score").notNull(),
+  coinsEarned: integer("coins_earned").default(0).notNull(),
+  meta: jsonb("meta").default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const magnumReferrals = pgTable("magnum_referrals", {
+  id: serial("id").primaryKey(),
+  inviterId: integer("inviter_id").references(() => magnumUsers.id).notNull(),
+  invitedId: integer("invited_id").references(() => magnumUsers.id).notNull(),
+  code: text("code").notNull(),
+  rewardClaimed: boolean("reward_claimed").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const magnumDuelHistory = pgTable("magnum_duel_history", {
+  id: serial("id").primaryKey(),
+  roomId: text("room_id").notNull(),
+  winner: text("winner"),
+  scores: jsonb("scores").default([]).notNull(),
+  durationSec: integer("duration_sec").default(10).notNull(),
+  playerCount: integer("player_count").default(2).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});

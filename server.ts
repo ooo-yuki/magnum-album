@@ -1372,10 +1372,149 @@ async function handleMiningTop(): Promise<Response> {
   }
 }
 
+// ---- Game scores + referrals + duel history (magnum_game_scores / referrals / duel_history) ----
+const GAME_WHITELIST = new Set(["runner","match3","knife","memory","clicker","rhythm","stack","blackjack","roulette","2042","flappy","typing","snake","dodge","quiz","duel"]);
+function validateGameName(g: unknown): string | null {
+  if (typeof g !== "string") return null;
+  const s = g.trim().toLowerCase().slice(0, 32);
+  if (!s || s.length < 2) return null;
+  if (!GAME_WHITELIST.has(s)) return null;
+  return s;
+}
+async function handleGameSubmit(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`game:submit:${user.id}:${ip}`, 20, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
+  let body: { game?: unknown; score?: unknown; meta?: unknown };
+  try { body = (await req.json()) as typeof body; } catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
+  const game = validateGameName(body.game);
+  if (!game) return Response.json({ error: "invalid game", allowed: [...GAME_WHITELIST] }, { status: 400 });
+  const score = Number(body.score);
+  if (!Number.isInteger(score) || score < 0 || score > 999999) return Response.json({ error: "score must be integer 0..999999" }, { status: 400 });
+  const meta = body.meta && typeof body.meta === "object" ? body.meta : {};
+  const coinsEarned = score < 10 ? 0 : Math.min(42, Math.floor(score / 200));
+  try {
+    const sql = getSql();
+    await sql`INSERT INTO magnum_game_scores (user_id, game, score, coins_earned, meta) VALUES (${user.id}, ${game}, ${score}, ${coinsEarned}, ${JSON.stringify(meta)}::jsonb)`;
+    if (coinsEarned > 0) {
+      await sql`INSERT INTO magnum_coins (user_id, balance) VALUES (${user.id}, 1000) ON CONFLICT (user_id) DO NOTHING`;
+      const upd = await sql`UPDATE magnum_coins SET balance = balance + ${coinsEarned} WHERE user_id=${user.id} RETURNING balance`;
+      const bal = Number((upd[0] as { balance: number }).balance);
+      await sql`INSERT INTO magnum_transactions (user_id, amount, reason, meta) VALUES (${user.id}, ${coinsEarned}, 'game_reward', ${JSON.stringify({ game, score })}::jsonb)`;
+      return Response.json({ ok: true, game, score, coinsEarned, balance: bal });
+    }
+    return Response.json({ ok: true, game, score, coinsEarned: 0 });
+  } catch (e) { console.error("[game submit] failed", e); return Response.json({ error: "db error" }, { status: 500 }); }
+}
+async function handleGameTop(req: Request): Promise<Response> {
+  try {
+    const url = new URL(req.url);
+    const game = url.searchParams.get("game")?.trim().toLowerCase() || "";
+    const limit = Math.min(50, Math.max(1, Number(url.searchParams.get("limit") || 20)));
+    const sql = getSql();
+    const rows = game && GAME_WHITELIST.has(game)
+      ? await sql`SELECT g.game, g.score, g.created_at, u.username, s.skin_id as avatar FROM magnum_game_scores g JOIN magnum_users u ON u.id=g.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id=g.user_id AND s.equipped=true WHERE g.game=${game} ORDER BY g.score DESC, g.created_at ASC LIMIT ${limit}`
+      : await sql`SELECT g.game, g.score, g.created_at, u.username, s.skin_id as avatar FROM magnum_game_scores g JOIN magnum_users u ON u.id=g.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id=g.user_id AND s.equipped=true ORDER BY g.score DESC LIMIT ${limit}`;
+    return Response.json({ top: rows.map((r: unknown) => { const x=r as {game:string;score:number;created_at:string;username:string;avatar:string|null}; return { game:String(x.game), score:Number(x.score), username:String(x.username), avatar:x.avatar||null, created_at:x.created_at }; }), count: rows.length, game: game || "all" });
+  } catch (e) { console.error("[game top] failed", e); return Response.json({ error: "db error" }, { status: 500 }); }
+}
+async function handleGameMy(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  try {
+    const sql = getSql();
+    const url = new URL(req.url);
+    const limit = Math.min(50, Math.max(1, Number(url.searchParams.get("limit") || 20)));
+    const rows = await sql`SELECT game, score, coins_earned, created_at FROM magnum_game_scores WHERE user_id=${user.id} ORDER BY created_at DESC LIMIT ${limit}`;
+    return Response.json({ scores: rows.map((r: unknown) => { const x=r as {game:string;score:number;coins_earned:number;created_at:string}; return { game:String(x.game), score:Number(x.score), coinsEarned:Number(x.coins_earned), created_at:x.created_at }; }), count: rows.length });
+  } catch (e) { console.error("[game my] failed", e); return Response.json({ error: "db error" }, { status: 500 }); }
+}
+function referralCodeFor(user: { id: number; username: string }): string {
+  return `${user.username.toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,12) || "BRAT"}${user.id.toString(36).toUpperCase()}42`;
+}
+async function handleReferralCode(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  try {
+    const sql = getSql();
+    const code = referralCodeFor(user);
+    const rows = await sql`SELECT invited_id, reward_claimed, created_at FROM magnum_referrals WHERE inviter_id=${user.id} ORDER BY created_at DESC`;
+    const invited = rows.map((r: unknown) => { const x=r as {invited_id:number;reward_claimed:boolean;created_at:string}; return { invitedId:Number(x.invited_id), rewardClaimed:Boolean(x.reward_claimed), created_at:x.created_at }; });
+    const redeemed = await sql`SELECT inviter_id, code FROM magnum_referrals WHERE invited_id=${user.id} LIMIT 1`;
+    return Response.json({ code, invited, invitedCount: invited.length, redeemed: redeemed.length ? redeemed[0] : null });
+  } catch (e) { console.error("[referral code] failed", e); return Response.json({ error: "db error" }, { status: 500 }); }
+}
+async function handleReferralRedeem(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`referral:redeem:${user.id}:${ip}`, 5, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
+  let body: { code?: unknown };
+  try { body = (await req.json()) as typeof body; } catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
+  const raw = typeof body.code === "string" ? body.code.trim().toUpperCase().slice(0, 32) : "";
+  if (!raw || raw.length < 4) return Response.json({ error: "code required" }, { status: 400 });
+  const selfCode = referralCodeFor(user);
+  if (raw === selfCode) return Response.json({ error: "cannot redeem own code" }, { status: 400 });
+  try {
+    const sql = getSql();
+    const already = await sql`SELECT id FROM magnum_referrals WHERE invited_id=${user.id} LIMIT 1`;
+    if (already.length > 0) return Response.json({ error: "already redeemed referral" }, { status: 409 });
+    // find inviter by code pattern: code = USERNAME+id36+42, extract id
+    const m = raw.match(/^(.*)42$/);
+    if (!m) return Response.json({ error: "invalid code format" }, { status: 400 });
+    const without42 = raw.slice(0, -2);
+    // try parse trailing base36 as user id
+    let inviterId: number | null = null;
+    for (let len = 1; len <= 6; len++) {
+      const cand = without42.slice(-len);
+      const n = parseInt(cand, 36);
+      if (!Number.isFinite(n) || n <= 0) continue;
+      const u = await sql`SELECT id, username FROM magnum_users WHERE id=${n} LIMIT 1`;
+      if (u.length === 0) continue;
+      const uu = u[0] as { id:number; username:string };
+      if (referralCodeFor({ id:Number(uu.id), username:String(uu.username) }) === raw) { inviterId = Number(uu.id); break; }
+    }
+    if (inviterId === null) return Response.json({ error: "code not found" }, { status: 404 });
+    await sql`INSERT INTO magnum_referrals (inviter_id, invited_id, code) VALUES (${inviterId}, ${user.id}, ${raw})`;
+    const reward = 42;
+    await sql`INSERT INTO magnum_coins (user_id, balance) VALUES (${user.id}, 1000) ON CONFLICT (user_id) DO NOTHING`;
+    await sql`INSERT INTO magnum_coins (user_id, balance) VALUES (${inviterId}, 1000) ON CONFLICT (user_id) DO NOTHING`;
+    await sql`UPDATE magnum_coins SET balance = balance + ${reward} WHERE user_id=${user.id}`;
+    await sql`UPDATE magnum_coins SET balance = balance + ${reward} WHERE user_id=${inviterId}`;
+    await sql`INSERT INTO magnum_transactions (user_id, amount, reason, meta) VALUES (${user.id}, ${reward}, 'referral_in', ${JSON.stringify({ code: raw, inviter: inviterId })}::jsonb)`;
+    await sql`INSERT INTO magnum_transactions (user_id, amount, reason, meta) VALUES (${inviterId}, ${reward}, 'referral_bonus', ${JSON.stringify({ invited: user.id, code: raw })}::jsonb)`;
+    try { await ensureNotification(inviterId, "Реферал 42!", `Братуха ${user.username} активировал твой код +${reward} монет`, "referral"); } catch {}
+    const upd = await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+    return Response.json({ ok: true, reward, balance: Number((upd[0] as {balance:number}).balance), inviterId });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg.includes("duplicate") || msg.includes("unique") || msg.includes("23505")) return Response.json({ error: "already redeemed referral" }, { status: 409 });
+    console.error("[referral redeem] failed", e); return Response.json({ error: "db error" }, { status: 500 });
+  }
+}
+async function handleDuelHistory(req: Request): Promise<Response> {
+  try {
+    const url = new URL(req.url);
+    const limit = Math.min(50, Math.max(1, Number(url.searchParams.get("limit") || 20)));
+    const sql = getSql();
+    const rows = await sql`SELECT room_id, winner, scores, duration_sec, player_count, created_at FROM magnum_duel_history ORDER BY created_at DESC LIMIT ${limit}`;
+    return Response.json({ history: rows.map((r: unknown) => { const x=r as {room_id:string;winner:string|null;scores:unknown;duration_sec:number;player_count:number;created_at:string}; return { roomId:String(x.room_id), winner:x.winner, scores:x.scores, durationSec:Number(x.duration_sec), playerCount:Number(x.player_count), created_at:x.created_at }; }), count: rows.length });
+  } catch (e) { console.error("[duel history] failed", e); return Response.json({ error: "db error" }, { status: 500 }); }
+}
+
 async function handleHealth(): Promise<Response> {
   try {
     const sql = getSql();
-    const [users, coins, mining, presave, ideas, daily, tx, votes, ach, notif, promos] = await Promise.all([
+    const [users, coins, mining, presave, ideas, daily, tx, votes, ach, notif, promos, gameScores, referrals, duels] = await Promise.all([
       sql`SELECT count(*)::int as c FROM magnum_users`,
       sql`SELECT count(*)::int as c FROM magnum_coins`,
       sql`SELECT count(*)::int as c FROM magnum_mining`,
@@ -1387,6 +1526,9 @@ async function handleHealth(): Promise<Response> {
       sql`SELECT count(*)::int as c FROM magnum_user_achievements`,
       sql`SELECT count(*)::int as c FROM magnum_notifications`,
       sql`SELECT count(*)::int as c FROM magnum_promo_codes`,
+      sql`SELECT count(*)::int as c FROM magnum_game_scores`,
+      sql`SELECT count(*)::int as c FROM magnum_referrals`,
+      sql`SELECT count(*)::int as c FROM magnum_duel_history`,
     ]);
     return Response.json({
       ok: true,
@@ -1403,6 +1545,9 @@ async function handleHealth(): Promise<Response> {
         achievements: Number((ach[0] as { c: number }).c),
         notifications: Number((notif[0] as { c: number }).c),
         promos: Number((promos[0] as { c: number }).c),
+        gameScores: Number((gameScores[0] as { c: number }).c),
+        referrals: Number((referrals[0] as { c: number }).c),
+        duels: Number((duels[0] as { c: number }).c),
       },
       uptime: process.uptime(),
     });
@@ -1574,11 +1719,19 @@ async function persistDuelResults(room: DuelRoom) {
   try {
     const sql = getSql();
     const now = new Date().toISOString();
+    const scoresJson: Array<{ name: string; score: number }> = [];
+    let winner: string | null = null;
+    let maxScore = -1;
     for (const ws of room.players) {
       const name = room.names.get(ws) ?? "Братуха";
       const score = room.scores.get(ws) ?? 0;
+      scoresJson.push({ name, score });
       await sql`INSERT INTO magnum_leaderboard (player, score, game, created_at) VALUES (${name}, ${score}, 'duel', ${now})`;
+      if (score > maxScore) { maxScore = score; winner = name; }
     }
+    try {
+      await sql`INSERT INTO magnum_duel_history (room_id, winner, scores, duration_sec, player_count) VALUES (${room.id}, ${winner}, ${JSON.stringify(scoresJson)}::jsonb, ${room.durationSec}, ${room.players.size})`;
+    } catch (e) { console.error("[duel history insert] failed", e); }
   } catch (e) {
     console.error("[ws persist] failed", e);
   }
@@ -1727,6 +1880,16 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/promo/catalog" && req.method === "GET") return handlePromoCatalog();
     if (url.pathname === "/magnum/api/promo/redeem" && req.method === "POST") return handlePromoRedeem(req);
     if (url.pathname === "/magnum/api/promo/my" && req.method === "GET") return handlePromoMy(req);
+
+    // games unified scoring (Neon, coins reward, rate limit)
+    if (url.pathname === "/magnum/api/games/submit" && req.method === "POST") return handleGameSubmit(req);
+    if (url.pathname === "/magnum/api/games/top" && req.method === "GET") return handleGameTop(req);
+    if (url.pathname === "/magnum/api/games/my" && req.method === "GET") return handleGameMy(req);
+    // referrals 42 (code = USERNAME+id36+42, reward 42 each)
+    if (url.pathname === "/magnum/api/referral/code" && req.method === "GET") return handleReferralCode(req);
+    if (url.pathname === "/magnum/api/referral/redeem" && req.method === "POST") return handleReferralRedeem(req);
+    // duel history (persisted from WS)
+    if (url.pathname === "/magnum/api/duel/history" && req.method === "GET") return handleDuelHistory(req);
 
     if (url.pathname === "/magnum" || url.pathname.startsWith("/magnum/")) {
       const rel = url.pathname.replace(/^\/magnum\/?/, "");

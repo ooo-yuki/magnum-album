@@ -43,6 +43,41 @@
       "when": 1788281000000,
       "tag": "0005_magnum_presave_clicks",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788300006000,
+      "tag": "0006_daily_transactions_votes",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788300007000,
+      "tag": "0007_achievements_profile",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1788300008000,
+      "tag": "0008_notifications",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1788300009000,
+      "tag": "0009_promo_codes",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1788300010000,
+      "tag": "0010_game_scores_referrals",
+      "breakpoints": true
     }
   ]
 }
