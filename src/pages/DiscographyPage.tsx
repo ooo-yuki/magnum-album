@@ -199,6 +199,30 @@ export function DiscographyPage() {
           },
         });
       }
+      // shimmer sweep on album cover overlays
+      if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        const container = containerRef.current;
+        if (container) {
+          const shines = container.querySelectorAll(`.${styles.coverShine}`);
+          shines.forEach((shine) => {
+            const shimmerTl = gsap.timeline({
+              repeat: -1,
+              delay: 2 + Math.random() * 2,
+              scrollTrigger: {
+                trigger: shine,
+                start: "top 85%",
+                toggleActions: "play pause resume pause",
+              },
+            });
+            shimmerTl.fromTo(
+              shine,
+              { backgroundPosition: "-200% 0" },
+              { backgroundPosition: "200% 0", duration: 1.4, ease: "power2.inOut" },
+            );
+            shimmerTl.to({}, { duration: 4 + Math.random() * 2 }); // pause between sweeps
+          });
+        }
+      }
     }, containerRef);
     return () => ctx.revert();
   }, []);
