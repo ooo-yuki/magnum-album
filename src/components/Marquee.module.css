@@ -44,7 +44,9 @@
   text-transform: uppercase;
   color: rgba(240, 240, 240, 0.55);
   padding: 0 0.6rem;
-  transition: color 0.22s;
+  cursor: default;
+  will-change: transform;
+  display: inline-block;
 }
 
 .word:hover {
