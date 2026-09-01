@@ -198,6 +198,13 @@
   transform: scale(0.98);
 }
 
+/* keyboard focus ring — outline clipped by overflow:hidden */
+.btnPrimary:focus-visible,
+.btnSecondary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.85), 0 0 0 5px rgba(255, 45, 85, 0.6);
+}
+
 .btnPrimary {
   background: var(--accent);
   color: #fff;
