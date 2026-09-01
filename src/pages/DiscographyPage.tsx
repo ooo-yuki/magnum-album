@@ -169,6 +169,36 @@ export function DiscographyPage() {
           start: "top 80%",
         },
       });
+
+      // breathing glow pulse on gold/hot score badges
+      if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        gsap.to(`.${styles.gold}`, {
+          boxShadow: "0 0 22px rgba(255,204,0,0.55), 0 0 44px rgba(255,204,0,0.2)",
+          duration: 1.5,
+          repeat: -1,
+          yoyo: true,
+          ease: "sine.inOut",
+          delay: 0.5,
+          scrollTrigger: {
+            trigger: `.${styles.albums}`,
+            start: "top 80%",
+            toggleActions: "play pause resume pause",
+          },
+        });
+        gsap.to(`.${styles.hot}`, {
+          boxShadow: "0 0 22px rgba(255,45,85,0.55), 0 0 44px rgba(255,45,85,0.2)",
+          duration: 1.5,
+          repeat: -1,
+          yoyo: true,
+          ease: "sine.inOut",
+          delay: 0.8,
+          scrollTrigger: {
+            trigger: `.${styles.albums}`,
+            start: "top 80%",
+            toggleActions: "play pause resume pause",
+          },
+        });
+      }
     }, containerRef);
     return () => ctx.revert();
   }, []);
