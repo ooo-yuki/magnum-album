@@ -919,7 +919,9 @@ async function handleMiningGet(req: Request): Promise<Response> {
     const data = await ensureMiningRow(user.id);
     const perClick = perClickFrom(data.upgrades);
     const perSec = data.upgrades.reduce((s, u) => s + (UPGRADES_DEF[u.id]?.auto ?? 0) * u.count, 0);
-    return Response.json({ balance: data.balance, upgrades: data.upgrades, perClick, perSec });
+    const boostUntil = miningBoostUntil.get(user.id) ?? 0;
+    const boosted = Date.now() < boostUntil;
+    return Response.json({ balance: data.balance, upgrades: data.upgrades, perClick, perSec, boost: { active: boosted, until: boosted ? boostUntil : null, remainingMs: boosted ? boostUntil - Date.now() : 0, price: MINING_BOOST_PRICE, durationMs: MINING_BOOST_MS } });
   } catch (e) {
     console.error("[mining get] failed", e);
     return Response.json({ error: "db error" }, { status: 500 });
@@ -935,11 +937,14 @@ async function handleMiningClick(req: Request): Promise<Response> {
   if (!checkRateLimit(`mining:click:${user.id}:${ip}`, 120, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
   try {
     const data = await ensureMiningRow(user.id);
-    const inc = perClickFrom(data.upgrades);
+    let inc = perClickFrom(data.upgrades);
+    const boostUntil = miningBoostUntil.get(user.id) ?? 0;
+    const boosted = Date.now() < boostUntil;
+    if (boosted) inc = inc * 2;
     const sql = getSql();
     const rows = await sql`UPDATE magnum_mining SET balance = balance + ${inc}, updated_at = now() WHERE user_id = ${user.id} RETURNING balance, upgrades`;
     const r = rows[0] as { balance: number; upgrades: unknown };
-    return Response.json({ balance: Number(r.balance), upgrades: parseUpgrades(r.upgrades), added: inc });
+    return Response.json({ balance: Number(r.balance), upgrades: parseUpgrades(r.upgrades), added: inc, boosted, boostUntil: boosted ? boostUntil : null });
   } catch (e) {
     console.error("[mining click] failed", e);
     return Response.json({ error: "db error" }, { status: 500 });
@@ -1805,17 +1810,74 @@ async function handleDuelInviteCreate(req: Request): Promise<Response> {
   const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
   const user=await getUserByToken(token); if(!user) return Response.json({error:"unauthorized"},{status:401});
   const ip=getClientIp(req); if(!checkRateLimit(`duel:invite:${user.id}:${ip}`,6,60_000)) return Response.json({error:"rate limited"},{status:429});
-  let body:{to?:unknown;username?:unknown;roomId?:unknown}; try{ body=(await req.json()) as typeof body; }catch{ return Response.json({error:"Invalid JSON"},{status:400}); }
+  let body:{to?:unknown;username?:unknown;roomId?:unknown;wager?:unknown}; try{ body=(await req.json()) as typeof body; }catch{ return Response.json({error:"Invalid JSON"},{status:400}); }
   const toName=typeof body.to==="string"?body.to.trim():typeof body.username==="string"?body.username.trim():""; if(!toName||toName.length<2) return Response.json({error:"to username required"},{status:400});
   if(toName.toLowerCase()===user.username.toLowerCase()) return Response.json({error:"cannot invite self"},{status:400});
+  const rawWager=Number(body.wager ?? 0); const wager=Number.isFinite(rawWager)?Math.max(0,Math.min(1420,Math.floor(rawWager))):0;
+  if(wager>0 && ![0,42,142,420,1420].includes(wager)) return Response.json({error:"wager must be 0/42/142/420/1420"},{status:400});
   const roomId=typeof body.roomId==="string"?body.roomId.trim().slice(0,64):[...rooms.keys()][0]||`room-${Date.now().toString(36)}`;
   try{ const sql=getSql(); await sql`CREATE TABLE IF NOT EXISTS magnum_duel_invites (id serial PRIMARY KEY, from_user_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, to_user_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, room_id text NOT NULL, status text DEFAULT 'pending' NOT NULL, created_at timestamp DEFAULT now() NOT NULL)`;
+    if(wager>0){ const cr=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`; const bal=cr.length?Number((cr[0] as {balance:number}).balance):0; if(bal<wager) return Response.json({error:"not enough coins for wager",required:wager,balance:bal},{status:402}); await sql`UPDATE magnum_coins SET balance=balance-${wager} WHERE user_id=${user.id}`; await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${-wager},'duel_wager_hold',${JSON.stringify({wager,roomId,to:toName})}::jsonb)`; }
     const toRows=await sql`SELECT id FROM magnum_users WHERE username=${toName} LIMIT 1`; if(toRows.length===0) return Response.json({error:"recipient not found"},{status:404});
     const toId=Number((toRows[0] as {id:number}).id);
     const rows=await sql`INSERT INTO magnum_duel_invites (from_user_id,to_user_id,room_id,status) VALUES (${user.id},${toId},${roomId},'pending') RETURNING id,room_id,status,created_at`;
-    try{ await ensureNotification(toId,`Дуэль 42: вызов от ${user.username}`,`Братуха ${user.username} зовёт в дуэль — комната ${roomId}`,"duel"); }catch{}
-    return Response.json({ok:true,invite:rows[0]},{status:201});
+    try{ await ensureNotification(toId,`Дуэль 42: вызов от ${user.username}`+(wager?` (ставка ${wager})`:""),`Братуха ${user.username} зовёт в дуэль — комната ${roomId}`+(wager?` • ставка ${wager} монет`:""),"duel"); }catch{}
+    return Response.json({ok:true,invite:rows[0],wager},{status:201});
   }catch(e){ console.error("[duel invite create] failed",e); return Response.json({error:"db error"},{status:500}); }
+}
+async function handleDuelInviteRespond(req: Request, idStr: string): Promise<Response> {
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
+  const user=await getUserByToken(token); if(!user) return Response.json({error:"unauthorized"},{status:401});
+  const id=Number(idStr); if(!Number.isInteger(id)||id<=0) return Response.json({error:"invalid id"},{status:400});
+  let body:{action?:unknown;status?:unknown}; try{ body=(await req.json()) as typeof body; }catch{ body={}; }
+  const raw=String(body.action ?? body.status ?? "").trim().toLowerCase();
+  const nextStatus=raw==="accept"||raw==="accepted"?"accepted":raw==="decline"||raw==="declined"||raw==="reject"?"declined":null;
+  if(!nextStatus) return Response.json({error:"action must be accept|decline"},{status:400});
+  const ip=getClientIp(req); if(!checkRateLimit(`duel:invite:respond:${user.id}:${ip}`,12,60_000)) return Response.json({error:"rate limited"},{status:429});
+  try{ const sql=getSql();
+    const rows=await sql`SELECT id,from_user_id,to_user_id,room_id,status FROM magnum_duel_invites WHERE id=${id} LIMIT 1`;
+    if(rows.length===0) return Response.json({error:"not found"},{status:404});
+    const inv=rows[0] as {id:number;from_user_id:number;to_user_id:number;room_id:string;status:string};
+    if(Number(inv.to_user_id)!==user.id && Number(inv.from_user_id)!==user.id) return Response.json({error:"forbidden"},{status:403});
+    if(inv.status!=="pending") return Response.json({error:"already "+inv.status,status:inv.status},{status:409});
+    if(Number(inv.to_user_id)!==user.id) return Response.json({error:"only recipient can respond"},{status:403});
+    const upd=await sql`UPDATE magnum_duel_invites SET status=${nextStatus} WHERE id=${id} RETURNING id,room_id,status`;
+    const otherId=Number(inv.from_user_id);
+    try{ await ensureNotification(otherId,`Дуэль 42: ${nextStatus==="accepted"?"принят ✅":"отклонён ❌"}`, `Братуха ${user.username} ${nextStatus==="accepted"?"принял":"отклонил"} вызов — комната ${inv.room_id}`,"duel"); }catch{}
+    // broadcast to room if exists
+    const room=rooms.get(inv.room_id); if(room && nextStatus==="accepted") broadcast(room,{type:"invite_accepted",room:roomPublic(room),inviteId:id,by:user.username});
+    return Response.json({ok:true,invite:upd[0]});
+  }catch(e){ console.error("[duel invite respond] failed",e); return Response.json({error:"db error"},{status:500}); }
+}
+async function handleDuelSeasonTop(req: Request, idStr: string): Promise<Response> {
+  const seasonId=Number(idStr); if(!Number.isInteger(seasonId)||seasonId<=0) return Response.json({error:"invalid season id"},{status:400});
+  try{ const sql=getSql();
+    const season=await sql`SELECT id,name,starts_at,ends_at FROM magnum_duel_seasons WHERE id=${seasonId} LIMIT 1`;
+    if(season.length===0) return Response.json({error:"season not found"},{status:404});
+    const s=season[0] as {id:number;name:string;starts_at:string;ends_at:string|null};
+    const since=new Date(s.starts_at).toISOString();
+    const endCond=s.ends_at?`AND h.created_at <= '${new Date(s.ends_at as string).toISOString()}'`:"";
+    // winners in season window
+    const top=await sql`SELECT h.winner, count(*)::int as wins, s2.skin_id as avatar FROM magnum_duel_history h LEFT JOIN magnum_users u ON u.username=h.winner LEFT JOIN magnum_shop_inventory s2 ON s2.user_id=u.id AND s2.equipped=true WHERE h.winner IS NOT NULL AND h.created_at >= ${since} GROUP BY h.winner,s2.skin_id ORDER BY wins DESC LIMIT 20`;
+    const recent=await sql`SELECT room_id,winner,scores,player_count,created_at FROM magnum_duel_history WHERE created_at >= ${since} ORDER BY created_at DESC LIMIT 10`;
+    return Response.json({season:{id:Number(s.id),name:String(s.name),startsAt:s.starts_at,endsAt:s.ends_at}, leaderboard: top.map((r:unknown)=>{const x=r as {winner:string;wins:number;avatar:string|null}; return {winner:String(x.winner),wins:Number(x.wins),avatar:x.avatar};}), recent: recent.map((r:unknown)=>{const x=r as {room_id:string;winner:string|null;scores:unknown;player_count:number;created_at:string}; return {roomId:x.room_id,winner:x.winner,scores:x.scores,playerCount:Number(x.player_count),created_at:x.created_at};}), count: top.length});
+  }catch(e){ console.error("[duel season top] failed",e); return Response.json({error:"db error"},{status:500}); }
+}
+const MINING_BOOST_PRICE=142; const MINING_BOOST_MS=60_000; const miningBoostUntil=new Map<number,number>();
+async function handleMiningBoost(req: Request): Promise<Response> {
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
+  const user=await getUserByToken(token); if(!user) return Response.json({error:"unauthorized"},{status:401});
+  const ip=getClientIp(req); if(!checkRateLimit(`mining:boost:${user.id}:${ip}`,6,60_000)) return Response.json({error:"rate limited"},{status:429});
+  const now=Date.now(); const until=miningBoostUntil.get(user.id) ?? 0;
+  if(now < until) return Response.json({ok:true,active:true,until,remainingMs:until-now,price:MINING_BOOST_PRICE});
+  try{ const sql=getSql(); const cr=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`; const bal=cr.length?Number((cr[0] as {balance:number}).balance):0;
+    if(bal < MINING_BOOST_PRICE) return Response.json({error:"not enough coins",required:MINING_BOOST_PRICE,balance:bal},{status:402});
+    await sql`UPDATE magnum_coins SET balance=balance-${MINING_BOOST_PRICE} WHERE user_id=${user.id}`;
+    await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${-MINING_BOOST_PRICE},'mining_boost',${JSON.stringify({price:MINING_BOOST_PRICE,durationMs:MINING_BOOST_MS})}::jsonb)`;
+    const newUntil=now+MINING_BOOST_MS; miningBoostUntil.set(user.id,newUntil);
+    const upd=await sql`UPDATE magnum_coins SET balance=balance WHERE user_id=${user.id} RETURNING balance`;
+    return Response.json({ok:true,active:true,until:newUntil,remainingMs:MINING_BOOST_MS,price:MINING_BOOST_PRICE,balance: upd.length?Number((upd[0] as {balance:number}).balance):bal-MINING_BOOST_PRICE});
+  }catch(e){ console.error("[mining boost] failed",e); return Response.json({error:"db error"},{status:500}); }
 }
 const wsReady=new Map<import("bun").ServerWebSocket<WSData>,boolean>();
 
@@ -2237,6 +2299,10 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/duel/invite" && req.method === "POST") return handleDuelInviteCreate(req);
     if (url.pathname === "/magnum/api/duel/seasons" && req.method === "GET") return handleDuelSeasons(req);
     if (url.pathname === "/magnum/api/duel/seasons" && req.method === "POST") return handleDuelSeasonCreate(req);
+    if (url.pathname.startsWith("/magnum/api/duel/invite/") && url.pathname.endsWith("/respond") && req.method === "POST") { const parts=url.pathname.split("/"); const idStr=parts[5] ?? ""; return handleDuelInviteRespond(req,idStr); }
+    if (url.pathname.startsWith("/magnum/api/duel/seasons/") && url.pathname.endsWith("/top") && req.method === "GET") { const parts=url.pathname.split("/"); const idStr=parts[4] ?? ""; return handleDuelSeasonTop(req,idStr); }
+    if (url.pathname === "/magnum/api/mining/boost" && req.method === "POST") return handleMiningBoost(req);
+    if (url.pathname === "/magnum/api/mining/boost" && req.method === "GET") return handleMiningBoost(req);
     // reports + moderation + status workflow + public profile + search
     if (url.pathname === "/magnum/api/reports" && req.method === "POST") return handleReportCreate(req);
     if (url.pathname === "/magnum/api/reports" && req.method === "GET") return handleReportsGet(req);
@@ -2326,6 +2392,18 @@ const server = Bun.serve<WSData>({
         room.state = "waiting";
         if (room.timer) { clearTimeout(room.timer); room.timer = null; }
         broadcast(room, { type: "room", room: roomPublic(room) });
+      } else if (msg.type === "spectate") {
+        broadcast(room, { type: "spectate", from: ws.data.username, count: room.players.size, room: roomPublic(room) });
+      } else if (msg.type === "typing") {
+        const on = Boolean((msg as {on?:unknown}).on);
+        broadcast(room, { type: "typing", from: ws.data.username, on });
+      } else if (msg.type === "wager") {
+        const wager = Math.max(0, Math.min(1420, Math.floor(Number((msg as {wager?:unknown}).wager ?? 0))));
+        broadcast(room, { type: "wager", from: ws.data.username, wager });
+      } else if (msg.type === "emote") {
+        const emo = String((msg as {emoji?:unknown}).emoji ?? (msg as {emote?:unknown}).emote ?? "🔥").slice(0,4);
+        if (emo.includes("<")||emo.includes(">")) return;
+        broadcast(room, { type: "emote", from: ws.data.username, emoji: emo });
       }
     },
     close(ws) {

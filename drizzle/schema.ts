@@ -253,3 +253,19 @@ export const magnumDuelInvites = pgTable("magnum_duel_invites", {
   status: text("status").default("pending").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+export const magnumDuelWagers = pgTable("magnum_duel_wagers", {
+  id: serial("id").primaryKey(),
+  roomId: text("room_id").notNull(),
+  userId: integer("user_id").references(() => magnumUsers.id).notNull(),
+  amount: integer("amount").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const magnumMiningBoosts = pgTable("magnum_mining_boosts", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => magnumUsers.id).notNull(),
+  until: timestamp("until").notNull(),
+  price: integer("price").default(142).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
