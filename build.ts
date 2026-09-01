@@ -63,6 +63,7 @@ const ROUTES: Array<{ path: string; priority: string; changefreq?: string }> = [
   { path: "/eco", priority: "0.6" },
   { path: "/mining", priority: "0.6" },
   { path: "/conveyor", priority: "0.6" },
+  { path: "/board", priority: "0.7" },
   { path: "/arena", priority: "0.7" },
   { path: "/squad", priority: "0.6" },
   { path: "/presave-rating", priority: "0.6" },
@@ -83,6 +84,7 @@ const ROUTES: Array<{ path: string; priority: string; changefreq?: string }> = [
   { path: "/games/dodge", priority: "0.5" },
   { path: "/games/quiz", priority: "0.5" },
   { path: "/game", priority: "0.4" },
+  { path: "/studio", priority: "0.7" },
 ];
 type BuildFileInfo = { name: string; path: string; bytes: number; gzipBytes: number; ext: string; kind: "entry" | "chunk" | "asset" | "css" | "js" };
 type DistMetrics = { files: BuildFileInfo[]; totalBytes: number; totalGzipBytes: number; byExt: Record<string, number>; largest: BuildFileInfo | null };

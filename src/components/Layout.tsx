@@ -21,6 +21,7 @@ import styles from "./Layout.module.css";
 
 const NAV_ITEMS = [
   { to: "/magnum", label: "Главная" },
+  { to: "/magnum/board", label: "Доска 42" },
   { to: "/magnum/recaps", label: "Пересказы" },
   { to: "/magnum/squad", label: "Батальон 42" },
   { to: "/magnum/conveyor", label: "Конвейер 42" },

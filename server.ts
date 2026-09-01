@@ -2304,7 +2304,9 @@ async function handlePresaveClick(req: Request): Promise<Response> {
   try { body = (await req.json().catch(() => ({}))) as typeof body; } catch { body = {}; }
   const url = typeof body.url === "string" ? body.url.trim().slice(0, 300) : "/magnum";
   if (url.length > 300 || url.includes("<") || url.includes("\"")) return Response.json({ error: "invalid url" }, { status: 400 });
-  const variant = body.variant === "a" || body.variant === "b" ? body.variant : null;
+  const allowedVariants = new Set(["a", "b", "return-popup"]);
+  const rawVariant = typeof body.variant === "string" ? body.variant.trim().slice(0, 32) : "";
+  const variant = allowedVariants.has(rawVariant) ? rawVariant : null;
   const token = extractToken(req);
   let userId: number | null = null;
   if (token) { try { const u = await getUserByToken(token); if (u) userId = u.id; } catch (e) { console.error("[presave] getUserByToken failed", e); } }
@@ -2412,7 +2414,7 @@ async function handleMiningTop(): Promise<Response> {
 }
 
 // ---- Game scores + referrals + duel history (magnum_game_scores / referrals / duel_history) ----
-const GAME_WHITELIST = new Set(["runner","match3","knife","memory","clicker","rhythm","stack","blackjack","roulette","2042","flappy","typing","snake","dodge","quiz","duel"]);
+const GAME_WHITELIST = new Set(["runner","match3","knife","memory","clicker","clicker42","rhythm","stack","blackjack","roulette","2042","flappy","typing","snake","dodge","quiz","duel","duel42","mining","nitro"]);
 function validateGameName(g: unknown): string | null {
   if (typeof g !== "string") return null;
   const s = g.trim().toLowerCase().slice(0, 32);
@@ -2586,21 +2588,20 @@ async function handleReferralRedeem(req: Request): Promise<Response> {
     if (already.length > 0) return Response.json({ error: "already redeemed referral" }, { status: 409 });
     let inviterId: number | null = bratCodeToUserId(raw);
     if (inviterId === null) {
-    // find inviter by old code pattern: code = USERNAME+id36+42, extract id
-    const m = raw.match(/^(.*)42$/);
-    if (!m) return Response.json({ error: "invalid code format" }, { status: 400 });
-    const without42 = raw.slice(0, -2);
-    // try parse trailing base36 as user id
-    for (let len = 1; len <= 6; len++) {
-      const cand = without42.slice(-len);
-      const n = parseInt(cand, 36);
-      if (!Number.isFinite(n) || n <= 0) continue;
-      const u = await sql`SELECT id, username FROM magnum_users WHERE id=${n} LIMIT 1`;
-      if (u.length === 0) continue;
-      const uu = u[0] as { id:number; username:string };
-      if (referralCodeFor({ id:Number(uu.id), username:String(uu.username) }) === raw) { inviterId = Number(uu.id); break; }
+      const m = raw.match(/^(.*)42$/);
+      if (!m) return Response.json({ error: "invalid code format" }, { status: 400 });
+      const without42 = raw.slice(0, -2);
+      for (let len = 1; len <= 6; len++) {
+        const cand = without42.slice(-len);
+        const n = parseInt(cand, 36);
+        if (!Number.isFinite(n) || n <= 0) continue;
+        const u = await sql`SELECT id, username FROM magnum_users WHERE id=${n} LIMIT 1`;
+        if (u.length === 0) continue;
+        const uu = u[0] as { id:number; username:string };
+        if (referralCodeFor({ id:Number(uu.id), username:String(uu.username) }) === raw) { inviterId = Number(uu.id); break; }
+      }
+      if (inviterId === null) return Response.json({ error: "code not found" }, { status: 404 });
     }
-    if (inviterId === null) return Response.json({ error: "code not found" }, { status: 404 });
     await sql`INSERT INTO magnum_referrals (inviter_id, invited_id, code) VALUES (${inviterId}, ${user.id}, ${raw})`;
     const reward = 42;
     await sql`INSERT INTO magnum_coins (user_id, balance) VALUES (${user.id}, 1000) ON CONFLICT (user_id) DO NOTHING`;
@@ -3691,6 +3692,155 @@ async function handleStudioShare(req: Request): Promise<Response> {
 }
 void ensureStudioTables().then(()=> console.log("[startup] magnum_studio_* ensured")).catch(e=> console.error("[startup] studio ensure failed",e));
 
+// ---- ДОСКА 42 — лента рекордов + вызовы друзей + глобальный шаринг ----
+const BOARD_GAMES = ["mining","conveyor","duel","pet","studio"] as const;
+type BoardGame = typeof BOARD_GAMES[number];
+function isBoardGame(v:string): v is BoardGame { return (BOARD_GAMES as readonly string[]).includes(v); }
+async function ensureBoardTables(): Promise<void> {
+  const sql=getSql();
+  await sql`CREATE TABLE IF NOT EXISTS magnum_challenges (id serial PRIMARY KEY, challenger_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, challenged_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, game text NOT NULL, score integer NOT NULL, status text NOT NULL DEFAULT 'pending', created_at timestamp DEFAULT now() NOT NULL, expires_at timestamp NOT NULL)`;
+  await sql`CREATE TABLE IF NOT EXISTS magnum_board_shares (id serial PRIMARY KEY, user_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, day_id text NOT NULL, created_at timestamp DEFAULT now() NOT NULL, UNIQUE(user_id, day_id))`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_board_challenges_status ON magnum_challenges(status, expires_at)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_board_challenges_challenged ON magnum_challenges(challenged_id, status)`;
+}
+void ensureBoardTables().then(()=> console.log("[startup] magnum_board_* ensured")).catch(e=> console.error("[startup] board ensure failed",e));
+
+async function handleBoardFeed(req:Request):Promise<Response>{
+  const url=new URL(req.url);
+  const game=url.searchParams.get("game")?.trim().toLowerCase()||"";
+  const tab=url.searchParams.get("tab")?.trim().toLowerCase()||"global"; // global | friends | challenges
+  const page=Math.max(1, Math.min(100, Number(url.searchParams.get("page")||1)));
+  const limit=20; const offset=(page-1)*limit;
+  const token=extractToken(req);
+  let user: {id:number; username:string}|null=null;
+  if(token) try{ user=await getUserByToken(token);}catch{}
+  try{
+    await ensureBoardTables();
+    const sql=getSql();
+    // expire stale challenges
+    try{ await sql`UPDATE magnum_challenges SET status='expired' WHERE status='pending' AND expires_at < now()`;}catch{}
+    if(tab==="challenges" && user){
+      const rows=await sql`SELECT c.id, c.challenger_id, c.challenged_id, c.game, c.score, c.status, c.created_at, c.expires_at, u1.username as challenger, u2.username as challenged FROM magnum_challenges c LEFT JOIN magnum_users u1 ON u1.id=c.challenger_id LEFT JOIN magnum_users u2 ON u2.id=c.challenged_id WHERE c.challenged_id=${user.id} AND c.status='pending' AND c.expires_at > now() ORDER BY c.created_at DESC LIMIT ${limit} OFFSET ${offset}`;
+      const items=rows.map((r:unknown)=>{ const x=r as {id:number; challenger_id:number; challenged_id:number; game:string; score:number; status:string; created_at:string; expires_at:string; challenger:string|null; challenged:string|null}; const exp=new Date(x.expires_at).getTime(); const rem=Math.max(0, exp-Date.now()); return { id:Number(x.id), challengerId:Number(x.challenger_id), challengedId:Number(x.challenged_id), challenger:x.challenger?String(x.challenger):`user#${x.challenger_id}`, challenged:x.challenged?String(x.challenged):`user#${x.challenged_id}`, game:String(x.game), score:Number(x.score), status:String(x.status), created_at:x.created_at, expires_at:x.expires_at, remainingMs:rem, remainingH:(rem/3600000).toFixed(1)};});
+      return Response.json({ ok:true, tab:"challenges", items, page, limit });
+    }
+    // friends tab: only records from followed users
+    if(tab==="friends" && user){
+      const friends=await sql`SELECT following_id FROM magnum_follows WHERE follower_id=${user.id}`;
+      const ids=friends.map((r:unknown)=> Number((r as {following_id:number}).following_id)).filter(n=>Number.isFinite(n));
+      if(ids.length===0) return Response.json({ ok:true, tab:"friends", items:[], page, limit, note:"no friends — подпишись на братух" });
+      // fetch game scores from friends only
+      const idsArr=`{${ids.join(",")}}`;
+      let rows: unknown[]=[];
+      if(game && isBoardGame(game)){
+        rows=await sql`SELECT g.game, g.score, g.created_at, u.username, u.id as user_id, s.skin_id as avatar FROM magnum_game_scores g JOIN magnum_users u ON u.id=g.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id=g.user_id AND s.equipped=true WHERE g.user_id = ANY(${idsArr}::int[]) AND g.game=${game} ORDER BY g.score DESC, g.created_at ASC LIMIT ${limit} OFFSET ${offset}`;
+      } else {
+        rows=await sql`SELECT g.game, g.score, g.created_at, u.username, u.id as user_id, s.skin_id as avatar FROM magnum_game_scores g JOIN magnum_users u ON u.id=g.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id=g.user_id AND s.equipped=true WHERE g.user_id = ANY(${idsArr}::int[]) ORDER BY g.created_at DESC LIMIT ${limit} OFFSET ${offset}`;
+      }
+      const items=rows.map((r:unknown)=>{ const x=r as {game:string;score:number;created_at:string;username:string;user_id:number;avatar:string|null}; return { game:String(x.game), score:Number(x.score), username:String(x.username), userId:Number(x.user_id), avatar:x.avatar||null, created_at:x.created_at, timeAgo: timeAgo(x.created_at)};});
+      return Response.json({ ok:true, tab:"friends", items, page, limit });
+    }
+    // global tab: all records
+    {
+      let rows: unknown[]=[];
+      if(game && isBoardGame(game)){
+        rows=await sql`SELECT g.game, g.score, g.created_at, u.username, u.id as user_id, s.skin_id as avatar FROM magnum_game_scores g JOIN magnum_users u ON u.id=g.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id=g.user_id AND s.equipped=true WHERE g.game=${game} ORDER BY g.score DESC, g.created_at ASC LIMIT ${limit} OFFSET ${offset}`;
+      } else {
+        rows=await sql`SELECT g.game, g.score, g.created_at, u.username, u.id as user_id, s.skin_id as avatar FROM magnum_game_scores g JOIN magnum_users u ON u.id=g.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id=g.user_id AND s.equipped=true ORDER BY g.created_at DESC LIMIT ${limit} OFFSET ${offset}`;
+      }
+      const items=rows.map((r:unknown)=>{ const x=r as {game:string;score:number;created_at:string;username:string;user_id:number;avatar:string|null}; return { game:String(x.game), score:Number(x.score), username:String(x.username), userId:Number(x.user_id), avatar:x.avatar||null, created_at:x.created_at, timeAgo: timeAgo(x.created_at)};});
+      return Response.json({ ok:true, tab:"global", items, page, limit, game: game||"all" });
+    }
+  }catch(e){ console.error("[board feed] failed",e); return Response.json({error:"db error"},{status:500});}
+}
+function timeAgo(iso:string):string{
+  const d=(Date.now()-new Date(iso).getTime())/1000;
+  if(d<60) return "только что";
+  if(d<3600) return `${Math.floor(d/60)}м назад`;
+  if(d<86400) return `${Math.floor(d/3600)}ч назад`;
+  return `${Math.floor(d/86400)}д назад`;
+}
+async function handleBoardChallenge(req:Request):Promise<Response>{
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
+  const user=await getUserByToken(token); if(!user) return Response.json({error:"unauthorized"},{status:401});
+  const ip=getClientIp(req); if(!checkRateLimit(`board:challenge:${user.id}:${ip}`,12,60_000)) return Response.json({error:"rate limited"},{status:429});
+  let body:{friendId?:unknown; friend_id?:unknown; game?:unknown; score?:unknown};
+  try{ body=(await req.json()) as typeof body;}catch{ return Response.json({error:"Invalid JSON"},{status:400});}
+  const friendId=Number(body.friendId ?? body.friend_id);
+  if(!Number.isInteger(friendId)||friendId<=0) return Response.json({error:"friendId required"},{status:400});
+  if(friendId===user.id) return Response.json({error:"cannot challenge yourself"},{status:400});
+  const game=String(body.game||"duel").trim().toLowerCase().slice(0,32);
+  if(!isBoardGame(game)) return Response.json({error:"game must be "+BOARD_GAMES.join("|")},{status:400});
+  const score=Number(body.score); if(!Number.isInteger(score)||score<0||score>999999) return Response.json({error:"score 0..999999"},{status:400});
+  try{
+    await ensureBoardTables();
+    const sql=getSql();
+    const ex=await sql`SELECT id FROM magnum_users WHERE id=${friendId} LIMIT 1`;
+    if(ex.length===0) return Response.json({error:"friend not found"},{status:404});
+    const expiresAt=new Date(Date.now()+24*60*60*1000).toISOString();
+    const rows=await sql`INSERT INTO magnum_challenges (challenger_id, challenged_id, game, score, status, expires_at) VALUES (${user.id}, ${friendId}, ${game}, ${score}, 'pending', ${expiresAt}) RETURNING id, challenger_id, challenged_id, game, score, status, created_at, expires_at`;
+    const r=rows[0] as {id:number; challenger_id:number; challenged_id:number; game:string; score:number; status:string; created_at:string; expires_at:string};
+    try{ await ensureNotification(friendId, `Вызов 42 от ${user.username}`, `${user.username} бросил вызов: ${game} ${score} — прими за 24ч! ⚔️`, "challenge"); }catch{}
+    return Response.json({ ok:true, challenge:{ id:Number(r.id), challengerId:Number(r.challenger_id), challengedId:Number(r.challenged_id), game:String(r.game), score:Number(r.score), status:String(r.status), created_at:r.created_at, expires_at:r.expires_at } },{status:201});
+  }catch(e){ console.error("[board challenge] failed",e); return Response.json({error:"db error"},{status:500});}
+}
+async function handleBoardAccept(req:Request):Promise<Response>{
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
+  const user=await getUserByToken(token); if(!user) return Response.json({error:"unauthorized"},{status:401});
+  const ip=getClientIp(req); if(!checkRateLimit(`board:accept:${user.id}:${ip}`,12,60_000)) return Response.json({error:"rate limited"},{status:429});
+  let body:{challengeId?:unknown; id?:unknown};
+  try{ body=(await req.json()) as typeof body;}catch{ return Response.json({error:"Invalid JSON"},{status:400});}
+  const cid=Number(body.challengeId ?? body.id);
+  if(!Number.isInteger(cid)||cid<=0) return Response.json({error:"challengeId required"},{status:400});
+  try{
+    await ensureBoardTables();
+    const sql=getSql();
+    await sql`UPDATE magnum_challenges SET status='expired' WHERE status='pending' AND expires_at < now()`;
+    const rows=await sql`SELECT id, challenger_id, challenged_id, game, score, status, expires_at FROM magnum_challenges WHERE id=${cid} LIMIT 1`;
+    if(rows.length===0) return Response.json({error:"not found"},{status:404});
+    const ch=rows[0] as {id:number; challenger_id:number; challenged_id:number; game:string; score:number; status:string; expires_at:string};
+    if(Number(ch.challenged_id)!==user.id) return Response.json({error:"not your challenge"},{status:403});
+    if(String(ch.status)!=="pending") return Response.json({error:`already ${ch.status}`},{status:409});
+    if(new Date(ch.expires_at).getTime() < Date.now()){ await sql`UPDATE magnum_challenges SET status='expired' WHERE id=${cid}`; return Response.json({error:"expired"},{status:410});}
+    await sql`UPDATE magnum_challenges SET status='accepted' WHERE id=${cid}`;
+    // game redirect mapping
+    const gameMap:Record<string,string>={ duel:"/magnum/games/duel-volcano", mining:"/magnum/mining", conveyor:"/magnum/conveyor", pet:"/magnum/map", studio:"/magnum/shop" };
+    const redirect=gameMap[String(ch.game)] || "/magnum/games/duel-volcano";
+    // ELO +42 winner handled via separate settle; here we just give +10% pot if both in same squad — deferred to duel finish, not accept. Return redirect.
+    return Response.json({ ok:true, challenge:{ id:cid, status:"accepted" }, redirect, game:String(ch.game), score:Number(ch.score) });
+  }catch(e){ console.error("[board accept] failed",e); return Response.json({error:"db error"},{status:500});}
+}
+async function handleBoardShare(req:Request):Promise<Response>{
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
+  const user=await getUserByToken(token); if(!user) return Response.json({error:"unauthorized"},{status:401});
+  const dayId=new Date().toISOString().slice(0,10);
+  await ensureBoardTables();
+  const sql=getSql();
+  const dup=await sql`SELECT id FROM magnum_board_shares WHERE user_id=${user.id} AND day_id=${dayId} LIMIT 1`;
+  if(dup.length>0) return Response.json({error:"already shared today", dayId, coins:0},{status:409});
+  await sql`INSERT INTO magnum_board_shares (user_id, day_id) VALUES (${user.id}, ${dayId})`;
+  await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${user.id},1000) ON CONFLICT (user_id) DO NOTHING`;
+  await sql`UPDATE magnum_coins SET balance=balance+42 WHERE user_id=${user.id}`;
+  await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},42,'board-share',${JSON.stringify({dayId})}::jsonb)`;
+  const upd=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+  const balance=Number((upd[0] as {balance:number}).balance);
+  const cntRes=await sql`SELECT count(*)::int as c FROM magnum_board_shares`;
+  const globalCount=Number((cntRes[0] as {c:number}).c);
+  return Response.json({ ok:true, coins:42, dayId, balance, globalCount });
+}
+async function handleBoardLeaderboard():Promise<Response>{
+  try{
+    await ensureBoardTables();
+    const sql=getSql();
+    const weekStart=new Date(); weekStart.setDate(weekStart.getDate()-7);
+    const rows=await sql`SELECT g.user_id, u.username, max(g.score)::int as best, count(*)::int as plays, s.skin_id as avatar FROM magnum_game_scores g JOIN magnum_users u ON u.id=g.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id=g.user_id AND s.equipped=true WHERE g.created_at > ${weekStart.toISOString()} GROUP BY g.user_id, u.username, s.skin_id ORDER BY best DESC LIMIT 20`;
+    const top=rows.map((r:unknown,i:number)=>{ const x=r as {user_id:number; username:string; best:number; plays:number; avatar:string|null}; const idx=i; const reward= idx===0?1420: idx===1?420: idx===2?142:0; return { rank:idx+1, userId:Number(x.user_id), username:String(x.username), score:Number(x.best), plays:Number(x.plays), avatar:x.avatar||null, reward, crown: idx<3?"conic-gold":"", isTop3: idx<3 };});
+    const globalRes=await sql`SELECT count(*)::int as c FROM magnum_board_shares`;
+    const globalCount=Number((globalRes[0] as {c:number}).c);
+    return Response.json({ leaderboard:top, top, count:top.length, globalCount, weekRewards:[1420,420,142], crown:"conic-gold", weekStart: weekStart.toISOString() });
+  }catch(e){ console.error("[board leaderboard] failed",e); return Response.json({error:"db error"},{status:500});}
+}
+
 const wsReady=new Map<import("bun").ServerWebSocket<WSData>,boolean>();
 
 async function handleHealth(): Promise<Response> {
@@ -4386,6 +4536,12 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/conveyor/claim" && req.method === "POST") return handleConveyorClaim(req);
     if (url.pathname === "/magnum/api/conveyor/upgrade" && req.method === "POST") return handleConveyorUpgrade(req);
     if (url.pathname === "/magnum/api/conveyor/prestige" && req.method === "POST") return handleConveyorPrestige(req);
+    // board 42 — лента рекордов + вызовы + шаринг
+    if (url.pathname === "/magnum/api/board/feed" && req.method === "GET") return handleBoardFeed(req);
+    if (url.pathname === "/magnum/api/board/challenge" && req.method === "POST") return handleBoardChallenge(req);
+    if (url.pathname === "/magnum/api/board/accept" && req.method === "POST") return handleBoardAccept(req);
+    if (url.pathname === "/magnum/api/board/share" && req.method === "POST") return handleBoardShare(req);
+    if (url.pathname === "/magnum/api/board/leaderboard" && req.method === "GET") return handleBoardLeaderboard();
     // pet 42 — тамагочи
     if (url.pathname === "/magnum/api/pet" && req.method === "GET") return handlePetGet(req);
     if (url.pathname === "/magnum/api/pet/feed" && req.method === "POST") return handlePetFeed(req);

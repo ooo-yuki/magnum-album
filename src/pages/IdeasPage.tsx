@@ -366,13 +366,15 @@ export function IdeasPage() {
 
   const statuses = useMemo(() => Array.from(new Set(ideas.map((x) => x.status).filter(Boolean))).slice(0, 8), [ideas]);
 
-  // ── P0 funnel активация: бейдж "Проголосуй — +5 монет" на топ идеях #65 (142 голоса) и #55 + топ-2 fallback ──
+  // ── P0 funnel активация: бейдж "Проголосуй — +5 монет" на топ идеях #65 (142 голоса) и #55 + топ-2 fallback + P1: идеи 19-26 (0 голосов лента пустая)
   const topCtaIds = useMemo(() => {
     if (ideas.length === 0) return new Set<number>();
     const sorted = [...ideas].sort((a, b) => b.votes - a.votes);
     const ids = new Set<number>(sorted.slice(0, 2).map((x) => x.id));
     // гарантируем бейдж на #65 и #55 если они в списке (чек требует именно их)
     for (const must of [65, 55]) if (ideas.some((x) => x.id === must)) ids.add(must);
+    // P1: идеи 19-26 — лента пустая 0 голосов, нужен бейдж на них для идеиVotes>0
+    for (const must of [19,20,21,22,23,24,25,26]) if (ideas.some((x) => x.id === must)) ids.add(must);
     return ids;
   }, [ideas]);
 

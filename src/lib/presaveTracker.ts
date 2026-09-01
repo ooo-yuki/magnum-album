@@ -21,13 +21,21 @@ export function getABVariant(): ABVariant {
   }
 }
 
+export function trackPresaveClick(variant?: string, url?: string): void {
+  try { localStorage.setItem("presave_done", "1"); } catch {}
+  const v = variant ?? getABVariant();
+  fetch("/magnum/api/presave/click", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: url ?? "https://music.thefence.me/psmagnum", ts: Date.now(), variant: v }) }).catch(() => {});
+}
+
 export function usePresaveTracker() {
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       const a = (e.target as HTMLElement).closest('a[href*="music.thefence.me/psmagnum"]');
       if (!a) return;
+      // if CTA already carries data-variant=return-popup, preserve it
+      const elVariant = (a as HTMLElement).getAttribute("data-variant");
+      const variant = elVariant === "return-popup" ? "return-popup" : getABVariant();
       try { localStorage.setItem("presave_done", "1"); } catch {}
-      const variant = getABVariant();
       fetch("/magnum/api/presave/click", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: (a as HTMLAnchorElement).href, ts: Date.now(), variant }) }).catch(() => {});
     };
     document.addEventListener("click", handler);

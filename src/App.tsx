@@ -4,6 +4,7 @@ import { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { HomePage } from "./pages/HomePage";
+import { ReturnPopup } from "./components/ReturnPopup";
 
 // perf 14:11 — 9 heavy pages lazy (Gallery 441KB + Recaps 277KB etc) → main 1037→509KB
 // perf 15:06 — ещё 5 eager pages → lazy: About42/Track/LastFit/Game/GamesHub (~68KB) → main 528→~460KB
@@ -20,12 +21,15 @@ const SquadPage = lazy(() => import("./pages/SquadPage").then(m => ({ default: m
 const ConveyorPage = lazy(() => import("./pages/ConveyorPage").then(m => ({ default: m.ConveyorPage })));
 const Map42Page = lazy(() => import("./pages/Map42Page").then(m => ({ default: m.Map42Page })));
 const ArenaPage = lazy(() => import("./pages/ArenaPage").then(m => ({ default: m.ArenaPage })));
+const Board42Page = lazy(() => import("./pages/Board42Page").then(m => ({ default: m.Board42Page })));
 // opt 15:06 — 5 оставшихся eager страниц → lazy (тяжёлые чанки >50KB каждый не нужен на /)
 const About42Page = lazy(() => import("./pages/About42Page").then(m => ({ default: m.About42Page })));
 const TrackPage = lazy(() => import("./pages/TrackPage").then(m => ({ default: m.TrackPage })));
 const LastFitPage = lazy(() => import("./pages/LastFitPage").then(m => ({ default: m.LastFitPage })));
 const GamePage = lazy(() => import("./pages/GamePage").then(m => ({ default: m.GamePage })));
 const GamesHub = lazy(() => import("./pages/GamesHub").then(m => ({ default: m.GamesHub })));
+const Studio42Page = lazy(() => import("./pages/Studio42Page").then(m => ({ default: m.Studio42Page })));
+const ShareCardPage = lazy(() => import("./components/ShareCard").then(m => ({ default: m.ShareCardPage })));
 
 function PageFallback() {
   return <div style={{ padding: "4rem 2rem", textAlign: "center", color: "#ff2d55" }}>Загрузка…</div>;
@@ -58,6 +62,7 @@ function GameFallback() {
 export default function App() {
   return (
     <BrowserRouter>
+      <ReturnPopup />
       <Routes>
         <Route path="/magnum" element={<Layout />}>
           <Route index element={<HomePage />} />
@@ -98,6 +103,9 @@ export default function App() {
           <Route path="conveyor" element={<Suspense fallback={<PageFallback />}><ConveyorPage /></Suspense>} />
           <Route path="map" element={<Suspense fallback={<PageFallback />}><Map42Page /></Suspense>} />
           <Route path="arena" element={<Suspense fallback={<PageFallback />}><ArenaPage /></Suspense>} />
+          <Route path="studio" element={<Suspense fallback={<PageFallback />}><Studio42Page /></Suspense>} />
+          <Route path="share-card" element={<Suspense fallback={<PageFallback />}><ShareCardPage /></Suspense>} />
+          <Route path="board" element={<Suspense fallback={<PageFallback />}><Board42Page /></Suspense>} />
         </Route>
       </Routes>
     </BrowserRouter>

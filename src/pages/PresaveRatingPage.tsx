@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { Link } from "react-router-dom";
 import styles from "./PresaveRatingPage.module.css";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -145,6 +146,7 @@ export function PresaveRatingPage() {
   const [err, setErr] = useState<string | null>(null);
   const [bandlink, setBandlink] = useState<{ title: string; image: string | null; ok: boolean } | null>(null);
   const [dropCountdown, setDropCountdown] = useState<string>(() => formatDropCountdown(DROP_DATE_RATING.getTime() - Date.now()));
+  const [shareBusy, setShareBusy] = useState(false);
 
   const rootRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
@@ -444,6 +446,35 @@ export function PresaveRatingPage() {
     window.setTimeout(() => setCheck("idle"), 2600);
   };
 
+  const handleShare = async () => {
+    setShareBusy(true);
+    try {
+      const { drawShareCard, canvasToBlob, shareOrDownload } = await import("../components/ShareCard");
+      const off = document.createElement("canvas");
+      const verifiedFrame = frames.find((f) => f.verified);
+      const top = ratingRows[0];
+      const uname = verifiedFrame?.username || top?.username || null;
+      const verified = Boolean(verifiedFrame?.verified || top?.verified);
+      const skinId = verifiedFrame?.avatar ?? top?.skinId ?? null;
+      const emoji = (() => {
+        const m: Record<string, string> = { mops: "🐗", rhino: "🦏", monkey: "🐵", frog: "🐸", panda: "🐼", fox: "🦊", owl: "🦉", shark: "🦈", flamingo: "🦩", wolf: "🐺", tiger: "🐯", dragon: "🐉" };
+        if (!skinId) return "★";
+        return m[skinId.toLowerCase().trim()] ?? "★";
+      })();
+      await drawShareCard(off, { username: uname, verified, avatarEmoji: emoji });
+      const blob = await canvasToBlob(off);
+      const safe = (uname ?? "magnum").replace(/[^a-z0-9_-]/gi, "_").slice(0, 18) || "magnum";
+      const res = await shareOrDownload(blob, `magnum-ya-v-42-${safe}-1080.png`);
+      setToast(res === "shared" ? "Поделились · Я в 42 🔥" : "Скачано PNG 1080×1080 ✓");
+      setTimeout(() => setToast(null), 2400);
+    } catch (e) {
+      setToast(String(e).slice(0, 96));
+      setTimeout(() => setToast(null), 2400);
+    } finally {
+      setShareBusy(false);
+    }
+  };
+
   const isEmpty = !loading && ratingRows.length === 0;
 
   useEffect(() => {
@@ -508,8 +539,18 @@ export function PresaveRatingPage() {
           {check === "ok" && "✓ Обновлено"}
           {check === "fail" && "× Пока пусто"}
         </button>
+        <button
+          onClick={handleShare}
+          disabled={shareBusy}
+          className={styles.checkBtn}
+          style={{ background: shareBusy ? "#333" : "linear-gradient(135deg,#ff2d55,#ffcc00)", color: shareBusy ? "#aaa" : "#fff", borderColor: "rgba(255,204,0,0.32)", fontWeight: 800 }}
+          data-testid="presave-share-btn"
+        >
+          {shareBusy ? "Готовлю 1080…" : "Поделиться · Я в 42"}
+        </button>
+        <Link to="/magnum/share-card" className={styles.presaveLink} style={{ border: "1px solid rgba(255,204,0,0.22)", padding: "8px 12px", borderRadius: 999, textDecoration: "none" }}>Открыть шаринг-карточку 1080×1080 →</Link>
         <a className={styles.presaveLink} href="https://music.thefence.me/psmagnum" target="_blank" rel="noopener noreferrer">Поставить пресейв на BandLink →</a>
-        <span className={styles.verifyHint}>GET /magnum/api/frame/status · /magnum/api/eco/leaderboard · /magnum/api/ideas — live · {bandlink?.ok ? "BandLink OK" : bandlink ? "BandLink OG fallback" : "BandLink…"}</span>
+        <span className={styles.verifyHint}>GET /magnum/api/frame/status · /magnum/api/eco/leaderboard · /magnum/api/ideas — live · {bandlink?.ok ? "BandLink OK" : bandlink ? "BandLink OG fallback" : "BandLink…"} · 1080×1080 Web Share → PNG</span>
       </div>
 
       <div className={styles.controls}>

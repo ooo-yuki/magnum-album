@@ -367,3 +367,21 @@ export const magnumPets = pgTable("magnum_pets", {
   streak: integer("streak").default(0).notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+export const magnumChallenges = pgTable("magnum_challenges", {
+  id: serial("id").primaryKey(),
+  challengerId: integer("challenger_id").references(() => magnumUsers.id, { onDelete: "cascade" }).notNull(),
+  challengedId: integer("challenged_id").references(() => magnumUsers.id, { onDelete: "cascade" }).notNull(),
+  game: text("game").notNull(),
+  score: integer("score").notNull(),
+  status: text("status").default("pending").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+});
+
+export const magnumBoardShares = pgTable("magnum_board_shares", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => magnumUsers.id, { onDelete: "cascade" }).notNull(),
+  dayId: text("day_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
