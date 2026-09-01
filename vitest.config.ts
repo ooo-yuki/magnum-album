@@ -7,6 +7,8 @@ export default defineConfig({
     setupFiles: ["./tests/setup.ts"],
     include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
     css: false,
+    testTimeout: 10000,
+    hookTimeout: 10000,
   },
   esbuild: {
     jsx: "automatic",

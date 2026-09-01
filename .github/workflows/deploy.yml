@@ -19,8 +19,8 @@ jobs:
       - name: Type check
         run: bunx tsc --noEmit
 
-      - name: Tests
-        run: bunx vitest run
+      - name: Tests # bun test
+        run: bunx vitest run # bun test — jsdom, vitest + @testing-library/react
 
       - name: Build
         run: bun run build.ts
