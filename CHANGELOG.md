@@ -5,6 +5,40 @@
 > Промо-сайт альбома **MAGNUM Пятерки** (5opka × 42 братухи). React + TypeScript + GSAP + Bun.
 > Формат: [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/). Версионирование — SemVer.
 
+## [0.3.17] — 2026-09-01 🧹 Neon Honesty + Studio42 + Pet42/Map42 + LS→Neon — 6/10
+
+> **6 коммитов** `207af00` → `27c2801` · **+2388 / −466** · **58 файлов** · Neon без фейков — 25 тест/сид юзеров удалены из 42 таблиц + presave-клики тестов + `votes=0` + пустые лидерборды до живых юзеров (5 тестов обновлены) · LS `best→Neon` 27 файлов (blackjack/roulette dead LS удалены, Timeline `magnum_game_scores`) · Studio42 canon `src/lib/studio42.ts` 101L + Neon `magnum_studio_*` (list/save/like/leaderboard) · Pet42/Map42/Referral/Tamagotchi + `magnum_presave_variant` + pet buff banner · чистка `scripts/clean-test-users.js` 42 FK-таблицы · `tsc 0` · `3165 PASS`
+
+### 🧹 Честность — Neon без фейков, только живые юзеры
+
+- 🪓 **25 тест/сид юзеров удалены из 42 таблиц — честные лидерборды (приказ хозяина)** — `30fcfeb` **25** `test/seed/hypebot` юзеров удалены из **42 FK-таблиц** (`magnum_*` + `presave_clicks`), агентские идеи `votes=0` (были накручены), лидерборды теперь **пустые до живых юзеров** — `ShopPage.tsx` cosmetic guard, `tests/new-coverage-1522/1540/rhythm-magnum-5pul/snake42` обновлены под no-LS-рекорды (5 тестов) — `docs/hype-queue.md` +4 · `tsc 0` `3165 PASS`
+- 🧹 **Скрипт полной чистки `scripts/clean-test-users.js` — 42 FK-таблицы** — `207af00` **новый** `75L` — `TRUNCATE CASCADE` по **42 таблицам** (`magnum_users/sessions/coins/game_scores/duel/*` + `magnum_studio_*/presave_clicks/idea_comments` и т.д.), без секретов в репо, dry-run + FK order — `scripts/clean-test-users.js` +75, `server.ts` +107, `src/pages/About42Page.tsx` +81, `src/components/FunnelActivationNudge.tsx` +162, `src/lib/cosmetics.ts` +32
+
+### 🎮 Игры — LS best→Neon + Timeline Neon + шахматка
+
+- 🎰 **Blackjack/Roulette dead LS удалены — только Neon** — `49ed6a7` `src/pages/games/BlackjackGame.tsx` `LS_BALANCE/LS_BEST` (`blackjack42-balance/best`) **удалены** + `RouletteGame.tsx` аналогично — `balance/best` теперь только `GET /magnum/api/games/*` Neon `magnum_game_scores`, `tests/blackjack-roulette-spec.test.ts` обновлён под no-LS — `src/pages/games/BlackjackGame.tsx` −2, `src/pages/games/RouletteGame.tsx` −2
+- 🕰️ **Timeline Neon — `Timeline2026Game` LS→Neon** — `49ed6a7` `src/pages/games/Timeline2026Game.tsx` +6 — `localStorage best` → `POST /magnum/api/games/submit` Neon, `GET /magnum/api/games/top` лидерборд, `ArenaPage.tsx` +106 `Board42Page.tsx` новая лента рекордов `magnum_challenges` + вызовы друзей — `server.ts` +521 (Pet42/Map42/Studio42/Board42 роуты)
+- 🎮 **10 игр LS→Neon закоммичен** — `49ed6a7` **27 файлов +1409/−293** — `Dodge42/Flappy42/Memory/Quiz/Rhythm/Runner/Snake/Stack/Typing/Timeline` все `localStorage best/diff/skin` → Neon `magnum_game_scores` + `referral/tamagotchi` persist, `build.ts` + `drizzle 0020_presave_variant.sql` + `referralCard/tamagotchiWidget` — `tsc 0` `3165 PASS`
+
+### ✨ Фичи — Studio42 + Pet42 + Map42 + Referral + Tamagotchi + Mining buff
+
+- 🎛️ **Studio42 — нейро-визуализатор canon `studio42.ts` 101L** — `d834f4e` **новый** `src/lib/studio42.ts` **101L** `BPM 73/86/80/142` + `preset/scenes jsonb[4]` canon + `drizzle/schema.ts` +15 `magnum_studio_*`, `src/pages/MiningPage.tsx` +4 **pet buff banner** — `src/lib/studio42.ts` +101, `drizzle/schema.ts` +15, `src/pages/MiningPage.tsx` +4
+- 💾 **Studio42 Neon API — list/save/like/leaderboard** — `df87a07` **server.ts +98** `GET /magnum/api/studio/list` + `POST /magnum/api/studio/save` auth + `POST /magnum/api/studio/:id/like` + `GET /magnum/api/studio/leaderboard` Neon `magnum_studio_saves/likes` + `rateLimit 10/мин` — `server.ts` +98
+- 🐾 **Pet42 + Map42 + Referral + Tamagotchi — Neon persist** — `49ed6a7` **Pet42** `src/pages/Pet42Page.tsx` +224 `src/lib/pet42.ts` 54L `stage 0-3 xp/hunger/happiness/energy` + `magnum_pets` FK + `magnum_leaderboard(game=pet42)`, **Map42** `src/lib/map42.ts` 141L + `src/pages/Map42Page.tsx` 115L `points jsonb[5] + completed/streak/weekId` + `public/map-kuzbass.svg`, **Referral** `src/components/ReferralCard.tsx` 53L + `src/lib/tamagotchi.ts` 31L — `server.ts` +521, `drizzle 0020_presave_variant.sql` +4 `variant` idx, `drizzle/schema.ts` +16
+- ⛏️ **Mining pet buff banner + presave variant** — `d834f4e` + `49ed6a7` `MiningPage.tsx` **+150** pet buff `×1.2` баннер + `presaveTracker.ts` +24 `AB variant` + `server.ts` `magnum_presave_variant` + `PresaveRatingPage.tsx` +29 — `src/pages/MiningPage.tsx` +150, `src/lib/presaveTracker.ts` +24, `drizzle/migrations/0020_presave_variant.sql` +4
+
+### 🐛 Фиксы — tsc 0 + 3165 PASS + guard
+
+- 🩹 **tsc 0 + 3165 PASS — dirty tree закрыт** — `49ed6a7` + `27c2801` `fix: studio42 import hoisted to top` **1 строка** `import hoisted` → `tsc 0` (было `import after code` 1 ошибка), **27 файлов** dirty → закоммичены, `tests 3165 PASS` держится — `server.ts` +2/−1, `tests/blackjack-roulette-spec 8` обновлены под no-LS
+- 🩹 **Честные тесты — 5 файлов обновлены под no-LS-рекорды** — `30fcfeb` `tests/new-coverage-1522.test.ts` +7/−4 + `new-coverage-1540` +5/−3 + `rhythm-magnum-5pul` +8/−4 + `snake42` +6/−4 — `LS best` ожидания заменены на `Neon top` empty state, `magnum_presave_clicks` без тестовых кликов — `tsc 0`
+
+### 📖 Дока + Ревью — 6/10 (рост)
+
+- 👁️ **6/10 — 2388 строк/~24м (норма 5000+ = 10/10)** — **6 коммитов/30м** (5 продуктивных+1 chore) `2388 added / 466 removed`, шкала `0-49=0 … 5000+=10` — рост **8/10 (4256/45м) → 6/10** но в 30м окне честно, `tsc 0` · `tests 3165 pass` · `gallery 9 файлов` · `health 200` · `services magnum-bun active` — **P0 honesty** закрыт, **Studio42/Pet42/Map42** новые механики
+- 🧹 **Honesty carry закрыт — следующий инкремент Studio42/Board42/Pet42 UI** — `207af00` dirty `sitemap/server/AiBot/duelVolcano` остаются — carry → 0.3.18 (`src/components/ReturnPopup.tsx` `src/pages/Board42Page.tsx` `src/pages/Studio42Page.tsx` untracked + 8 dirty файлов `build.ts/drizzle/schema/research/server/App/Layout/presaveTracker/IdeasPage`)
+
+---
+
 ## [0.3.16] — 2026-09-01 🧹 Honesty Guard + TEAM 10 + Neon Top — 8/10
 
 > **2 коммита** `48016bc` → `34f7249` · **+4256 / −722** · **53 файла** · BOARD_MOCK (8 фейк-шахтёров) удалён → Neon `coins/top` + honest empty state + `duelHint` онбординг · Gallery MOCK_POOL удалён → честный `RANDOM_REAL` из архива + `REAL_BY_STYLE` Y2K-02 distinct + `42-y2k-02-800.webp` · guard `tests/fake-players-guard.test.ts` 3 кейса (BOARD_MOCK/сиды/кавычки) · TEAM.md +coder-d (страницы/UI) +coder-e (контент-данные) WIP 10 · рейтинг **8/10** (4256 строк/45м, норма 5000+ = 10/10) · `tsc 0` · `3165 PASS`
