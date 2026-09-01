@@ -7,6 +7,7 @@
  * Audited: 2026-09-01 — 0 <img> found, CLS-safe, no LCP image.
  * Build: vendor split via src/vendor.ts + Bun splitting:true (see build.ts)
  * Sitemap: deduplicated via Set<loc> — verified in public/sitemap.xml
+ * GSAP: entrance y24 stagger 0.12, hover RGB, reduced-motion gate, cleanup via ctx.revert
  */
 import { useRef, useEffect } from "react";
 import gsap from "gsap";
@@ -38,37 +39,137 @@ const REVIEWS: Review[] = [
 
 export function PressWall() {
   const sectionRef = useRef<HTMLElement>(null);
-  const cardsRef = useRef<(HTMLDivElement | null)[]>([]);
   const headerRef = useRef<HTMLDivElement>(null);
+  const cardsRef = useRef<(HTMLDivElement | null)[]>([]);
+  const statsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!sectionRef.current) return;
+
     const ctx = gsap.context(() => {
-      gsap.set(headerRef.current, { y: 20, opacity: 0 });
-      gsap.to(headerRef.current, {
-        y: 0, opacity: 1, duration: 0.7, ease: "power3.out",
-        scrollTrigger: { trigger: sectionRef.current, start: "top 78%", toggleActions: "play none none none" },
+      // collect entrance elements for reduced-motion gate
+      const cards = cardsRef.current.filter(Boolean) as HTMLDivElement[];
+      const headerEl = headerRef.current;
+      const statsEl = statsRef.current;
+      const entranceEls = [headerEl, ...cards, statsEl].filter(Boolean) as Element[];
+
+      // reduced-motion gate: instant show, skip timelines/magnet/RGB
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        gsap.set(entranceEls, { y: 0, opacity: 1, scale: 1, clearProps: "transform" });
+        gsap.set(cards, { y: 0, opacity: 1, scale: 1, filter: "none" });
+        return;
+      }
+
+      // GSAP entrance y24 stagger 0.12 — spec
+      gsap.set(headerEl, { y: 24, opacity: 0 });
+      gsap.set(cards, { y: 24, opacity: 0, scale: 0.97 });
+      if (statsEl) gsap.set(statsEl, { y: 24, opacity: 0 });
+
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: "top 78%",
+          toggleActions: "play none none none",
+        },
+        defaults: { ease: "power3.out" },
       });
-      gsap.set(cardsRef.current, { y: 36, opacity: 0, scale: 0.98 });
-      gsap.to(cardsRef.current, {
-        y: 0, opacity: 1, scale: 1,
-        duration: 0.65, stagger: 0.09, ease: "power3.out",
-        scrollTrigger: { trigger: sectionRef.current, start: "top 65%", toggleActions: "play none none none" },
-      });
-      if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        cardsRef.current.forEach((el) => {
-          if (!el) return;
-          el.addEventListener("mousemove", (e) => {
-            const rect = el.getBoundingClientRect();
-            const x = ((e.clientX - rect.left) / rect.width) * 100;
-            const y = ((e.clientY - rect.top) / rect.height) * 100;
-            el.style.setProperty("--mx", `${x}%`);
-            el.style.setProperty("--my", `${y}%`);
-          });
+
+      tl.to(headerEl, { y: 0, opacity: 1, duration: 0.7 })
+        .to(cards, { y: 0, opacity: 1, scale: 1, duration: 0.62, stagger: 0.12 }, "-=0.35")
+        .to(statsEl, { y: 0, opacity: 1, duration: 0.5 }, "-=0.22");
+
+      // bar width stagger — subtle extra polish
+      const bars = cards.map((c) => c.querySelector(`.${styles.bar} span`) as HTMLElement | null).filter(Boolean) as HTMLElement[];
+      if (bars.length) {
+        gsap.set(bars, { scaleX: 0, transformOrigin: "left center" });
+        gsap.to(bars, {
+          scaleX: 1,
+          duration: 0.7,
+          stagger: 0.12,
+          ease: "power3.out",
+          scrollTrigger: {
+            trigger: sectionRef.current,
+            start: "top 62%",
+            toggleActions: "play none none none",
+          },
         });
       }
+
+      // hover RGB + radial follow + magnet — gated, cleanup via array
+      const cleanups: Array<() => void> = [];
+
+      cards.forEach((card) => {
+        if (!card) return;
+
+        const onMove = (e: MouseEvent) => {
+          if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+          const rect = card.getBoundingClientRect();
+          const x = ((e.clientX - rect.left) / rect.width) * 100;
+          const y = ((e.clientY - rect.top) / rect.height) * 100;
+          card.style.setProperty("--mx", `${x}%`);
+          card.style.setProperty("--my", `${y}%`);
+          // subtle magnet to cursor
+          const dx = ((e.clientX - (rect.left + rect.width / 2)) / rect.width) * 8;
+          const dy = ((e.clientY - (rect.top + rect.height / 2)) / rect.height) * 6;
+          gsap.to(card, { x: dx, y: dy, duration: 0.4, ease: "power3.out", overwrite: "auto" });
+        };
+
+        const onEnter = () => {
+          if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+          gsap.to(card, {
+            y: -4,
+            scale: 1.012,
+            duration: 0.25,
+            ease: "power2.out",
+            boxShadow: "0 14px 40px rgba(0,0,0,0.34), 0 0 22px rgba(255,45,85,0.16), 0 0 28px rgba(88,101,242,0.12)",
+            overwrite: "auto",
+          });
+          // hover RGB: red/cyan channel split via drop-shadow filter
+          gsap.to(card, {
+            duration: 0.22,
+            ease: "power2.out",
+            filter: "drop-shadow(1px 0 0 rgba(255,0,80,0.32)) drop-shadow(-1px 0 0 rgba(0,255,255,0.32))",
+            overwrite: "auto",
+          });
+        };
+
+        const onLeave = () => {
+          if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+            gsap.set(card, { x: 0, y: 0, scale: 1, clearProps: "filter" });
+            return;
+          }
+          gsap.to(card, {
+            x: 0,
+            y: 0,
+            scale: 1,
+            duration: 0.55,
+            ease: "elastic.out(1,0.42)",
+            boxShadow: "0 0 0 transparent",
+            filter: "none",
+            overwrite: "auto",
+          });
+        };
+
+        card.addEventListener("mousemove", onMove);
+        card.addEventListener("mouseenter", onEnter);
+        card.addEventListener("mouseleave", onLeave);
+
+        cleanups.push(() => {
+          card.removeEventListener("mousemove", onMove);
+          card.removeEventListener("mouseenter", onEnter);
+          card.removeEventListener("mouseleave", onLeave);
+        });
+      });
+
+      // store cleanups on section for outer revert safety
+      (sectionRef.current as unknown as { _pressCleanups?: () => void })._pressCleanups = () =>
+        cleanups.forEach((fn) => fn());
     }, sectionRef);
-    return () => ctx.revert();
+
+    return () => {
+      (sectionRef.current as unknown as { _pressCleanups?: () => void })?._pressCleanups?.();
+      ctx.revert();
+    };
   }, []);
 
   return (
@@ -95,7 +196,7 @@ export function PressWall() {
           </div>
         ))}
       </div>
-      <div className={styles.statsRow}>
+      <div className={styles.statsRow} ref={statsRef}>
         <div className={styles.stat}><strong>8K+</strong><span>клипов TikTok</span></div>
         <div className={styles.stat}><strong>200K+</strong><span>просмотров</span></div>
         <div className={styles.stat}><strong>42</strong><span>братухи на связи</span></div>
