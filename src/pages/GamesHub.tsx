@@ -108,6 +108,38 @@ export function GamesHub() {
           </div>
         ))}
       </div>
+      {/* Хайп-фичи — магазин и будущие модули */}
+      <section className={styles.hypeSection} aria-label="Хайп-фичи">
+        <h2 className={styles.hypeTitle}>Хайп-фичи</h2>
+        <p className={styles.hypeSubtitle}>Фарми монеты в играх — трать в магазине. Скоро — эко-рейтинг, фреймы и арена.</p>
+        <div className={styles.hypeGrid}>
+          <Link to="/magnum/shop" className={`${styles.card} ${styles.hypeCard}`}>
+            <span className={styles.icon}>🛒</span>
+            <strong>Магазин скинов</strong>
+            <p>12 скинов 42 — COMMON → LEGENDARY за magnum-coins</p>
+            <span className={styles.hypeCta}>В магазин →</span>
+          </Link>
+          <div className={`${styles.card} ${styles.hypeCard} ${styles.hypeCardSoon}`} aria-disabled="true">
+            <span className={styles.icon}>🌿</span>
+            <strong>Эко-рейтинг</strong>
+            <p>Скоро — твой вклад в зелёный движ 42</p>
+            <span className={styles.hypeBadge}>soon</span>
+          </div>
+          <div className={`${styles.card} ${styles.hypeCard} ${styles.hypeCardSoon}`} aria-disabled="true">
+            <span className={styles.icon}>🖼️</span>
+            <strong>Фреймы</strong>
+            <p>Скоро — рамки для аватара</p>
+            <span className={styles.hypeBadge}>soon</span>
+          </div>
+          <div className={`${styles.card} ${styles.hypeCard} ${styles.hypeCardSoon}`} aria-disabled="true">
+            <span className={styles.icon}>⚔️</span>
+            <strong>Арена</strong>
+            <p>Скоро — PvP братух</p>
+            <span className={styles.hypeBadge}>soon</span>
+          </div>
+        </div>
+      </section>
+
       <Link to="/magnum" className={styles.back}>← На главную</Link>
     </div>
   );
