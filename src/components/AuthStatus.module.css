@@ -1,0 +1,4 @@
+.me{font-size:.82rem;font-weight:700;color:#00ff88;border:1px solid rgba(0,255,136,.35);padding:.25rem .5rem;border-radius:999px;background:rgba(0,255,136,.08)}
+.login{font-size:.82rem;font-weight:700;color:#ff2d55;text-decoration:none;border:1px solid rgba(255,45,85,.35);padding:.25rem .6rem;border-radius:999px}
+.login:hover{background:#ff2d55;color:#fff}
+.skeleton{opacity:.4}

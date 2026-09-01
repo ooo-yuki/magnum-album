@@ -9,6 +9,7 @@ import { TopProgress } from "./TopProgress";
 import { ScrollToTop } from "./ScrollToTop";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { AiBot } from "./AiBot";
+import { AuthStatus } from "./AuthStatus";
 import styles from "./Layout.module.css";
 
 const NAV_ITEMS = [
@@ -110,6 +111,7 @@ export function Layout() {
           >
             БРАТ-БОТ
           </button>
+          <AuthStatus />
         </div>
 
         <button
