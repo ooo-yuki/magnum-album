@@ -338,6 +338,21 @@ export const magnumConveyorState = pgTable("magnum_conveyor_state", {
   dust: integer("dust").default(0).notNull(),
 });
 
+export const magnumStudioSaves = pgTable("magnum_studio_saves", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => magnumUsers.id, { onDelete: "cascade" }).notNull(),
+  trackSlug: text("track_slug").notNull(),
+  preset: text("preset").notNull(),
+  scenes: jsonb("scenes").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+export const magnumStudioLikes = pgTable("magnum_studio_likes", {
+  id: serial("id").primaryKey(),
+  saveId: integer("save_id").references(() => magnumStudioSaves.id, { onDelete: "cascade" }).notNull(),
+  userId: integer("user_id").references(() => magnumUsers.id, { onDelete: "cascade" }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const magnumPets = pgTable("magnum_pets", {
   userId: integer("user_id").primaryKey().references(() => magnumUsers.id, { onDelete: "cascade" }),
   stage: integer("stage").default(0).notNull(),

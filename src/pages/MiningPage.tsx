@@ -720,6 +720,10 @@ export function MiningPage() {
 
       {/* VAULT 42 — лимитированные дропы (Neon magnum_mining_vault) */}
       <section className={styles.shop} ref={vaultRef} style={{ marginTop: 28 }}>
+        <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:10,padding:"8px 12px",border:"1px solid rgba(255,204,0,.18)",borderRadius:12,background:"rgba(255,204,0,.06)"}}>
+          <span style={{fontWeight:800,fontSize:12}}>🐾 ПИТОМЕЦ 42 {petBuff?`· stage ${petBuff.stage} · ${petBuff.buff} · +${petBuff.bonus}% mining`:`· яйцо → титан +5/10/15% mining`}</span>
+          <a href="/magnum/pet" style={{marginLeft:"auto",fontSize:12,padding:"6px 10px",borderRadius:999,border:"1px solid #ffd42a",color:"#ffd42a",textDecoration:"none",fontWeight:800}}>→ /magnum/pet</a>
+        </div>
         <h2 className={styles.sectionTitle}>VAULT 42 <span>· ЛИМИТКИ · Neon</span></h2>
         <p style={{ opacity: 0.6, fontSize: 13, marginBottom: 10 }}>Открой сейф — цена списывается из магнум-баланса, награда падает бонуcом. Тираж ограничен (sold out на сервере). Баланс только в Neon.</p>
         <div className={styles.shopGrid}>
