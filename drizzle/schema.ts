@@ -79,3 +79,11 @@ export const magnumCosmetics = pgTable("magnum_cosmetics", {
   equipped: boolean("equipped").default(false),
   purchasedAt: timestamp("purchased_at").defaultNow(),
 });
+
+export const magnumPresaveClicks = pgTable("magnum_presave_clicks", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => magnumUsers.id),
+  url: text("url").default("/magnum"),
+  ip: text("ip"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
