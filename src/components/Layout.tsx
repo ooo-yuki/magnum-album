@@ -10,6 +10,7 @@ import { ScrollToTop } from "./ScrollToTop";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { AiBot } from "./AiBot";
 import { AuthStatus } from "./AuthStatus";
+import { usePresaveTracker } from "../lib/presaveTracker";
 import styles from "./Layout.module.css";
 
 const NAV_ITEMS = [
@@ -28,6 +29,7 @@ const NAV_ITEMS = [
 
 export function Layout() {
   const location = useLocation();
+  usePresaveTracker();
   const [menuOpen, setMenuOpen] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);

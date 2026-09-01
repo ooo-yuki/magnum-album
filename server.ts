@@ -635,6 +635,15 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/auth/logout" && req.method === "POST") return handleLogout(req);
     if (url.pathname === "/magnum/api/coins" && req.method === "GET") return handleCoinsGet(req);
     if (url.pathname === "/magnum/api/coins/add" && req.method === "POST") return handleCoinsAdd(req);
+    if (url.pathname === "/magnum/api/presave/click" && req.method === "POST") {
+      try {
+        const sql = neon(process.env.DATABASE_URL!);
+        const user = await getUserByToken(req).catch(() => null);
+        const body = await req.json().catch(() => ({} as any));
+        await sql`INSERT INTO magnum_presave_clicks (user_id, url, created_at) VALUES (${user?.id ?? null}, ${String((body as any).url || "/magnum")}, now())`;
+      } catch {}
+      return Response.json({ ok: true });
+    }
 
     // ideas
     if (url.pathname === "/magnum/api/ideas" && req.method === "GET") return handleIdeasGet();
