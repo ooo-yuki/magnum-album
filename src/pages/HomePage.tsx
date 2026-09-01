@@ -7,6 +7,7 @@ import { Singles } from "../components/Singles";
 import { About } from "../components/About";
 import { NavGrid } from "../components/NavGrid";
 import { Timeline } from "../components/Timeline";
+import { PressWall } from "../components/PressWall";
 import { CTA } from "../components/CTA";
 
 const TARGET = 42;
@@ -183,6 +184,7 @@ export function HomePage() {
       <NavGrid />
       <About />
       <Timeline />
+      <PressWall />
       <Singles />
       <CTA />
 
