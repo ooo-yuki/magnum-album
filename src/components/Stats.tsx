@@ -14,6 +14,7 @@ interface StatItem {
 const STATS: StatItem[] = [
   { target: 8, suffix: "K+", label: "клипов в TikTok" },
   { target: 200, suffix: "K+", label: "просмотров клипа" },
+  { target: 42, suffix: "", label: "братухи на связи" },
 ];
 
 function AnimatedNumber({ target, suffix }: { target: number; suffix: string }) {
@@ -126,7 +127,7 @@ export function Stats() {
       <div
         className={styles.stat}
         ref={(el) => {
-          itemsRef.current[2] = el;
+          itemsRef.current[3] = el;
         }}
       >
         <div className={styles.badge} ref={badgeRef}>
