@@ -72,3 +72,15 @@
 .presaveBtn{display:inline-block;padding:.8rem 1.5rem;border-radius:999px;background:var(--accent);color:#fff;font-weight:800;box-shadow:0 0 18px rgba(255,45,85,.4)}
 .modalActions{display:flex;gap:.5rem;margin-top:.4rem;flex-wrap:wrap;justify-content:center}
 .playAgainBtn{padding:.6rem 1.1rem;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#fff;font-weight:700;cursor:pointer}
+
+/* Открытка 42 в победной модалке */
+.postcardImg {
+  width: 100%;
+  max-width: 420px;
+  height: auto;
+  border-radius: 14px;
+  margin: 0.6rem auto 0.4rem;
+  display: block;
+  border: 1px solid rgba(255, 204, 0, 0.4);
+  box-shadow: 0 0 28px rgba(255, 204, 0, 0.25), 0 12px 40px rgba(0, 0, 0, 0.5);
+}

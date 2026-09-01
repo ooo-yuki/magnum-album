@@ -57,3 +57,15 @@
 .postcard span{ display:block; font-weight:400; font-size:0.8rem; color:rgba(240,240,240,0.6); margin-top:0.3rem; }
 .presaveBtn{ display:block; margin:0.8rem 0; padding:0.8rem; border-radius:999px; background:#ff2d55; color:#fff; font-weight:700; font-size:0.85rem; word-break:break-all; }
 .modalActions{ display:flex; gap:0.5rem; justify-content:center; flex-wrap:wrap; }
+
+/* Открытка 42 в победной модалке */
+.postcardImg {
+  width: 100%;
+  max-width: 420px;
+  height: auto;
+  border-radius: 14px;
+  margin: 0.6rem auto 0.4rem;
+  display: block;
+  border: 1px solid rgba(255, 204, 0, 0.4);
+  box-shadow: 0 0 28px rgba(255, 204, 0, 0.25), 0 12px 40px rgba(0, 0, 0, 0.5);
+}
