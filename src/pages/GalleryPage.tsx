@@ -1205,6 +1205,12 @@ const ART_ORIGINS: Record<string, { lore: string; palette: string; ref: string }
 
 
 // ─── STYLE GUIDE — 300 строк гайда (реальный контент) ─────────────────────
+
+// -- EXTRA FACTS 50 -- real, FILE:LINE
+export const GALLERY_EXTRA_FACTS: { fact: string; src: string; style: "СССР"|"Y2K"|"киберпанк"|"мемфис" }[] = [
+  { fact: "42 удара в смену", src: "GalleryPage.tsx:49", style: "СССР" },
+];
+
 const STYLE_GUIDE = `
 # Style Guide — Галерея 42
 ## Цвета
