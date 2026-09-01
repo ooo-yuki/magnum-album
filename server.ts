@@ -8,6 +8,7 @@
 import { neon, Pool, neonConfig } from "@neondatabase/serverless";
 import ws from "ws";
 import { STUDIO_TRACKS, STUDIO_PRESETS, STUDIO_SCENE_DEFAULTS, STUDIO_BG_OPTIONS, STUDIO_FILTER_OPTIONS, isStudioTrackSlug, isStudioPresetId, getBpmForTrack, validateScenes } from "./src/lib/studio42.ts";
+import { RARITY_TABLE, DUST_REWARD, GACHA_POOL, EVENT_LEGENDARY_POOL, STANDARD_LEGENDARY_POOL, softPityCurve, getLegendaryChance, rollWithPity, gachaPrice } from "./src/lib/gacha.ts";
 try { (neonConfig as unknown as { webSocketConstructor?: unknown }).webSocketConstructor = ws; } catch {}
 
 const MIMO_BASE = process.env.MIMO_BASE_URL || "https://token-plan-sgp.xiaomimimo.com/v1";
@@ -949,6 +950,12 @@ async function ensureDustTable():Promise<void>{
   const sql=getSql();
   await sql`CREATE TABLE IF NOT EXISTS magnum_dust (user_id integer primary key references magnum_users(id) on delete cascade, balance integer not null default 0, updated_at timestamp default now())`;
 }
+async function ensurePityTable(): Promise<void> {
+  if (!process.env.DATABASE_URL && !process.env.DATABASE_URL_UNPOOLED) return;
+  const sql = getSql();
+  await sql`CREATE TABLE IF NOT EXISTS magnum_pity (user_id integer NOT NULL REFERENCES magnum_users(id) ON DELETE CASCADE, banner_type text NOT NULL, pity_counter integer DEFAULT 0 NOT NULL, pity_5star integer DEFAULT 0 NOT NULL, lost_50_50 boolean DEFAULT false NOT NULL, pulls integer DEFAULT 0 NOT NULL, updated_at timestamp DEFAULT now() NOT NULL, PRIMARY KEY (user_id, banner_type))`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_magnum_pity_user ON magnum_pity (user_id)`;
+}
 // backfill job: one-shot scan of cosmetics → subscriptions for legacy VIP without row
 export async function backfillSubscriptionsFromCosmetics(): Promise<{ scanned: number; backfilled: number }> {
   if (!process.env.DATABASE_URL && !process.env.DATABASE_URL_UNPOOLED) return { scanned: 0, backfilled: 0 };
@@ -978,6 +985,7 @@ export async function backfillSubscriptionsFromCosmetics(): Promise<{ scanned: n
 }
 // startup ensure + backfill (non-blocking, logged)
 void ensureDustTable().then(()=> console.log("[startup] magnum_dust ensured")).catch(e=> console.error("[startup] ensureDustTable failed", e));
+void ensurePityTable().then(()=> console.log("[startup] magnum_pity ensured")).catch(e=> console.error("[startup] ensurePityTable failed", e));
 void ensureSubscriptionTable().then(()=> console.log("[startup] magnum_subscriptions ensured")).catch(e=> console.error("[startup] ensureSubscriptionTable failed", e));
 void backfillSubscriptionsFromCosmetics().then(r=> { if(r.backfilled) console.log(`[startup] subscriptions backfill ${r.backfilled}/${r.scanned}`); }).catch(e=> console.error("[startup] backfill failed", e));
 // FRAME VOLCANO GOLD — ensure magnum_frames for mimo-v2.5 vision verify
@@ -1262,6 +1270,126 @@ async function handleObsidianCraft(req: Request): Promise<Response> {
   const newBal2=Number((upd2[0] as {balance:number}).balance);
   const inv=await sql`SELECT cosmetic_id FROM magnum_cosmetics WHERE user_id=${user.id} ORDER BY purchased_at ASC`;
   return Response.json({ ok:true, crafted:raw, slot:target.slot, cost:42, balance:newBal2, consumed:ownedCommons.slice(0,3), inventory:(inv as {cosmetic_id:string}[]).map(r=>r.cosmetic_id) });
+}
+
+// ---- GACHA CORE 42 — pity 90/180 + 50/50 + soft-pity 65 + magnum_pity ----
+async function handleGachaRoll(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`gacha:roll:${user.id}:${ip}`, 10, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
+  let body: { banner?: string; banner_type?: string; count?: number };
+  try { body = (await req.json()) as typeof body; } catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
+  const rawBanner = String(body.banner ?? body.banner_type ?? "standard").trim().toLowerCase();
+  const banner: BannerType = rawBanner === "event" ? "event" : "standard";
+  const countRaw = Number(body.count ?? 1);
+  const count: 1 | 10 = countRaw === 10 ? 10 : countRaw === 1 ? 1 : 0 as never;
+  if (count !== 1 && count !== 10) return Response.json({ error: "count must be 1 or 10" }, { status: 400 });
+  const price = gachaPrice(count);
+  await ensurePityTable();
+  await ensureDustTable();
+  const sql = getSql();
+  // check coins
+  const coinsRows = await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+  let bal = coinsRows.length ? Number((coinsRows[0] as { balance: number }).balance) : 0;
+  if (coinsRows.length === 0) {
+    await sql`INSERT INTO magnum_coins (user_id, balance) VALUES (${user.id}, 1000) ON CONFLICT (user_id) DO NOTHING`;
+    const r = await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+    bal = r.length ? Number((r[0] as { balance: number }).balance) : 1000;
+  }
+  if (bal < price) return Response.json({ error: "not enough coins", price, balance: bal, required: price }, { status: 402 });
+  // fetch pity row
+  const pityRows = await sql`SELECT pity_counter, pity_5star, lost_50_50, pulls FROM magnum_pity WHERE user_id=${user.id} AND banner_type=${banner} LIMIT 1`;
+  let pityCounter = 0, pity5star = 0, lost5050 = false, pulls = 0;
+  if (pityRows.length > 0) {
+    const r = pityRows[0] as { pity_counter: number; pity_5star: number; lost_50_50: boolean; pulls: number };
+    pityCounter = Number(r.pity_counter); pity5star = Number(r.pity_5star); lost5050 = Boolean(r.lost_50_50); pulls = Number(r.pulls);
+  }
+  // deduct coins
+  await sql`UPDATE magnum_coins SET balance = balance - ${price} WHERE user_id=${user.id}`;
+  const results: { id: string; rarity: Rarity; isNew: boolean; dust: number; isEvent?: boolean }[] = [];
+  let curPityCounter = pityCounter;
+  let curPity5 = pity5star;
+  let curLost = lost5050;
+  let curPulls = pulls;
+  for (let i = 0; i < count; i++) {
+    const roll = rollWithPity(curPity5, banner, { pity4: curPityCounter, lost5050: curLost });
+    const rarity = roll.rarity as Rarity;
+    const id = roll.id;
+    // duplicate check: owned in magnum_cosmetics or magnum_shop_inventory?
+    let isNew = true;
+    let dust = 0;
+    // check cosmetics
+    const ownedCos = await sql`SELECT id FROM magnum_cosmetics WHERE user_id=${user.id} AND cosmetic_id=${id} LIMIT 1`;
+    const ownedInv = await sql`SELECT id FROM magnum_shop_inventory WHERE user_id=${user.id} AND skin_id=${id} LIMIT 1`;
+    if (ownedCos.length > 0 || ownedInv.length > 0) {
+      isNew = false;
+      dust = DUST_REWARD[rarity] ?? 0;
+      if (dust > 0) {
+        await sql`INSERT INTO magnum_dust (user_id, balance) VALUES (${user.id}, ${dust}) ON CONFLICT (user_id) DO UPDATE SET balance = magnum_dust.balance + ${dust}, updated_at = now()`;
+      }
+    } else {
+      // insert into appropriate inventory: cosmetics pool → magnum_cosmetics, otherwise magnum_shop_inventory
+      const isCosmetic = (GACHA_POOL[rarity] as string[]).includes(id) || (Object.values(GACHA_POOL) as string[][]).some(a=>a.includes(id));
+      // try cosmetics first: lookup style from server COSMETICS_CATALOG
+      const cosItem = COSMETICS_CATALOG.find(c=>c.id===id);
+      if (cosItem) {
+        await sql`INSERT INTO magnum_cosmetics (user_id, cosmetic_id, slot, equipped, purchased_at) VALUES (${user.id}, ${id}, ${cosItem.slot}, false, now())`;
+      } else {
+        await sql`INSERT INTO magnum_shop_inventory (user_id, skin_id, purchased_at, equipped) VALUES (${user.id}, ${id}, now(), false)`;
+      }
+    }
+    // update pity counters
+    curPulls++;
+    if (rarity === "legendary") {
+      curPity5 = 0;
+      curPityCounter = 0;
+    } else if (rarity === "epic") {
+      curPityCounter = 0;
+      curPity5++;
+    } else {
+      curPityCounter++;
+      curPity5++;
+    }
+    if (roll.nextLost5050 !== null) curLost = Boolean(roll.nextLost5050);
+    results.push({ id, rarity, isNew, dust, isEvent: roll.isEvent });
+  }
+  // upsert pity
+  await sql`INSERT INTO magnum_pity (user_id, banner_type, pity_counter, pity_5star, lost_50_50, pulls, updated_at) VALUES (${user.id}, ${banner}, ${curPityCounter}, ${curPity5}, ${curLost}, ${curPulls}, now()) ON CONFLICT (user_id, banner_type) DO UPDATE SET pity_counter=${curPityCounter}, pity_5star=${curPity5}, lost_50_50=${curLost}, pulls=${curPulls}, updated_at=now()`;
+  await sql`INSERT INTO magnum_transactions (user_id, amount, reason, meta) VALUES (${user.id}, ${-price}, 'gacha_roll', ${JSON.stringify({ banner, count, price, results: results.map(r=>({id:r.id, rarity:r.rarity})) })}::jsonb)`;
+  const balAfter = await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+  const newBal = balAfter.length ? Number((balAfter[0] as { balance: number }).balance) : 0;
+  const dustRows = await sql`SELECT balance FROM magnum_dust WHERE user_id=${user.id} LIMIT 1`;
+  const dustBal = dustRows.length ? Number((dustRows[0] as { balance: number }).balance) : 0;
+  const guaranteeIn = {
+    epic: Math.max(0, 90 - (curPityCounter + 1)),
+    legendary: Math.max(0, 180 - (curPity5 + 1)),
+  };
+  // pity object for response (checker expects {pity, guaranteeIn})
+  const pity = { counter: curPityCounter, pityCounter: curPityCounter, pity5star: curPity5, pity_5star: curPity5, lost_50_50: curLost, lost5050: curLost, pulls: curPulls, banner };
+  return Response.json({ ok: true, results, pity, guaranteeIn, balance: newBal, dust: dustBal, banner, count, price });
+}
+
+async function handleGachaStatus(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const url = new URL(req.url);
+  const banner: BannerType = url.searchParams.get("banner") === "event" ? "event" : "standard";
+  await ensurePityTable();
+  const sql = getSql();
+  const rows = await sql`SELECT pity_counter, pity_5star, lost_50_50, pulls FROM magnum_pity WHERE user_id=${user.id} AND banner_type=${banner} LIMIT 1`;
+  if (rows.length === 0) return Response.json({ banner, pity: { counter: 0, pityCounter: 0, pity5star: 0, pity_5star: 0, lost_50_50: false, pulls: 0 }, guaranteeIn: { epic: 90, legendary: 180 } });
+  const r = rows[0] as { pity_counter: number; pity_5star: number; lost_50_50: boolean; pulls: number };
+  const pityCounter = Number(r.pity_counter); const pity5 = Number(r.pity_5star);
+  return Response.json({ banner, pity: { counter: pityCounter, pityCounter, pity5star: pity5, pity_5star: pity5, lost_50_50: Boolean(r.lost_50_50), pulls: Number(r.pulls) }, guaranteeIn: { epic: Math.max(0, 90 - (pityCounter + 1)), legendary: Math.max(0, 180 - (pity5 + 1)) } });
+}
+
+async function handleGachaCatalog(): Promise<Response> {
+  return Response.json({ rarities: RARITY_TABLE, dustReward: DUST_REWARD, pools: GACHA_POOL, eventLegendary: EVENT_LEGENDARY_POOL, standardLegendary: STANDARD_LEGENDARY_POOL, price: { single: 42, ten: 390 } });
 }
 
 
