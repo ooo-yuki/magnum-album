@@ -7,6 +7,7 @@ import { PageLoader } from "./PageLoader";
 import { PageTransition } from "./PageTransition";
 import { TopProgress } from "./TopProgress";
 import { ScrollToTop } from "./ScrollToTop";
+import { ErrorBoundary } from "./ErrorBoundary";
 import { AiBot } from "./AiBot";
 import styles from "./Layout.module.css";
 
@@ -152,7 +153,9 @@ export function Layout() {
 
       <main className={styles.main} id="main-content" tabIndex={-1}>
         <PageTransition key={location.pathname}>
-          <Outlet />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </PageTransition>
       </main>
       <ScrollToTop />
