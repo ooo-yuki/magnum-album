@@ -879,28 +879,20 @@ async function handleFrameVerify(req: Request): Promise<Response> {
 }
 
 async function handleFrameStatus(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  let user: { id: number; username: string } | null = null;
+  try { user = await getUserByToken(token); } catch (e) { console.error("[frame status] getUserByToken failed", e); return Response.json({ error: "db error" }, { status: 500 }); }
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
   try {
     const sql = getSql();
-    const token = extractToken(req);
-    let user: { id: number; username: string } | null = null;
-    if (token) { try { user = await getUserByToken(token); } catch (e) { console.error("[frame status] getUserByToken failed", e); } }
-    if (user) {
-      const rows = await sql`SELECT f.id, u.username, f.verified, f.created_at, s.skin_id as avatar FROM magnum_frames f LEFT JOIN magnum_users u ON u.id = f.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id = f.user_id AND s.equipped = true WHERE f.user_id = ${user.id} ORDER BY f.created_at DESC LIMIT 50`;
-      const frames = rows.map((r: unknown) => {
-        const x = r as { id: number; username: string; verified: boolean | null; created_at: string; avatar: string | null };
-        return { id: Number(x.id), username: String(x.username || user!.username), verified: Boolean(x.verified), status: x.verified ? "verified" : "pending", created_at: x.created_at, avatar: x.avatar || null };
-      });
-      const verified = frames.filter(f => f.verified).length;
-      return Response.json({ frames, total: frames.length, verified, pending: frames.length - verified, user: user.username });
-    }
-    const rows = await sql`SELECT f.id, COALESCE(u.username, 'Братуха') as username, f.verified, f.created_at, f.user_id as raw_user_id, s.skin_id as avatar FROM magnum_frames f LEFT JOIN magnum_users u ON u.id = f.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id = f.user_id AND s.equipped = true ORDER BY f.created_at DESC LIMIT 50`;
-    const total = rows.length;
-    const verified = rows.filter((r: unknown) => (r as { verified: boolean }).verified === true).length;
+    const rows = await sql`SELECT f.id, u.username, f.verified, f.created_at, s.skin_id as avatar FROM magnum_frames f LEFT JOIN magnum_users u ON u.id = f.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id = f.user_id AND s.equipped = true WHERE f.user_id = ${user.id} ORDER BY f.created_at DESC LIMIT 50`;
     const frames = rows.map((r: unknown) => {
-      const x = r as { id: number; username: string; verified: boolean | null; created_at: string; raw_user_id: number; avatar: string | null };
-      return { id: Number(x.id), username: String(x.username || "Братуха"), verified: Boolean(x.verified), status: x.verified ? "verified" : "pending", created_at: x.created_at, avatar: x.avatar || null };
+      const x = r as { id: number; username: string; verified: boolean | null; created_at: string; avatar: string | null };
+      return { id: Number(x.id), username: String(x.username || user!.username), verified: Boolean(x.verified), status: x.verified ? "verified" : "pending", created_at: x.created_at, avatar: x.avatar || null };
     });
-    return Response.json({ frames, total, verified, pending: total - verified });
+    const verified = frames.filter(f => f.verified).length;
+    return Response.json({ frames, total: frames.length, verified, pending: frames.length - verified, user: user.username });
   } catch (e) {
     console.error("[frame status] failed", e);
     return Response.json({ error: "db error" }, { status: 500 });

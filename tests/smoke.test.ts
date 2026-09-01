@@ -54,7 +54,9 @@ describe("smoke: Hero MAGNUM", () => {
   it("Hero пресвейв CTA присутствует", () => {
     render(React.createElement(Hero));
     const presave = screen.getByLabelText(/Пресейв MAGNUM/i);
-    expect(presave).toHaveAttribute("href", expect.stringContaining("music.yandex.ru"));
+    const href = presave.getAttribute("href") ?? "";
+    // BandLink переехал на music.thefence.me/psmagnum, но yandex.ru/artist/7544304 остаётся алиасом — принимаем оба
+    expect(href).toMatch(/music\.(yandex\.ru|thefence\.me)/);
   });
 });
 
@@ -97,16 +99,20 @@ describe("smoke: presave ссылка", () => {
   it("CTA содержит пресейв ссылку на Яндекс Музыку", () => {
     render(React.createElement(CTA));
     const presaveLinks = screen.getAllByRole("link");
-    const yandexLink = presaveLinks.find((a) => (a.getAttribute("href") || "").includes("music.yandex.ru"));
-    expect(yandexLink).toBeDefined();
-    expect(yandexLink!.getAttribute("href")).toContain("7544304");
-    expect(yandexLink!.getAttribute("target")).toBe("_blank");
+    const link = presaveLinks.find((a) => {
+      const h = a.getAttribute("href") || "";
+      return h.includes("music.yandex.ru") || h.includes("music.thefence.me/psmagnum");
+    });
+    expect(link).toBeDefined();
+    const href = link!.getAttribute("href") ?? "";
+    expect(href).toMatch(/music\.(yandex\.ru|thefence\.me)/);
+    expect(link!.getAttribute("target")).toBe("_blank");
   });
   it("Hero и CTA вместе имеют минимум 2 пресейв ссылки", () => {
     const { unmount } = render(React.createElement(Hero));
     unmount();
     render(React.createElement(CTA));
-    const allLinks = document.body.querySelectorAll('a[href*="music.yandex.ru"]');
+    const allLinks = document.body.querySelectorAll('a[href*="music.yandex.ru"], a[href*="music.thefence.me"]');
     expect(allLinks.length).toBeGreaterThanOrEqual(1);
   });
 });

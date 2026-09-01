@@ -83,22 +83,21 @@ export function AuthStatus() {
     const ac = new AbortController();
     (async () => {
       try {
-        // primary: real endpoint with tier — GET /magnum/api/frame/status (handleFrameStatus) returns {tier, active}
-        const r = await fetch("/magnum/api/frame/status", { credentials: "include", signal: ac.signal });
+        // P0 #1: primary — GET /magnum/api/shop/subscriptions (handleShopSubscriptions) returns {tier, active}
+        const r = await fetch("/magnum/api/shop/subscriptions", { credentials: "include", signal: ac.signal });
         if (r.ok) {
           const ct = r.headers.get("content-type") ?? "";
-          if (!ct.includes("application/json")) { setTier(null); return; }
-          let j: unknown = null;
-          try { j = await r.json(); } catch { const txt = await r.text().catch(() => ""); try { j = JSON.parse(txt); } catch { j = null; } }
-          const obj = j as { tier?: string; active?: boolean; status?: string } | null;
-          // handleFrameStatus: {tier: "vip"|"vip+"|"pro"|null, active: boolean}
-          const t = obj?.tier as string | null | undefined;
-          if (typeof t === "string" && t) { setTier(t); return; }
-          if (obj?.active === false) { setTier(null); return; }
-          // if active but no tier string — fall through to inventory fallback
+          if (ct.includes("application/json")) {
+            let j: unknown = null;
+            try { j = await r.json(); } catch { const txt = await r.text().catch(() => ""); try { j = JSON.parse(txt); } catch { j = null; } }
+            const obj = j as { tier?: string | null; active?: string | null; subscription?: string | null } | null;
+            const t = (obj?.tier ?? obj?.active ?? obj?.subscription) as string | null | undefined;
+            if (typeof t === "string" && t) { setTier(t); return; }
+            if (t === null) { setTier(null); return; }
+          }
         }
-        // fallback: derive tier from cosmetic inventory
-        const inv = await fetch("/magnum/api/shop/inventory", { credentials: "include", signal: ac.signal });
+        // fallback: derive tier from cosmetic inventory (legacy + P1 reliability)
+        const inv = await fetch("/magnum/api/shop/cosmetic/inventory", { credentials: "include", signal: ac.signal });
         if (inv.ok) {
           const ct2 = inv.headers.get("content-type") ?? "";
           if (!ct2.includes("application/json")) { setTier(null); return; }
