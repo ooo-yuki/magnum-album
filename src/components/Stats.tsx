@@ -28,8 +28,8 @@ function AnimatedNumber({ target, suffix }: { target: number; suffix: string }) 
       const obj = { val: 0 };
       gsap.to(obj, {
         val: target,
-        duration: 2,
-        ease: "power2.out",
+        duration: 2.6,
+        ease: "expo.out", // stats easing v2 — smoother deceleration
         scrollTrigger: {
           trigger: ref.current,
           start: "top 80%",

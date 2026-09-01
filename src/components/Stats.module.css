@@ -16,6 +16,8 @@
 }
 
 .number {
+  font-variant-numeric: tabular-nums;
+  will-change: contents;
   font-size: clamp(2.1rem, 5vw, 3.4rem);
   font-weight: 900;
   letter-spacing: -0.03em;
