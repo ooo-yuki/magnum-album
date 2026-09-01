@@ -86,6 +86,8 @@ async function getUserByToken(token: string): Promise<{ id: number; username: st
 
 // ---- Auth handlers ----
 async function handleRegister(req: Request): Promise<Response> {
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`auth:register:${ip}`, 5, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
   let body: { username?: string; password?: string };
   try {
     body = (await req.json()) as typeof body;
@@ -136,6 +138,8 @@ async function handleRegister(req: Request): Promise<Response> {
 }
 
 async function handleLogin(req: Request): Promise<Response> {
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`auth:login:${ip}`, 8, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
   let body: { username?: string; password?: string };
   try {
     body = (await req.json()) as typeof body;
@@ -205,11 +209,29 @@ async function handleCoinsGet(req: Request): Promise<Response> {
   return Response.json({ balance: Number((rows[0] as { balance: number }).balance) });
 }
 
+// ---- Coins leaderboard (top 20) ----
+async function handleCoinsTop(): Promise<Response> {
+  try {
+    const sql = getSql();
+    const rows = await sql`SELECT u.username, c.balance, s.skin_id as avatar, COALESCE(f.verified,false) as verified FROM magnum_coins c JOIN magnum_users u ON u.id=c.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id=c.user_id AND s.equipped=true LEFT JOIN magnum_frames f ON f.user_id=c.user_id ORDER BY c.balance DESC LIMIT 20`;
+    const top = rows.map((r: unknown) => {
+      const x = r as { username: string; balance: number; avatar: string | null; verified: boolean | null };
+      return { username: String(x.username), balance: Number(x.balance), avatar: x.avatar || null, verified: Boolean(x.verified) };
+    });
+    return Response.json({ top, count: top.length });
+  } catch (e) {
+    console.error("[coins top] failed", e);
+    return Response.json({ error: "db error" }, { status: 500 });
+  }
+}
+
 async function handleCoinsAdd(req: Request): Promise<Response> {
   const token = extractToken(req);
   if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
   const user = await getUserByToken(token);
   if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`coins:add:${user.id}:${ip}`, 20, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
 
   let body: { amount?: number };
   try {
@@ -220,6 +242,7 @@ async function handleCoinsAdd(req: Request): Promise<Response> {
   const amount = Number(body.amount);
   if (!Number.isFinite(amount) || !Number.isInteger(amount)) return Response.json({ error: "amount must be integer" }, { status: 400 });
   if (amount === 0) return Response.json({ error: "amount cannot be 0" }, { status: 400 });
+  if (Math.abs(amount) > 10000) return Response.json({ error: "amount too large" }, { status: 400 });
 
   const sql = getSql();
   await sql`INSERT INTO magnum_coins (user_id, balance) VALUES (${user.id}, 1000) ON CONFLICT (user_id) DO NOTHING`;
@@ -245,6 +268,8 @@ async function handleIdeasPost(req: Request): Promise<Response> {
   if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
   const user = await getUserByToken(token);
   if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`ideas:post:${user.id}:${ip}`, 10, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
 
   let body: { title?: string; description?: string };
   try {
@@ -269,6 +294,8 @@ async function handleIdeasPost(req: Request): Promise<Response> {
 async function handleIdeasVote(req: Request, idStr: string): Promise<Response> {
   const id = Number(idStr);
   if (!Number.isInteger(id) || id <= 0) return Response.json({ error: "invalid id" }, { status: 400 });
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`ideas:vote:${ip}:${id}`, 12, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
   try {
     const sql = getSql();
     const rows = await sql`UPDATE magnum_ideas SET votes = COALESCE(votes,0) + 1 WHERE id = ${id} RETURNING *`;
@@ -316,6 +343,8 @@ async function handleShopBuy(req: Request): Promise<Response> {
   if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
   const user = await getUserByToken(token);
   if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`shop:buy:${user.id}:${ip}`, 15, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
   let body: { skinId?: string; skin_id?: string; id?: string };
   try { body = (await req.json()) as typeof body; } catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
   const skinId = typeof body.skinId === "string" ? body.skinId.trim() : typeof body.skin_id === "string" ? body.skin_id.trim() : typeof body.id === "string" ? body.id.trim() : "";
@@ -481,6 +510,8 @@ async function handleFrameVerify(req: Request): Promise<Response> {
   if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
   const user = await getUserByToken(token);
   if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`frame:verify:${user.id}:${ip}`, 8, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
   let body: { verified?: boolean };
   try { body = (await req.json()) as typeof body; } catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
   const verified = Boolean(body.verified);
@@ -645,6 +676,8 @@ async function handleMiningClick(req: Request): Promise<Response> {
   if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
   const user = await getUserByToken(token);
   if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`mining:click:${user.id}:${ip}`, 120, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
   try {
     const data = await ensureMiningRow(user.id);
     const inc = perClickFrom(data.upgrades);
@@ -762,6 +795,51 @@ async function handlePresaveStats(req: Request): Promise<Response> {
   } catch (e) {
     console.error("[presave stats] failed", e);
     return Response.json({ error: "db error" }, { status: 500 });
+  }
+}
+
+async function handleMiningTop(): Promise<Response> {
+  try {
+    const sql = getSql();
+    const rows = await sql`SELECT u.username, m.balance, m.upgrades, s.skin_id as avatar FROM magnum_mining m JOIN magnum_users u ON u.id=m.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id=m.user_id AND s.equipped=true ORDER BY m.balance DESC LIMIT 20`;
+    const top = rows.map((r: unknown) => {
+      const x = r as { username: string; balance: number; upgrades: unknown; avatar: string | null };
+      const ups = parseUpgrades(x.upgrades);
+      const perSec = ups.reduce((s, u) => s + (UPGRADES_DEF[u.id]?.auto ?? 0) * u.count, 0);
+      return { username: String(x.username), balance: Number(x.balance), perSec, upgrades: ups, avatar: x.avatar || null };
+    });
+    return Response.json({ top, count: top.length });
+  } catch (e) {
+    console.error("[mining top] failed", e);
+    return Response.json({ error: "db error" }, { status: 500 });
+  }
+}
+
+async function handleHealth(): Promise<Response> {
+  try {
+    const sql = getSql();
+    const [users, coins, mining, presave, ideas] = await Promise.all([
+      sql`SELECT count(*)::int as c FROM magnum_users`,
+      sql`SELECT count(*)::int as c FROM magnum_coins`,
+      sql`SELECT count(*)::int as c FROM magnum_mining`,
+      sql`SELECT count(*)::int as c FROM magnum_presave_clicks`,
+      sql`SELECT count(*)::int as c FROM magnum_ideas`,
+    ]);
+    return Response.json({
+      ok: true,
+      ts: new Date().toISOString(),
+      counts: {
+        users: Number((users[0] as { c: number }).c),
+        coins: Number((coins[0] as { c: number }).c),
+        mining: Number((mining[0] as { c: number }).c),
+        presave: Number((presave[0] as { c: number }).c),
+        ideas: Number((ideas[0] as { c: number }).c),
+      },
+      uptime: process.uptime(),
+    });
+  } catch (e) {
+    console.error("[health] failed", e);
+    return Response.json({ ok: false, error: "db error" }, { status: 500 });
   }
 }
 
@@ -973,7 +1051,9 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/auth/login" && req.method === "POST") return handleLogin(req);
     if (url.pathname === "/magnum/api/auth/me" && req.method === "GET") return handleMe(req);
     if (url.pathname === "/magnum/api/auth/logout" && req.method === "POST") return handleLogout(req);
+    if (url.pathname === "/magnum/api/health" && req.method === "GET") return handleHealth();
     if (url.pathname === "/magnum/api/coins" && req.method === "GET") return handleCoinsGet(req);
+    if (url.pathname === "/magnum/api/coins/top" && req.method === "GET") return handleCoinsTop();
     if (url.pathname === "/magnum/api/coins/add" && req.method === "POST") return handleCoinsAdd(req);
     if (url.pathname === "/magnum/api/presave/click" && req.method === "POST") return handlePresaveClick(req);
     if (url.pathname === "/magnum/api/presave/stats" && req.method === "GET") return handlePresaveStats(req);
@@ -1008,6 +1088,7 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/mining/click" && req.method === "POST") return handleMiningClick(req);
     if (url.pathname === "/magnum/api/mining/upgrade" && req.method === "POST") return handleMiningUpgrade(req);
     if (url.pathname === "/magnum/api/mining/collect" && req.method === "POST") return handleMiningCollect(req);
+    if (url.pathname === "/magnum/api/mining/top" && req.method === "GET") return handleMiningTop();
 
     if (url.pathname === "/magnum" || url.pathname.startsWith("/magnum/")) {
       const rel = url.pathname.replace(/^\/magnum\/?/, "");
