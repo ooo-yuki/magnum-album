@@ -9,6 +9,7 @@ export function About() {
   const sectionRef = useRef<HTMLElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
+  const highlightsRef = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
     if (!sectionRef.current) return;
@@ -16,6 +17,7 @@ export function About() {
     const ctx = gsap.context(() => {
       gsap.set(headingRef.current, { y: 20, opacity: 0 });
       gsap.set(textRef.current, { y: 30, opacity: 0 });
+      gsap.set(highlightsRef.current, { y: 28, opacity: 0, scale: 0.96 });
 
       gsap.to(headingRef.current, {
         scrollTrigger: {
@@ -39,6 +41,21 @@ export function About() {
         duration: 0.8,
         delay: 0.2,
       });
+
+      // staggered reveal for each highlight card
+      gsap.to(highlightsRef.current, {
+        scrollTrigger: {
+          trigger: `.${styles.highlights}`,
+          start: "top 85%",
+          toggleActions: "play none none none",
+        },
+        y: 0,
+        opacity: 1,
+        scale: 1,
+        stagger: 0.1,
+        duration: 0.55,
+        ease: "back.out(1.4)",
+      });
     }, sectionRef);
 
     return () => ctx.revert();
@@ -60,34 +77,24 @@ export function About() {
         </div>
 
         <div className={styles.highlights}>
-          <div className={styles.highlight}>
-            <span className={styles.highlightIcon}>🎵</span>
-            <div>
-              <strong>Мультижанровый</strong>
-              <p>Разные стили для каждой аудитории</p>
+          {[
+            { icon: "🎵", title: "Мультижанровый", desc: "Разные стили для каждой аудитории" },
+            { icon: "🪼", title: "Туса Медуза", desc: "Первый сингл уже в чартах, тренд в TikTok" },
+            { icon: "🔒", title: "VPN", desc: "Второй сингл с клипом" },
+            { icon: "🏆", title: "SLAY Awards", desc: "Цель — захват трендов, плейлистов и SLAY" },
+          ].map((h, i) => (
+            <div
+              key={h.title}
+              className={styles.highlight}
+              ref={(el) => { highlightsRef.current[i] = el; }}
+            >
+              <span className={styles.highlightIcon}>{h.icon}</span>
+              <div>
+                <strong>{h.title}</strong>
+                <p>{h.desc}</p>
+              </div>
             </div>
-          </div>
-          <div className={styles.highlight}>
-            <span className={styles.highlightIcon}>🪼</span>
-            <div>
-              <strong>Туса Медуза</strong>
-              <p>Первый сингл уже в чартах, тренд в TikTok</p>
-            </div>
-          </div>
-          <div className={styles.highlight}>
-            <span className={styles.highlightIcon}>🔒</span>
-            <div>
-              <strong>VPN</strong>
-              <p>Второй сингл с клипом</p>
-            </div>
-          </div>
-          <div className={styles.highlight}>
-            <span className={styles.highlightIcon}>🏆</span>
-            <div>
-              <strong>SLAY Awards</strong>
-              <p>Цель — захват трендов, плейлистов и SLAY</p>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
     </section>
