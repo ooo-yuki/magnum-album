@@ -15,6 +15,8 @@ import { KnifeHitGame } from "./pages/games/KnifeHitGame";
 import { RunnerGame } from "./pages/games/RunnerGame";
 import { RhythmGame } from "./pages/games/RhythmGame";
 import { Stack42Game } from "./pages/games/Stack42Game";
+import { BlackjackGame } from "./pages/games/BlackjackGame";
+import { RouletteGame } from "./pages/games/RouletteGame";
 
 export default function App() {
   return (
@@ -36,6 +38,8 @@ export default function App() {
           <Route path="games/clicker" element={<ClickerGame />} />
           <Route path="games/rhythm" element={<RhythmGame />} />
           <Route path="games/stack" element={<Stack42Game />} />
+          <Route path="games/blackjack" element={<BlackjackGame />} />
+          <Route path="games/roulette" element={<RouletteGame />} />
           <Route path="games/quiz" element={<GamePage />} />
         </Route>
       </Routes>
