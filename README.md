@@ -52,8 +52,8 @@ PORT=30646 bun run server.ts  # http://localhost:30646/magnum/
 ```
 src/
   components/ Hero, Layout (14 nav), AiBot, Gallery, Timeline, PressWall, News2026, ErrorBoundary…
-  pages/ HomePage, ShopPage, EcoPage, GalleryPage, MiningPage, PresaveRatingPage, IdeasPage, RecapsPage, DiscographyPage…
-  pages/games/ Runner, Match3, KnifeHit, Memory, Clicker, Blackjack, Roulette, Rhythm, Stack…
+  pages/ HomePage, ShopPage, EcoPage, GalleryPage, MiningPage, PresaveRatingPage, IdeasPage, RecapsPage, DiscographyPage, ArtistsPage, About42Page, LastFitPage, TrackPage, GamesHub, GamePage
+  pages/games/ Runner, Match3, KnifeHit, Memory, Clicker, Blackjack, Roulette, Rhythm, Stack, Flappy42, Game2042, Typing, Snake42, Dodge42
   lib/ coins.ts (→ /magnum/api/coins)
 drizzle/ schema.ts (magnum_ideas, leaderboard, eco_results, shop_inventory, frames, users, sessions, coins)
 neon.ts  # infra-as-code
