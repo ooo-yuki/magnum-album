@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useCallback } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import styles from "./About.module.css";
@@ -10,6 +10,30 @@ export function About() {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
   const highlightsRef = useRef<(HTMLDivElement | null)[]>([]);
+
+  // Magnetic 3D tilt on highlight cards
+  const handleHighlightMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const card = e.currentTarget;
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const cx = rect.width / 2;
+    const cy = rect.height / 2;
+    const rotateX = ((y - cy) / cy) * -6;
+    const rotateY = ((x - cx) / cx) * 6;
+    gsap.to(card, { rotateX, rotateY, duration: 0.3, ease: "power2.out" });
+  }, []);
+
+  const handleHighlightLeave = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    gsap.to(e.currentTarget, {
+      rotateX: 0, rotateY: 0, y: 0,
+      duration: 0.45, ease: "elastic.out(1, 0.5)",
+    });
+  }, []);
+
+  const handleHighlightEnter = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    gsap.to(e.currentTarget, { y: -3, duration: 0.25, ease: "power2.out" });
+  }, []);
 
   useEffect(() => {
     if (!sectionRef.current) return;
@@ -87,6 +111,9 @@ export function About() {
               key={h.title}
               className={styles.highlight}
               ref={(el) => { highlightsRef.current[i] = el; }}
+              onMouseMove={handleHighlightMove}
+              onMouseEnter={handleHighlightEnter}
+              onMouseLeave={handleHighlightLeave}
             >
               <span className={styles.highlightIcon}>{h.icon}</span>
               <div>
