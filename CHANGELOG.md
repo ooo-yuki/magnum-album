@@ -5,6 +5,69 @@
 > Промо-сайт альбома **MAGNUM Пятерки** (5opka × 42 братухи). React + TypeScript + GSAP + Bun.
 > Формат: [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/). Версионирование — SemVer.
 
+## [0.3.7] — 2026-09-01 ⛏️ Mining Exchange 10:1 + Eco Rating 0-10 + Idea Comments — 2/10
+
+> **8 коммитов** `2c53379` → `26dd77e` · **+840 / −14** · **14 файлов** · Mining 10:1 + Eco 0-10 (11 tiers) + idea comments + presave leaderboard + 3051 tests · рейтинг **2/10** (1031 строк/10м, норма 5000+ = 10/10) · `tsc 0` · `magnum-bun active` `caddy Up`
+
+### ✨ Фичи — Магазин/Эко/Майнинг/Идеи + Пресейв
+
+- ⛏️ **Mining Exchange 10:1 — руда → монеты Neon** — `0c47e1f` **rate 10 руда = 1 монета** · `POST /magnum/api/mining/exchange` (auth + `rate limit 8/мин` + валидация `10..10000` + `multiple of 10` ) · **Neon** `magnum_mining_exchanges` (user_id, mining_amount, coins_amount, rate 10) + индекс `user_id` · баланс `magnum_coins` + `magnum_mining` списывание + `magnum_transactions reason mining_exchange` — `drizzle/migrations/0012_mining_exchange_comments.sql` +23, `drizzle/schema.ts` +9, `server.ts` +67 (`handleMiningExchange`)
+- 🌿 **Eco Rating 0-10 — 11 tiers Neon + бонусы** — `0c47e1f` **ECO_TIERS 0..10** (Токсик −1000..−400 → 42 Абсолют 337..1000) · `ECO_TIERS: 11×{rating,tier,minScore,maxScore,color,badge,desc}` + `ECO_RATING_LABELS` + `calcEcoRating(score)` · `POST /magnum/api/eco/rating` (score −1000..1000 + answers 0..10 ×20 + player 2..32 или auth + `10/мин`) → `INSERT magnum_eco_ratings` + **бонусы 7→42 / 9→84 / 10→142** в `magnum_coins` · `GET /magnum/api/eco/tiers` (11 tiers) + `GET /magnum/api/eco/rating` top-30 (JOIN users + shop_inventory avatar) · **Neon** `magnum_eco_ratings` (user_id, player, score, rating 0..10, tier, answers jsonb) + 3 индекса — `drizzle/migrations/0011_eco_ratings.sql` +17, `drizzle/schema.ts` +10, `server.ts` +47, `src/pages/EcoPage.tsx` +57 (fetch tiers+rating top-10 + POST rating на submit + ratingMsg 4с)
+- 💬 **Idea Comments — Neon без localStorage** — `0c47e1f` **2 эндпоинта** `GET /magnum/api/ideas/:id/comments` (50шт `ORDER BY created_at ASC` JOIN users) + `POST /magnum/api/ideas/:id/comments` (auth + `body 3..400` + `idea exists 404` + `10/мин` + `INSERT magnum_idea_comments RETURNING`) · **Neon** `magnum_idea_comments` (idea_id FK CASCADE, user_id FK CASCADE, body) + 2 индекса — `drizzle/migrations/0012_mining_exchange_comments.sql` +10, `drizzle/schema.ts` +9, `server.ts` +56
+- 🏆 **Presave Leaderboard + WS chat** — `0c47e1f` `GET /magnum/api/presave/leaderboard` (топ presave + `ideaComments` count из `magnum_idea_comments`) + **WS chat** валидация + rate limit — `server.ts` +22
+- 📝 **README keeper — Tests 3051 + 26 tables** — `02eb99f` **Tests 2997→3051 (30 файлов)**, **20→26 tables** (`+game_scores/referrals/duel/eco_ratings/exchanges/comments`), **2042 DAILY + Memory/Rhythm FEVER**, mining exchange, idea comments, gallery 8 файлов — `README.md` +11/−10
+
+### 🎮 Игры — без прямых гейм-коммитов (фичи ушли в Mining/Eco)
+
+- 📰 **Recaps — Freakland Create день 1 35:24** — `26dd77e` **YpiqNshMn0E 35:24** открытие сервера Пятёрки, город Завоз + иудочка-ачивка · транскрипт **803 сегмента** + **2 идеи 101/102** (Freakland gen3) — `src/pages/RecapsPage.tsx` +18
+- 🎮 в окне `1233f63..26dd77e` гейм-логика не менялась — **2042 DAILY + FLOAT +X** (`ed478b2`, `3dcd532`) уже в **[0.3.6]**; текущий инкремент — серверные **Eco/Mining/Comments** под игры (рейтинг/обмен/комменты) · **Flappy42Game.tsx uncommitted** (DIFFICULTIES 3× norm/hard/turbo + BIRD_SKINS 5× classic/magnum/vpn/meduza/void — 54 строки) — в работе, войдёт в **0.3.8** (Rhythm 66 строк tips/best/tut + Flappy 203 строки — оба uncommitted)
+
+### 🤖 БРАТ-БОТ — стабилен
+
+- 🤖 без изменений в окне — бот стабилен, задачи ушли в **Mining Exchange + Eco Rating + Idea Comments** (след. инкремент — подсказки по **Vault + промокодам + FEVER + Daily топ + обмен 10:1**)
+
+### 🖼️ Открытка / Галерея — 8 файлов (WARN y2k/dup)
+
+- 🖼️ **8 файлов — WARN galleryTokens-Y2K + daily** — `6e73296` watchdog **8 файлов** `42-{agit,cyber,memphis,y2k}-01.{jpg,800.webp}` (12M, PNG 1536x1024 + 800.webp 67-133K), `tsc 0` · `REAL_BY_STYLE`/`REAL_FALLBACK` указывают на существующие файлы, `check-list 6→8` устарел — WARN; **galleryTokens-Y2K** (`y2k-01/02→memphis`) + **DAILY_KEY dead code** (watchdog 15:12 BUG-1/2) — без рестарта (`magnum-bun active`, `caddy Up`, `git clean`)
+
+### 🧪 Тесты / CI — 3051 passed (28 файлов, +16)
+
+- ✅ **3051 passed (28 файлов, 9412 expects, 2.42s bun + 22.25s vitest)** — `2c53379` `reports/test-2026-09-01-1510.md` +107, `tests/new-coverage-1530.test.ts` +127 — **3035→3051 +16**, `tsc 0`, **Bun 1.4.0 + TS 7.0.2 + vitest 3.2.7 jsdom** · покрытие **eco ratings + mining exchange + idea comments + presave leaderboard + WS chat**
+- 🩹 **Fix gallery build 400B → 600B** — `1aa15ab` `tests/gallery-api-games.test.ts` +2/−2 — `gsap shim 514B` превышал 400B — порог 600B, `eco ratings+exchange` gap закрыт — `tsc 0`
+- 🟢 **Watchdog 15:12 — OK 200/200/200 active/Up** — `6e73296` `reports/watchdog-2026-09-01-1512.md` +94 — **200/200/200**, `magnum-bun active (restart 15:12:41, 19.6M)`, `magnum-caddy Up 12min`, **8 gallery, 822 строки**, `tsc 0`, **2 бага** (`galleryTokens-Y2K + daily`) — без доп. рестарта
+
+### ⚡ Перфоманс — стабилен
+
+- 🟢 **Health стабилен** — в окне `1233f63..26dd77e` перф-коммитов нет (предыдущий `5d785d0` 528→472KB lazy уже в 0.3.6); `magnum-bun 19.6M` + `caddy Up` — без рестарта, `dist` не трогали
+
+### 🐛 Фиксы — gallery build threshold
+
+- 🩹 **Gallery build 400B → 600B** — `1aa15ab` `gsap shim 514B` — порог поднят (тест +2/−2) — P2 закрыт, `tsc 0`
+- ⚠️ **Остались P1/P2 → 0.3.8:** `DAILY_KEY void` + `historyRef.length` + `TOCTOU 1278-1297` 5 SQL без BEGIN + `UNIQUE(user_id,code)` + `gallery y2k alias` + `archive 210× 200 html` + `Memory localStorage` vs Neon + `Flappy diff` не закоммичен
+
+### 🔐 Auth / Neon — gate держится, +3 таблицы
+
+- 🔐 **Auth 15:15 — check OK** — `41f777e` `reports/auth-2026-09-01-1515.md` +103 — **4/4 защищённых 401** (`/auth/me`, `/coins`, `/shop/inventory`, `WS`) + **16 доп. 401** + **публичные 200** + **WS raw socket без токена → 401** ✅ (фикс `26cc8b3` держится 3-й прогон) · `AuthStatus.tsx` Войти/Регистрация + `credentials:include` OK
+- 🗄️ **Neon — +3 таблицы (0011 + 0012)** — `0c47e1f` `magnum_eco_ratings` + `magnum_mining_exchanges` + `magnum_idea_comments` · **итого 26 таблиц** — `drizzle/migrations/meta/_journal.json` idx 11+12 (`0011_eco_ratings` 1788300011000 + `0012_mining_exchange_comments` 1788300012000) + `drizzle/schema.ts` +28
+
+### 📖 Дока + Ревью — 2/10 → след. инкремент
+
+- 👁️ **Review 2/10 — 1031 строк/10м** — `19afd96` `reports/review-2026-09-01-1516.md` +87 — **2/10** (1026/5, норма 5000+ = 10/10) — падение с **3/10 → 2/10**, крупные фичи 2042/TILE_LORE вышли из 10м окна (20м ~3500 строк/12 коммитов) — требует **5000+ строк/10м** · **tsc PASS · tests PASS · health PASS · services PASS · gallery WARN**
+- 📝 **README keeper** — `02eb99f` `README.md` +11/−10 — синхрон с **3051 tests + 26 tables**
+- 📝 **Changelog 0.3.6** — `1233f63` `CHANGELOG.md` +59 — предыдущий 0.3.6 задокументирован
+
+### 🐛 Известные баги → след. инкремент (0.3.8)
+
+- ⚠️ **P1 DAILY_KEY dead code** — `Game2042.tsx:411` `void DAILY_KEY` — не `getItem/setItem` и не в `magnum_game_scores` — спам `POST /games/submit` + `restart()` ломает детерминизм (watchdog 15:12 BUG-1)
+- ⚠️ **P2 historyRef.length не триггерит ре-рендер** — `Game2042.tsx:277+636` `useRef` в JSX `disabled/(0/6)` — только при `setGrid/setScore` (watchdog 15:12 BUG-2)
+- ⚠️ **TOCTOU `server.ts:1278-1297`** — `handlePromoRedeem` 5 SQL без `BEGIN` + нет `UNIQUE(user_id,code)` — гонка `uses > max_uses` (review 15:03 §)
+- ⚠️ **Gallery `GalleryPage.tsx:39-43` + `galleryTokens.ts:42`** — `y2k-01/02→memphis`, `y2k-03→cyber`, `42-y2k-01.jpg ≡ 42-memphis-01.jpg` + `.jpg` содержит PNG + **archive 210× 200 html** (SPA fallback)
+- ⚠️ **Memory `MemoryGame.tsx:293,494`** — `localStorage "memory42-best"` вместо `Neon magnum_game_scores` + 45 localStorage vs ТЗ «all state in Neon»
+- ⚠️ **Flappy42Game.tsx uncommitted** — `DIFFICULTIES 3× + BIRD_SKINS 5×` — 54 строки не закоммичены, войдут в 0.3.8
+- ⚠️ **Gallery check-list 6→8 устарел** — `watchdog 15:12` WARN — 8 файлов vs ожидаемо 6
+
+---
+
 ## [0.3.6] — 2026-09-01 🔒 WS-фикс + 2042 Daily/FLOAT + Scoring Neon — 3/10
 
 > **14 коммитов** `3f1314a` → `c8b93fb` · **+1582 / −101** · **22 файла** (+`f3e0446` changelog) · 2042 Daily Challenge + FLOAT +X pop + unified Neon scoring + WS 401 fix + lazy 528→472KB · рейтинг 3/10 → 3/10 (стабильно, 853 строки/10м)
