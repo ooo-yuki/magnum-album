@@ -20,14 +20,16 @@
 Штраф −2 к рейтингу: 42P01 в journalctl, health!=200, tsc!=0, тесты падают.
 
 ## Роли и домены (не пересекаются)
-- **coder-a** (kanban: coder-a): игры, дуэли, WS-мультиплеер, GSAP-анимации
-- **coder-b** (kanban: coder-b): контент, галерея, магазин, идеи, квесты
+- **coder-a** (kanban: coder-a): игры, дуэли, WS-мультиплеер, GSAP-анимации, idle-механики
+- **coder-b** (kanban: coder-b): контент, галерея, магазин, идеи, квесты, эко
 - **coder-c** (kanban: coder-c): server.ts, API-контракты, drizzle/Neon, миграции, auth
+- **coder-d** (kanban: coder-d): новые страницы/разделы, UI/UX, Layout/Drawer, GSAP-анимации страниц
+- **coder-e** (kanban: coder-e): контент-данные (карточки/скины/вопросы/факты), попапы, магазины
 - **deployer**: единственный, кто build+cp+restart. Кодеры деплой НЕ делают.
 - **reviewer**: только рейтинг по формуле + 3 замечания по НОВЫМ коммитам (не повторять старые).
 - **gatekeeper (спек-страж)**: дифф docs/SPEC-42.md ↔ код. Цены, таблицы, контракты, инварианты.
 - **funnel**: метрики юзера (presave, votes, duels) → P0-задачи на борд.
-- **backlog keeper**: переливает репорты в kanban-задачи (`hermes kanban create --board magnum`), НЕ перегенерирует BACKLOG.md с нуля.
+- **backlog keeper**: переливает репорты в kanban-задачи (`hermes kanban create --board magnum`), НЕ перегенерирует BACKLOG.md с нуля. WIP-лимит ready = 10 (5 кодеров × 2).
 
 ## Правила
 1. Задачи живут на kanban-борде `magnum`. Есть claim, статус, ретрай, reclaim зависших.
