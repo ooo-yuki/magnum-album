@@ -3111,6 +3111,1356 @@ Detal: kazhdyj den 1 quest 72 — otkryt 3 recaps + klik 42 + quiz 1Q. Progress 
 
 ---
 
+### 7.73 Bratukha-Ficha 42.73 — Retro-Wave 73 — VHS glitch + scanline
+
+**Ideya:**
+Modul 42.73: bratukha delaj 73 cherez /magnum/ — random ivent 42/142/420, FOMO 42ch, Create shesternya 73. Limit 3/d, cooldown 6ch LS, anti-abuz IP v2. Sharing 42.73 OG.
+Detal: kazhdyj den 1 quest 73 — otkryt 3 recaps + klik 42 + quiz 1Q. Progress LS `magnum-42.73`.
+
+**LS klyuchi:**
+- `magnum-42.73:{count,lastDate,claimed,season:73}`
+- `magnum-42.73-cooldown:ISO`
+- `magnum-coins:number` `src/lib/coins.ts`
+- `magnum-42.73-history:[]`
+- server v2: `magnum_hype42_73(user_id,count,last_date)`
+
+**UI bloki:**
+- `Hype42_73Card` gradient `linear-gradient(135deg,#ff2d55,#5865f2)` emoji 🪼
+- `Hype42_73Timer` 42:00:00 puls scale 1→1.04
+- `Hype42_73Reward` konfetti 120 + addCoins
+- `Hype42_73History` 20 barov
+- `Hype42_73Badge` NavGrid 42.73 LIVE
+- `Hype42_73Share` OG 1080
+
+**Fajly:**
+- `src/components/Hype42_73.tsx`
+- `src/lib/hype42_73.ts` get/claim/can/cooldown
+- `src/components/Hype42_73.module.css` pulse
+- `src/pages/HomePage.tsx` widget
+- `src/lib/coins.ts`
+- `server.ts` GET/POST /magnum/api/hype42/73
+
+**Edge:**
+- toDateString lokalno future sbros
+- LS bityj fallback {count:0}
+- povtor claim idempotent
+- NaN klamp addCoins
+- privatnyj try/catch
+- prefers-reduced-motion statichno
+- dve vkladki BroadcastChannel
+- server sravnivaet lastDate
+
+**Nagrada/khajp:**
+- 42/142/420/1420 sezon 73 skin hype42.73-fire epic
+- sharing 42.73 krinzha ne sushchestvuet + PRESAVE https://music.thefence.me/psmagnum
+- kross StreakCalendar RecapQuest Leaderboard HYPE 42.73
+- console.log('[magnum] hype42.73')
+
+### 7.74 Bratukha-Ficha 42.74 — Create Train 74 — marshrut 42 i raspisanie
+
+**Ideya:**
+Modul 42.74: bratukha delaj 74 cherez /magnum/ — random ivent 42/142/420, FOMO 42ch, Create shesternya 74. Limit 3/d, cooldown 6ch LS, anti-abuz IP v2. Sharing 42.74 OG.
+Detal: kazhdyj den 1 quest 74 — otkryt 3 recaps + klik 42 + quiz 1Q. Progress LS `magnum-42.74`.
+
+**LS klyuchi:**
+- `magnum-42.74:{count,lastDate,claimed,season:74}`
+- `magnum-42.74-cooldown:ISO`
+- `magnum-coins:number` `src/lib/coins.ts`
+- `magnum-42.74-history:[]`
+- server v2: `magnum_hype42_74(user_id,count,last_date)`
+
+**UI bloki:**
+- `Hype42_74Card` gradient `linear-gradient(135deg,#ff2d55,#5865f2)` emoji 🔥
+- `Hype42_74Timer` 42:00:00 puls scale 1→1.04
+- `Hype42_74Reward` konfetti 120 + addCoins
+- `Hype42_74History` 20 barov
+- `Hype42_74Badge` NavGrid 42.74 LIVE
+- `Hype42_74Share` OG 1080
+
+**Fajly:**
+- `src/components/Hype42_74.tsx`
+- `src/lib/hype42_74.ts` get/claim/can/cooldown
+- `src/components/Hype42_74.module.css` pulse
+- `src/pages/HomePage.tsx` widget
+- `src/lib/coins.ts`
+- `server.ts` GET/POST /magnum/api/hype42/74
+
+**Edge:**
+- toDateString lokalno future sbros
+- LS bityj fallback {count:0}
+- povtor claim idempotent
+- NaN klamp addCoins
+- privatnyj try/catch
+- prefers-reduced-motion statichno
+- dve vkladki BroadcastChannel
+- server sravnivaet lastDate
+
+**Nagrada/khajp:**
+- 42/142/420/1420 sezon 74 skin hype42.74-fire epic
+- sharing 42.74 krinzha ne sushchestvuet + PRESAVE https://music.thefence.me/psmagnum
+- kross StreakCalendar RecapQuest Leaderboard HYPE 42.74
+- console.log('[magnum] hype42.74')
+
+### 7.75 Bratukha-Ficha 42.75 — Kuzbass Lore 75 — ugol i veter
+
+**Ideya:**
+Modul 42.75: bratukha delaj 75 cherez /magnum/ — random ivent 42/142/420, FOMO 42ch, Create shesternya 75. Limit 3/d, cooldown 6ch LS, anti-abuz IP v2. Sharing 42.75 OG.
+Detal: kazhdyj den 1 quest 75 — otkryt 3 recaps + klik 42 + quiz 1Q. Progress LS `magnum-42.75`.
+
+**LS klyuchi:**
+- `magnum-42.75:{count,lastDate,claimed,season:75}`
+- `magnum-42.75-cooldown:ISO`
+- `magnum-coins:number` `src/lib/coins.ts`
+- `magnum-42.75-history:[]`
+- server v2: `magnum_hype42_75(user_id,count,last_date)`
+
+**UI bloki:**
+- `Hype42_75Card` gradient `linear-gradient(135deg,#ff2d55,#5865f2)` emoji ⚡
+- `Hype42_75Timer` 42:00:00 puls scale 1→1.04
+- `Hype42_75Reward` konfetti 120 + addCoins
+- `Hype42_75History` 20 barov
+- `Hype42_75Badge` NavGrid 42.75 LIVE
+- `Hype42_75Share` OG 1080
+
+**Fajly:**
+- `src/components/Hype42_75.tsx`
+- `src/lib/hype42_75.ts` get/claim/can/cooldown
+- `src/components/Hype42_75.module.css` pulse
+- `src/pages/HomePage.tsx` widget
+- `src/lib/coins.ts`
+- `server.ts` GET/POST /magnum/api/hype42/75
+
+**Edge:**
+- toDateString lokalno future sbros
+- LS bityj fallback {count:0}
+- povtor claim idempotent
+- NaN klamp addCoins
+- privatnyj try/catch
+- prefers-reduced-motion statichno
+- dve vkladki BroadcastChannel
+- server sravnivaet lastDate
+
+**Nagrada/khajp:**
+- 42/142/420/1420 sezon 75 skin hype42.75-fire epic
+- sharing 42.75 krinzha ne sushchestvuet + PRESAVE https://music.thefence.me/psmagnum
+- kross StreakCalendar RecapQuest Leaderboard HYPE 42.75
+- console.log('[magnum] hype42.75')
+
+### 7.76 Bratukha-Ficha 42.76 — Magazin Skinov 76 — kombo-nabor 42
+
+**Ideya:**
+Modul 42.76: bratukha delaj 76 cherez /magnum/ — random ivent 42/142/420, FOMO 42ch, Create shesternya 76. Limit 3/d, cooldown 6ch LS, anti-abuz IP v2. Sharing 42.76 OG.
+Detal: kazhdyj den 1 quest 76 — otkryt 3 recaps + klik 42 + quiz 1Q. Progress LS `magnum-42.76`.
+
+**LS klyuchi:**
+- `magnum-42.76:{count,lastDate,claimed,season:76}`
+- `magnum-42.76-cooldown:ISO`
+- `magnum-coins:number` `src/lib/coins.ts`
+- `magnum-42.76-history:[]`
+- server v2: `magnum_hype42_76(user_id,count,last_date)`
+
+**UI bloki:**
+- `Hype42_76Card` gradient `linear-gradient(135deg,#ff2d55,#5865f2)` emoji 🎛️
+- `Hype42_76Timer` 42:00:00 puls scale 1→1.04
+- `Hype42_76Reward` konfetti 120 + addCoins
+- `Hype42_76History` 20 barov
+- `Hype42_76Badge` NavGrid 42.76 LIVE
+- `Hype42_76Share` OG 1080
+
+**Fajly:**
+- `src/components/Hype42_76.tsx`
+- `src/lib/hype42_76.ts` get/claim/can/cooldown
+- `src/components/Hype42_76.module.css` pulse
+- `src/pages/HomePage.tsx` widget
+- `src/lib/coins.ts`
+- `server.ts` GET/POST /magnum/api/hype42/76
+
+**Edge:**
+- toDateString lokalno future sbros
+- LS bityj fallback {count:0}
+- povtor claim idempotent
+- NaN klamp addCoins
+- privatnyj try/catch
+- prefers-reduced-motion statichno
+- dve vkladki BroadcastChannel
+- server sravnivaet lastDate
+
+**Nagrada/khajp:**
+- 42/142/420/1420 sezon 76 skin hype42.76-fire epic
+- sharing 42.76 krinzha ne sushchestvuet + PRESAVE https://music.thefence.me/psmagnum
+- kross StreakCalendar RecapQuest Leaderboard HYPE 42.76
+- console.log('[magnum] hype42.76')
+
+### 7.77 Bratukha-Ficha 42.77 — Brat-Bot 77 — meme-generator 42
+
+**Ideya:**
+Modul 42.77: bratukha delaj 77 cherez /magnum/ — random ivent 42/142/420, FOMO 42ch, Create shesternya 77. Limit 3/d, cooldown 6ch LS, anti-abuz IP v2. Sharing 42.77 OG.
+Detal: kazhdyj den 1 quest 77 — otkryt 3 recaps + klik 42 + quiz 1Q. Progress LS `magnum-42.77`.
+
+**LS klyuchi:**
+- `magnum-42.77:{count,lastDate,claimed,season:77}`
+- `magnum-42.77-cooldown:ISO`
+- `magnum-coins:number` `src/lib/coins.ts`
+- `magnum-42.77-history:[]`
+- server v2: `magnum_hype42_77(user_id,count,last_date)`
+
+**UI bloki:**
+- `Hype42_77Card` gradient `linear-gradient(135deg,#ff2d55,#5865f2)` emoji 🧪
+- `Hype42_77Timer` 42:00:00 puls scale 1→1.04
+- `Hype42_77Reward` konfetti 120 + addCoins
+- `Hype42_77History` 20 barov
+- `Hype42_77Badge` NavGrid 42.77 LIVE
+- `Hype42_77Share` OG 1080
+
+**Fajly:**
+- `src/components/Hype42_77.tsx`
+- `src/lib/hype42_77.ts` get/claim/can/cooldown
+- `src/components/Hype42_77.module.css` pulse
+- `src/pages/HomePage.tsx` widget
+- `src/lib/coins.ts`
+- `server.ts` GET/POST /magnum/api/hype42/77
+
+**Edge:**
+- toDateString lokalno future sbros
+- LS bityj fallback {count:0}
+- povtor claim idempotent
+- NaN klamp addCoins
+- privatnyj try/catch
+- prefers-reduced-motion statichno
+- dve vkladki BroadcastChannel
+- server sravnivaet lastDate
+
+**Nagrada/khajp:**
+- 42/142/420/1420 sezon 77 skin hype42.77-fire epic
+- sharing 42.77 krinzha ne sushchestvuet + PRESAVE https://music.thefence.me/psmagnum
+- kross StreakCalendar RecapQuest Leaderboard HYPE 42.77
+- console.log('[magnum] hype42.77')
+
+### 7.78 Bratukha-Ficha 42.78 — Arena 78 — sezon #78 i battle-pass
+
+**Ideya:**
+Modul 42.78: bratukha delaj 78 cherez /magnum/ — random ivent 42/142/420, FOMO 42ch, Create shesternya 78. Limit 3/d, cooldown 6ch LS, anti-abuz IP v2. Sharing 42.78 OG.
+Detal: kazhdyj den 1 quest 78 — otkryt 3 recaps + klik 42 + quiz 1Q. Progress LS `magnum-42.78`.
+
+**LS klyuchi:**
+- `magnum-42.78:{count,lastDate,claimed,season:78}`
+- `magnum-42.78-cooldown:ISO`
+- `magnum-coins:number` `src/lib/coins.ts`
+- `magnum-42.78-history:[]`
+- server v2: `magnum_hype42_78(user_id,count,last_date)`
+
+**UI bloki:**
+- `Hype42_78Card` gradient `linear-gradient(135deg,#ff2d55,#5865f2)` emoji 🎲
+- `Hype42_78Timer` 42:00:00 puls scale 1→1.04
+- `Hype42_78Reward` konfetti 120 + addCoins
+- `Hype42_78History` 20 barov
+- `Hype42_78Badge` NavGrid 42.78 LIVE
+- `Hype42_78Share` OG 1080
+
+**Fajly:**
+- `src/components/Hype42_78.tsx`
+- `src/lib/hype42_78.ts` get/claim/can/cooldown
+- `src/components/Hype42_78.module.css` pulse
+- `src/pages/HomePage.tsx` widget
+- `src/lib/coins.ts`
+- `server.ts` GET/POST /magnum/api/hype42/78
+
+**Edge:**
+- toDateString lokalno future sbros
+- LS bityj fallback {count:0}
+- povtor claim idempotent
+- NaN klamp addCoins
+- privatnyj try/catch
+- prefers-reduced-motion statichno
+- dve vkladki BroadcastChannel
+- server sravnivaet lastDate
+
+**Nagrada/khajp:**
+- 42/142/420/1420 sezon 78 skin hype42.78-fire epic
+- sharing 42.78 krinzha ne sushchestvuet + PRESAVE https://music.thefence.me/psmagnum
+- kross StreakCalendar RecapQuest Leaderboard HYPE 42.78
+- console.log('[magnum] hype42.78')
+
+### 7.79 Bratukha-Ficha 42.79 — Eco-Kvest 79 — pererabotka 42
+
+**Ideya:**
+Modul 42.79: bratukha delaj 79 cherez /magnum/ — random ivent 42/142/420, FOMO 42ch, Create shesternya 79. Limit 3/d, cooldown 6ch LS, anti-abuz IP v2. Sharing 42.79 OG.
+Detal: kazhdyj den 1 quest 79 — otkryt 3 recaps + klik 42 + quiz 1Q. Progress LS `magnum-42.79`.
+
+**LS klyuchi:**
+- `magnum-42.79:{count,lastDate,claimed,season:79}`
+- `magnum-42.79-cooldown:ISO`
+- `magnum-coins:number` `src/lib/coins.ts`
+- `magnum-42.79-history:[]`
+- server v2: `magnum_hype42_79(user_id,count,last_date)`
+
+**UI bloki:**
+- `Hype42_79Card` gradient `linear-gradient(135deg,#ff2d55,#5865f2)` emoji 🌀
+- `Hype42_79Timer` 42:00:00 puls scale 1→1.04
+- `Hype42_79Reward` konfetti 120 + addCoins
+- `Hype42_79History` 20 barov
+- `Hype42_79Badge` NavGrid 42.79 LIVE
+- `Hype42_79Share` OG 1080
+
+**Fajly:**
+- `src/components/Hype42_79.tsx`
+- `src/lib/hype42_79.ts` get/claim/can/cooldown
+- `src/components/Hype42_79.module.css` pulse
+- `src/pages/HomePage.tsx` widget
+- `src/lib/coins.ts`
+- `server.ts` GET/POST /magnum/api/hype42/79
+
+**Edge:**
+- toDateString lokalno future sbros
+- LS bityj fallback {count:0}
+- povtor claim idempotent
+- NaN klamp addCoins
+- privatnyj try/catch
+- prefers-reduced-motion statichno
+- dve vkladki BroadcastChannel
+- server sravnivaet lastDate
+
+**Nagrada/khajp:**
+- 42/142/420/1420 sezon 79 skin hype42.79-fire epic
+- sharing 42.79 krinzha ne sushchestvuet + PRESAVE https://music.thefence.me/psmagnum
+- kross StreakCalendar RecapQuest Leaderboard HYPE 42.79
+- console.log('[magnum] hype42.79')
+
+### 7.80 Bratukha-Ficha 42.80 — Freakland DJ 80 — lo-fi MAGNUM
+
+**Ideya:**
+Modul 42.80: bratukha delaj 80 cherez /magnum/ — random ivent 42/142/420, FOMO 42ch, Create shesternya 80. Limit 3/d, cooldown 6ch LS, anti-abuz IP v2. Sharing 42.80 OG.
+Detal: kazhdyj den 1 quest 80 — otkryt 3 recaps + klik 42 + quiz 1Q. Progress LS `magnum-42.80`.
+
+**LS klyuchi:**
+- `magnum-42.80:{count,lastDate,claimed,season:80}`
+- `magnum-42.80-cooldown:ISO`
+- `magnum-coins:number` `src/lib/coins.ts`
+- `magnum-42.80-history:[]`
+- server v2: `magnum_hype42_80(user_id,count,last_date)`
+
+**UI bloki:**
+- `Hype42_80Card` gradient `linear-gradient(135deg,#ff2d55,#5865f2)` emoji 💎
+- `Hype42_80Timer` 42:00:00 puls scale 1→1.04
+- `Hype42_80Reward` konfetti 120 + addCoins
+- `Hype42_80History` 20 barov
+- `Hype42_80Badge` NavGrid 42.80 LIVE
+- `Hype42_80Share` OG 1080
+
+**Fajly:**
+- `src/components/Hype42_80.tsx`
+- `src/lib/hype42_80.ts` get/claim/can/cooldown
+- `src/components/Hype42_80.module.css` pulse
+- `src/pages/HomePage.tsx` widget
+- `src/lib/coins.ts`
+- `server.ts` GET/POST /magnum/api/hype42/80
+
+**Edge:**
+- toDateString lokalno future sbros
+- LS bityj fallback {count:0}
+- povtor claim idempotent
+- NaN klamp addCoins
+- privatnyj try/catch
+- prefers-reduced-motion statichno
+- dve vkladki BroadcastChannel
+- server sravnivaet lastDate
+
+**Nagrada/khajp:**
+- 42/142/420/1420 sezon 80 skin hype42.80-fire epic
+- sharing 42.80 krinzha ne sushchestvuet + PRESAVE https://music.thefence.me/psmagnum
+- kross StreakCalendar RecapQuest Leaderboard HYPE 42.80
+- console.log('[magnum] hype42.80')
+
+### 7.81 Bratukha-Ficha 42.81 — Streak Heatmap 81 — kalendar zhara
+
+**Ideya:**
+Modul 42.81: bratukha delaj 81 cherez /magnum/ — random ivent 42/142/420, FOMO 42ch, Create shesternya 81. Limit 3/d, cooldown 6ch LS, anti-abuz IP v2. Sharing 42.81 OG.
+Detal: kazhdyj den 1 quest 81 — otkryt 3 recaps + klik 42 + quiz 1Q. Progress LS `magnum-42.81`.
+
+**LS klyuchi:**
+- `magnum-42.81:{count,lastDate,claimed,season:81}`
+- `magnum-42.81-cooldown:ISO`
+- `magnum-coins:number` `src/lib/coins.ts`
+- `magnum-42.81-history:[]`
+- server v2: `magnum_hype42_81(user_id,count,last_date)`
+
+**UI bloki:**
+- `Hype42_81Card` gradient `linear-gradient(135deg,#ff2d55,#5865f2)` emoji 🚂
+- `Hype42_81Timer` 42:00:00 puls scale 1→1.04
+- `Hype42_81Reward` konfetti 120 + addCoins
+- `Hype42_81History` 20 barov
+- `Hype42_81Badge` NavGrid 42.81 LIVE
+- `Hype42_81Share` OG 1080
+
+**Fajly:**
+- `src/components/Hype42_81.tsx`
+- `src/lib/hype42_81.ts` get/claim/can/cooldown
+- `src/components/Hype42_81.module.css` pulse
+- `src/pages/HomePage.tsx` widget
+- `src/lib/coins.ts`
+- `server.ts` GET/POST /magnum/api/hype42/81
+
+**Edge:**
+- toDateString lokalno future sbros
+- LS bityj fallback {count:0}
+- povtor claim idempotent
+- NaN klamp addCoins
+- privatnyj try/catch
+- prefers-reduced-motion statichno
+- dve vkladki BroadcastChannel
+- server sravnivaet lastDate
+
+**Nagrada/khajp:**
+- 42/142/420/1420 sezon 81 skin hype42.81-fire epic
+- sharing 42.81 krinzha ne sushchestvuet + PRESAVE https://music.thefence.me/psmagnum
+- kross StreakCalendar RecapQuest Leaderboard HYPE 42.81
+- console.log('[magnum] hype42.81')
+
+### 7.82 Bratukha-Ficha 42.82 — Roulette 82 — super-wheel 42x
+
+**Ideya:**
+Modul 42.82: bratukha delaj 82 cherez /magnum/ — random ivent 42/142/420, FOMO 42ch, Create shesternya 82. Limit 3/d, cooldown 6ch LS, anti-abuz IP v2. Sharing 42.82 OG.
+Detal: kazhdyj den 1 quest 82 — otkryt 3 recaps + klik 42 + quiz 1Q. Progress LS `magnum-42.82`.
+
+**LS klyuchi:**
+- `magnum-42.82:{count,lastDate,claimed,season:82}`
+- `magnum-42.82-cooldown:ISO`
+- `magnum-coins:number` `src/lib/coins.ts`
+- `magnum-42.82-history:[]`
+- server v2: `magnum_hype42_82(user_id,count,last_date)`
+
+**UI bloki:**
+- `Hype42_82Card` gradient `linear-gradient(135deg,#ff2d55,#5865f2)` emoji 🧱
+- `Hype42_82Timer` 42:00:00 puls scale 1→1.04
+- `Hype42_82Reward` konfetti 120 + addCoins
+- `Hype42_82History` 20 barov
+- `Hype42_82Badge` NavGrid 42.82 LIVE
+- `Hype42_82Share` OG 1080
+
+**Fajly:**
+- `src/components/Hype42_82.tsx`
+- `src/lib/hype42_82.ts` get/claim/can/cooldown
+- `src/components/Hype42_82.module.css` pulse
+- `src/pages/HomePage.tsx` widget
+- `src/lib/coins.ts`
+- `server.ts` GET/POST /magnum/api/hype42/82
+
+**Edge:**
+- toDateString lokalno future sbros
+- LS bityj fallback {count:0}
+- povtor claim idempotent
+- NaN klamp addCoins
+- privatnyj try/catch
+- prefers-reduced-motion statichno
+- dve vkladki BroadcastChannel
+- server sravnivaet lastDate
+
+**Nagrada/khajp:**
+- 42/142/420/1420 sezon 82 skin hype42.82-fire epic
+- sharing 42.82 krinzha ne sushchestvuet + PRESAVE https://music.thefence.me/psmagnum
+- kross StreakCalendar RecapQuest Leaderboard HYPE 42.82
+- console.log('[magnum] hype42.82')
+
+### 7.83 Bratukha-Ficha 42.83 — Clip Duels 83 — 1v1 narezek
+
+**Ideya:**
+Modul 42.83: bratukha delaj 83 cherez /magnum/ — random ivent 42/142/420, FOMO 42ch, Create shesternya 83. Limit 3/d, cooldown 6ch LS, anti-abuz IP v2. Sharing 42.83 OG.
+Detal: kazhdyj den 1 quest 83 — otkryt 3 recaps + klik 42 + quiz 1Q. Progress LS `magnum-42.83`.
+
+**LS klyuchi:**
+- `magnum-42.83:{count,lastDate,claimed,season:83}`
+- `magnum-42.83-cooldown:ISO`
+- `magnum-coins:number` `src/lib/coins.ts`
+- `magnum-42.83-history:[]`
+- server v2: `magnum_hype42_83(user_id,count,last_date)`
+
+**UI bloki:**
+- `Hype42_83Card` gradient `linear-gradient(135deg,#ff2d55,#5865f2)` emoji 🎧
+- `Hype42_83Timer` 42:00:00 puls scale 1→1.04
+- `Hype42_83Reward` konfetti 120 + addCoins
+- `Hype42_83History` 20 barov
+- `Hype42_83Badge` NavGrid 42.83 LIVE
+- `Hype42_83Share` OG 1080
+
+**Fajly:**
+- `src/components/Hype42_83.tsx`
+- `src/lib/hype42_83.ts` get/claim/can/cooldown
+- `src/components/Hype42_83.module.css` pulse
+- `src/pages/HomePage.tsx` widget
+- `src/lib/coins.ts`
+- `server.ts` GET/POST /magnum/api/hype42/83
+
+**Edge:**
+- toDateString lokalno future sbros
+- LS bityj fallback {count:0}
+- povtor claim idempotent
+- NaN klamp addCoins
+- privatnyj try/catch
+- prefers-reduced-motion statichno
+- dve vkladki BroadcastChannel
+- server sravnivaet lastDate
+
+**Nagrada/khajp:**
+- 42/142/420/1420 sezon 83 skin hype42.83-fire epic
+- sharing 42.83 krinzha ne sushchestvuet + PRESAVE https://music.thefence.me/psmagnum
+- kross StreakCalendar RecapQuest Leaderboard HYPE 42.83
+- console.log('[magnum] hype42.83')
+
+### 7.84 Bratukha-Ficha 42.84 — Recap Roulette 84 — random 42
+
+**Ideya:**
+Modul 42.84: bratukha delaj 84 cherez /magnum/ — random ivent 42/142/420, FOMO 42ch, Create shesternya 84. Limit 3/d, cooldown 6ch LS, anti-abuz IP v2. Sharing 42.84 OG.
+Detal: kazhdyj den 1 quest 84 — otkryt 3 recaps + klik 42 + quiz 1Q. Progress LS `magnum-42.84`.
+
+**LS klyuchi:**
+- `magnum-42.84:{count,lastDate,claimed,season:84}`
+- `magnum-42.84-cooldown:ISO`
+- `magnum-coins:number` `src/lib/coins.ts`
+- `magnum-42.84-history:[]`
+- server v2: `magnum_hype42_84(user_id,count,last_date)`
+
+**UI bloki:**
+- `Hype42_84Card` gradient `linear-gradient(135deg,#ff2d55,#5865f2)` emoji 🏆
+- `Hype42_84Timer` 42:00:00 puls scale 1→1.04
+- `Hype42_84Reward` konfetti 120 + addCoins
+- `Hype42_84History` 20 barov
+- `Hype42_84Badge` NavGrid 42.84 LIVE
+- `Hype42_84Share` OG 1080
+
+**Fajly:**
+- `src/components/Hype42_84.tsx`
+- `src/lib/hype42_84.ts` get/claim/can/cooldown
+- `src/components/Hype42_84.module.css` pulse
+- `src/pages/HomePage.tsx` widget
+- `src/lib/coins.ts`
+- `server.ts` GET/POST /magnum/api/hype42/84
+
+**Edge:**
+- toDateString lokalno future sbros
+- LS bityj fallback {count:0}
+- povtor claim idempotent
+- NaN klamp addCoins
+- privatnyj try/catch
+- prefers-reduced-motion statichno
+- dve vkladki BroadcastChannel
+- server sravnivaet lastDate
+
+**Nagrada/khajp:**
+- 42/142/420/1420 sezon 84 skin hype42.84-fire epic
+- sharing 42.84 krinzha ne sushchestvuet + PRESAVE https://music.thefence.me/psmagnum
+- kross StreakCalendar RecapQuest Leaderboard HYPE 42.84
+- console.log('[magnum] hype42.84')
+
+### 7.85 Bratukha-Ficha 42.85 — Voice TTS 85 — bratukha ozvuchka
+
+**Ideya:**
+Modul 42.85: bratukha delaj 85 cherez /magnum/ — random ivent 42/142/420, FOMO 42ch, Create shesternya 85. Limit 3/d, cooldown 6ch LS, anti-abuz IP v2. Sharing 42.85 OG.
+Detal: kazhdyj den 1 quest 85 — otkryt 3 recaps + klik 42 + quiz 1Q. Progress LS `magnum-42.85`.
+
+**LS klyuchi:**
+- `magnum-42.85:{count,lastDate,claimed,season:85}`
+- `magnum-42.85-cooldown:ISO`
+- `magnum-coins:number` `src/lib/coins.ts`
+- `magnum-42.85-history:[]`
+- server v2: `magnum_hype42_85(user_id,count,last_date)`
+
+**UI bloki:**
+- `Hype42_85Card` gradient `linear-gradient(135deg,#ff2d55,#5865f2)` emoji 🌪️
+- `Hype42_85Timer` 42:00:00 puls scale 1→1.04
+- `Hype42_85Reward` konfetti 120 + addCoins
+- `Hype42_85History` 20 barov
+- `Hype42_85Badge` NavGrid 42.85 LIVE
+- `Hype42_85Share` OG 1080
+
+**Fajly:**
+- `src/components/Hype42_85.tsx`
+- `src/lib/hype42_85.ts` get/claim/can/cooldown
+- `src/components/Hype42_85.module.css` pulse
+- `src/pages/HomePage.tsx` widget
+- `src/lib/coins.ts`
+- `server.ts` GET/POST /magnum/api/hype42/85
+
+**Edge:**
+- toDateString lokalno future sbros
+- LS bityj fallback {count:0}
+- povtor claim idempotent
+- NaN klamp addCoins
+- privatnyj try/catch
+- prefers-reduced-motion statichno
+- dve vkladki BroadcastChannel
+- server sravnivaet lastDate
+
+**Nagrada/khajp:**
+- 42/142/420/1420 sezon 85 skin hype42.85-fire epic
+- sharing 42.85 krinzha ne sushchestvuet + PRESAVE https://music.thefence.me/psmagnum
+- kross StreakCalendar RecapQuest Leaderboard HYPE 42.85
+- console.log('[magnum] hype42.85')
+
+### 7.86 Bratukha-Ficha 42.86 — Timeline 86 — lenta 42 sobytij
+
+**Ideya:**
+Modul 42.86: bratukha delaj 86 cherez /magnum/ — random ivent 42/142/420, FOMO 42ch, Create shesternya 86. Limit 3/d, cooldown 6ch LS, anti-abuz IP v2. Sharing 42.86 OG.
+Detal: kazhdyj den 1 quest 86 — otkryt 3 recaps + klik 42 + quiz 1Q. Progress LS `magnum-42.86`.
+
+**LS klyuchi:**
+- `magnum-42.86:{count,lastDate,claimed,season:86}`
+- `magnum-42.86-cooldown:ISO`
+- `magnum-coins:number` `src/lib/coins.ts`
+- `magnum-42.86-history:[]`
+- server v2: `magnum_hype42_86(user_id,count,last_date)`
+
+**UI bloki:**
+- `Hype42_86Card` gradient `linear-gradient(135deg,#ff2d55,#5865f2)` emoji 🛠️
+- `Hype42_86Timer` 42:00:00 puls scale 1→1.04
+- `Hype42_86Reward` konfetti 120 + addCoins
+- `Hype42_86History` 20 barov
+- `Hype42_86Badge` NavGrid 42.86 LIVE
+- `Hype42_86Share` OG 1080
+
+**Fajly:**
+- `src/components/Hype42_86.tsx`
+- `src/lib/hype42_86.ts` get/claim/can/cooldown
+- `src/components/Hype42_86.module.css` pulse
+- `src/pages/HomePage.tsx` widget
+- `src/lib/coins.ts`
+- `server.ts` GET/POST /magnum/api/hype42/86
+
+**Edge:**
+- toDateString lokalno future sbros
+- LS bityj fallback {count:0}
+- povtor claim idempotent
+- NaN klamp addCoins
+- privatnyj try/catch
+- prefers-reduced-motion statichno
+- dve vkladki BroadcastChannel
+- server sravnivaet lastDate
+
+**Nagrada/khajp:**
+- 42/142/420/1420 sezon 86 skin hype42.86-fire epic
+- sharing 42.86 krinzha ne sushchestvuet + PRESAVE https://music.thefence.me/psmagnum
+- kross StreakCalendar RecapQuest Leaderboard HYPE 42.86
+- console.log('[magnum] hype42.86')
+
+### 7.87 Bratukha-Ficha 42.87 — Shop Auction 87 — auktsion limitok
+
+**Ideya:**
+Modul 42.87: bratukha delaj 87 cherez /magnum/ — random ivent 42/142/420, FOMO 42ch, Create shesternya 87. Limit 3/d, cooldown 6ch LS, anti-abuz IP v2. Sharing 42.87 OG.
+Detal: kazhdyj den 1 quest 87 — otkryt 3 recaps + klik 42 + quiz 1Q. Progress LS `magnum-42.87`.
+
+**LS klyuchi:**
+- `magnum-42.87:{count,lastDate,claimed,season:87}`
+- `magnum-42.87-cooldown:ISO`
+- `magnum-coins:number` `src/lib/coins.ts`
+- `magnum-42.87-history:[]`
+- server v2: `magnum_hype42_87(user_id,count,last_date)`
+
+**UI bloki:**
+- `Hype42_87Card` gradient `linear-gradient(135deg,#ff2d55,#5865f2)` emoji 📦
+- `Hype42_87Timer` 42:00:00 puls scale 1→1.04
+- `Hype42_87Reward` konfetti 120 + addCoins
+- `Hype42_87History` 20 barov
+- `Hype42_87Badge` NavGrid 42.87 LIVE
+- `Hype42_87Share` OG 1080
+
+**Fajly:**
+- `src/components/Hype42_87.tsx`
+- `src/lib/hype42_87.ts` get/claim/can/cooldown
+- `src/components/Hype42_87.module.css` pulse
+- `src/pages/HomePage.tsx` widget
+- `src/lib/coins.ts`
+- `server.ts` GET/POST /magnum/api/hype42/87
+
+**Edge:**
+- toDateString lokalno future sbros
+- LS bityj fallback {count:0}
+- povtor claim idempotent
+- NaN klamp addCoins
+- privatnyj try/catch
+- prefers-reduced-motion statichno
+- dve vkladki BroadcastChannel
+- server sravnivaet lastDate
+
+**Nagrada/khajp:**
+- 42/142/420/1420 sezon 87 skin hype42.87-fire epic
+- sharing 42.87 krinzha ne sushchestvuet + PRESAVE https://music.thefence.me/psmagnum
+- kross StreakCalendar RecapQuest Leaderboard HYPE 42.87
+- console.log('[magnum] hype42.87')
+
+### 7.88 Bratukha-Ficha 42.88 — Share Card 88 — OG 1200x630
+
+**Ideya:**
+Modul 42.88: bratukha delaj 88 cherez /magnum/ — random ivent 42/142/420, FOMO 42ch, Create shesternya 88. Limit 3/d, cooldown 6ch LS, anti-abuz IP v2. Sharing 42.88 OG.
+Detal: kazhdyj den 1 quest 88 — otkryt 3 recaps + klik 42 + quiz 1Q. Progress LS `magnum-42.88`.
+
+**LS klyuchi:**
+- `magnum-42.88:{count,lastDate,claimed,season:88}`
+- `magnum-42.88-cooldown:ISO`
+- `magnum-coins:number` `src/lib/coins.ts`
+- `magnum-42.88-history:[]`
+- server v2: `magnum_hype42_88(user_id,count,last_date)`
+
+**UI bloki:**
+- `Hype42_88Card` gradient `linear-gradient(135deg,#ff2d55,#5865f2)` emoji 🎨
+- `Hype42_88Timer` 42:00:00 puls scale 1→1.04
+- `Hype42_88Reward` konfetti 120 + addCoins
+- `Hype42_88History` 20 barov
+- `Hype42_88Badge` NavGrid 42.88 LIVE
+- `Hype42_88Share` OG 1080
+
+**Fajly:**
+- `src/components/Hype42_88.tsx`
+- `src/lib/hype42_88.ts` get/claim/can/cooldown
+- `src/components/Hype42_88.module.css` pulse
+- `src/pages/HomePage.tsx` widget
+- `src/lib/coins.ts`
+- `server.ts` GET/POST /magnum/api/hype42/88
+
+**Edge:**
+- toDateString lokalno future sbros
+- LS bityj fallback {count:0}
+- povtor claim idempotent
+- NaN klamp addCoins
+- privatnyj try/catch
+- prefers-reduced-motion statichno
+- dve vkladki BroadcastChannel
+- server sravnivaet lastDate
+
+**Nagrada/khajp:**
+- 42/142/420/1420 sezon 88 skin hype42.88-fire epic
+- sharing 42.88 krinzha ne sushchestvuet + PRESAVE https://music.thefence.me/psmagnum
+- kross StreakCalendar RecapQuest Leaderboard HYPE 42.88
+- console.log('[magnum] hype42.88')
+
+### 7.89 Bratukha-Ficha 42.89 — Mining 89 — kliker 42 GH/s
+
+**Ideya:**
+Modul 42.89: bratukha delaj 89 cherez /magnum/ — random ivent 42/142/420, FOMO 42ch, Create shesternya 89. Limit 3/d, cooldown 6ch LS, anti-abuz IP v2. Sharing 42.89 OG.
+Detal: kazhdyj den 1 quest 89 — otkryt 3 recaps + klik 42 + quiz 1Q. Progress LS `magnum-42.89`.
+
+**LS klyuchi:**
+- `magnum-42.89:{count,lastDate,claimed,season:89}`
+- `magnum-42.89-cooldown:ISO`
+- `magnum-coins:number` `src/lib/coins.ts`
+- `magnum-42.89-history:[]`
+- server v2: `magnum_hype42_89(user_id,count,last_date)`
+
+**UI bloki:**
+- `Hype42_89Card` gradient `linear-gradient(135deg,#ff2d55,#5865f2)` emoji 🧲
+- `Hype42_89Timer` 42:00:00 puls scale 1→1.04
+- `Hype42_89Reward` konfetti 120 + addCoins
+- `Hype42_89History` 20 barov
+- `Hype42_89Badge` NavGrid 42.89 LIVE
+- `Hype42_89Share` OG 1080
+
+**Fajly:**
+- `src/components/Hype42_89.tsx`
+- `src/lib/hype42_89.ts` get/claim/can/cooldown
+- `src/components/Hype42_89.module.css` pulse
+- `src/pages/HomePage.tsx` widget
+- `src/lib/coins.ts`
+- `server.ts` GET/POST /magnum/api/hype42/89
+
+**Edge:**
+- toDateString lokalno future sbros
+- LS bityj fallback {count:0}
+- povtor claim idempotent
+- NaN klamp addCoins
+- privatnyj try/catch
+- prefers-reduced-motion statichno
+- dve vkladki BroadcastChannel
+- server sravnivaet lastDate
+
+**Nagrada/khajp:**
+- 42/142/420/1420 sezon 89 skin hype42.89-fire epic
+- sharing 42.89 krinzha ne sushchestvuet + PRESAVE https://music.thefence.me/psmagnum
+- kross StreakCalendar RecapQuest Leaderboard HYPE 42.89
+- console.log('[magnum] hype42.89')
+
+### 7.90 Bratukha-Ficha 42.90 — Quiz Blitz 90 — 10 sek vopros
+
+**Ideya:**
+Modul 42.90: bratukha delaj 90 cherez /magnum/ — random ivent 42/142/420, FOMO 42ch, Create shesternya 90. Limit 3/d, cooldown 6ch LS, anti-abuz IP v2. Sharing 42.90 OG.
+Detal: kazhdyj den 1 quest 90 — otkryt 3 recaps + klik 42 + quiz 1Q. Progress LS `magnum-42.90`.
+
+**LS klyuchi:**
+- `magnum-42.90:{count,lastDate,claimed,season:90}`
+- `magnum-42.90-cooldown:ISO`
+- `magnum-coins:number` `src/lib/coins.ts`
+- `magnum-42.90-history:[]`
+- server v2: `magnum_hype42_90(user_id,count,last_date)`
+
+**UI bloki:**
+- `Hype42_90Card` gradient `linear-gradient(135deg,#ff2d55,#5865f2)` emoji 🛰️
+- `Hype42_90Timer` 42:00:00 puls scale 1→1.04
+- `Hype42_90Reward` konfetti 120 + addCoins
+- `Hype42_90History` 20 barov
+- `Hype42_90Badge` NavGrid 42.90 LIVE
+- `Hype42_90Share` OG 1080
+
+**Fajly:**
+- `src/components/Hype42_90.tsx`
+- `src/lib/hype42_90.ts` get/claim/can/cooldown
+- `src/components/Hype42_90.module.css` pulse
+- `src/pages/HomePage.tsx` widget
+- `src/lib/coins.ts`
+- `server.ts` GET/POST /magnum/api/hype42/90
+
+**Edge:**
+- toDateString lokalno future sbros
+- LS bityj fallback {count:0}
+- povtor claim idempotent
+- NaN klamp addCoins
+- privatnyj try/catch
+- prefers-reduced-motion statichno
+- dve vkladki BroadcastChannel
+- server sravnivaet lastDate
+
+**Nagrada/khajp:**
+- 42/142/420/1420 sezon 90 skin hype42.90-fire epic
+- sharing 42.90 krinzha ne sushchestvuet + PRESAVE https://music.thefence.me/psmagnum
+- kross StreakCalendar RecapQuest Leaderboard HYPE 42.90
+- console.log('[magnum] hype42.90')
+
+### 7.91 Bratukha-Ficha 42.91 — Frame 91 — conic-gradient ramka
+
+**Ideya:**
+Modul 42.91: bratukha delaj 91 cherez /magnum/ — random ivent 42/142/420, FOMO 42ch, Create shesternya 91. Limit 3/d, cooldown 6ch LS, anti-abuz IP v2. Sharing 42.91 OG.
+Detal: kazhdyj den 1 quest 91 — otkryt 3 recaps + klik 42 + quiz 1Q. Progress LS `magnum-42.91`.
+
+**LS klyuchi:**
+- `magnum-42.91:{count,lastDate,claimed,season:91}`
+- `magnum-42.91-cooldown:ISO`
+- `magnum-coins:number` `src/lib/coins.ts`
+- `magnum-42.91-history:[]`
+- server v2: `magnum_hype42_91(user_id,count,last_date)`
+
+**UI bloki:**
+- `Hype42_91Card` gradient `linear-gradient(135deg,#ff2d55,#5865f2)` emoji 🎯
+- `Hype42_91Timer` 42:00:00 puls scale 1→1.04
+- `Hype42_91Reward` konfetti 120 + addCoins
+- `Hype42_91History` 20 barov
+- `Hype42_91Badge` NavGrid 42.91 LIVE
+- `Hype42_91Share` OG 1080
+
+**Fajly:**
+- `src/components/Hype42_91.tsx`
+- `src/lib/hype42_91.ts` get/claim/can/cooldown
+- `src/components/Hype42_91.module.css` pulse
+- `src/pages/HomePage.tsx` widget
+- `src/lib/coins.ts`
+- `server.ts` GET/POST /magnum/api/hype42/91
+
+**Edge:**
+- toDateString lokalno future sbros
+- LS bityj fallback {count:0}
+- povtor claim idempotent
+- NaN klamp addCoins
+- privatnyj try/catch
+- prefers-reduced-motion statichno
+- dve vkladki BroadcastChannel
+- server sravnivaet lastDate
+
+**Nagrada/khajp:**
+- 42/142/420/1420 sezon 91 skin hype42.91-fire epic
+- sharing 42.91 krinzha ne sushchestvuet + PRESAVE https://music.thefence.me/psmagnum
+- kross StreakCalendar RecapQuest Leaderboard HYPE 42.91
+- console.log('[magnum] hype42.91')
+
+### 7.92 Bratukha-Ficha 42.92 — Neon Grid 92 — RGB setka 42
+
+**Ideya:**
+Modul 42.92: bratukha delaj 92 cherez /magnum/ — random ivent 42/142/420, FOMO 42ch, Create shesternya 92. Limit 3/d, cooldown 6ch LS, anti-abuz IP v2. Sharing 42.92 OG.
+Detal: kazhdyj den 1 quest 92 — otkryt 3 recaps + klik 42 + quiz 1Q. Progress LS `magnum-42.92`.
+
+**LS klyuchi:**
+- `magnum-42.92:{count,lastDate,claimed,season:92}`
+- `magnum-42.92-cooldown:ISO`
+- `magnum-coins:number` `src/lib/coins.ts`
+- `magnum-42.92-history:[]`
+- server v2: `magnum_hype42_92(user_id,count,last_date)`
+
+**UI bloki:**
+- `Hype42_92Card` gradient `linear-gradient(135deg,#ff2d55,#5865f2)` emoji 🦾
+- `Hype42_92Timer` 42:00:00 puls scale 1→1.04
+- `Hype42_92Reward` konfetti 120 + addCoins
+- `Hype42_92History` 20 barov
+- `Hype42_92Badge` NavGrid 42.92 LIVE
+- `Hype42_92Share` OG 1080
+
+**Fajly:**
+- `src/components/Hype42_92.tsx`
+- `src/lib/hype42_92.ts` get/claim/can/cooldown
+- `src/components/Hype42_92.module.css` pulse
+- `src/pages/HomePage.tsx` widget
+- `src/lib/coins.ts`
+- `server.ts` GET/POST /magnum/api/hype42/92
+
+**Edge:**
+- toDateString lokalno future sbros
+- LS bityj fallback {count:0}
+- povtor claim idempotent
+- NaN klamp addCoins
+- privatnyj try/catch
+- prefers-reduced-motion statichno
+- dve vkladki BroadcastChannel
+- server sravnivaet lastDate
+
+**Nagrada/khajp:**
+- 42/142/420/1420 sezon 92 skin hype42.92-fire epic
+- sharing 42.92 krinzha ne sushchestvuet + PRESAVE https://music.thefence.me/psmagnum
+- kross StreakCalendar RecapQuest Leaderboard HYPE 42.92
+- console.log('[magnum] hype42.92')
+
+### 7.93 Bratukha-Ficha 42.93 — Hype Cannon 93 — push 42
+
+**Ideya:**
+Modul 42.93: bratukha delaj 93 cherez /magnum/ — random ivent 42/142/420, FOMO 42ch, Create shesternya 93. Limit 3/d, cooldown 6ch LS, anti-abuz IP v2. Sharing 42.93 OG.
+Detal: kazhdyj den 1 quest 93 — otkryt 3 recaps + klik 42 + quiz 1Q. Progress LS `magnum-42.93`.
+
+**LS klyuchi:**
+- `magnum-42.93:{count,lastDate,claimed,season:93}`
+- `magnum-42.93-cooldown:ISO`
+- `magnum-coins:number` `src/lib/coins.ts`
+- `magnum-42.93-history:[]`
+- server v2: `magnum_hype42_93(user_id,count,last_date)`
+
+**UI bloki:**
+- `Hype42_93Card` gradient `linear-gradient(135deg,#ff2d55,#5865f2)` emoji 🧬
+- `Hype42_93Timer` 42:00:00 puls scale 1→1.04
+- `Hype42_93Reward` konfetti 120 + addCoins
+- `Hype42_93History` 20 barov
+- `Hype42_93Badge` NavGrid 42.93 LIVE
+- `Hype42_93Share` OG 1080
+
+**Fajly:**
+- `src/components/Hype42_93.tsx`
+- `src/lib/hype42_93.ts` get/claim/can/cooldown
+- `src/components/Hype42_93.module.css` pulse
+- `src/pages/HomePage.tsx` widget
+- `src/lib/coins.ts`
+- `server.ts` GET/POST /magnum/api/hype42/93
+
+**Edge:**
+- toDateString lokalno future sbros
+- LS bityj fallback {count:0}
+- povtor claim idempotent
+- NaN klamp addCoins
+- privatnyj try/catch
+- prefers-reduced-motion statichno
+- dve vkladki BroadcastChannel
+- server sravnivaet lastDate
+
+**Nagrada/khajp:**
+- 42/142/420/1420 sezon 93 skin hype42.93-fire epic
+- sharing 42.93 krinzha ne sushchestvuet + PRESAVE https://music.thefence.me/psmagnum
+- kross StreakCalendar RecapQuest Leaderboard HYPE 42.93
+- console.log('[magnum] hype42.93')
+
+### 7.94 Bratukha-Ficha 42.94 — Vinyl 94 — plastinka MAGNUM
+
+**Ideya:**
+Modul 42.94: bratukha delaj 94 cherez /magnum/ — random ivent 42/142/420, FOMO 42ch, Create shesternya 94. Limit 3/d, cooldown 6ch LS, anti-abuz IP v2. Sharing 42.94 OG.
+Detal: kazhdyj den 1 quest 94 — otkryt 3 recaps + klik 42 + quiz 1Q. Progress LS `magnum-42.94`.
+
+**LS klyuchi:**
+- `magnum-42.94:{count,lastDate,claimed,season:94}`
+- `magnum-42.94-cooldown:ISO`
+- `magnum-coins:number` `src/lib/coins.ts`
+- `magnum-42.94-history:[]`
+- server v2: `magnum_hype42_94(user_id,count,last_date)`
+
+**UI bloki:**
+- `Hype42_94Card` gradient `linear-gradient(135deg,#ff2d55,#5865f2)` emoji 🌈
+- `Hype42_94Timer` 42:00:00 puls scale 1→1.04
+- `Hype42_94Reward` konfetti 120 + addCoins
+- `Hype42_94History` 20 barov
+- `Hype42_94Badge` NavGrid 42.94 LIVE
+- `Hype42_94Share` OG 1080
+
+**Fajly:**
+- `src/components/Hype42_94.tsx`
+- `src/lib/hype42_94.ts` get/claim/can/cooldown
+- `src/components/Hype42_94.module.css` pulse
+- `src/pages/HomePage.tsx` widget
+- `src/lib/coins.ts`
+- `server.ts` GET/POST /magnum/api/hype42/94
+
+**Edge:**
+- toDateString lokalno future sbros
+- LS bityj fallback {count:0}
+- povtor claim idempotent
+- NaN klamp addCoins
+- privatnyj try/catch
+- prefers-reduced-motion statichno
+- dve vkladki BroadcastChannel
+- server sravnivaet lastDate
+
+**Nagrada/khajp:**
+- 42/142/420/1420 sezon 94 skin hype42.94-fire epic
+- sharing 42.94 krinzha ne sushchestvuet + PRESAVE https://music.thefence.me/psmagnum
+- kross StreakCalendar RecapQuest Leaderboard HYPE 42.94
+- console.log('[magnum] hype42.94')
+
+### 7.95 Bratukha-Ficha 42.95 — Ice Biome 95 — snezhnyj fregat
+
+**Ideya:**
+Modul 42.95: bratukha delaj 95 cherez /magnum/ — random ivent 42/142/420, FOMO 42ch, Create shesternya 95. Limit 3/d, cooldown 6ch LS, anti-abuz IP v2. Sharing 42.95 OG.
+Detal: kazhdyj den 1 quest 95 — otkryt 3 recaps + klik 42 + quiz 1Q. Progress LS `magnum-42.95`.
+
+**LS klyuchi:**
+- `magnum-42.95:{count,lastDate,claimed,season:95}`
+- `magnum-42.95-cooldown:ISO`
+- `magnum-coins:number` `src/lib/coins.ts`
+- `magnum-42.95-history:[]`
+- server v2: `magnum_hype42_95(user_id,count,last_date)`
+
+**UI bloki:**
+- `Hype42_95Card` gradient `linear-gradient(135deg,#ff2d55,#5865f2)` emoji 🪐
+- `Hype42_95Timer` 42:00:00 puls scale 1→1.04
+- `Hype42_95Reward` konfetti 120 + addCoins
+- `Hype42_95History` 20 barov
+- `Hype42_95Badge` NavGrid 42.95 LIVE
+- `Hype42_95Share` OG 1080
+
+**Fajly:**
+- `src/components/Hype42_95.tsx`
+- `src/lib/hype42_95.ts` get/claim/can/cooldown
+- `src/components/Hype42_95.module.css` pulse
+- `src/pages/HomePage.tsx` widget
+- `src/lib/coins.ts`
+- `server.ts` GET/POST /magnum/api/hype42/95
+
+**Edge:**
+- toDateString lokalno future sbros
+- LS bityj fallback {count:0}
+- povtor claim idempotent
+- NaN klamp addCoins
+- privatnyj try/catch
+- prefers-reduced-motion statichno
+- dve vkladki BroadcastChannel
+- server sravnivaet lastDate
+
+**Nagrada/khajp:**
+- 42/142/420/1420 sezon 95 skin hype42.95-fire epic
+- sharing 42.95 krinzha ne sushchestvuet + PRESAVE https://music.thefence.me/psmagnum
+- kross StreakCalendar RecapQuest Leaderboard HYPE 42.95
+- console.log('[magnum] hype42.95')
+
+### 7.96 Bratukha-Ficha 42.96 — Radio 96 — FM 42.0
+
+**Ideya:**
+Modul 42.96: bratukha delaj 96 cherez /magnum/ — random ivent 42/142/420, FOMO 42ch, Create shesternya 96. Limit 3/d, cooldown 6ch LS, anti-abuz IP v2. Sharing 42.96 OG.
+Detal: kazhdyj den 1 quest 96 — otkryt 3 recaps + klik 42 + quiz 1Q. Progress LS `magnum-42.96`.
+
+**LS klyuchi:**
+- `magnum-42.96:{count,lastDate,claimed,season:96}`
+- `magnum-42.96-cooldown:ISO`
+- `magnum-coins:number` `src/lib/coins.ts`
+- `magnum-42.96-history:[]`
+- server v2: `magnum_hype42_96(user_id,count,last_date)`
+
+**UI bloki:**
+- `Hype42_96Card` gradient `linear-gradient(135deg,#ff2d55,#5865f2)` emoji ⚙️
+- `Hype42_96Timer` 42:00:00 puls scale 1→1.04
+- `Hype42_96Reward` konfetti 120 + addCoins
+- `Hype42_96History` 20 barov
+- `Hype42_96Badge` NavGrid 42.96 LIVE
+- `Hype42_96Share` OG 1080
+
+**Fajly:**
+- `src/components/Hype42_96.tsx`
+- `src/lib/hype42_96.ts` get/claim/can/cooldown
+- `src/components/Hype42_96.module.css` pulse
+- `src/pages/HomePage.tsx` widget
+- `src/lib/coins.ts`
+- `server.ts` GET/POST /magnum/api/hype42/96
+
+**Edge:**
+- toDateString lokalno future sbros
+- LS bityj fallback {count:0}
+- povtor claim idempotent
+- NaN klamp addCoins
+- privatnyj try/catch
+- prefers-reduced-motion statichno
+- dve vkladki BroadcastChannel
+- server sravnivaet lastDate
+
+**Nagrada/khajp:**
+- 42/142/420/1420 sezon 96 skin hype42.96-fire epic
+- sharing 42.96 krinzha ne sushchestvuet + PRESAVE https://music.thefence.me/psmagnum
+- kross StreakCalendar RecapQuest Leaderboard HYPE 42.96
+- console.log('[magnum] hype42.96')
+
+### 7.97 Bratukha-Ficha 42.97 — Crystal 97 — redkij drop 42
+
+**Ideya:**
+Modul 42.97: bratukha delaj 97 cherez /magnum/ — random ivent 42/142/420, FOMO 42ch, Create shesternya 97. Limit 3/d, cooldown 6ch LS, anti-abuz IP v2. Sharing 42.97 OG.
+Detal: kazhdyj den 1 quest 97 — otkryt 3 recaps + klik 42 + quiz 1Q. Progress LS `magnum-42.97`.
+
+**LS klyuchi:**
+- `magnum-42.97:{count,lastDate,claimed,season:97}`
+- `magnum-42.97-cooldown:ISO`
+- `magnum-coins:number` `src/lib/coins.ts`
+- `magnum-42.97-history:[]`
+- server v2: `magnum_hype42_97(user_id,count,last_date)`
+
+**UI bloki:**
+- `Hype42_97Card` gradient `linear-gradient(135deg,#ff2d55,#5865f2)` emoji 🔮
+- `Hype42_97Timer` 42:00:00 puls scale 1→1.04
+- `Hype42_97Reward` konfetti 120 + addCoins
+- `Hype42_97History` 20 barov
+- `Hype42_97Badge` NavGrid 42.97 LIVE
+- `Hype42_97Share` OG 1080
+
+**Fajly:**
+- `src/components/Hype42_97.tsx`
+- `src/lib/hype42_97.ts` get/claim/can/cooldown
+- `src/components/Hype42_97.module.css` pulse
+- `src/pages/HomePage.tsx` widget
+- `src/lib/coins.ts`
+- `server.ts` GET/POST /magnum/api/hype42/97
+
+**Edge:**
+- toDateString lokalno future sbros
+- LS bityj fallback {count:0}
+- povtor claim idempotent
+- NaN klamp addCoins
+- privatnyj try/catch
+- prefers-reduced-motion statichno
+- dve vkladki BroadcastChannel
+- server sravnivaet lastDate
+
+**Nagrada/khajp:**
+- 42/142/420/1420 sezon 97 skin hype42.97-fire epic
+- sharing 42.97 krinzha ne sushchestvuet + PRESAVE https://music.thefence.me/psmagnum
+- kross StreakCalendar RecapQuest Leaderboard HYPE 42.97
+- console.log('[magnum] hype42.97')
+
+### 7.98 Bratukha-Ficha 42.98 — Disco 98 — mirror ball 42
+
+**Ideya:**
+Modul 42.98: bratukha delaj 98 cherez /magnum/ — random ivent 42/142/420, FOMO 42ch, Create shesternya 98. Limit 3/d, cooldown 6ch LS, anti-abuz IP v2. Sharing 42.98 OG.
+Detal: kazhdyj den 1 quest 98 — otkryt 3 recaps + klik 42 + quiz 1Q. Progress LS `magnum-42.98`.
+
+**LS klyuchi:**
+- `magnum-42.98:{count,lastDate,claimed,season:98}`
+- `magnum-42.98-cooldown:ISO`
+- `magnum-coins:number` `src/lib/coins.ts`
+- `magnum-42.98-history:[]`
+- server v2: `magnum_hype42_98(user_id,count,last_date)`
+
+**UI bloki:**
+- `Hype42_98Card` gradient `linear-gradient(135deg,#ff2d55,#5865f2)` emoji 💿
+- `Hype42_98Timer` 42:00:00 puls scale 1→1.04
+- `Hype42_98Reward` konfetti 120 + addCoins
+- `Hype42_98History` 20 barov
+- `Hype42_98Badge` NavGrid 42.98 LIVE
+- `Hype42_98Share` OG 1080
+
+**Fajly:**
+- `src/components/Hype42_98.tsx`
+- `src/lib/hype42_98.ts` get/claim/can/cooldown
+- `src/components/Hype42_98.module.css` pulse
+- `src/pages/HomePage.tsx` widget
+- `src/lib/coins.ts`
+- `server.ts` GET/POST /magnum/api/hype42/98
+
+**Edge:**
+- toDateString lokalno future sbros
+- LS bityj fallback {count:0}
+- povtor claim idempotent
+- NaN klamp addCoins
+- privatnyj try/catch
+- prefers-reduced-motion statichno
+- dve vkladki BroadcastChannel
+- server sravnivaet lastDate
+
+**Nagrada/khajp:**
+- 42/142/420/1420 sezon 98 skin hype42.98-fire epic
+- sharing 42.98 krinzha ne sushchestvuet + PRESAVE https://music.thefence.me/psmagnum
+- kross StreakCalendar RecapQuest Leaderboard HYPE 42.98
+- console.log('[magnum] hype42.98')
+
+### 7.99 Bratukha-Ficha 42.99 — Factory 99 — brass line 42
+
+**Ideya:**
+Modul 42.99: bratukha delaj 99 cherez /magnum/ — random ivent 42/142/420, FOMO 42ch, Create shesternya 99. Limit 3/d, cooldown 6ch LS, anti-abuz IP v2. Sharing 42.99 OG.
+Detal: kazhdyj den 1 quest 99 — otkryt 3 recaps + klik 42 + quiz 1Q. Progress LS `magnum-42.99`.
+
+**LS klyuchi:**
+- `magnum-42.99:{count,lastDate,claimed,season:99}`
+- `magnum-42.99-cooldown:ISO`
+- `magnum-coins:number` `src/lib/coins.ts`
+- `magnum-42.99-history:[]`
+- server v2: `magnum_hype42_99(user_id,count,last_date)`
+
+**UI bloki:**
+- `Hype42_99Card` gradient `linear-gradient(135deg,#ff2d55,#5865f2)` emoji 🧊
+- `Hype42_99Timer` 42:00:00 puls scale 1→1.04
+- `Hype42_99Reward` konfetti 120 + addCoins
+- `Hype42_99History` 20 barov
+- `Hype42_99Badge` NavGrid 42.99 LIVE
+- `Hype42_99Share` OG 1080
+
+**Fajly:**
+- `src/components/Hype42_99.tsx`
+- `src/lib/hype42_99.ts` get/claim/can/cooldown
+- `src/components/Hype42_99.module.css` pulse
+- `src/pages/HomePage.tsx` widget
+- `src/lib/coins.ts`
+- `server.ts` GET/POST /magnum/api/hype42/99
+
+**Edge:**
+- toDateString lokalno future sbros
+- LS bityj fallback {count:0}
+- povtor claim idempotent
+- NaN klamp addCoins
+- privatnyj try/catch
+- prefers-reduced-motion statichno
+- dve vkladki BroadcastChannel
+- server sravnivaet lastDate
+
+**Nagrada/khajp:**
+- 42/142/420/1420 sezon 99 skin hype42.99-fire epic
+- sharing 42.99 krinzha ne sushchestvuet + PRESAVE https://music.thefence.me/psmagnum
+- kross StreakCalendar RecapQuest Leaderboard HYPE 42.99
+- console.log('[magnum] hype42.99')
+
+### 7.100 Bratukha-Ficha 43.00 — Tower 100 — 100 etazhej 42
+
+**Ideya:**
+Modul 43.00: bratukha delaj 100 cherez /magnum/ — random ivent 42/142/420, FOMO 42ch, Create shesternya 100. Limit 3/d, cooldown 6ch LS, anti-abuz IP v2. Sharing 43.00 OG.
+Detal: kazhdyj den 1 quest 100 — otkryt 3 recaps + klik 42 + quiz 1Q. Progress LS `magnum-43.00`.
+
+**LS klyuchi:**
+- `magnum-43.00:{count,lastDate,claimed,season:100}`
+- `magnum-43.00-cooldown:ISO`
+- `magnum-coins:number` `src/lib/coins.ts`
+- `magnum-43.00-history:[]`
+- server v2: `magnum_hype43_00(user_id,count,last_date)`
+
+**UI bloki:**
+- `Hype43_00Card` gradient `linear-gradient(135deg,#ff2d55,#5865f2)` emoji 📡
+- `Hype43_00Timer` 42:00:00 puls scale 1→1.04
+- `Hype43_00Reward` konfetti 120 + addCoins
+- `Hype43_00History` 20 barov
+- `Hype43_00Badge` NavGrid 43.00 LIVE
+- `Hype43_00Share` OG 1080
+
+**Fajly:**
+- `src/components/Hype43_00.tsx`
+- `src/lib/hype43_00.ts` get/claim/can/cooldown
+- `src/components/Hype43_00.module.css` pulse
+- `src/pages/HomePage.tsx` widget
+- `src/lib/coins.ts`
+- `server.ts` GET/POST /magnum/api/hype42/100
+
+**Edge:**
+- toDateString lokalno future sbros
+- LS bityj fallback {count:0}
+- povtor claim idempotent
+- NaN klamp addCoins
+- privatnyj try/catch
+- prefers-reduced-motion statichno
+- dve vkladki BroadcastChannel
+- server sravnivaet lastDate
+
+**Nagrada/khajp:**
+- 42/142/420/1420 sezon 100 skin hype43.00-fire epic
+- sharing 43.00 krinzha ne sushchestvuet + PRESAVE https://music.thefence.me/psmagnum
+- kross StreakCalendar RecapQuest Leaderboard HYPE 43.00
+- console.log('[magnum] hype43.00')
+
+### 7.101 Bratukha-Ficha 43.01 — Circus 101 — freak-show 42
+
+**Ideya:**
+Modul 43.01: bratukha delaj 101 cherez /magnum/ — random ivent 42/142/420, FOMO 42ch, Create shesternya 101. Limit 3/d, cooldown 6ch LS, anti-abuz IP v2. Sharing 43.01 OG.
+Detal: kazhdyj den 1 quest 101 — otkryt 3 recaps + klik 42 + quiz 1Q. Progress LS `magnum-43.01`.
+
+**LS klyuchi:**
+- `magnum-43.01:{count,lastDate,claimed,season:101}`
+- `magnum-43.01-cooldown:ISO`
+- `magnum-coins:number` `src/lib/coins.ts`
+- `magnum-43.01-history:[]`
+- server v2: `magnum_hype43_01(user_id,count,last_date)`
+
+**UI bloki:**
+- `Hype43_01Card` gradient `linear-gradient(135deg,#ff2d55,#5865f2)` emoji 🎪
+- `Hype43_01Timer` 42:00:00 puls scale 1→1.04
+- `Hype43_01Reward` konfetti 120 + addCoins
+- `Hype43_01History` 20 barov
+- `Hype43_01Badge` NavGrid 43.01 LIVE
+- `Hype43_01Share` OG 1080
+
+**Fajly:**
+- `src/components/Hype43_01.tsx`
+- `src/lib/hype43_01.ts` get/claim/can/cooldown
+- `src/components/Hype43_01.module.css` pulse
+- `src/pages/HomePage.tsx` widget
+- `src/lib/coins.ts`
+- `server.ts` GET/POST /magnum/api/hype42/101
+
+**Edge:**
+- toDateString lokalno future sbros
+- LS bityj fallback {count:0}
+- povtor claim idempotent
+- NaN klamp addCoins
+- privatnyj try/catch
+- prefers-reduced-motion statichno
+- dve vkladki BroadcastChannel
+- server sravnivaet lastDate
+
+**Nagrada/khajp:**
+- 42/142/420/1420 sezon 101 skin hype43.01-fire epic
+- sharing 43.01 krinzha ne sushchestvuet + PRESAVE https://music.thefence.me/psmagnum
+- kross StreakCalendar RecapQuest Leaderboard HYPE 43.01
+- console.log('[magnum] hype43.01')
+
+### 7.102 Bratukha-Ficha 43.02 — Mega Build 102 — 102-blok skhema
+
+**Ideya:**
+Modul 43.02: bratukha delaj 102 cherez /magnum/ — random ivent 42/142/420, FOMO 42ch, Create shesternya 102. Limit 3/d, cooldown 6ch LS, anti-abuz IP v2. Sharing 43.02 OG.
+Detal: kazhdyj den 1 quest 102 — otkryt 3 recaps + klik 42 + quiz 1Q. Progress LS `magnum-43.02`.
+
+**LS klyuchi:**
+- `magnum-43.02:{count,lastDate,claimed,season:102}`
+- `magnum-43.02-cooldown:ISO`
+- `magnum-coins:number` `src/lib/coins.ts`
+- `magnum-43.02-history:[]`
+- server v2: `magnum_hype43_02(user_id,count,last_date)`
+
+**UI bloki:**
+- `Hype43_02Card` gradient `linear-gradient(135deg,#ff2d55,#5865f2)` emoji 🏗️
+- `Hype43_02Timer` 42:00:00 puls scale 1→1.04
+- `Hype43_02Reward` konfetti 120 + addCoins
+- `Hype43_02History` 20 barov
+- `Hype43_02Badge` NavGrid 43.02 LIVE
+- `Hype43_02Share` OG 1080
+
+**Fajly:**
+- `src/components/Hype43_02.tsx`
+- `src/lib/hype43_02.ts` get/claim/can/cooldown
+- `src/components/Hype43_02.module.css` pulse
+- `src/pages/HomePage.tsx` widget
+- `src/lib/coins.ts`
+- `server.ts` GET/POST /magnum/api/hype42/102
+
+**Edge:**
+- toDateString lokalno future sbros
+- LS bityj fallback {count:0}
+- povtor claim idempotent
+- NaN klamp addCoins
+- privatnyj try/catch
+- prefers-reduced-motion statichno
+- dve vkladki BroadcastChannel
+- server sravnivaet lastDate
+
+**Nagrada/khajp:**
+- 42/142/420/1420 sezon 102 skin hype43.02-fire epic
+- sharing 43.02 krinzha ne sushchestvuet + PRESAVE https://music.thefence.me/psmagnum
+- kross StreakCalendar RecapQuest Leaderboard HYPE 43.02
+- console.log('[magnum] hype43.02')
+
 > 42 — кринжа не существует. Делай, братуха. 🔥
 
 <!-- 42: братуха, не забудь пресейв https://music.thefence.me/psmagnum -->
