@@ -67,6 +67,7 @@ export function IdeasPage() {
     return () => ctx.revert();
   }, [ideas, loading]);
 
+  // GSAP hover verified 2026-09-01 — Content-резерв 24/7 #2 (y:-4 + glow, reduced-motion guard)
   const onCardEnter = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     gsap.to(e.currentTarget, {
