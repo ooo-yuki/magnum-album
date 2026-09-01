@@ -1,9 +1,29 @@
 # 🎤 MAGNUM — ЧЕЙНДЖЛОГ
 
-> 🌐 **Сайт:** [oooyuki.zomb.top:30645/magnum](https://oooyuki.zomb.top:30645/magnum/) · 🎧 **Пресейв альбома MAGNUM:** [жми сюда, братуха](https://oooyuki.zomb.top:30645/magnum/)
+> 🌐 **Сайт:** [oooyuki.zomb.top:30645/magnum](https://oooyuki.zomb.top:30645/magnum/) · 🎧 **Пресейв альбома MAGNUM:** [music.thefence.me/psmagnum](https://music.thefence.me/psmagnum)
 >
 > Промо-сайт альбома **MAGNUM Пятерки** (5opka × 42 братухи). React + TypeScript + GSAP + Bun.
 > Формат: [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/).
+
+## [0.2.0] — 2026-09-01
+
+### 🎮 Игры
+
+- ⌨️ **Скоропечатание 42** (TypingGame) — 12 фраз MAGNUM 2026, WPM-трекинг, кнопка пресейва в конце
+
+### ✨ Фичи
+
+- 💡 **Ideas 42** — голосование за идеи через Neon (`magnum_ideas`), форма отправки, навигация расширена до 10 пунктов
+- ⛏️ **Майнинг 42-коинов** — ироничный GSAP-кликер: лопата 42 / кирка 142, авто-майнинг, лидерборд в localStorage
+- 📊 **Рейтинг пресейва** — топ-20 братух (8K клипов / 200K просмотров), эмодзи-аватары, проверка через БРАТ-БОТ
+- 🛒 **Магазин / Эко / Майнинг** — все эндпоинты перенесены на `/magnum/api/*`, баланс теперь серверный (убран localStorage)
+- 🏠 **Главная + навигация** — 14 пунктов меню, 4 RGB промо-баннера + popup (закрытие через `magnum-banner-closed`), GamesHub очищен до мини-игр
+
+### ⚡ Перфоманс
+
+- 🔄 Рефакторинг фронта: coins/shop/eco/mining → серверные API-маршруты, отказ от клиентского localStorage для баланса
+
+---
 
 ## [0.1.0] — 2026-09-01
 
@@ -70,4 +90,5 @@
 - 🎯 Focus-visible кольца на NavGrid/CTA (a11y, WCAG 2.4.1)
 - ♿ Skip-to-content ссылка и `prefers-reduced-motion` везде
 
+[0.2.0]: https://github.com/ooo-yuki/magnum-album/releases/tag/v0.2.0
 [0.1.0]: https://github.com/ooo-yuki/magnum-album/releases/tag/v0.1.0
