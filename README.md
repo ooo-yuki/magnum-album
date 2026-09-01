@@ -10,13 +10,13 @@
 
 ## Что это
 
-Промо-сайт альбома **MAGNUM** уровня $5000 — не лендинг, а платформа 42-движения. 15 игровых роутов, AI-бот, магазин косметики, эко-рейтинг, майнинг, галерея 42-артов, рейтинг пресейва и генератор идей.
+Промо-сайт альбома **MAGNUM** уровня $5000 — не лендинг, а платформа 42-движения. 16 игровых роутов, AI-бот, магазин косметики, эко-рейтинг, майнинг, галерея 42-артов, рейтинг пресейва и генератор идей.
 
 ## Фичи
 
 | Блок | Что внутри |
 |---|---|
-| 🎮 **Игры 42** | Runner / Match-3 / Knife Hit / Memory / Clicker / Quiz / Blackjack 42 (4200 монет → открытка) / Roulette 42 / Rhythm / Stack / Flappy 42 / 2042 / Typing / Snake 42 / Dodge 42 — победа → пресейв |
+| 🎮 **Игры 42** | Runner / Match-3 / Knife Hit / Memory / Clicker / Quiz / Blackjack 42 (4200 монет → открытка) / Roulette 42 / Rhythm / Stack / Flappy 42 / 2042 / Typing / Snake 42 / Dodge 42 / Timeline 2026 — победа → пресейв (16 роутов: `/magnum/games/*`) |
 | 🤖 **БРАТ-БОТ 42** | AI-бот с проверкой скрина пресейва через прокси (ключ не в бандле), кидаешь скрин — хвалит, нет — уговаривает, сжатие до 1280 JPEG |
 | 🛒 **Магазин** | 12 скинов (CSS-градиенты+эмодзи) редкости 42/142/420/1420, единый `magnum-coins` (миграция из blackjack/roulette) |
 | 🌿 **Эко-рейтинг** | 8 вопросов Кемерово/Кузбасса, ранги Нормис→Легенда, `magnum-eco-leaderboard` |
@@ -51,11 +51,11 @@ PORT=30646 bun run server.ts  # http://localhost:30646/magnum/
 
 ```
 src/
-  components/ Hero, Layout (14 nav), AiBot, Gallery, Timeline, PressWall, News2026, ErrorBoundary…
+  components/ Hero, Layout (11 nav), AiBot, Gallery, Timeline, PressWall, News2026, ErrorBoundary…
   pages/ HomePage, ShopPage, EcoPage, GalleryPage, MiningPage, PresaveRatingPage, IdeasPage, RecapsPage, DiscographyPage, ArtistsPage, About42Page, LastFitPage, TrackPage, GamesHub, GamePage
-  pages/games/ Runner, Match3, KnifeHit, Memory, Clicker, Blackjack, Roulette, Rhythm, Stack, Flappy42, Game2042, Typing, Snake42, Dodge42
-  lib/ coins.ts (→ /magnum/api/coins)
-drizzle/ schema.ts (magnum_ideas, leaderboard, eco_results, shop_inventory, frames, users, sessions, coins)
+  pages/games/ Runner, Match3, KnifeHit, Memory, Clicker, Blackjack, Roulette, Rhythm, Stack, Flappy42, Game2042, Typing, Snake42, Dodge42, Quiz, Timeline2026 (+16 роутов)
+  lib/ coins.ts (→ /magnum/api/coins), economy.ts, perf-analytics.ts, presaveTracker.ts
+drizzle/ schema.ts (magnum_ideas, leaderboard, eco_results, shop_inventory, frames, users, sessions, coins, mining)
 neon.ts  # infra-as-code
 public/images/ postcard-4200.png (242KB), ai-bot-avatar.png (92KB), gallery-42/*
 ```
@@ -89,6 +89,14 @@ CI: `.github/workflows/deploy.yml` → `tsc → bun test → build → scp /srv/
 | `magnum changelog investor 20m` | 20м — `CHANGELOG.md` Keep a Changelog с эмодзи |
 | `magnum ideas generator 15m` | 15м — 2-3 идеи в `magnum_ideas` |
 | `magnum freakland recaps 60m` | 60м — YouTube транскрипты → `RecapsPage` |
+| `magnum readme keeper 30m` | 30м — сверка README vs `src/` (этот джоб) |
+| `magnum GSAP lead 30m` | 30м — GSAP-полировка страниц |
+| `magnum rating backend 20m` | 20м — бэкенд рейтинга |
+| `magnum games lead 30m` | 30м — игры 42 |
+| `magnum reviewer 20m` | 20м — ревью кода |
+| `magnum tester 15m` | 15м — `bunx vitest run` |
+| `magnum health report 15m file` | 15м — файловый health-репорт |
+| `magnum agent 1-8` | 5-15м — 8 автономных агентов (watchdog/tester/hype/games/content/api/reviewer/changelog) |
 
 ## Пресейв
 
