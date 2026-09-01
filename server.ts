@@ -1795,7 +1795,6 @@ function validateChatBody(v: unknown): string | null {
 async function handleChatHistory(req: Request): Promise<Response> {
   try {
     const sql = getSql();
-    await sql`CREATE TABLE IF NOT EXISTS magnum_chat_messages (id serial PRIMARY KEY, user_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, body text NOT NULL, reply_to integer, created_at timestamp DEFAULT now() NOT NULL)`;
     const url = new URL(req.url);
     const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit") || 30)));
     const offset = Math.max(0, Math.min(5000, Number(url.searchParams.get("offset") || 0)));
@@ -1827,7 +1826,6 @@ async function handleChatSend(req: Request): Promise<Response> {
   if (replyTo != null && (!Number.isInteger(replyTo) || replyTo <= 0)) return Response.json({ error: "replyTo must be integer id" }, { status: 400 });
   try {
     const sql = getSql();
-    await sql`CREATE TABLE IF NOT EXISTS magnum_chat_messages (id serial PRIMARY KEY, user_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, body text NOT NULL, reply_to integer, created_at timestamp DEFAULT now() NOT NULL)`;
     if (replyTo) {
       const ex = await sql`SELECT id FROM magnum_chat_messages WHERE id=${replyTo} LIMIT 1`;
       if (ex.length === 0) return Response.json({ error: "reply target not found" }, { status: 404 });
@@ -1874,7 +1872,6 @@ async function handleFollowToggle(req: Request): Promise<Response> {
   if (name.toLowerCase() === user.username.toLowerCase()) return Response.json({ error: "cannot follow self" }, { status: 400 });
   try {
     const sql = getSql();
-    await sql`CREATE TABLE IF NOT EXISTS magnum_follows (id serial PRIMARY KEY, follower_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, following_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, created_at timestamp DEFAULT now() NOT NULL, CONSTRAINT magnum_follows_no_self CHECK (follower_id <> following_id), CONSTRAINT magnum_follows_unique UNIQUE (follower_id, following_id))`;
     const target = await sql`SELECT id FROM magnum_users WHERE username=${name} LIMIT 1`;
     if (target.length === 0) return Response.json({ error: "user not found" }, { status: 404 });
     const targetId = Number((target[0] as { id: number }).id);
@@ -1895,7 +1892,6 @@ async function handleFollowsList(req: Request): Promise<Response> {
   if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
   try {
     const sql = getSql();
-    await sql`CREATE TABLE IF NOT EXISTS magnum_follows (id serial PRIMARY KEY, follower_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, following_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, created_at timestamp DEFAULT now() NOT NULL, CONSTRAINT magnum_follows_no_self CHECK (follower_id <> following_id), CONSTRAINT magnum_follows_unique UNIQUE (follower_id, following_id))`;
     const url = new URL(req.url);
     const box = url.searchParams.get("box") === "followers" ? "followers" : "following";
     const limit = Math.min(50, Math.max(1, Number(url.searchParams.get("limit") || 20)));
@@ -2164,13 +2160,14 @@ async function handleHealth(): Promise<Response> {
       sql`SELECT count(*)::int as c FROM magnum_referrals`,
       sql`SELECT count(*)::int as c FROM magnum_duel_history`,
     ]);
-    let exchangesCount = 0; let commentsCount = 0; let reportsCount = 0; let modLogCount = 0; let chatCount = 0; let followsCount = 0;
+    let exchangesCount = 0; let commentsCount = 0; let reportsCount = 0; let modLogCount = 0; let chatCount = 0; let followsCount = 0; let aiUsageCount = 0;
     try { const r = await sql`SELECT count(*)::int as c FROM magnum_mining_exchanges`; exchangesCount = Number((r[0] as {c:number}).c); } catch {}
     try { const r = await sql`SELECT count(*)::int as c FROM magnum_idea_comments`; commentsCount = Number((r[0] as {c:number}).c); } catch {}
     try { const r = await sql`SELECT count(*)::int as c FROM magnum_reports`; reportsCount = Number((r[0] as {c:number}).c); } catch {}
     try { const r = await sql`SELECT count(*)::int as c FROM magnum_moderation_log`; modLogCount = Number((r[0] as {c:number}).c); } catch {}
     try { const r = await sql`SELECT count(*)::int as c FROM magnum_chat_messages`; chatCount = Number((r[0] as {c:number}).c); } catch {}
     try { const r = await sql`SELECT count(*)::int as c FROM magnum_follows`; followsCount = Number((r[0] as {c:number}).c); } catch {}
+    try { const r = await sql`SELECT count(*)::int as c FROM magnum_ai_usage`; aiUsageCount = Number((r[0] as {c:number}).c); } catch {}
     return Response.json({
       ok: true,
       ts: new Date().toISOString(),
@@ -2195,6 +2192,7 @@ async function handleHealth(): Promise<Response> {
         moderationLog: modLogCount,
         chatMessages: chatCount,
         follows: followsCount,
+        aiUsage: aiUsageCount,
       },
       uptime: process.uptime(),
     });
@@ -2235,6 +2233,16 @@ async function handleAi(req: Request): Promise<Response> {
   if (req.method !== "POST") {
     return Response.json({ error: "POST only" }, { status: 405 });
   }
+  // 🔴 auth-gate: все /ai требуют токен — иначе anon жжёт XIAOMI_API_KEY (auth-2026-09-01-1607)
+  const rawToken = extractToken(req);
+  if (!rawToken) return Response.json({ error: "unauthorized" }, { status: 401 });
+  let aiUser: { id: number; username: string } | null = null;
+  try { aiUser = await getUserByToken(rawToken); } catch {}
+  if (!aiUser) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`ai:${aiUser.id}:${ip}`, 10, 60_000)) {
+    return Response.json({ error: "rate limited — попробуй через минуту, братуха", retryAfterSec: 60 }, { status: 429 });
+  }
   const apiKey = process.env.XIAOMI_API_KEY;
   if (!apiKey) {
     return Response.json({ error: "XIAOMI_API_KEY not configured on server" }, { status: 500 });
@@ -2253,6 +2261,22 @@ async function handleAi(req: Request): Promise<Response> {
   if (!userText && !imageDataUrl) {
     return Response.json({ error: "text or image required" }, { status: 400 });
   }
+  // доп. лимит для image — дороже, отдельный бакет 12/мин per user/ip
+  if (imageDataUrl && !checkRateLimit(`ai:image:${aiUser.id}:${ip}`, 12, 60_000)) {
+    return Response.json({ error: "image rate limited — 12/мин", retryAfterSec: 60 }, { status: 429 });
+  }
+  // Neon ledger: fire-and-forget, не блокирует прокси, но сохраняет аудит трат
+  const ledgerPromise = (async () => {
+    try {
+      const sql = getSql();
+      // таблица создаётся миграцией 0017; на старых инстансах — IF NOT EXISTS без DDL в hot path позже
+      await sql`INSERT INTO magnum_ai_usage (user_id, ip, has_image, model, tokens_requested) VALUES (${aiUser.id}, ${ip}, ${imageDataUrl ? true : false}, ${MIMO_MODEL}, 400)`;
+    } catch (e) {
+      // таблица может отсутствовать до применения миграции — молча игнор, есть in-memory rateLimit
+      const msg = e instanceof Error ? e.message : String(e);
+      if (!msg.includes("magnum_ai_usage") && !msg.includes("does not exist")) console.error("[ai ledger] failed", e);
+    }
+  })();
 
   const messages: ChatMessage[] = [{ role: "system", content: SYSTEM_PROMPT }];
 
@@ -2274,6 +2298,7 @@ async function handleAi(req: Request): Promise<Response> {
     messages.push({ role: "user", content: userText });
   }
 
+  const t0 = Date.now();
   try {
     const upstream = await fetch(`${MIMO_BASE}/chat/completions`, {
       method: "POST",
@@ -2291,21 +2316,58 @@ async function handleAi(req: Request): Promise<Response> {
 
     if (!upstream.ok) {
       const errText = await upstream.text();
-      console.error(`[ai-proxy] upstream ${upstream.status}: ${errText.slice(0, 300)}`);
+      console.error(`[ai-proxy] upstream ${upstream.status}: ${errText.slice(0, 300)} ip=${ip} user=${aiUser?.username ?? "anon"} image=${!!imageDataUrl}`);
       return Response.json({ error: `Upstream error ${upstream.status}` }, { status: 502 });
     }
 
     const data = (await upstream.json()) as {
       choices?: { message?: { content?: string } }[];
+      usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
     };
     const text = data.choices?.[0]?.message?.content?.trim();
     if (!text) {
       return Response.json({ error: "Empty response" }, { status: 502 });
     }
+    const dt = Date.now() - t0;
+    console.log(`[ai-proxy] ok ${dt}ms ip=${ip} user=${aiUser?.username ?? "anon"} image=${!!imageDataUrl} tokens=${data.usage?.total_tokens ?? "?"}`);
+    // дождаться ledger чтобы не терять аудит при быстром выходе (но не дольше 300мс)
+    try { await Promise.race([ledgerPromise, new Promise(r => setTimeout(r, 300))]); } catch {}
     return Response.json({ text });
   } catch (e) {
-    console.error("[ai-proxy] fetch failed:", e);
+    console.error("[ai-proxy] fetch failed:", e, `ip=${ip} user=${aiUser?.username ?? "anon"}`);
+    try { await Promise.race([ledgerPromise, new Promise(r => setTimeout(r, 300))]); } catch {}
     return Response.json({ error: "Upstream unreachable" }, { status: 502 });
+  }
+}
+
+// GET /magnum/api/ai/usage — свой аудит трат (auth, last 20)
+async function handleAiUsage(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`ai:usage:${user.id}:${ip}`, 20, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
+  try {
+    const sql = getSql();
+    const rows = await sql`SELECT ip, has_image, model, tokens_requested, created_at FROM magnum_ai_usage WHERE user_id=${user.id} ORDER BY created_at DESC LIMIT 20`;
+    const total = await sql`SELECT count(*)::int as c FROM magnum_ai_usage WHERE user_id=${user.id}`;
+    const today = await sql`SELECT count(*)::int as c FROM magnum_ai_usage WHERE user_id=${user.id} AND created_at > now() - interval '24 hours'`;
+    return Response.json({
+      usage: rows.map((r: unknown) => {
+        const x = r as { ip: string; has_image: boolean; model: string; tokens_requested: number; created_at: string };
+        return { hasImage: Boolean(x.has_image), model: String(x.model), tokensRequested: Number(x.tokens_requested), created_at: x.created_at };
+      }),
+      total: Number((total[0] as { c: number }).c),
+      last24h: Number((today[0] as { c: number }).c),
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg.includes("does not exist") || msg.includes("magnum_ai_usage")) {
+      return Response.json({ usage: [], total: 0, last24h: 0, note: "migrate 0017 pending" });
+    }
+    console.error("[ai usage] failed", e);
+    return Response.json({ error: "db error" }, { status: 500 });
   }
 }
 
@@ -2458,6 +2520,7 @@ const server = Bun.serve<WSData>({
     }
 
     // --- MAGNUM API ---
+    if (url.pathname === "/magnum/api/ai/usage" && req.method === "GET") return handleAiUsage(req);
     if (url.pathname === "/magnum/api/ai") return handleAi(req);
     if (url.pathname === "/magnum/api/auth/register" && req.method === "POST") return handleRegister(req);
     if (url.pathname === "/magnum/api/auth/login" && req.method === "POST") return handleLogin(req);

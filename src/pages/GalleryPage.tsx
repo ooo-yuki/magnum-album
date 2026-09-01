@@ -36,11 +36,11 @@ const REAL_BY_STYLE: Record<Style42, string> = {
 const REAL_FALLBACK: Record<string, string> = {
   "ussr-01": "/magnum/images/gallery-42/42-agit-01-800.webp",
   "ussr-02": "/magnum/images/gallery-42/42-agit-01.jpg",
-  "y2k-01": "/magnum/images/gallery-42/42-memphis-01-800.webp",
-  "y2k-02": "/magnum/images/gallery-42/42-memphis-01.jpg",
+  "y2k-01": "/magnum/images/gallery-42/42-y2k-01-800.webp",
+  "y2k-02": "/magnum/images/gallery-42/42-y2k-01.jpg",
   "cyber-01": "/magnum/images/gallery-42/42-cyber-01-800.webp",
   "memphis-01": "/magnum/images/gallery-42/42-memphis-01-800.webp",
-  "y2k-03": "/magnum/images/gallery-42/42-cyber-01.jpg",
+  "y2k-03": "/magnum/images/gallery-42/42-y2k-01-800.webp",
 };
 const BASE_ARTS: Art42[] = [
   {

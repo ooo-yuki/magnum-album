@@ -111,7 +111,7 @@ export const PRISM_FAQ: {q:string;a:string;src:string}[]=[
   {q:"GET /shop/dust?",a:"баланс пыли Neon",src:"server.ts:handleDustGet"},
 ];
 function isValidCosmeticId(v:string):boolean{ return /^[a-z0-9-]{2,64}$/.test(v); }
-export function isValidBundleId(v:string):boolean{ return /^[a-z0-9-]{2,40}$/.test(v); }
+export function isValidBundleId(v:string):boolean{ const s=v.trim(); return !!s && s.length<=40 && /^[a-z0-9-]+$/.test(s); }
 type Bundle = { id:string; name:string; desc:string; emoji:string; items:string[]; slots:string[]; price:number; origPrice:number; rarity:Rarity; tag:string };
 const SHOP_BUNDLES: Bundle[] = [
   { id:"bundle-starter", name:"Старт 42", desc:"Мопс + Неон-рамка + Братуха", emoji:"🎒", items:["mops","frame-neon42","title-bra"], slots:["skin","frame","title"], price:84, origPrice:126, rarity:"rare", tag:"−33%" },

@@ -284,3 +284,13 @@ export const magnumFollows = pgTable("magnum_follows", {
   followingId: integer("following_id").references(() => magnumUsers.id).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+export const magnumAiUsage = pgTable("magnum_ai_usage", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => magnumUsers.id),
+  ip: text("ip").notNull(),
+  hasImage: boolean("has_image").default(false).notNull(),
+  model: text("model").default("mimo-v2.5").notNull(),
+  tokensRequested: integer("tokens_requested").default(400).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
