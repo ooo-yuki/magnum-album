@@ -125,3 +125,13 @@ export const magnumMiningVault = pgTable("magnum_mining_vault", {
   vaultId: text("vault_id").notNull(),
   claimedAt: timestamp("claimed_at").defaultNow().notNull(),
 });
+
+export const magnumNotifications = pgTable("magnum_notifications", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => magnumUsers.id).notNull(),
+  title: text("title").notNull(),
+  body: text("body").notNull(),
+  kind: text("kind").default("info").notNull(),
+  read: boolean("read").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});

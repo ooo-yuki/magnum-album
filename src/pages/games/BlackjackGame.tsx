@@ -39,35 +39,14 @@ const LORE_TIPS: string[] = [
   "Стрик x3 даёт +10% к выплате — катай без поражений и фармь быстрее.",
   "4200 монет = Открытка 42 — дойди до цели и забери пресейв MAGNUM!",
   "Фишка 42 — счастливая: ставь 42 и лови блэкджек на 42-й раздаче!",
-  "Холдем и Блэкджек — братья: блефуй дилера, как блефуешь чат.",
   "Нажми H — ещё карту, S — хватит, D — дабл, N — новая раздача.",
   "Свайп влево — хит, вправо — стенд. Играй одной рукой на мобиле!",
   "Перебор — главный враг. Стой на 17+, бери на 11- — база стратегия.",
 ];
 
-const STREAK_TIERS = [
-  { streak: 1, label: "Старт", mult: 1.0, color: "rgba(255,255,255,0.5)" },
-  { streak: 2, label: "Разогрев", mult: 1.05, color: "#ffcc00" },
-  { streak: 3, label: "На кураже", mult: 1.10, color: "#ff9500" },
-  { streak: 5, label: "Гений 42", mult: 1.18, color: "#ff2d55" },
-  { streak: 7, label: "MAGNUM", mult: 1.28, color: "#00ff88" },
-  { streak: 10, label: "ЛЕГЕНДА", mult: 1.42, color: "#5865f2" },
-] as const;
+const STREAK_TIERS = [{streak:1,label:"Старт",mult:1,color:"rgba(255,255,255,0.5)"},{streak:2,label:"Разогрев",mult:1.05,color:"#ffcc00"},{streak:3,label:"На кураже",mult:1.1,color:"#ff9500"},{streak:5,label:"Гений 42",mult:1.18,color:"#ff2d55"},{streak:7,label:"MAGNUM",mult:1.28,color:"#00ff88"},{streak:10,label:"ЛЕГЕНДА",mult:1.42,color:"#5865f2"}] as const;
 
-const ACHIEVEMENTS = [
-  { id: "first_win", title: "Первый куш", desc: "Выиграй первую раздачу", icon: "🃏" },
-  { id: "blackjack", title: "БЛЭКДЖЕК 42", desc: "Собери блэкджек", icon: "♠️" },
-  { id: "streak3", title: "На кураже x3", desc: "3 победы подряд", icon: "🔥" },
-  { id: "streak5", title: "Гений 42 x5", desc: "5 побед подряд", icon: "⚡" },
-  { id: "double_win", title: "Дабл-мастер", desc: "Выиграй даблом", icon: "💎" },
-  { id: "balance2k", title: "Катка 2K", desc: "Баланс 2000+", icon: "💰" },
-  { id: "balance42", title: "Открытка 42", desc: "Достигни 4200", icon: "🎉" },
-  { id: "ten_wins", title: "Десятка", desc: "10 побед всего", icon: "🏆" },
-  { id: "no_bust10", title: "Холодная голова", desc: "10 раздач без перебора", icon: "🧊" },
-  { id: "comeback", title: "Камбэк", desc: "Победи после 0 монет (ресет 200)", icon: "🚀" },
-  { id: "perfect21", title: "21 из 2", desc: "Собери 21 тремя картами", icon: "✨" },
-  { id: "dealer_bust5", title: "Дилер горит", desc: "5 бюстов дилера", icon: "💥" },
-] as const;
+const ACHIEVEMENTS = [{id:"first_win",title:"Первый куш",desc:"Выиграй первую раздачу",icon:"🃏"},{id:"blackjack",title:"БЛЭКДЖЕК 42",desc:"Собери блэкджек",icon:"♠️"},{id:"streak3",title:"На кураже x3",desc:"3 победы подряд",icon:"🔥"},{id:"streak5",title:"Гений 42 x5",desc:"5 побед подряд",icon:"⚡"},{id:"double_win",title:"Дабл-мастер",desc:"Выиграй даблом",icon:"💎"},{id:"balance2k",title:"Катка 2K",desc:"Баланс 2000+",icon:"💰"},{id:"balance42",title:"Открытка 42",desc:"Достигни 4200",icon:"🎉"},{id:"ten_wins",title:"Десятка",desc:"10 побед всего",icon:"🏆"},{id:"no_bust10",title:"Холодная голова",desc:"10 раздач без перебора",icon:"🧊"},{id:"comeback",title:"Камбэк",desc:"Победи после 0 монет",icon:"🚀"},{id:"perfect21",title:"21 из 2",desc:"Собери 21 тремя картами",icon:"✨"},{id:"dealer_bust5",title:"Дилер горит",desc:"5 бюстов дилера",icon:"💥"}] as const;
 
 const STRATEGY_HINTS: Record<string, string> = {
   "5-8": "Бери всегда — мало для стопа.",
@@ -398,7 +377,7 @@ export function BlackjackGame(){
       setBalance(b=>Math.max(0,b-bet));
       setMsg("У дилера БЛЭКДЖЕК — проигрыш");
       setHistory(h=> [`LOSE vs BJ -${bet}`,...h].slice(0,8));
-      playLoseSound();
+      playLoseSound(); haptic(90); setLosses(v=>v+1); setStreak(0);
     } else {
       setMsg(`Твоя рука ${handValue(p)} — ещё карту?`);
     }
@@ -461,18 +440,18 @@ export function BlackjackGame(){
         setBalance(b=>Math.max(0,b-bet));
         msgLocal=`Дилер ${dv} vs ${pv} — проигрыш -${bet}`;
         setHistory(h=> [`LOSE ${pv} vs ${dv} -${bet}`,...h].slice(0,8));
-        playLoseSound();
+        playLoseSound(); haptic(90); setLosses(v=>v+1); setStreak(0); noBustStreakRef.current=0;
       } else if(dv < pv){
         setResult("win");
         setBalance(b=>b+bet);
         msgLocal=`${pv} vs ${dv} — победа +${bet}!`;
         setHistory(h=> [`WIN ${pv} vs ${dv} +${bet}`,...h].slice(0,8));
-        playWinSound();
+        playWinSound(); shakeWin(pageRef.current); { const mult=getStreakMult(streak+1); const bonus=Math.floor(bet*(mult-1)); if(bonus>0){ setBalance(b=>b+bonus); msgLocal+=` +бонус ${bonus}`; } setWins(v=>v+1); noBustStreakRef.current++; setStreak(s=>{const ns=s+1; setBestStreak(bs=>Math.max(bs,ns)); if(ns>=3) spawnConfetti(ns>=5); if(ns>=2) playStreak(ns); hapticWin(); return ns;}); }
       } else {
         setResult("push");
         msgLocal=`Ничья ${pv}:${dv} — ставка сохранена`;
         setHistory(h=> [`PUSH ${pv}:${dv}`,...h].slice(0,8));
-        playPush();
+        playPush(); haptic(25); setPushes(v=>v+1); // стрик не сбрасываем на пуш
       }
       setMsg(msgLocal);
       setPhase("result");
@@ -501,7 +480,7 @@ export function BlackjackGame(){
       setBalance(b=>Math.max(0,b - doubledBet));
       setMsg(`Дабл — перебор ${handValue(np)}! -${doubledBet}`);
       setHistory(h=> [`DOUBLE BUST -${doubledBet}`,...h].slice(0,8));
-      playBust();
+      playBust(); haptic(90); setLosses(v=>v+1); setStreak(0); noBustStreakRef.current=0;
       return;
     }
     // otherwise dealer plays with doubled bet
@@ -527,24 +506,24 @@ export function BlackjackGame(){
       setBalance(b=>b+doubledBet);
       setMsg(`Дабл! Дилер сгорел — +${doubledBet} 🔥`);
       setHistory(h=> [`DOUBLE WIN +${doubledBet}`,...h].slice(0,8));
-      playWinSound();
+      playWinSound(); shakeWin(pageRef.current); { const mult=getStreakMult(streak+1); const bonus=Math.floor(doubledBet*(mult-1)); if(bonus>0) setBalance(b=>b+bonus); setWins(v=>v+1); noBustStreakRef.current++; setStreak(s=>{const ns=s+1; setBestStreak(bs=>Math.max(bs,ns)); if(ns>=3) spawnConfetti(ns>=5); if(ns>=2) playStreak(ns); hapticWin(); return ns;}); }
     } else if(dv>pv){
       setResult("lose");
       setBalance(b=>Math.max(0,b-doubledBet));
       setMsg(`Дабл: ${pv} vs ${dv} — проигрыш -${doubledBet}`);
       setHistory(h=> [`DOUBLE LOSE -${doubledBet}`,...h].slice(0,8));
-      playLoseSound();
+      playLoseSound(); haptic(90); setLosses(v=>v+1); setStreak(0); noBustStreakRef.current=0;
     } else if(dv < pv){
       setResult("win");
       setBalance(b=>b+doubledBet);
       setMsg(`Дабл победа ${pv} vs ${dv} +${doubledBet}!`);
       setHistory(h=> [`DOUBLE WIN +${doubledBet}`,...h].slice(0,8));
-      playWinSound();
+      playWinSound(); shakeWin(pageRef.current); { const mult=getStreakMult(streak+1); const bonus=Math.floor(doubledBet*(mult-1)); if(bonus>0) setBalance(b=>b+bonus); setWins(v=>v+1); noBustStreakRef.current++; setStreak(s=>{const ns=s+1; setBestStreak(bs=>Math.max(bs,ns)); if(ns>=3) spawnConfetti(ns>=5); if(ns>=2) playStreak(ns); hapticWin(); return ns;}); }
     } else {
       setResult("push");
       setMsg(`Дабл ничья ${pv}:${dv}`);
       setHistory(h=> [`DOUBLE PUSH`,...h].slice(0,8));
-      playPush();
+      playPush(); haptic(25); setPushes(v=>v+1);
     }
     setPhase("result");
   },[phase,player,dealer,deck,draw,bet,balance]);
@@ -580,6 +559,44 @@ export function BlackjackGame(){
 
   const betChips = [10,25,50,100,250];
 
+  // ── управление: клавиатура H/S/D/N/P/Space + свайп + GSAP раздача ──
+  useEffect(()=>{
+    const onKey=(e:KeyboardEvent)=>{
+      const k=e.key.toLowerCase();
+      if(phase==="betting" && (k===" "||k==="enter")){ e.preventDefault(); deal(); return; }
+      if(phase==="player"){
+        if(k==="h"){ e.preventDefault(); hit(); }
+        else if(k==="s"){ e.preventDefault(); stand(); }
+        else if(k==="d" && canDouble){ e.preventDefault(); doubleDown(); }
+      }
+      if(phase==="result" && k==="n"){ e.preventDefault(); nextRound(); }
+      if((phase==="player"||phase==="dealer") && (k==="p"||k===" ")){ /* pause not needed */ }
+    };
+    window.addEventListener("keydown", onKey);
+    return ()=>window.removeEventListener("keydown", onKey);
+  },[phase, bet, balance, canDouble, deal, hit, stand, doubleDown, nextRound]);
+
+  // GSAP: карты влетают стаггером при раздаче
+  useEffect(()=>{
+    if(!dealt || !cardRowRef.current) return;
+    if(prefersReducedMotion()) return;
+    const cards=cardRowRef.current.querySelectorAll(`.${"card"}`);
+    if(!cards.length) return;
+    gsap.set(cards,{ y:24, opacity:0, scale:0.92, rotation: -2 });
+    gsap.to(cards,{ y:0, opacity:1, scale:1, rotation:0, stagger:0.08, duration:0.45, ease:"back.out(1.2)", overwrite:true });
+  },[dealt, player.length, dealer.length]);
+
+  const onTouchStart=useCallback((e:React.TouchEvent)=>{
+    const t0=e.touches[0]; if(!t0) return; touchStartRef.current={x:t0.clientX, y:t0.clientY};
+  },[]);
+  const onTouchEnd=useCallback((e:React.TouchEvent)=>{
+    if(phase!=="player"||!touchStartRef.current) return;
+    const t0=e.changedTouches[0]; if(!t0) return;
+    const dx=t0.clientX-touchStartRef.current.x; const dy=t0.clientY-touchStartRef.current.y;
+    touchStartRef.current=null;
+    if(Math.abs(dx)<42 || Math.abs(dy)>80) return;
+    if(dx<0) hit(); else stand();
+  },[phase, hit, stand]);
 
   // GSAP spec: y24 stagger 0.12 ScrollTrigger batch + reduced-motion gate + gsap.context cleanup + hover y:-4 RGB glow
   useEffect(() => {
@@ -620,7 +637,28 @@ export function BlackjackGame(){
         <div className={styles.stat}><span>Рекорд</span><strong>{best}</strong></div>
       </div>
 
-      <div className={styles.table}>
+      {/* Стрик + статистика */}
+      <div style={{display:"flex", gap:8, flexWrap:"wrap", justifyContent:"center", alignItems:"center", width:"100%", maxWidth:560, padding:"0 1rem"}}>
+        <div style={{display:"flex", alignItems:"center", gap:6, background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:12, padding:"0.35rem 0.7rem"}}>
+          <span style={{fontSize:"0.72rem", color:"rgba(240,240,240,0.55)"}}>Стрик</span>
+          <strong style={{color: streak>=3? STREAK_TIERS.find(t=>streak>=t.streak)?.color ?? "#ffcc00" : "rgba(255,255,255,0.85)", fontSize:"0.95rem"}}>{streak} {streak>=3?"🔥":streak>=2?"⚡":""}</strong>
+          <span style={{fontSize:"0.68rem", color:"rgba(240,240,240,0.4)"}}>×{getStreakMult(streak).toFixed(2)} {streak>=3? STREAK_TIERS.find(t=>streak>=t.streak)?.label:""}</span>
+          {bestStreak>0 && <span style={{fontSize:"0.66rem", color:"rgba(240,240,240,0.35)"}}>· рекорд {bestStreak}</span>}
+        </div>
+        <div style={{display:"flex", gap:6, fontSize:"0.72rem", color:"rgba(240,240,240,0.55)"}}>
+          <span style={{background:"rgba(0,255,136,0.08)", border:"1px solid rgba(0,255,136,0.15)", borderRadius:999, padding:"0.2rem 0.5rem"}}>W {wins}</span>
+          <span style={{background:"rgba(255,45,85,0.08)", border:"1px solid rgba(255,45,85,0.15)", borderRadius:999, padding:"0.2rem 0.5rem"}}>L {losses}</span>
+          <span style={{background:"rgba(255,204,0,0.08)", border:"1px solid rgba(255,204,0,0.15)", borderRadius:999, padding:"0.2rem 0.5rem"}}>P {pushes}</span>
+          <span style={{background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:999, padding:"0.2rem 0.5rem"}}>BJ {bjCount}</span>
+        </div>
+      </div>
+
+      <div style={{fontSize:"0.74rem", color:"rgba(240,240,240,0.42)", maxWidth:560, textAlign:"center", padding:"0 1rem", minHeight:18}}>
+        💡 {LORE_TIPS[tipIdx]} <button onClick={()=>setTipIdx(i=>(i+1)%LORE_TIPS.length)} style={{marginLeft:6, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:999, padding:"0.15rem 0.5rem", fontSize:"0.68rem", color:"rgba(240,240,240,0.6)", cursor:"pointer"}}>ещё</button>
+      </div>
+
+      <div className={styles.table} ref={cardRowRef} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} style={{position:"relative", overflow:"hidden"}}>
+        <canvas ref={confettiRef} style={{position:"absolute", inset:0, width:"100%", height:"100%", pointerEvents:"none", zIndex:5}} width={560} height={260} />
         {/* Dealer */}
         <div className={styles.handBlock}>
           <div className={styles.handHead}><span>Дилер</span><span className={styles.handVal}>{phase==="betting" ? "—" : phase==="result" || dealt && dealer.every(c=>!c.hidden) ? handValue(dealer) : `${dealerShownVal} + ?`}</span>{dealer.length>0 && isBlackjack(dealer.filter(c=>!c.hidden) as Card[]) && phase==="result" && <span className={styles.badgeBJ}>BJ</span>}</div>
@@ -650,6 +688,11 @@ export function BlackjackGame(){
         </div>
 
         <div className={styles.msg} data-result={result||""}>{msg}</div>
+        {phase==="player" && player.length>0 && (
+          <div style={{fontSize:"0.74rem", color:"rgba(0,255,136,0.85)", background:"rgba(0,255,136,0.06)", border:"1px solid rgba(0,255,136,0.14)", borderRadius:10, padding:"0.35rem 0.6rem", marginTop:4}}>
+            🤖 Подсказка: {getStrategyHint(player, dealer.find(c=>!c.hidden))} <span style={{opacity:0.55}}>(H/S/D)</span>
+          </div>
+        )}
       </div>
 
       {/* Betting */}
@@ -664,7 +707,7 @@ export function BlackjackGame(){
           </div>
           <div className={styles.chips}>
             {betChips.map(v=>(
-              <button key={v} disabled={balance < v} onClick={()=>setBet(v)} className={`${styles.chip} ${bet===v?styles.chipActive:""}`}>{v}</button>
+              <button key={v} disabled={balance < v} onClick={()=>{ setBet(v); playChip(); haptic(12); }} className={`${styles.chip} ${bet===v?styles.chipActive:""}`}>{v}</button>
             ))}
           </div>
           <button className={styles.dealBtn} onClick={deal} disabled={balance<bet || bet<MIN_BET}>Раздать 🃏</button>
@@ -702,6 +745,10 @@ export function BlackjackGame(){
           {history.map((h,i)=><span key={i} className={styles.historyItem}>{h}</span>)}
         </div>
       )}
+
+      <div style={{display:"flex", gap:6, flexWrap:"wrap", justifyContent:"center", maxWidth:560, padding:"0 0.5rem"}}>
+        {ACHIEVEMENTS.map(a=>{ const unlocked = (a.id==="first_win"&&wins>=1)||(a.id==="blackjack"&&bjCount>=1)||(a.id==="streak3"&&bestStreak>=3)||(a.id==="streak5"&&bestStreak>=5)||(a.id==="balance2k"&&best>=2000)||(a.id==="balance42"&&best>=4200)||(a.id==="ten_wins"&&wins>=10)||(a.id==="dealer_bust5"&&dealerBusts>=5); return <span key={a.id} title={`${a.title} — ${a.desc}`} style={{fontSize:"0.68rem", padding:"0.2rem 0.45rem", borderRadius:999, border:"1px solid", borderColor: unlocked?"rgba(255,204,0,0.35)":"rgba(255,255,255,0.07)", background: unlocked?"rgba(255,204,0,0.12)":"rgba(255,255,255,0.03)", color: unlocked?"#ffcc00":"rgba(240,240,240,0.35)", opacity: unlocked?1:0.55}}>{a.icon} {a.title}</span>; })}
+      </div>
 
       <p className={styles.hint}>Подсказка: стой на 17+, бери на 11- • Дилер стоит на soft 17 • Цель 4200 = Открытка 42</p>
 

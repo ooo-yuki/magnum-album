@@ -1086,6 +1086,7 @@ async function handleAchClaim(req: Request): Promise<Response> {
     const upd = await sql`UPDATE magnum_coins SET balance=balance+${def.reward} WHERE user_id=${user.id} RETURNING balance`;
     const bal = Number((upd[0] as { balance: number }).balance);
     await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${def.reward},'achievement',${JSON.stringify({ achievementId: raw })}::jsonb)`;
+    await ensureNotification(user.id, `Ачивка: ${def.title}`, `+${def.reward} монет за ${def.title}`, "achievement");
     return Response.json({ ok: true, achievementId: raw, reward: def.reward, balance: bal });
   } catch (e) {
     console.error("[ach claim] failed", e);
@@ -1136,6 +1137,74 @@ async function handleProfile(req: Request): Promise<Response> {
     console.error("[profile] failed", e);
     return Response.json({ error: "db error" }, { status: 500 });
   }
+}
+
+// ---- Notifications inbox (Neon magnum_notifications) ----
+async function ensureNotification(userId: number, title: string, body: string, kind: string = "info"): Promise<void> {
+  try {
+    const sql = getSql();
+    const t = title.trim().slice(0, 80);
+    const b = body.trim().slice(0, 300);
+    const k = kind.trim().slice(0, 16) || "info";
+    await sql`INSERT INTO magnum_notifications (user_id, title, body, kind, read, created_at) VALUES (${userId}, ${t}, ${b}, ${k}, false, now())`;
+  } catch (e) { console.error("[notify ensure] failed", e); }
+}
+async function handleNotificationsGet(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  try {
+    const sql = getSql();
+    const url = new URL(req.url);
+    const limit = Math.min(50, Math.max(1, Number(url.searchParams.get("limit") || 20)));
+    const unreadOnly = url.searchParams.get("unread") === "1" || url.searchParams.get("unread") === "true";
+    const rows = unreadOnly
+      ? await sql`SELECT id, title, body, kind, read, created_at FROM magnum_notifications WHERE user_id=${user.id} AND read=false ORDER BY created_at DESC LIMIT ${limit}`
+      : await sql`SELECT id, title, body, kind, read, created_at FROM magnum_notifications WHERE user_id=${user.id} ORDER BY created_at DESC LIMIT ${limit}`;
+    const unreadRows = await sql`SELECT count(*)::int as c FROM magnum_notifications WHERE user_id=${user.id} AND read=false`;
+    const unread = Number((unreadRows[0] as { c: number }).c);
+    return Response.json({
+      notifications: rows.map((r: unknown) => {
+        const x = r as { id: number; title: string; body: string; kind: string; read: boolean; created_at: string };
+        return { id: Number(x.id), title: String(x.title), body: String(x.body), kind: String(x.kind), read: Boolean(x.read), created_at: x.created_at };
+      }),
+      unread,
+      count: rows.length,
+    });
+  } catch (e) { console.error("[notifications get] failed", e); return Response.json({ error: "db error" }, { status: 500 }); }
+}
+async function handleNotificationsRead(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`notif:read:${user.id}:${ip}`, 20, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
+  let body: { id?: number; ids?: number[] };
+  try { body = (await req.json()) as typeof body; } catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
+  const ids: number[] = Array.isArray(body.ids) ? body.ids.map(n => Number(n)).filter(n => Number.isInteger(n) && n > 0).slice(0, 50)
+    : typeof body.id === "number" && Number.isInteger(body.id) && body.id > 0 ? [body.id]
+    : [];
+  if (ids.length === 0) return Response.json({ error: "id or ids required" }, { status: 400 });
+  try {
+    const sql = getSql();
+    for (const id of ids) await sql`UPDATE magnum_notifications SET read=true WHERE user_id=${user.id} AND id=${id}`;
+    return Response.json({ ok: true, read: ids });
+  } catch (e) { console.error("[notifications read] failed", e); return Response.json({ error: "db error" }, { status: 500 }); }
+}
+async function handleNotificationsClear(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`notif:clear:${user.id}:${ip}`, 6, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
+  try {
+    const sql = getSql();
+    const del = await sql`DELETE FROM magnum_notifications WHERE user_id=${user.id} AND read=true RETURNING id`;
+    return Response.json({ ok: true, cleared: del.length });
+  } catch (e) { console.error("[notifications clear] failed", e); return Response.json({ error: "db error" }, { status: 500 }); }
 }
 
 // ---- Presave handlers (rate limit + validation, stats) ----
@@ -1202,7 +1271,7 @@ async function handleMiningTop(): Promise<Response> {
 async function handleHealth(): Promise<Response> {
   try {
     const sql = getSql();
-    const [users, coins, mining, presave, ideas, daily, tx, votes, ach] = await Promise.all([
+    const [users, coins, mining, presave, ideas, daily, tx, votes, ach, notif] = await Promise.all([
       sql`SELECT count(*)::int as c FROM magnum_users`,
       sql`SELECT count(*)::int as c FROM magnum_coins`,
       sql`SELECT count(*)::int as c FROM magnum_mining`,
@@ -1212,6 +1281,7 @@ async function handleHealth(): Promise<Response> {
       sql`SELECT count(*)::int as c FROM magnum_transactions`,
       sql`SELECT count(*)::int as c FROM magnum_idea_votes`,
       sql`SELECT count(*)::int as c FROM magnum_user_achievements`,
+      sql`SELECT count(*)::int as c FROM magnum_notifications`,
     ]);
     return Response.json({
       ok: true,
@@ -1226,6 +1296,7 @@ async function handleHealth(): Promise<Response> {
         transactions: Number((tx[0] as { c: number }).c),
         ideaVotes: Number((votes[0] as { c: number }).c),
         achievements: Number((ach[0] as { c: number }).c),
+        notifications: Number((notif[0] as { c: number }).c),
       },
       uptime: process.uptime(),
     });
@@ -1534,6 +1605,11 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/achievements" && req.method === "GET") return handleAchGet(req);
     if (url.pathname === "/magnum/api/achievements/claim" && req.method === "POST") return handleAchClaim(req);
     if (url.pathname === "/magnum/api/profile" && req.method === "GET") return handleProfile(req);
+
+    // notifications inbox
+    if (url.pathname === "/magnum/api/notifications" && req.method === "GET") return handleNotificationsGet(req);
+    if (url.pathname === "/magnum/api/notifications/read" && req.method === "POST") return handleNotificationsRead(req);
+    if (url.pathname === "/magnum/api/notifications/clear" && req.method === "POST") return handleNotificationsClear(req);
 
     if (url.pathname === "/magnum" || url.pathname.startsWith("/magnum/")) {
       const rel = url.pathname.replace(/^\/magnum\/?/, "");
