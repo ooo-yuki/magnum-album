@@ -186,6 +186,7 @@ export function MiningPage() {
   const [nitroScore, setNitroScore] = useState(0);
   const [duelLb, setDuelLb] = useState<Array<{player:string;score:number;avatar?:string|null}>>([]);
   const [duelElo, setDuelElo] = useState<number|null>(null);
+  const [petBuff, setPetBuff] = useState<{stage:number;bonus:number;buff:string}|null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const nitroBarRef = useRef<HTMLDivElement>(null);
@@ -264,6 +265,18 @@ export function MiningPage() {
     return () => clearInterval(id);
   }, [perSec]);
 
+  // vault Neon fetch
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch("/magnum/api/pet", { credentials: "include" });
+        if (r.ok) {
+          const j = await r.json() as { pet?: { stage:number; miningBonus:number; buff:string } };
+          if (j.pet) setPetBuff({ stage: j.pet.stage, bonus: j.pet.miningBonus, buff: j.pet.buff });
+        }
+      } catch {}
+    })();
+  }, []);
   // vault Neon fetch
   useEffect(() => {
     (async () => {
@@ -435,9 +448,23 @@ export function MiningPage() {
     })();
   };
 
-  // ---- WS duel — P0 funnel: автоконнект + онбординг "Жми Старт" ----
+  // ---- WS duel — NITRO 42: x9 + ghost + overheat 3s→1s -50% ----
   const [duelHintDismissed, setDuelHintDismissed] = useState(false);
   const duelPromptShownRef = useRef(false);
+  const spawnConfetti = useCallback(() => {
+    if (!stageRef.current) return;
+    const root = stageRef.current;
+    for (let i=0;i<160;i++) {
+      const d=document.createElement('div');
+      d.style.position='absolute'; d.style.left='50%'; d.style.top='38%';
+      d.style.width='6px'; d.style.height='6px'; d.style.borderRadius='1px';
+      d.style.background= i%3===0?'#ff2d55': i%3===1?'#00ff88':'#ffd42a';
+      d.style.pointerEvents='none';
+      root.appendChild(d);
+      const ang=Math.random()*Math.PI*2, dist=60+Math.random()*180;
+      gsap.to(d,{x:Math.cos(ang)*dist, y:Math.sin(ang)*dist+80, rotation:Math.random()*720, opacity:0, duration:0.9+Math.random()*0.6, ease:'power2.out', onComplete:()=>d.remove()});
+    }
+  },[]);
   const connectDuel = useCallback(async () => {
     if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) return;
     if (!me) {
@@ -449,18 +476,35 @@ export function MiningPage() {
     const wsUrl = `${proto}//${window.location.host}/magnum/api/ws`;
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
-    ws.onopen = () => setDuelConnected(true);
+    ws.onopen = () => { setDuelConnected(true); setSuspect(false); };
     ws.onclose = () => setDuelConnected(false);
     ws.onerror = () => setDuelConnected(false);
     ws.onmessage = (ev) => {
       try {
-        const msg = JSON.parse(String(ev.data)) as { type?: string; room?: DuelRoom; you?: string };
+        const msg = JSON.parse(String(ev.data)) as any;
         if (msg.room) setDuelRoom(msg.room);
         if (msg.type === "room" || msg.type === "lobby:created") {
+          if (msg.room) { setDuelRoom(msg.room as DuelRoom); if (msg.code) setDuelCode(String(msg.code)); }
+        }
+        if (msg.type === "suspect") { setSuspect(true); showToast(msg.toast||"братуха, авто-клик? 🚫"); if(stageRef.current) gsap.fromTo(stageRef.current,{x:-6},{x:6,duration:0.08, yoyo:true, repeat:5, ease:'power2.inOut'}); }
+        if (msg.type === "overheat") { setOverheat(true); setGhostTrail(true); showToast("OVERHEAT — кулдаун 1с −50% ❄️"); if(stageRef.current) gsap.fromTo(stageRef.current,{x:-6},{x:6,duration:0.09, yoyo:true, repeat:4}); setTimeout(()=>{ setOverheat(false); },1000); }
+        if (msg.type === "tick") {
+          if (typeof msg.nitro==='number') setNitro(msg.nitro); else if(typeof msg.volcano==='number') setNitro(msg.volcano);
+          else if(typeof msg.magma==='number') setNitro(msg.magma);
+          if (typeof msg.score==='number') setNitroScore(Math.round(msg.score*10));
+          if (msg.ghostTrail || msg.eruptionPending) setGhostTrail(true);
+          if (msg.overheat) { setOverheat(true); setTimeout(()=>setOverheat(false),1000); }
+          if (typeof msg.oppNitro==='number') setOppNitro(msg.oppNitro);
+          if (msg.lavaSpike || msg.eruption) { burstPendingRef.current=false; if(stageRef.current){ gsap.fromTo(stageRef.current,{scale:1},{scale:1.03,duration:0.12,yoyo:true,repeat:1}); } }
+          if (msg.ghostTrail && ghostBarRef.current && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            gsap.fromTo(ghostBarRef.current,{opacity:0.6},{opacity:1, duration:0.4, yoyo:true, repeat:1, ease:'sine.inOut'});
+          }
           if (msg.room) setDuelRoom(msg.room as DuelRoom);
         }
         if (msg.type === "finish") {
           if (msg.room) setDuelRoom(msg.room as DuelRoom);
+          spawnConfetti();
+          setNitro(0); setOppNitro(0); setGhostTrail(false); setOverheat(false); heldMaxRef.current=null; burstPendingRef.current=false;
           const myScore = (() => {
             try {
               const r = (msg as { room?: DuelRoom }).room;
@@ -469,14 +513,15 @@ export function MiningPage() {
               return typeof p?.score === "number" ? Math.round(p.score * 10) : 42;
             } catch { return 42; }
           })();
-          void fetch("/magnum/api/games/submit", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ game: "duel", score: myScore, meta: { src: "mining-ws-finish" } }) }).catch(() => {});
+          void fetch("/magnum/api/games/submit", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ game: "duel42", score: myScore, meta: { src: "mining-nitro-finish", nitro } }) }).catch(() => {});
         }
-        if (msg.type === "scores" || msg.type === "tick" || msg.type === "start") {
+        if (msg.type === "scores" || msg.type === "start") {
           if (msg.room) setDuelRoom(msg.room as DuelRoom);
+          if (msg.type==="start") { setNitro(0); setNitroScore(0); setGhostTrail(false); setOverheat(false); heldMaxRef.current=null; lastClickRef.current=0; overheatUntilRef.current=0; }
         }
       } catch {}
     };
-  }, [me, showToast]);
+  }, [me, showToast, spawnConfetti]);
 
   // автоконнект WS дуэли после логина / при заходе на Майнинг
   useEffect(() => {
@@ -493,8 +538,10 @@ export function MiningPage() {
     if (duelHintDismissed) return;
     if (duelPromptShownRef.current) return;
     duelPromptShownRef.current = true;
-    showToast("Жми Старт — взорви вулкан! 🌋 1/4 братух в комнате");
+    showToast("Жми Старт — вруби NITRO! 🔥 1/4 братух в комнате — x9 до 9!");
   }, [duelConnected, duelRoom, duelHintDismissed, showToast]);
+
+  useEffect(()=>{ if(!me) return; fetch('/magnum/api/duel42/leaderboard').then(r=>r.ok?r.json():null).then(j=>{ if(j?.leaderboard) setDuelLb(j.leaderboard); }).catch(()=>{}); fetch('/magnum/api/duel42/elo',{credentials:'include'}).then(r=>r.ok?r.json():null).then(j=>{ if(typeof j?.elo==='number') setDuelElo(j.elo); }).catch(()=>{}); },[me]);
 
   const disconnectDuel = useCallback(() => {
     wsRef.current?.close();
@@ -507,13 +554,50 @@ export function MiningPage() {
 
   const duelClick = () => {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+    if (Date.now() < overheatUntilRef.current) { showToast('OVERHEAT — остываем 1с'); return; }
+    const now=Date.now(); const dt=now - lastClickRef.current;
+    let cur=nitro;
+    if (dt < 180) cur = Math.min(9, cur + 1); else cur = 1;
+    setNitro(cur);
+    lastClickRef.current=now;
+    if (cur >= 9) {
+      if (heldMaxRef.current===null) heldMaxRef.current=now;
+      const held = now - (heldMaxRef.current??now);
+      if (held >= 3000 && !burstPendingRef.current) {
+        burstPendingRef.current=true; setGhostTrail(true);
+      }
+      if (held >= 3000) {
+        overheatUntilRef.current=now+1000; setOverheat(true); setGhostTrail(true);
+        setTimeout(()=>setOverheat(false),1000);
+        if(stageRef.current && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) gsap.fromTo(stageRef.current,{x:-6},{x:6,duration:0.09, yoyo:true, repeat:4});
+      }
+    } else {
+      heldMaxRef.current=null; burstPendingRef.current=false;
+    }
     wsRef.current.send(JSON.stringify({ type: "click" }));
-    // punch
     if (rockRef.current) gsap.fromTo(rockRef.current, { scale: 0.96 }, { scale: 1, duration: 0.15 });
+    if (nitroFillRef.current && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      gsap.fromTo(nitroFillRef.current,{scaleX:1},{scaleX:1.08,duration:0.12, yoyo:true, repeat:1});
+    }
+    if (cur>=9 && ghostBarRef.current && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      gsap.fromTo(ghostBarRef.current,{opacity:0.5},{opacity:1,duration:0.25, yoyo:true, repeat:1});
+    }
   };
   const duelStart = () => {
     wsRef.current?.send(JSON.stringify({ type: "start" }));
+    setNitro(0); setOverheat(false); setGhostTrail(false); heldMaxRef.current=null; burstPendingRef.current=false;
   };
+  const duelCreateLobby = () => {
+    if(!wsRef.current || wsRef.current.readyState!==WebSocket.OPEN) return;
+    wsRef.current.send(JSON.stringify({ type:"lobby:create", wager: duelWager }));
+  };
+  const duelJoin = () => {
+    if(!wsRef.current || wsRef.current.readyState!==WebSocket.OPEN) return;
+    const code = duelCode.trim().toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,4);
+    if(code.length!==4){ showToast('Код 4 символа, братуха'); return; }
+    wsRef.current.send(JSON.stringify({ type:"join", code }));
+  };
+  const duelReady = () => { wsRef.current?.send(JSON.stringify({type:'ready'})); };
 
   // P0 funnel: автоскролл к #duel если hash при заходе (/magnum/mining#duel из нуджа)
   useEffect(() => {
@@ -658,35 +742,55 @@ export function MiningPage() {
         <div style={{ marginTop: 8, fontSize: 11, opacity: 0.45 }}>GET /magnum/api/mining/vault · POST /magnum/api/mining/vault/claim · {vaultClaimed.size}/5 забрано · баланс Neon: {coins} 42</div>
       </section>
 
-      {/* WS duel 2-4 игрока — P0 funnel активация: id=duel для автоскролла из нуджа */}
-      <section id="duel" data-duel="42" className={styles.duelSection} style={{ marginTop: 32, scrollMarginTop: 72 }}>
-        <h2 className={styles.sectionTitle}>ДУЭЛЬ 42 <span>· 2–4 БРАТУХИ · REALTIME WS</span></h2>
-        <p style={{ opacity: 0.7, marginBottom: 12 }}>Комната на 2–4 игрока, кликер-дуэль 10 сек, broadcast scores, persist в magnum_leaderboard при финише.</p>
+      {/* NITRO 42 — WS 2-4 + nitro x9 + ghost + overheat 3с→1с -50% — GSAP y24 stagger 0.12 shake x6 */}
+      <section ref={stageRef} id="duel" data-duel="42" className={styles.duelSection} style={{ marginTop: 32, scrollMarginTop: 72, position:"relative", overflow:"hidden", border:"1px solid rgba(255,45,85,0.18)", borderRadius:14, padding:14, background:"linear-gradient(180deg, rgba(255,45,85,0.06), rgba(255,255,255,0.02))" }}>
+        {overheat && <div style={{position:"absolute", inset:0, background:"rgba(0,180,255,0.06)", pointerEvents:"none"}} />}
+        <h2 className={styles.sectionTitle}>⚡ ДУЭЛЬ NITRO 42 <span>· 2–4 БРАТУХИ · x9 · 10С</span></h2>
+        <p style={{ opacity: 0.7, marginBottom: 12 }}>NITRO &lt;0.18с +9% капа x9 (1.0→1.72) · overheat 3с удержания x9 → 1с кулдаун −50% · ghost-nitro trail · CPS&gt;20 suspect · wager 0/42/142/420</p>
         {duelConnected && duelRoom?.state === "waiting" && !duelHintDismissed && (
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, padding: "10px 14px", border: "1px solid rgba(255,204,0,0.35)", borderRadius: 12, background: "linear-gradient(135deg, rgba(255,204,0,0.16), rgba(255,45,85,0.10))", boxShadow: "0 0 18px rgba(255,204,0,0.18)" }}>
-            <span style={{ fontSize: 18 }}>🌋</span>
-            <div style={{ flex: 1, fontWeight: 800, fontSize: 13, letterSpacing: 0.3 }}>Жми Старт — ворвись в дуэль! 1/4 братух в комнате → 10с кликов, счёт в magnum_game_scores</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, padding: "10px 14px", border: "1px solid rgba(255,45,85,0.35)", borderRadius: 12, background: "linear-gradient(135deg, rgba(255,45,85,0.16), rgba(255,204,0,0.10))", boxShadow: "0 0 18px rgba(255,45,85,0.18)" }}>
+            <span style={{ fontSize: 18 }}>⚡</span>
+            <div style={{ flex: 1, fontWeight: 800, fontSize: 13, letterSpacing: 0.3 }}>Вруби NITRO! 1/4 братух → 10с кликов · &lt;0.18с +9% до x9</div>
             <button className={styles.btnSave} onClick={() => duelStart()} style={{ animation: "pulse 1.2s infinite" }}>ЖМИ СТАРТ →</button>
             <button className={styles.btnGhost} onClick={() => setDuelHintDismissed(true)} style={{ fontSize: 11, opacity: 0.6 }}>✕</button>
           </div>
         )}
+        <div style={{display:"flex", gap:8, marginBottom:10, flexWrap:"wrap", alignItems:"center"}}>
+          <select value={duelWager} onChange={e=>setDuelWager(Number(e.target.value))} style={{padding:"6px 8px", borderRadius:10, border:"1px solid rgba(255,255,255,0.12)", background:"rgba(0,0,0,0.3)", color:"#fff"}}>
+            <option value={0}>wager 0</option><option value={42}>wager 42</option><option value={142}>wager 142</option><option value={420}>wager 420</option>
+          </select>
+          <button onClick={duelCreateLobby} disabled={!duelConnected} style={{padding:"6px 10px", borderRadius:10, border:"1px solid rgba(255,204,0,0.22)", opacity:!duelConnected?0.5:1, cursor:"pointer"}}>Создать ABCD</button>
+          <input value={duelCode} onChange={e=>setDuelCode(e.target.value)} placeholder="ABCD" maxLength={4} style={{width:64, padding:"6px 8px", borderRadius:10, border:"1px solid rgba(255,255,255,0.12)", background:"rgba(0,0,0,0.3)", color:"#fff", textTransform:"uppercase"}} />
+          <button onClick={duelJoin} disabled={!duelConnected} style={{padding:"6px 10px", borderRadius:10, border:"1px solid rgba(255,255,255,0.12)", opacity:!duelConnected?0.5:1, cursor:"pointer"}}>Join</button>
+        </div>
+        {/* nitro + ghost bars */}
+        <div ref={nitroBarRef} style={{marginBottom:10, display:"grid", gap:6}}>
+          <div style={{display:"flex", justifyContent:"space-between", fontSize:12, opacity:0.9}}><span>NITRO {nitro}/9 {ghostTrail?"👻 ghost": ""} {overheat?"❄️ OVERHEAT 1с":""} {suspect?"🚫 suspect":""}</span><span>score {nitroScore}</span></div>
+          <div style={{height:14, borderRadius:10, background:"rgba(0,0,0,0.35)", border:"1px solid rgba(255,45,85,0.22)", overflow:"hidden", position:"relative"}}>
+            <div ref={nitroFillRef} style={{height:"100%", width:`${(nitro/9)*100}%`, background: overheat?"linear-gradient(90deg,#00b8ff,#00e5ff)": ghostTrail?"linear-gradient(90deg,#ff2d55,#ff8a65)":"linear-gradient(90deg,#ff2d55,#ffd42a)", transition:"width 0.12s", boxShadow: ghostTrail?"0 0 14px rgba(255,45,85,0.45)":"none"}} />
+          </div>
+          <div ref={ghostBarRef} style={{height:6, borderRadius:6, background: ghostTrail?"rgba(255,45,85,0.35)":"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.06)", opacity: ghostTrail?1:0.5, boxShadow: ghostTrail?"0 0 10px rgba(255,45,85,0.35)":"none", transition:"all 0.2s"}} />
+          <div style={{fontSize:11, opacity:0.6}}>ABCD join→ready→10с · nitro &lt;0.18с +9% капа x9 · overheat 3с→1с −50% · ghost trail · throttle 30/сек · heartbeat 25с · wager win +wager*2 +42 ELO</div>
+        </div>
         <div style={{ display: "flex", gap: 12, marginBottom: 12, flexWrap: "wrap", alignItems: "center" }}>
           {!duelConnected ? <button className={styles.btnSave} onClick={connectDuel}>ВОЙТИ В ДУЭЛЬ →</button> : <button className={styles.btnGhost} onClick={disconnectDuel}>ВЫЙТИ</button>}
-          {duelConnected && duelRoom?.state === "waiting" && <button className={styles.btnSave} onClick={duelStart} style={{ boxShadow: "0 0 14px rgba(255,204,0,0.35)" }}>СТАРТ 10С</button>}
-          {duelConnected && duelRoom?.state === "playing" && <button className={styles.rock} onClick={duelClick} style={{ padding: "12px 28px" }}>ЖМИ! 🔥</button>}
-          {duelConnected && duelRoom && <span style={{ fontSize: 11, opacity: 0.55, border: "1px solid rgba(255,255,255,0.12)", borderRadius: 999, padding: "4px 8px" }}>{duelConnected ? "WS ● connected" : "WS ○"} · {duelRoom.players.length}/4 · {duelRoom.state}</span>}
+          {duelConnected && <button className={styles.btnGhost} onClick={duelReady}>READY ✓</button>}
+          {duelConnected && duelRoom?.state === "waiting" && <button className={styles.btnSave} onClick={duelStart} style={{ boxShadow: "0 0 14px rgba(255,45,85,0.35)" }}>СТАРТ 10С</button>}
+          {duelConnected && duelRoom?.state === "playing" && <button className={styles.rock} onClick={duelClick} style={{ padding: "12px 28px", background: overheat?"rgba(0,180,255,0.12)":undefined, borderColor: overheat?"rgba(0,180,255,0.32)":undefined, boxShadow: nitro>=9?"0 0 16px rgba(255,45,85,0.35)":"none" }}>{overheat?"ОСТЫВАЕМ... ❄️":"ЖМИ! ⚡ NITRO"}</button>}
+          {duelConnected && duelRoom && <span style={{ fontSize: 11, opacity: 0.55, border: "1px solid rgba(255,255,255,0.12)", borderRadius: 999, padding: "4px 8px" }}>{duelConnected ? "WS ● connected" : "WS ○"} · {duelRoom.players.length}/4 · {duelRoom.state} {duelRoom.wager?`· wager ${duelRoom.wager}`:""} {duelElo!==null?`· ELO ${duelElo}`:""}</span>}
         </div>
         {duelRoom ? (
-          <div ref={boardRef} style={{ border: "1px solid #333", borderRadius: 12, padding: 12 }}>
-            <div style={{ fontSize: 12, opacity: 0.6, marginBottom: 8 }}>Комната {duelRoom.id} · {duelRoom.state} · {duelRoom.players.length}/4</div>
+          <div style={{ border: "1px solid #333", borderRadius: 12, padding: 12 }}>
+            <div style={{ fontSize: 12, opacity: 0.6, marginBottom: 8 }}>Комната {duelRoom.id} · {duelRoom.state} · {duelRoom.players.length}/4 {duelRoom.wager?`· wager ${duelRoom.wager}`:""}</div>
             {duelRoom.players.map((p) => (
-              <div key={p.name} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #222" }}>
-                <span>{p.name}</span><span style={{ fontWeight: 700 }}>{p.score}</span>
+              <div key={p.name} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #222", opacity: (p as any).suspect?0.6:1 }}>
+                <span>{p.name} {(p as any).ready?"✓":""} {(p as any).suspect?"👻":""} {p.name===me?.username?`· nitro ${nitro}/9`: (p.nitro!==undefined?`· nitro ${p.nitro}/9`: p.volcano!==undefined?`· nitro ${p.volcano}/9`:"")}</span><span style={{ fontWeight: 700 }}>{p.score.toFixed(2)}</span>
               </div>
             ))}
-            {duelRoom.state === "finished" && <div style={{ marginTop: 8, color: "#7cff7c" }}>Финиш! Результаты сохранены в magnum_leaderboard.</div>}
+            {duelRoom.state === "finished" && <div style={{ marginTop: 8, color: "#7cff7c" }}>Финиш! Результаты в magnum_leaderboard (duel42) + ELO · Конфетти 160 🎉</div>}
           </div>
         ) : <div style={{ opacity: 0.5, fontSize: 13 }}>{duelConnected ? "Ждём игроков…" : "Нажми «Войти в дуэль» — найдём комнату 2–4 братух."}</div>}
+        {duelLb.length>0 && <div style={{marginTop:10, padding:10, borderRadius:10, border:"1px solid rgba(255,255,255,0.06)", background:"rgba(255,255,255,0.02)", fontSize:12}}><div style={{opacity:0.8, marginBottom:6}}>🏆 DUEL42 7дн · ELO · crown nitro</div>{duelLb.slice(0,5).map((r,i)=><div key={i} style={{display:"flex", justifyContent:"space-between"}}><span>{i+1}. {r.player}</span><span>{r.score}</span></div>)}</div>}
       </section>
 
       <section ref={boardRef} className={styles.board}>

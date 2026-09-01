@@ -11,9 +11,11 @@ describe("🎴 Blackjack 42 — спека 4200 открытка", () => {
     expect(bj).toContain("START_BALANCE = 1000");
     expect(bj).toContain("GOAL = 4200");
   });
-  it("LS ключи blackjack42-balance + best", () => {
-    expect(bj).toContain("blackjack42-balance");
-    expect(bj).toContain("blackjack42-best");
+  it("баланс/рекорд в Neon (без LS) — fetch /magnum/api/games/my и coins", () => {
+    expect(bj).not.toContain("blackjack42-balance");
+    expect(bj).not.toContain("blackjack42-best");
+    expect(bj).toContain("/magnum/api/games/my");
+    expect(bj).toContain("blackjack");
   });
   it("BJ 3:2 и soft17 логика", () => {
     expect(bj).toContain("isSoft17");

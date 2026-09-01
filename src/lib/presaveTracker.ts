@@ -1,12 +1,34 @@
 import { useEffect } from "react";
 
+export type ABVariant = "a" | "b";
+
+export function getABVariant(): ABVariant {
+  if (typeof window === "undefined") return "a";
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get("ab");
+    if (q === "a" || q === "b") {
+      try { localStorage.setItem("ab_cta", q); } catch {}
+      return q;
+    }
+    const stored = localStorage.getItem("ab_cta");
+    if (stored === "a" || stored === "b") return stored;
+    const picked: ABVariant = Math.random() < 0.5 ? "a" : "b";
+    try { localStorage.setItem("ab_cta", picked); } catch {}
+    return picked;
+  } catch {
+    return "a";
+  }
+}
+
 export function usePresaveTracker() {
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       const a = (e.target as HTMLElement).closest('a[href*="music.thefence.me/psmagnum"]');
       if (!a) return;
       try { localStorage.setItem("presave_done", "1"); } catch {}
-      fetch("/magnum/api/presave/click", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: (a as HTMLAnchorElement).href, ts: Date.now() }) }).catch(() => {});
+      const variant = getABVariant();
+      fetch("/magnum/api/presave/click", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: (a as HTMLAnchorElement).href, ts: Date.now(), variant }) }).catch(() => {});
     };
     document.addEventListener("click", handler);
     return () => document.removeEventListener("click", handler);

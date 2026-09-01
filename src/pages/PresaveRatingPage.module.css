@@ -38,6 +38,8 @@
 }
 .subtitle { max-width: 720px; margin: 0 auto; color: var(--c-dim); font-size: 14.5px; line-height: 1.55; }
 .subtitle b { color: var(--c-text); }
+.fomoBadge { display: inline-flex; align-items: center; justify-content: center; margin-top: 10px; padding: 7px 14px; border-radius: 999px; background: linear-gradient(135deg, rgba(255,204,0,0.16), rgba(255,45,85,0.12)); border: 1px solid rgba(255,204,0,0.32); color: var(--c-yellow); font-size: 12px; font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase; box-shadow: 0 0 18px rgba(255,204,0,0.14); font-variant-numeric: tabular-nums; will-change: transform; }
+@media (max-width: 560px) { .fomoBadge { font-size: 11px; padding: 6px 10px; letter-spacing: 0.04em; } }
 
 .toast {
   position: fixed; top: 18px; left: 50%; transform: translateX(-50%); z-index: 70;

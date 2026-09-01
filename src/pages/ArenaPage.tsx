@@ -8,25 +8,14 @@ gsap.registerPlugin(useGSAP as never);
 type LbRow = { player: string; score: number; created_at: string; avatar: string | null };
 type LbRes = { leaderboard: LbRow[]; season: string; game: string; count: number; top3Bonus: number; crown: string; pulse: string };
 type EloRes = { elo: number; top: Array<{ username: string; elo: number }> };
+type SeasonRow = { id: number; name: string; startsAt: string; endsAt: string | null };
 
-type ArenaLS = { rating: number; wins: number; season: string; streak: number; lastSeason?: string; claimedWin?: string; claimedStreak3?: string; claimedCrown?: string };
-
-const LS_KEY = "magnum-arena-season";
 const VOLCANO_PULSE = "1.2s";
 
 function weekIdNow(): string {
   const d = new Date(); const jan1 = new Date(d.getFullYear(), 0, 1); const days = Math.floor((d.getTime() - jan1.getTime()) / 86400000);
   const week = Math.ceil((days + jan1.getDay() + 1) / 7); return `${d.getFullYear()}-W${String(week).padStart(2,"0")}`;
 }
-function season7dId(): string {
-  // 7дн сезон — скользящее окно, но для LS и idempotence используем weekId
-  return weekIdNow();
-}
-function loadLS(): ArenaLS {
-  try { const raw = localStorage.getItem(LS_KEY); if (raw) return JSON.parse(raw) as ArenaLS; } catch {}
-  return { rating: 1000, wins: 0, season: season7dId(), streak: 0 };
-}
-function saveLS(v: ArenaLS) { try { localStorage.setItem(LS_KEY, JSON.stringify(v)); } catch {} }
 
 function StreakCalendar({ streak, weekId }: { streak: number; weekId: string }) {
   return (
@@ -42,14 +31,13 @@ function StreakCalendar({ streak, weekId }: { streak: number; weekId: string }) 
 export function ArenaPage() {
   const [lb, setLb] = useState<LbRow[]>([]);
   const [elo, setElo] = useState<number | null>(null);
-  const [season] = useState(()=> season7dId());
-  const [ls, setLs] = useState<ArenaLS>(()=> loadLS());
+  const [season, setSeason] = useState<string>(() => weekIdNow());
+  const [wins, setWins] = useState(0);
+  const [streak, setStreak] = useState(0);
+  const [claimed, setClaimed] = useState<{ win: boolean; streak3: boolean; crown: boolean }>({ win: false, streak3: false, crown: false });
   const [msg, setMsg] = useState("");
   const [crownBonus] = useState(1420);
   const wrapRef = useRef<HTMLDivElement>(null);
-
-  // hydrate LS once
-  useEffect(()=>{ const v=loadLS(); if(v.season!==season){ v.season=season; } setLs(v); }, [season]);
 
   useEffect(()=>{
     let cancel=false;
@@ -59,11 +47,43 @@ export function ArenaPage() {
     }).catch(()=>{});
     fetch("/magnum/api/duel42/elo",{credentials:"include"}).then(r=> r.ok? r.json(): null).then((j:EloRes|null)=>{
       if(cancel||!j) return; setElo(j.elo);
-      // sync LS rating with server ELO if higher
-      setLs(prev=>{
-        if(j.elo!==prev.rating){ const nv={...prev, rating:j.elo, season}; saveLS(nv); return nv; }
-        return prev;
+    }).catch(()=>{});
+    // server season — from magnum_duel_seasons, fallback to computed weekId
+    fetch("/magnum/api/duel/seasons?limit=1",{credentials:"include"}).then(r=> r.ok? r.json(): null).then((j:{seasons?:SeasonRow[]}|null)=>{
+      if(cancel||!j) return;
+      const s = Array.isArray(j.seasons) && j.seasons[0];
+      if(s && typeof s.name==="string" && s.name) setSeason(String(s.name));
+      else if(s && typeof s.id==="number") setSeason(String(s.id));
+      // else keep weekIdNow() fallback already set
+    }).catch(()=>{});
+    // claimed flags via Neon transactions (idempotent check) — server returns already:true on duplicate
+    fetch("/magnum/api/transactions?limit=50",{credentials:"include"}).then(r=> r.ok? r.json(): null).then((j:{transactions?:Array<{reason:string;meta:unknown}>}|null)=>{
+      if(cancel||!j||!Array.isArray(j.transactions)) return;
+      const currentSeason = weekIdNow(); // use computed until server season fetched; will re-evaluate via season state effect below
+      // we check all seasons, but mark if any claimed for current computed season or later server season
+      // store raw; actual per-season check happens after season is known via second pass
+      const has = (kind:string, seasonId:string) => j.transactions!.some(t=> t.reason===`arena_${kind}` && (t.meta as {season?:string}|null)?.season===seasonId);
+      // optimistic: if has for currentSeason, set; season update will re-check
+      setClaimed({
+        win: has("win", currentSeason),
+        streak3: has("streak3", currentSeason),
+        crown: has("crown", currentSeason),
       });
+      // wins/streak derived from transactions count for demo (Neon source, not LS)
+      const winCount = j.transactions!.filter(t=> t.reason==="arena_win").length;
+      // streak inferred from consecutive wins not stored; keep 0 and let bumpStreak handle live session
+      if(winCount) setWins(winCount);
+    }).catch(()=>{});
+    return ()=>{ cancel=true; };
+  }, []);
+
+  // re-derive claimed when season updates (fetch transactions for that season)
+  useEffect(()=>{
+    let cancel=false;
+    fetch("/magnum/api/transactions?limit=50",{credentials:"include"}).then(r=> r.ok? r.json(): null).then((j:{transactions?:Array<{reason:string;meta:unknown}>}|null)=>{
+      if(cancel||!j||!Array.isArray(j.transactions)) return;
+      const has = (kind:string) => j.transactions!.some(t=> t.reason===`arena_${kind}` && (t.meta as {season?:string}|null)?.season===season);
+      setClaimed({ win: has("win"), streak3: has("streak3"), crown: has("crown") });
     }).catch(()=>{});
     return ()=>{ cancel=true; };
   }, [season]);
@@ -102,33 +122,29 @@ export function ArenaPage() {
 
   async function claim(kind: "win"|"streak3"|"crown") {
     setMsg("");
-    // LS guards for streak3/win (client streak) — server also guards via tx meta
-    if(kind==="streak3" && ls.streak < 3) { setMsg("Нужен стрик 3 — выиграй 3 дуэли подряд"); return; }
+    if(kind==="streak3" && streak < 3) { setMsg("Нужен стрик 3 — выиграй 3 дуэли подряд"); return; }
     try{
       const r=await fetch("/magnum/api/arena/claim",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({kind, season})});
       const j=await r.json() as {ok?:boolean; already?:boolean; reward?:number; error?:string; balance?:number};
       if(!r.ok){ setMsg(j.error||"Ошибка"); return; }
-      if(j.already){ setMsg(kind==="crown"? "👑 Crown уже получен в этом сезоне": kind==="streak3"? "🔥 Streak 3 уже получен": "✓ +42 уже получен"); return; }
+      if(j.already){ setMsg(kind==="crown"? "👑 Crown уже получен в этом сезоне": kind==="streak3"? "🔥 Streak 3 уже получен": "✓ +42 уже получен"); setClaimed(prev=> ({...prev, [kind==="win"?"win":kind==="streak3"?"streak3":"crown"]: true})); return; }
       const reward = j.reward ?? (kind==="win"?42:kind==="streak3"?142:1420);
       setMsg(`+${reward} монет • ${kind} • ${season}`);
-      // animate confetti-ish pulse on crown
       if(kind==="crown" && wrapRef.current){
         const c = wrapRef.current.querySelector<HTMLElement>("[data-crown]");
         if(c) { gsap.fromTo(c,{scale:0.8},{scale:1.08,duration:0.18,ease:"back.out(2)",yoyo:true,repeat:1}); }
       }
-      // persist LS claimed flags
-      const nv: ArenaLS = {...ls};
-      if(kind==="win") nv.claimedWin = season;
-      if(kind==="streak3") nv.claimedStreak3 = season;
-      if(kind==="crown") nv.claimedCrown = season;
-      setLs(nv); saveLS(nv);
+      // server is source of truth — mark claimed in React state
+      setClaimed(prev=> ({...prev, [kind==="win"?"win":kind==="streak3"?"streak3":"crown"]: true}));
+      if(kind==="win") setWins(v=> v+1);
     }catch{ setMsg("Сеть недоступна"); }
   }
 
-  // simulate LS streak increment on win? For demo, expose helper to bump streak (cross with StreakCalendar)
   function bumpStreak() {
-    const nv = {...ls, streak: Math.min(7, (ls.streak||0)+1), wins: (ls.wins||0)+1, season};
-    setLs(nv); saveLS(nv); setMsg(`Стрик ${nv.streak}/7 • +1 win (LS) — нажми «Забрать +142» на 3-м`);
+    const ns = Math.min(7, streak+1);
+    setStreak(ns);
+    setWins(v=> v+1);
+    setMsg(`Стрик ${ns}/7 • +1 win — нажми «Забрать +142» на 3-м`);
   }
 
   return (
@@ -137,9 +153,9 @@ export function ArenaPage() {
       <p className={styles.sub}>ELO 7дн • <span style={{color:"#ff5722",fontWeight:800}}>volcano-crown топ-3 👑</span> + pulse {VOLCANO_PULSE} + stagger y10 0.05 volcano-bar • /magnum/arena • StreakCalendar GSAP</p>
 
       <div className={styles.kpi}>
-        <div className={styles.kpiItem}><div className={styles.kpiLab}>ELO 7дн</div><div className={styles.kpiVal}>{elo ?? ls.rating}</div></div>
-        <div className={styles.kpiItem}><div className={styles.kpiLab}>Побед (LS)</div><div className={styles.kpiVal}>{ls.wins}</div></div>
-        <div className={styles.kpiItem}><div className={styles.kpiLab}>Стрик</div><div className={styles.kpiVal}>{ls.streak}/7</div></div>
+        <div className={styles.kpiItem}><div className={styles.kpiLab}>ELO 7дн</div><div className={styles.kpiVal}>{elo ?? 1000}</div></div>
+        <div className={styles.kpiItem}><div className={styles.kpiLab}>Побед (Neon)</div><div className={styles.kpiVal}>{wins}</div></div>
+        <div className={styles.kpiItem}><div className={styles.kpiLab}>Стрик</div><div className={styles.kpiVal}>{streak}/7</div></div>
         <div className={styles.kpiItem}><div className={styles.kpiLab}>Сезон</div><div className={styles.kpiVal} style={{fontSize:14}}>{season} • 7дн</div></div>
         <div className={styles.kpiItem}><div className={styles.kpiLab}>Награды</div><div className={styles.kpiVal} style={{fontSize:12}}>+42 win / +142 streak3 / +{crownBonus} crown</div></div>
       </div>
@@ -172,29 +188,29 @@ export function ArenaPage() {
           </div>
           <div style={{marginTop:12,display:"flex",gap:8,flexWrap:"wrap"}}>
             <a href="/magnum/games/duel-volcano" className={`${styles.btn} ${styles.btnPrimary}`}>ИГРАТЬ VOLCANO →</a>
-            <button type="button" className={styles.btn} onClick={bumpStreak}>+1 win (LS стрик)</button>
+            <button type="button" className={styles.btn} onClick={bumpStreak}>+1 win (стрик)</button>
           </div>
         </div>
 
         <div style={{display:"flex",flexDirection:"column",gap:12}}>
           <div className={styles.card}>
             <div className={styles.cardTitle}>Стрик-календарь 7дн • cross StreakCalendar</div>
-            <StreakCalendar streak={ls.streak} weekId={season} />
-            <div className={styles.meta} style={{marginTop:8}}>LS: <code>magnum-arena-season:{`{rating,wins,season,streak}`}</code> • streak 3 → +142 • crown топ-3 → +1420</div>
+            <StreakCalendar streak={streak} weekId={season} />
+            <div className={styles.meta} style={{marginTop:8}}>Neon: <code>ELO /magnum/api/duel42/elo + season /magnum/api/duel/seasons • streak 3 → +142 • crown топ-3 → +1420</code></div>
             <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:10}}>
-              <button type="button" className={`${styles.btn} ${ls.claimedWin===season? "":styles.btnPrimary}`} disabled={ls.claimedWin===season} onClick={()=>claim("win")}>{ls.claimedWin===season?"✓ +42 получен":"+42 win"}</button>
-              <button type="button" className={`${styles.btn} ${ls.claimedStreak3===season? "":styles.btnPrimary}`} disabled={ls.claimedStreak3===season || ls.streak<3} onClick={()=>claim("streak3")} title={ls.streak<3?"Нужен стрик 3":""}>{ls.claimedStreak3===season?"✓ +142 получен":"+142 streak 3"}</button>
-              <button type="button" className={`${styles.btn} ${ls.claimedCrown===season? "":styles.btnPrimary}`} disabled={ls.claimedCrown===season} onClick={()=>claim("crown")}>{ls.claimedCrown===season?"✓ 👑 получен":"👑 +1420 crown топ-3"}</button>
+              <button type="button" className={`${styles.btn} ${claimed.win? "":styles.btnPrimary}`} disabled={claimed.win} onClick={()=>claim("win")}>{claimed.win?"✓ +42 получен":"+42 win"}</button>
+              <button type="button" className={`${styles.btn} ${claimed.streak3? "":styles.btnPrimary}`} disabled={claimed.streak3 || streak<3} onClick={()=>claim("streak3")} title={streak<3?"Нужен стрик 3":""}>{claimed.streak3?"✓ +142 получен":"+142 streak 3"}</button>
+              <button type="button" className={`${styles.btn} ${claimed.crown? "":styles.btnPrimary}`} disabled={claimed.crown} onClick={()=>claim("crown")}>{claimed.crown?"✓ 👑 получен":"👑 +1420 crown топ-3"}</button>
             </div>
             {msg && <div className={styles.meta} style={{marginTop:8,color:"#7cff7c",fontWeight:700}}>{msg}</div>}
-            <div className={styles.meta} style={{marginTop:8}}>Сброс: LS сбрасывается при смене weekId • сервер idempotent по (user, season, kind) в magnum_transactions</div>
+            <div className={styles.meta} style={{marginTop:8}}>Сброс: сезон с сервера (magnum_duel_seasons / weekId) • сервер idempotent по (user, season, kind) в magnum_transactions — повтор после перезагрузки 409</div>
           </div>
 
           <div className={styles.card}>
             <div className={styles.cardTitle}>Как получить</div>
             <ul className={styles.meta} style={{marginTop:8,paddingLeft:16,display:"flex",flexDirection:"column",gap:4}}>
               <li><b>+42 win</b> — выиграй дуэль VOLCANO (WS 10с, volcano x11, eruption 2.5×)</li>
-              <li><b>+142 streak 3</b> — 3 победы подряд в сезоне 7дн (LS стрик)</li>
+              <li><b>+142 streak 3</b> — 3 победы подряд в сезоне 7дн</li>
               <li><b>+1420 crown</b> — войди в топ-3 ELO 7дн и забери crown (проверка Neon)</li>
               <li>Wager 42/142/420 • overheat 4с→1.5с • ghost-volcano trail</li>
             </ul>

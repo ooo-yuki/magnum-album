@@ -8,7 +8,7 @@ export function AuthStatus() {
   const [loading, setLoading] = useState(true);
   const [tier, setTier] = useState<string | null>(null);
   const [showModal, setShowModal] = useState<null | "login" | "register">(null);
-  const [form, setForm] = useState({ username: "", password: "" });
+  const [form, setForm] = useState({ username: "", password: "", bratCode: "" });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [quickBusy, setQuickBusy] = useState(false);
@@ -142,11 +142,13 @@ export function AuthStatus() {
     setBusy(true);
     try {
       const url = showModal === "register" ? "/magnum/api/auth/register" : "/magnum/api/auth/login";
+      const payload: Record<string,string> = { username: u, password: p };
+      if (showModal === "register" && form.bratCode.trim()) payload.referralCode = form.bratCode.trim().toUpperCase();
       const r = await fetch(url, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: u, password: p }),
+        body: JSON.stringify(payload),
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) { setError((j as { error?: string }).error || "ошибка"); return; }
@@ -157,7 +159,7 @@ export function AuthStatus() {
         });
       }
       setShowModal(null);
-      setForm({ username: "", password: "" });
+      setForm({ username: "", password: "", bratCode: "" });
       await refresh();
       window.dispatchEvent(new CustomEvent("magnum:auth", { detail: (j as { user?: Me }).user }));
     } catch {
@@ -248,6 +250,7 @@ export function AuthStatus() {
             <h3 className={styles.modalTitle}>{showModal === "register" ? "Регистрация 42" : "Вход"}</h3>
             <input className={styles.input} placeholder="логин (3-32)" value={form.username} onChange={(ev) => setForm((p) => ({ ...p, username: ev.target.value }))} maxLength={32} autoFocus />
             <input className={styles.input} placeholder="пароль (3+)" type="password" value={form.password} onChange={(ev) => setForm((p) => ({ ...p, password: ev.target.value }))} />
+            {showModal === "register" && <input className={styles.input} placeholder="БРАТУХА-КОД 42-XXXX (опц.)" value={form.bratCode} onChange={ev=>setForm(p=>({...p, bratCode: ev.target.value}))} maxLength={7} style={{ textTransform:"uppercase" }} />}
             {error && <span className={styles.error}>{error}</span>}
             <div className={styles.modalActions}>
               <button type="submit" className={styles.submit} disabled={busy} onMouseEnter={onBtnEnter} onMouseLeave={onBtnLeave}>{busy ? "…" : showModal === "register" ? "Создать" : "Войти"}</button>

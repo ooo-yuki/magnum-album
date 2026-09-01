@@ -85,6 +85,7 @@ export const magnumPresaveClicks = pgTable("magnum_presave_clicks", {
   userId: integer("user_id").references(() => magnumUsers.id),
   url: text("url").default("/magnum"),
   ip: text("ip"),
+  variant: text("variant"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -335,4 +336,19 @@ export const magnumConveyorState = pgTable("magnum_conveyor_state", {
   prestige: integer("prestige").default(0).notNull(),
   lastClaim: timestamp("last_claim").defaultNow().notNull(),
   dust: integer("dust").default(0).notNull(),
+});
+
+export const magnumPets = pgTable("magnum_pets", {
+  userId: integer("user_id").primaryKey().references(() => magnumUsers.id, { onDelete: "cascade" }),
+  stage: integer("stage").default(0).notNull(),
+  xp: integer("xp").default(0).notNull(),
+  hunger: integer("hunger").default(70).notNull(),
+  happiness: integer("happiness").default(70).notNull(),
+  energy: integer("energy").default(70).notNull(),
+  lastTick: timestamp("last_tick").defaultNow().notNull(),
+  lastPlayAt: timestamp("last_play_at"),
+  lastSleepAt: timestamp("last_sleep_at"),
+  lastClaimAt: timestamp("last_claim_at"),
+  streak: integer("streak").default(0).notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

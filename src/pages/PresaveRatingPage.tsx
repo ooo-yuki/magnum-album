@@ -121,6 +121,17 @@ export const PRESAVE_RATING_FAQ_EXTRA: { q: string; a: string; src: string }[] =
 function isValidPresaveQ(v: string): boolean { const s=v.trim(); return s.length>=1 && s.length<=32; }
 function isValidBoost(v: string): boolean { return /^[a-z0-9_-]{1,24}$/.test(v.trim().toLowerCase()); }
 
+const DROP_DATE_RATING = new Date("2026-09-15T00:00:00+03:00");
+function formatDropCountdown(ms: number): string {
+  if (ms <= 0) return "Дроп уже здесь 🔥";
+  const d = Math.floor(ms / 86400000);
+  const h = Math.floor((ms % 86400000) / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  if (d > 0) return `${d}д ${String(h).padStart(2, "0")}ч ${String(m).padStart(2, "0")}м`;
+  if (h > 0) return `${h}ч ${String(m).padStart(2, "0")}м`;
+  return `${m}м`;
+}
+
 export function PresaveRatingPage() {
   const [filter, setFilter] = useState<"all" | RatingRow["status"]>("all");
   const [q, setQ] = useState("");
@@ -133,11 +144,13 @@ export function PresaveRatingPage() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [bandlink, setBandlink] = useState<{ title: string; image: string | null; ok: boolean } | null>(null);
+  const [dropCountdown, setDropCountdown] = useState<string>(() => formatDropCountdown(DROP_DATE_RATING.getTime() - Date.now()));
 
   const rootRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
   const kpiRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLDivElement>(null);
+  const fomoBadgeRef = useRef<HTMLDivElement>(null);
 
   const loadAll = async () => {
     setLoading(true);
@@ -433,10 +446,26 @@ export function PresaveRatingPage() {
 
   const isEmpty = !loading && ratingRows.length === 0;
 
+  useEffect(() => {
+    const tick = () => setDropCountdown(formatDropCountdown(DROP_DATE_RATING.getTime() - Date.now()));
+    const id = window.setInterval(tick, 60000);
+    tick();
+    return () => clearInterval(id);
+  }, []);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!fomoBadgeRef.current) return;
+    const ctx = gsap.context(() => {
+      gsap.to(fomoBadgeRef.current, { scale: 1.03, duration: 0.42, ease: "power2.inOut", repeat: -1, yoyo: true, repeatDelay: 2.16 });
+    }, fomoBadgeRef);
+    return () => ctx.revert();
+  }, []);
+
   return (
     <div className={styles.page} ref={rootRef}>
       <header ref={heroRef} className={styles.header}>
         <div className={styles.badge}>★ РЕЙТИНГ ПРЕСЕЙВА · MAGNUM · 42 БРАТУХИ</div>
+        <div ref={fomoBadgeRef} className={styles.fomoBadge} data-testid="presave-fomo-badge">FOMO: первые 42 — золотая рамка · До дропа MAGNUM: {dropCountdown}</div>
         <h1 className={styles.title}>КТО ПОСТАВИЛ<br />ПРЕСЕЙВ — ТОТ БРАТУХА</h1>
         <p className={styles.subtitle}>
           Реальный рейтинг — только живые братухи, без фейков. {bandlink?.title ? `BandLink: ${bandlink.title}` : ""} Проверка — через <b>БРАТ-БОТа</b>.

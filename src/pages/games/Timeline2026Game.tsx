@@ -172,7 +172,9 @@ export function Timeline2026Game() {
   const [placed, setPlaced] = useState<Event[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<"ok" | "bad" | null>(null);
-  const [best, setBest] = useState(() => { try { return Number(localStorage.getItem("tl2026-best")) || 0; } catch { return 0; } });
+  const [best, setBest] = useState<number>(0);
+  // Neon best — progress in magnum_game_scores (SPEC §7), без LS
+  useEffect(()=>{ fetch("/magnum/api/games/my",{credentials:"include"}).then(r=>r.ok?r.json():null).then(j=>{ const arr=j?.scores as {game:string;score:number}[]|undefined; if(!arr) return; let m=0; for(const s of arr) if(s.game==="timeline"&&s.score>m) m=s.score; if(m) setBest(m); }).catch(()=>{}); },[]);
   const [streak, setStreak] = useState(0);
   const [hints, setHints] = useState(3);
   const [hintReveal, setHintReveal] = useState<string | null>(null);
@@ -290,7 +292,7 @@ export function Timeline2026Game() {
         if (newPlaced.length === cfg.events) {
           if (round + 1 >= ROUNDS) {
             const finalScore = score + gain;
-            if (finalScore > best) { setBest(finalScore); try { localStorage.setItem("tl2026-best", String(finalScore)); } catch {} }
+            if (finalScore > best) { setBest(finalScore); void fetch("/magnum/api/games/submit",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({game:"timeline",score:finalScore})}).catch(()=>{}); }
             if (!muted) playWin();
             setShowConfetti(true);
             if (!prefersReducedMotion() && placedRef.current) {

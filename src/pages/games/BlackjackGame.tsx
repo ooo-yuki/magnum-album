@@ -25,8 +25,6 @@ function hoverOut(el: HTMLElement) {
 const PRESAVE = "https://music.thefence.me/psmagnum";
 const GOAL = 4200;
 const START_BALANCE = 1000;
-const LS_BALANCE = "blackjack42-balance";
-const LS_BEST = "blackjack42-best";
 const MIN_BET = 10;
 
 // ── Контент-массивы 42 / MAGNUM — 50+ строк лора ──

@@ -25,6 +25,9 @@
 .proofItem strong { color: #fff; }
 .proofDot { opacity: 0.35; }
 .fine { margin-top: 0.7rem; font-size: 0.72rem; color: var(--faint); }
+.fomoBadge { display: inline-flex; align-items: center; justify-content: center; margin-top: 0.85rem; padding: 0.42rem 0.9rem; border-radius: 999px; background: linear-gradient(135deg, rgba(255,45,85,0.14), rgba(255,204,0,0.12)); border: 1px solid rgba(255,45,85,0.24); color: #fff; font-size: 0.82rem; font-weight: 800; letter-spacing: 0.02em; box-shadow: 0 0 18px rgba(255,45,85,0.14); will-change: transform; }
+.countdown { display: inline-flex; align-items: center; justify-content: center; margin-top: 0.55rem; margin-left: 0.5rem; padding: 0.32rem 0.75rem; border-radius: 999px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.10); color: rgba(255,255,255,0.86); font-size: 0.78rem; font-weight: 700; letter-spacing: 0.03em; font-variant-numeric: tabular-nums; will-change: transform; }
+@media (max-width: 560px) { .fomoBadge { font-size: 0.74rem; padding: 0.36rem 0.7rem; } .countdown { font-size: 0.70rem; margin-left: 0; display: flex; margin-top: 0.45rem; } }
 @keyframes rgbShift { 0% { background-position: 0% 50%; } 100% { background-position: 400% 50%; } }
 @media (prefers-reduced-motion: reduce) { .card, .card::before { transition: none !important; animation: none !important; } .shimmer { display: none; } .card:hover { transform: none; } }
 @media (max-width: 480px) { .card { padding: 1rem 0.9rem; } .heading { font-size: 1.7rem; } }

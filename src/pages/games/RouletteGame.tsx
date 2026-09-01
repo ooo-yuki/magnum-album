@@ -30,8 +30,6 @@ function safeRamp(param: AudioParam, fn: () => void, fallbackValue: number) {
 const PRESAVE = "https://music.thefence.me/psmagnum";
 const START_BALANCE = 1000;
 const WIN_BALANCE = 4200;
-const LS_BALANCE = "roulette42-balance";
-const LS_HISTORY = "roulette42-history";
 
 const CHIPS = [1, 5, 25, 100] as const;
 

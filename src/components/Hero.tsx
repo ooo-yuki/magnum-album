@@ -2,6 +2,7 @@ import { useRef, useEffect, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import styles from "./Hero.module.css";
+import { getABVariant, type ABVariant } from "../lib/presaveTracker";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -11,7 +12,7 @@ export { PRESAVE_URL };
 const SCRAMBLE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*!?";
 const TITLE_TARGET = "MAGNUM";
 
-export function Hero() {
+export function Hero({ variant: variantProp }: { variant?: ABVariant }) {
   const sectionRef = useRef<HTMLElement>(null);
   const badgeRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
@@ -25,10 +26,29 @@ export function Hero() {
   const glowRef = useRef<HTMLDivElement>(null);
 
   const [titleText, setTitleText] = useState(SCRAMBLE_CHARS.slice(0, TITLE_TARGET.length));
+  const [variant, setVariant] = useState<ABVariant>(variantProp ?? "a");
+  const [presaveCount, setPresaveCount] = useState<number | null>(null);
+  useEffect(() => {
+    if (variantProp) { setVariant(variantProp); return; }
+    setVariant(getABVariant());
+  }, [variantProp]);
+
+  // live presave counter — visible without scroll on mobile (Neon-backed, not LS)
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/magnum/api/presave/stats", { credentials: "include" })
+      .then((r) => r.ok ? r.json() as Promise<{ total?: number }> : null)
+      .then((j) => { if (!cancelled && j && typeof j.total === "number") setPresaveCount(j.total); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  const isB = variant === "b";
+  const shownCount = presaveCount ?? 0;
 
   const handlePresave = () => {
     try { localStorage.setItem("presave_done", "1"); } catch {}
-    fetch("/magnum/api/presave/click", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: PRESAVE_URL, ts: Date.now() }) }).catch(() => {});
+    fetch("/magnum/api/presave/click", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: PRESAVE_URL, ts: Date.now(), variant }) }).catch(() => {});
   };
 
   // text-scramble effect on mount
@@ -249,7 +269,7 @@ export function Hero() {
   }, []);
 
   return (
-    <section className={styles.hero} ref={sectionRef} aria-label="MAGNUM hero">
+    <section className={styles.hero} ref={sectionRef} aria-label="MAGNUM hero" data-variant={variant}>
       {/* gradient / orb layers for parallax depth */}
       <div className={styles.glow} ref={glowRef} aria-hidden />
       <div className={styles.orb1} ref={orb1Ref} aria-hidden />
@@ -268,10 +288,35 @@ export function Hero() {
       </h1>
 
       <p className={styles.subtitle} ref={subtitleRef}>
-        Пятерка × 42&nbsp;братухи
+        {isB ? "42 братухи уже в деле" : "Пятерка × 42\u00a0братухи"}
       </p>
 
-      <p className={styles.tagline} ref={taglineRef}>Мультижанровый захват — от сада до чартов</p>
+      <p className={styles.tagline} ref={taglineRef}>{isB ? `${shownCount} пресейвов · стань частью 42` : "Мультижанровый захват — от сада до чартов"}</p>
+
+      {/* visible counter without scroll — mobile-first, Neon-backed */}
+      <div
+        data-testid="hero-presave-counter"
+        aria-live="polite"
+        style={{
+          marginTop: "0.7rem",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "0.45rem",
+          padding: "0.32rem 0.78rem",
+          borderRadius: 999,
+          background: shownCount >= 7 ? "rgba(0,255,136,0.12)" : "rgba(255,45,85,0.12)",
+          border: `1px solid ${shownCount >= 7 ? "rgba(0,255,136,0.22)" : "rgba(255,45,85,0.18)"}`,
+          fontSize: "0.78rem",
+          fontWeight: 800,
+          letterSpacing: "0.02em",
+          color: shownCount >= 7 ? "#00ff88" : "#ff2d55",
+          position: "relative" as const,
+          zIndex: 1,
+        }}
+      >
+        <span aria-hidden>🔥</span> {shownCount}/42 пресейвов · {shownCount >= 42 ? "дроп готов!" : `осталось ${42 - shownCount} мест`}
+        <span style={{ background: "#ffcc00", color: "#111", padding: "0.1rem 0.38rem", borderRadius: 999, fontSize: "0.68rem", fontWeight: 900 }}>+42</span>
+      </div>
 
       <div className={styles.cta} ref={ctaRef}>
         <a
@@ -283,12 +328,13 @@ export function Hero() {
           onClick={handlePresave}
           data-testid="hero-presave"
           data-presave-bonus="42"
+          data-variant={variant}
         >
           <span className={styles.btnPulse} aria-hidden />
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z" />
           </svg>
-          Пресейв <span style={{ background: "rgba(255,255,255,0.22)", padding: "0.12rem 0.45rem", borderRadius: 999, fontSize: "0.72rem", fontWeight: 900 }}>+42 монеты</span>
+          {isB ? "Забрать свой MAGNUM →" : <><span>Пресейв</span> <span style={{ background: "rgba(255,255,255,0.22)", padding: "0.12rem 0.45rem", borderRadius: 999, fontSize: "0.72rem", fontWeight: 900 }}>+42 монеты</span></>}
         </a>
         <a href="#singles" className={styles.btnSecondary}>
           Слушать синглы

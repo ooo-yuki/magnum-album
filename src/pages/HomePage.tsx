@@ -8,6 +8,9 @@ import { Stats } from "../components/Stats";
 import { About } from "../components/About";
 import { NavGrid } from "../components/NavGrid";
 import { lazy, Suspense } from "react";
+import { getABVariant, type ABVariant } from "../lib/presaveTracker";
+import { ReferralCard } from "../components/ReferralCard";
+import { TamagotchiWidget } from "../components/TamagotchiWidget";
 // perf 16:34 — lazy below-fold (Timeline 576L + PressWall 207L + News2026 242L + CTA) — main 466→~340K eager
 // perf 2026-09-01 — Singles lazy (162L, GSAP/ScrollTrigger, 2 covers) → main -~12KB (chunk split)
 const Singles = lazy(() => import("../components/Singles").then(m => ({ default: m.Singles })));
@@ -351,6 +354,8 @@ export function HomePage() {
   const [progress, setProgress] = useState(0);
   const [unlocked, setUnlocked] = useState(false);
   const hintTimerRef = useRef<number | null>(null);
+  const [abVariant, setAbVariant] = useState<ABVariant>("a");
+  useEffect(() => { try { setAbVariant(getABVariant()); } catch {} }, []);
 
   const onLogoClick = useCallback((e: MouseEvent) => {
     const target = e.target as HTMLElement;
@@ -406,7 +411,7 @@ export function HomePage() {
 
   return (
     <>
-      <Hero />
+      <Hero variant={abVariant} />
       <Marquee />
       <Stats />
       <NavGrid />
@@ -415,8 +420,10 @@ export function HomePage() {
       <Suspense fallback={<div style={{minHeight:200}} /> }><PressWall /></Suspense>
       <Suspense fallback={<div style={{minHeight:160}} /> }><News2026 /></Suspense>
       <PromoBanners />
+      <div style={{ maxWidth:1120, margin:"0 auto", padding:"0.8rem 1rem" }}><ReferralCard /></div>
+      <TamagotchiWidget />
       <Suspense fallback={<div style={{minHeight:220}} />}><Singles /></Suspense>
-      <Suspense fallback={<div style={{minHeight:120}} /> }><CTA /></Suspense>
+      <Suspense fallback={<div style={{minHeight:120}} /> }><CTA variant={abVariant} /></Suspense>
       <PopupBanner />
 
       {pct > 0 && pct < TARGET && (

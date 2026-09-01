@@ -1,7 +1,8 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import styles from "./CTA.module.css";
+import { getABVariant, type ABVariant } from "../lib/presaveTracker";
 
 gsap.registerPlugin(ScrollTrigger);
 const PRESAVE_URL = "https://music.thefence.me/psmagnum";
@@ -9,17 +10,68 @@ export { PRESAVE_URL };
 const SPOTIFY_URL = "https://open.spotify.com/artist/5opka";
 const YT_URL = "https://www.youtube.com/@5opka";
 
-export function CTA() {
+const DROP_DATE = new Date("2026-09-15T00:00:00+03:00");
+const FOMO_TOTAL = 42;
+function formatCountdown(ms: number): string {
+  if (ms <= 0) return "Дроп уже здесь 🔥";
+  const d = Math.floor(ms / 86400000);
+  const h = Math.floor((ms % 86400000) / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  if (d > 0) return `${d}д ${String(h).padStart(2, "0")}ч ${String(m).padStart(2, "0")}м`;
+  if (h > 0) return `${h}ч ${String(m).padStart(2, "0")}м`;
+  return `${m}м`;
+}
+
+export function CTA({ variant: variantProp }: { variant?: ABVariant }) {
   const sectionRef = useRef<HTMLElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const textRef = useRef<HTMLParagraphElement>(null);
   const cardsRef = useRef<(HTMLAnchorElement | null)[]>([]);
   const shimmerRef = useRef<HTMLSpanElement>(null);
   const proofRef = useRef<HTMLDivElement>(null);
+  const fomoRef = useRef<HTMLDivElement>(null);
+  const countdownRef = useRef<HTMLDivElement>(null);
+
+  const [variant, setVariant] = useState<ABVariant>(variantProp ?? "a");
+  const [presaveCount, setPresaveCount] = useState<number | null>(null);
+  const [countdown, setCountdown] = useState<string>(() => formatCountdown(DROP_DATE.getTime() - Date.now()));
+  useEffect(() => {
+    if (variantProp) { setVariant(variantProp); return; }
+    setVariant(getABVariant());
+  }, [variantProp]);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/magnum/api/presave/stats", { credentials: "include" })
+      .then((r) => r.ok ? r.json() as Promise<{ total?: number; presaveCount?: number }> : null)
+      .then((j) => { if (!cancelled && j && typeof j.total === "number") setPresaveCount(Math.min(j.total, FOMO_TOTAL)); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+  useEffect(() => {
+    const tick = () => setCountdown(formatCountdown(DROP_DATE.getTime() - Date.now()));
+    const id = window.setInterval(tick, 60000);
+    tick();
+    return () => clearInterval(id);
+  }, []);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const els = [fomoRef.current, countdownRef.current].filter(Boolean) as HTMLElement[];
+    if (!els.length) return;
+    const ctx = gsap.context(() => {
+      els.forEach((el, i) => {
+        gsap.to(el, { scale: 1.03, duration: 0.42, ease: "power2.inOut", repeat: -1, yoyo: true, repeatDelay: 2.16, delay: i * 0.2 });
+      });
+    });
+    return () => ctx.revert();
+  }, []);
+
+  const isB = variant === "b";
+  const shownCount = presaveCount ?? 0;
+  const remaining = Math.max(0, FOMO_TOTAL - shownCount);
 
   const handlePresaveClick = () => {
     try { localStorage.setItem("presave_done", "1"); } catch {}
-    fetch("/magnum/api/presave/click", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: PRESAVE_URL, ts: Date.now() }) }).catch(() => {});
+    fetch("/magnum/api/presave/click", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: PRESAVE_URL, ts: Date.now(), variant }) }).catch(() => {});
   };
 
   useEffect(() => {
@@ -132,21 +184,24 @@ export function CTA() {
   }, []);
 
   return (
-    <section className={styles.cta} ref={sectionRef} aria-label="Пресейв MAGNUM">
+    <section className={styles.cta} ref={sectionRef} aria-label="Пресейв MAGNUM" data-variant={variant}>
       <div className={styles.inner}>
         <p className={styles.kicker}>MAGNUM • 5 пуль • уже в сети два сингла</p>
-        <h2 ref={headingRef} className={styles.heading}>Это только начало захвата</h2>
+        <div ref={fomoRef} className={styles.fomoBadge} data-testid="cta-fomo-badge" aria-live="polite">🔥 {shownCount}/42 пресейвов · осталось {remaining} мест до дропа</div>
+        <div ref={countdownRef} className={styles.countdown} data-testid="cta-countdown">До дропа MAGNUM: {countdown}</div>
+        <h2 ref={headingRef} className={styles.heading}>{isB ? "42 братухи уже в деле" : "Это только начало захвата"}</h2>
         <p ref={textRef} className={styles.lead}>
-          5 треков как 5 пуль из напечатанного пистолета. Туса Медуза и VPN уже в чартах — остальное скоро.
-          Пресейв = ты первый услышишь.
+          {isB
+            ? "7 пресейвов \u00b7 стань частью 42 — 5 треков как 5 пуль из напечатанного пистолета, остальное скоро. Ты следующий."
+            : "5 треков как 5 пуль из напечатанного пистолета. Туса Медуза и VPN уже в чартах — остальное скоро. Пресейв = ты первый услышишь."}
         </p>
         <div className={styles.grid}>
-          <a href={PRESAVE_URL} target="_blank" rel="noopener noreferrer" className={`${styles.card} ${styles.primary}`} ref={(el) => { cardsRef.current[0] = el; }} onClick={handlePresaveClick} data-testid="cta-presave" data-presave-bonus="42">
+          <a href={PRESAVE_URL} target="_blank" rel="noopener noreferrer" className={`${styles.card} ${styles.primary}`} ref={(el) => { cardsRef.current[0] = el; }} onClick={handlePresaveClick} data-testid="cta-presave" data-presave-bonus="42" data-variant={variant}>
             <span ref={shimmerRef} className={styles.shimmer} aria-hidden />
             <span style={{ position: "absolute", top: 10, right: 10, fontSize: "0.68rem", fontWeight: 900, letterSpacing: "0.06em", background: "#fff", color: "#ff2d55", padding: "0.2rem 0.5rem", borderRadius: 999, lineHeight: 1 }} data-testid="bonus-badge">+42 монеты</span>
             <span className={styles.cardIcon}>★</span>
-            <span className={styles.cardTitle}>Пресейв на Яндекс Музыке</span>
-            <span className={styles.cardSub}>400K+ слушателей • уведомление в день релиза</span>
+            <span className={styles.cardTitle}>{isB ? "Забрать свой MAGNUM →" : "Пресейв на Яндекс Музыке"}</span>
+            <span className={styles.cardSub}>{isB ? "7 пресейвов \u00b7 стань частью 42" : "400K+ слушателей • уведомление в день релиза"}</span>
             <span className={styles.cardCta}>Сохранить → <span style={{ opacity: 0.9, fontSize: "0.78rem", marginLeft: 6, background: "rgba(255,255,255,0.22)", padding: "0.1rem 0.4rem", borderRadius: 999 }}>бонус +42</span></span>
           </a>
           <a href={SPOTIFY_URL} target="_blank" rel="noopener noreferrer" className={styles.card} ref={(el) => { cardsRef.current[1] = el; }}>

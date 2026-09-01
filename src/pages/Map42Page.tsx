@@ -1,113 +1,7 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import gsap from "gsap";
 import styles from "./Map42Page.module.css";
-
-type Opt = { label: string; correct: boolean; hint: string };
-type Q = { q: string; emoji: string; options: Opt[] };
-type PointDef = { id: string; name: string; sub: string; x: number; y: number; color: string; theme: string; qs: Q[] };
-
-const POINTS: PointDef[] = [
-  {
-    id: "kemerovo", name: "КЕМЕРОВО", sub: "Томь • 557k • адмцентр", x: 470, y: 210, color: "#00ff88", theme: "Томь/пластик",
-    qs: [
-      { emoji: "🌊", q: "Томь в Кемерово — 827 км. Куда пластиковую бутылку?", options: [
-        { label: "В общий мусор — авось переработают", correct: false, hint: "мимо" },
-        { label: "Сдать в фандомат «Лента» / раздельный бак", correct: true, hint: "+42" },
-        { label: "Сжечь на берегу", correct: false, hint: "дым −142" },
-        { label: "Оставить на Красном озере", correct: false, hint: "анти-эко" },
-      ]},
-      { emoji: "🏭", q: "Кемерово — химпром Кузбасса. Что помогает Томи чище?", options: [
-        { label: "Сортировка 7дн: ПЭТ/стекло/органика", correct: true, hint: "+42" },
-        { label: "Сливать всё в Томь", correct: false, hint: "−142" },
-        { label: "Жечь пластик в мангале", correct: false, hint: "хуже" },
-        { label: "Не сортировать — всё в один пакет", correct: false, hint: "−42" },
-      ]},
-    ]
-  },
-  {
-    id: "novokuznetsk", name: "НОВОКУЗНЕЦК", sub: "Разрезы • 553k • юг", x: 620, y: 420, color: "#ff2d55", theme: "Уголь/разрезы",
-    qs: [
-      { emoji: "⛏️", q: "Кузбасс — 190 млн т угля в год. Что с рекультивацией разрезов?", options: [
-        { label: "Бросить разрез — природа сама", correct: false, hint: "долго" },
-        { label: "Рекультивация + посадка кедров/леса", correct: true, hint: "+42" },
-        { label: "Засыпать мусором", correct: false, hint: "−142" },
-        { label: "Не знать где разрез", correct: false, hint: "учи" },
-      ]},
-      { emoji: "🌲", q: "Лес Кузбасса — 4817,5 тыс га. Твой мув?", options: [
-        { label: "Сажаю весной кедры, агитирую за субботники", correct: true, hint: "+42" },
-        { label: "Жгу уголь без фильтра", correct: false, hint: "коптим" },
-        { label: "Рублю бор без посадки", correct: false, hint: "−142" },
-        { label: "Не в курсе про лес", correct: false, hint: "−42" },
-      ]},
-    ]
-  },
-  {
-    id: "belovo", name: "БЕЛОВО", sub: "Беловское вдхр • 68k", x: 540, y: 340, color: "#ffcc00", theme: "Вода/пластик",
-    qs: [
-      { emoji: "♻️", q: "Беловское водохранилище — пластик у воды?", options: [
-        { label: "Собрал в пакет, донёс до бака", correct: true, hint: "+42" },
-        { label: "Оставил на берегу — природа вывезет", correct: false, hint: "−142" },
-        { label: "Кинул в воду", correct: false, hint: "−142" },
-        { label: "Сжёг на пляже", correct: false, hint: "дым" },
-      ]},
-      { emoji: "🧴", q: "Пластик — куда после пикника?", options: [
-        { label: "Разделил ПЭТ/стекло — сдал", correct: true, hint: "+42" },
-        { label: "В общий мусор", correct: false, hint: "−5" },
-        { label: "Закопал", correct: false, hint: "−42" },
-        { label: "Сжёг", correct: false, hint: "хуже" },
-      ]},
-    ]
-  },
-  {
-    id: "prokopievsk", name: "ПРОКОПЬЕВСК", sub: "Шахты • 187k • уголь", x: 580, y: 380, color: "#9147ff", theme: "Шахты/уголь",
-    qs: [
-      { emoji: "🏗️", q: "Прокопьевск — шахты Кузбасса. Что с угольной пылью?", options: [
-        { label: "Фильтры + брикеты + субботники на Томи", correct: true, hint: "+42" },
-        { label: "Топлю чем попало без фильтра", correct: false, hint: "−142" },
-        { label: "Не знаю что такое пыль", correct: false, hint: "учи" },
-        { label: "Жгу мусор с углём", correct: false, hint: "−42" },
-      ]},
-      { emoji: "🪨", q: "Уголь Кузбасса — 95,7 тыс км², 3 хребта (Кузнецкий Алатау, Салаир). Твой вклад?", options: [
-        { label: "Переработка + агитация MAGNUM 42", correct: true, hint: "+42" },
-        { label: "Выкинул пластик в Томь", correct: false, hint: "−142" },
-        { label: "Игнор", correct: false, hint: "мимо" },
-        { label: "Только уголь жгу", correct: false, hint: "−42" },
-      ]},
-    ]
-  },
-  {
-    id: "mezhdurechensk", name: "МЕЖДУРЕЧЕНСК", sub: "Горная Шория • 96k • исток Томи", x: 700, y: 520, color: "#00ffcc", theme: "Исток/тайга",
-    qs: [
-      { emoji: "🏔️", q: "Междуреченск — у истока Томи, тайга. Что с лесом?", options: [
-        { label: "Посадка кедров + защита бора", correct: true, hint: "+42" },
-        { label: "Рублю без восстановления", correct: false, hint: "−142" },
-        { label: "Мусор в тайге", correct: false, hint: "−142" },
-        { label: "Не знаю где исток", correct: false, hint: "−42" },
-      ]},
-      { emoji: "🌲", q: "Сосновый бор Кемерово — субботник?", options: [
-        { label: "Иду на субботник, собираю 42 бутылки", correct: true, hint: "+42" },
-        { label: "Не хожу — пусть другие", correct: false, hint: "−42" },
-        { label: "Мусорю в бору", correct: false, hint: "−142" },
-        { label: "Жгу костёр с пластиком", correct: false, hint: "хуже" },
-      ]},
-    ]
-  },
-];
-
-const BOSS_Q: Q[] = [
-  { emoji: "🗺️", q: "Кузбасс — 42 регион. Что в сердце региона?", options: [
-    { label: "Томь 827 км + 95,7k км² + 190M уголь", correct: true, hint: "+1420" },
-    { label: "Не знаю", correct: false, hint: "учи" },
-    { label: "Только уголь", correct: false, hint: "мало" },
-    { label: "42 — просто число", correct: false, hint: "мимо" },
-  ]},
-  { emoji: "♻️", q: "Эко-миссия Кузбасса — что делаешь для Томи?", options: [
-    { label: "Сортировка 7дн + фандомат + субботники", correct: true, hint: "+1420" },
-    { label: "Кидаю пластик в реку", correct: false, hint: "−142" },
-    { label: "Жгу пластик", correct: false, hint: "дым" },
-    { label: "Игнор", correct: false, hint: "мимо" },
-  ]},
-];
+import { POINTS_CANON as POINTS, BOSS_Q_CANON as BOSS_Q, type MapOpt as Opt, type MapQ as Q, type MapPointDef as PointDef } from "../lib/map42";
 
 const ECO_MONITORING_URL = "https://kuzbass-ecology.ru/monitoring"; // сводка эко-мониторинга Кузбасса
 
@@ -204,11 +98,13 @@ export function Map42Page(){
     // last q correct -> complete point
     setBusy(true);
     try{
-      const r = await fetch("/magnum/api/map/answer",{ method:"POST", credentials:"include", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ pointId: activeDef.id })});
+      const answerId = (opt as {id?:string}).id ?? opt.label;
+      const r = await fetch("/magnum/api/map/answer",{ method:"POST", credentials:"include", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ pointId: activeDef.id, answerId })});
       const j = await r.json() as { ok?:boolean; error?:string; completed?:number; points?:Record<string,boolean>; streak?:number; weekId?:string; coins?:number; already?:boolean };
       if(!r.ok){
         if(r.status===401){ showToast("Войди, братуха — прогресс только для залогиненных"); }
-        else if(j.already){ showToast("Точка уже закрашена"); await fetchProgress(); setActivePoint(null); }
+        else if(j.already || j.error?.includes("already completed")){ showToast("Точка уже закрашена"); await fetchProgress(); setActivePoint(null); }
+        else if(j.error==="wrong answer" || j.error==="answerId required"){ showToast(`Неверный ответ — ${opt.hint || "попробуй ещё"} • ${j.error}`); }
         else showToast(j.error || "Ошибка");
       } else {
         await fetchProgress();
@@ -242,6 +138,7 @@ export function Map42Page(){
   };
 
   const handleBossAnswer = async (opt: Opt)=>{
+    if(busy) return;
     if(!opt.correct){ showToast("Мимо — босс ждёт правильный ответ"); return; }
     if(bossQi < BOSS_Q.length - 1){ setBossQi(v=>v+1); return; }
     setBusy(true);
