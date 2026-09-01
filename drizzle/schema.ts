@@ -236,3 +236,20 @@ export const magnumModerationLog = pgTable("magnum_moderation_log", {
   meta: jsonb("meta").default({}).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+export const magnumDuelSeasons = pgTable("magnum_duel_seasons", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  startsAt: timestamp("starts_at").defaultNow().notNull(),
+  endsAt: timestamp("ends_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const magnumDuelInvites = pgTable("magnum_duel_invites", {
+  id: serial("id").primaryKey(),
+  fromUserId: integer("from_user_id").references(() => magnumUsers.id).notNull(),
+  toUserId: integer("to_user_id").references(() => magnumUsers.id).notNull(),
+  roomId: text("room_id").notNull(),
+  status: text("status").default("pending").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
