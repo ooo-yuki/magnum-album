@@ -37,6 +37,8 @@ export function Marquee() {
 
   useEffect(() => {
     if (!trackRef.current) return;
+    // respect reduced motion — show static list instead of infinite scroll
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     // measure one set's width, then tween from 0 to -half
     const track = trackRef.current;
