@@ -20,53 +20,114 @@ export function CTA() {
 
   useEffect(() => {
     if (!sectionRef.current) return;
+
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
     const ctx = gsap.context(() => {
-      gsap.set(headingRef.current, { y: 28, opacity: 0 });
-      gsap.set(textRef.current, { y: 16, opacity: 0 });
-      gsap.set(cardsRef.current, { y: 24, opacity: 0, scale: 0.97 });
-      gsap.set(proofRef.current, { y: 12, opacity: 0 });
-      gsap.to(headingRef.current, {
+      const entranceEls = [
+        headingRef.current,
+        textRef.current,
+        ...cardsRef.current.filter(Boolean) as Element[],
+        proofRef.current,
+      ].filter(Boolean) as Element[];
+
+      // reduced-motion: show instantly, skip all GSAP timelines
+      if (prefersReduced) {
+        gsap.set(entranceEls, { y: 0, opacity: 1, scale: 1, clearProps: "transform" });
+        gsap.set(cardsRef.current.filter(Boolean), { y: 0, opacity: 1, scale: 1 });
+        return;
+      }
+
+      // GSAP entrance y24 stagger 0.12 — task spec
+      gsap.set(headingRef.current, { y: 24, opacity: 0 });
+      gsap.set(textRef.current, { y: 24, opacity: 0 });
+      gsap.set(cardsRef.current.filter(Boolean), { y: 24, opacity: 0, scale: 0.97 });
+      gsap.set(proofRef.current, { y: 24, opacity: 0 });
+
+      const tl = gsap.timeline({
         scrollTrigger: { trigger: sectionRef.current, start: "top 80%", toggleActions: "play none none none" },
-        y: 0, opacity: 1, duration: 0.7, ease: "power3.out",
+        defaults: { ease: "power3.out" },
       });
-      gsap.to(textRef.current, {
-        scrollTrigger: { trigger: sectionRef.current, start: "top 76%", toggleActions: "play none none none" },
-        y: 0, opacity: 1, duration: 0.55, delay: 0.12,
-      });
-      gsap.to(cardsRef.current, {
-        scrollTrigger: { trigger: sectionRef.current, start: "top 68%", toggleActions: "play none none none" },
-        y: 0, opacity: 1, scale: 1, duration: 0.6, stagger: 0.1, ease: "power3.out", delay: 0.18,
-      });
-      gsap.to(proofRef.current, {
-        scrollTrigger: { trigger: sectionRef.current, start: "top 62%", toggleActions: "play none none none" },
-        y: 0, opacity: 1, duration: 0.5, delay: 0.35,
-      });
-      if (shimmerRef.current && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        const tl = gsap.timeline({
-          repeat: -1, delay: 1.2,
+      tl.to(headingRef.current, { y: 0, opacity: 1, duration: 0.7 })
+        .to(textRef.current, { y: 0, opacity: 1, duration: 0.55 }, "-=0.35")
+        .to(cardsRef.current.filter(Boolean), { y: 0, opacity: 1, scale: 1, duration: 0.6, stagger: 0.12 }, "-=0.2")
+        .to(proofRef.current, { y: 0, opacity: 1, duration: 0.5 }, "-=0.25");
+
+      // shimmer loop (respects reduced-motion already gated above)
+      if (shimmerRef.current) {
+        const shimmerTl = gsap.timeline({
+          repeat: -1,
+          delay: 1.2,
           scrollTrigger: { trigger: sectionRef.current, start: "top 80%", toggleActions: "play pause resume pause" },
         });
-        tl.fromTo(shimmerRef.current, { x: "-120%" }, { x: "220%", duration: 1.3, ease: "power2.inOut" });
-        tl.to({}, { duration: 3.2 });
+        shimmerTl.fromTo(shimmerRef.current, { x: "-120%" }, { x: "220%", duration: 1.3, ease: "power2.inOut" });
+        shimmerTl.to({}, { duration: 3.2 });
       }
-      const primary = cardsRef.current[0];
-      if (primary && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+
+      // hover RGB + magnet for cards — GSAP RGB split
+      const cleanups: Array<() => void> = [];
+      cardsRef.current.forEach((card) => {
+        if (!card) return;
+        const onEnter = () => {
+          gsap.to(card, {
+            y: -4,
+            scale: 1.015,
+            duration: 0.25,
+            ease: "power2.out",
+            // RGB shadow split
+            boxShadow: "0 14px 40px rgba(0,0,0,0.34), 0 0 22px rgba(255,45,85,0.22), 0 0 30px rgba(88,101,242,0.18)",
+            overwrite: "auto",
+          });
+          gsap.to(card, {
+            duration: 0.22,
+            ease: "power2.out",
+            // RGB text/border tint via filter hue for subtle shift
+            filter: "drop-shadow(1px 0 0 rgba(255,0,80,0.35)) drop-shadow(-1px 0 0 rgba(0,255,255,0.35))",
+            overwrite: "auto",
+          });
+        };
+        const onLeave = () => {
+          gsap.to(card, {
+            y: 0,
+            scale: 1,
+            duration: 0.35,
+            ease: "power3.out",
+            boxShadow: "0 0 0 transparent",
+            filter: "none",
+            overwrite: "auto",
+          });
+        };
         const onMove = (e: MouseEvent) => {
-          const r = primary.getBoundingClientRect();
+          if (card !== cardsRef.current[0]) return;
+          const r = card.getBoundingClientRect();
           const dx = ((e.clientX - (r.left + r.width / 2)) / r.width) * 10;
           const dy = ((e.clientY - (r.top + r.height / 2)) / r.height) * 7;
-          gsap.to(primary, { x: dx, y: dy, duration: 0.4, ease: "power3.out", overwrite: "auto" });
+          gsap.to(card, { x: dx, y: dy, duration: 0.4, ease: "power3.out", overwrite: "auto" });
         };
-        const onLeave = () => gsap.to(primary, { x: 0, y: 0, duration: 0.6, ease: "elastic.out(1,0.4)" });
-        primary.addEventListener("mousemove", onMove);
-        primary.addEventListener("mouseleave", onLeave);
-        (primary as unknown as { _cleanup?: () => void })._cleanup = () => {
-          primary.removeEventListener("mousemove", onMove);
-          primary.removeEventListener("mouseleave", onLeave);
+        const onMoveLeave = () => {
+          if (card === cardsRef.current[0]) gsap.to(card, { x: 0, y: 0, duration: 0.6, ease: "elastic.out(1,0.4)" });
         };
-      }
+        card.addEventListener("mouseenter", onEnter);
+        card.addEventListener("mouseleave", () => {
+          onLeave();
+          onMoveLeave();
+        });
+        if (card === cardsRef.current[0]) {
+          card.addEventListener("mousemove", onMove);
+        }
+        cleanups.push(() => {
+          card.removeEventListener("mouseenter", onEnter);
+          card.removeEventListener("mouseleave", onLeave);
+          card.removeEventListener("mousemove", onMove);
+        });
+      });
+      (sectionRef.current as unknown as { _ctaHoverCleanup?: () => void })._ctaHoverCleanup = () =>
+        cleanups.forEach((fn) => fn());
     }, sectionRef);
+
     return () => {
+      (sectionRef.current as unknown as { _ctaHoverCleanup?: () => void })?._ctaHoverCleanup?.();
+      // legacy _cleanup from primary magnet (defensive)
       (cardsRef.current[0] as unknown as { _cleanup?: () => void })?._cleanup?.();
       ctx.revert();
     };

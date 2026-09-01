@@ -16,12 +16,14 @@ export function Hero() {
   const badgeRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const subtitleRef = useRef<HTMLParagraphElement>(null);
+  const taglineRef = useRef<HTMLParagraphElement>(null);
   const ctaRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const orb1Ref = useRef<HTMLDivElement>(null);
   const orb2Ref = useRef<HTMLDivElement>(null);
   const orb3Ref = useRef<HTMLDivElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
+
   const [titleText, setTitleText] = useState(SCRAMBLE_CHARS.slice(0, TITLE_TARGET.length));
 
   // text-scramble effect on mount
@@ -46,24 +48,35 @@ export function Hero() {
   }, []);
 
   useEffect(() => {
-    const ctx = gsap.context(() => {
-      // initial states
-      gsap.set(badgeRef.current, { y: 20, opacity: 0 });
-      gsap.set(titleRef.current, { scale: 0.85, opacity: 0 });
-      gsap.set(subtitleRef.current, { y: 20, opacity: 0 });
-      gsap.set(ctaRef.current, { y: 30, opacity: 0 });
-      gsap.set(scrollRef.current, { opacity: 0 });
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-      const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
-      tl.to(badgeRef.current, { y: 0, opacity: 1, duration: 0.8 })
-        .to(
-          titleRef.current,
-          { scale: 1, opacity: 1, duration: 1.2, ease: "back.out(1.7)" },
-          "-=0.4",
-        )
-        .to(subtitleRef.current, { y: 0, opacity: 1, duration: 0.8 }, "-=0.6")
-        .to(ctaRef.current, { y: 0, opacity: 1, duration: 0.8 }, "-=0.4")
-        .to(scrollRef.current, { opacity: 1, duration: 1 }, "-=0.2");
+    const ctx = gsap.context(() => {
+      const entranceEls = [
+        badgeRef.current,
+        titleRef.current,
+        subtitleRef.current,
+        taglineRef.current,
+        ctaRef.current,
+        scrollRef.current,
+      ].filter(Boolean) as Element[];
+
+      // reduced-motion: instant visible, no animation
+      if (prefersReduced) {
+        gsap.set(entranceEls, { y: 0, opacity: 1, clearProps: "transform" });
+        if (ctaRef.current) gsap.set(ctaRef.current.querySelectorAll("a"), { clearProps: "all" });
+        return;
+      }
+
+      // GSAP entrance y24 stagger 0.12 — task spec
+      gsap.set(entranceEls, { y: 24, opacity: 0 });
+      gsap.to(entranceEls, {
+        y: 0,
+        opacity: 1,
+        duration: 0.7,
+        stagger: 0.12,
+        ease: "power3.out",
+        overwrite: "auto",
+      });
 
       // title gradient shift loop
       gsap.to(titleRef.current, {
@@ -74,7 +87,7 @@ export function Hero() {
         ease: "sine.inOut",
       });
 
-      // subtle floating for badge + subtitle
+      // subtle floating for badge
       gsap.to(badgeRef.current, {
         y: -4,
         duration: 2.2,
@@ -96,9 +109,50 @@ export function Hero() {
             yoyo: true,
             ease: "sine.inOut",
           });
-          // shine sweep via pseudo handled in CSS, but add micro shake on hover via gsap later
         }
       }
+
+      // hover RGB — GSAP textShadow / filter split on buttons
+      const hoverEls: HTMLElement[] = [];
+      if (ctaRef.current) {
+        ctaRef.current.querySelectorAll<HTMLElement>(`a`).forEach((el) => hoverEls.push(el));
+      }
+      const cleanups: Array<() => void> = [];
+      hoverEls.forEach((el) => {
+        const onEnter = () => {
+          gsap.to(el, {
+            duration: 0.22,
+            ease: "power2.out",
+            // RGB split via textShadow + boxShadow
+            textShadow: "2px 0 0 rgba(255,0,80,0.9), -2px 0 0 rgba(0,255,255,0.9)",
+            boxShadow: "0 0 18px rgba(255,45,85,0.5), 0 0 30px rgba(88,101,242,0.35)",
+            y: -2,
+            overwrite: "auto",
+          });
+        };
+        const onLeave = () => {
+          gsap.to(el, {
+            duration: 0.3,
+            ease: "power3.out",
+            textShadow: "0 0 0 transparent",
+            boxShadow:
+              el.classList.contains(styles.btnPrimary)
+                ? "0 0 30px rgba(255, 45, 85, 0.45), 0 8px 32px rgba(255, 45, 85, 0.28)"
+                : "none",
+            y: 0,
+            overwrite: "auto",
+          });
+        };
+        el.addEventListener("mouseenter", onEnter);
+        el.addEventListener("mouseleave", onLeave);
+        cleanups.push(() => {
+          el.removeEventListener("mouseenter", onEnter);
+          el.removeEventListener("mouseleave", onLeave);
+        });
+      });
+      // store cleanup on section for ctx revert phase
+      (sectionRef.current as unknown as { _heroHoverCleanup?: () => void })._heroHoverCleanup = () =>
+        cleanups.forEach((fn) => fn());
 
       // parallax on scroll — deeper layers move slower
       gsap.to(titleRef.current, {
@@ -157,7 +211,7 @@ export function Hero() {
         if (!ref.current) return;
         gsap.to(ref.current, {
           yPercent: (i % 2 === 0 ? -25 : 18) * (0.6 + i * 0.15),
-          xPercent: (i % 2 === 0 ? 8 : -8),
+          xPercent: i % 2 === 0 ? 8 : -8,
           ease: "none",
           scrollTrigger: {
             trigger: sectionRef.current,
@@ -182,7 +236,11 @@ export function Hero() {
       });
     }, sectionRef);
 
-    return () => ctx.revert();
+    return () => {
+      // cleanup hover listeners + gsap context
+      (sectionRef.current as unknown as { _heroHoverCleanup?: () => void })?._heroHoverCleanup?.();
+      ctx.revert();
+    };
   }, []);
 
   return (
@@ -208,7 +266,7 @@ export function Hero() {
         Пятерка × 42&nbsp;братухи
       </p>
 
-      <p className={styles.tagline}>Мультижанровый захват — от сада до чартов</p>
+      <p className={styles.tagline} ref={taglineRef}>Мультижанровый захват — от сада до чартов</p>
 
       <div className={styles.cta} ref={ctaRef}>
         <a
