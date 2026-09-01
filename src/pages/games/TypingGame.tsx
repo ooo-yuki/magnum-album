@@ -2,6 +2,12 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import styles from "./TypingGame.module.css";
 
+//Obscura-заглушка AudioParam: прямые вызовы ramp-методов могут кинуть — оборачиваем
+function safeRamp(param: AudioParam, fn: () => void, fallbackValue: number) {
+  try { fn(); } catch { param.value = fallbackValue; }
+}
+
+
 const PRESAVE = "https://music.thefence.me/psmagnum";
 const WIN_WPM = 42; // thematic target
 
@@ -57,7 +63,7 @@ function playKey(correct: boolean, combo: number) {
   const base = correct ? 560 + Math.min(combo * 22, 240) : 180;
   o.frequency.value = base;
   g.gain.setValueAtTime(correct ? 0.07 : 0.1, ctx.currentTime);
-  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (correct ? 0.08 : 0.12));
+  safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (correct ? 0.08 : 0.12)), 0.001);
   o.start(); o.stop(ctx.currentTime + 0.1);
   // combo chime every 5
   if (correct && combo > 0 && combo % 5 === 0) {
@@ -65,7 +71,7 @@ function playKey(correct: boolean, combo: number) {
     o2.connect(g2); g2.connect(ctx.destination);
     o2.type = "triangle"; o2.frequency.value = 880 + combo * 10;
     g2.gain.setValueAtTime(0.12, ctx.currentTime + 0.02);
-    g2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
+    safeRamp(g2.gain, () => g2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22), 0.001);
     o2.start(ctx.currentTime + 0.02); o2.stop(ctx.currentTime + 0.25);
   }
 }
@@ -76,7 +82,7 @@ function playWin() {
     o.connect(g); g.connect(ctx.destination);
     o.type = "sine"; o.frequency.value = 440 + i * 110;
     g.gain.setValueAtTime(0.12, ctx.currentTime + d);
-    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + d + 0.35);
+    safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + d + 0.35), 0.001);
     o.start(ctx.currentTime + d); o.stop(ctx.currentTime + d + 0.4);
   });
 }

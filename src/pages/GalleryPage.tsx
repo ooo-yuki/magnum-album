@@ -102,7 +102,7 @@ const MOCK_POOL: Omit<Art42, "id">[] = [
     style: "Y2K",
     emoji: "🎮",
     gradient: "linear-gradient(135deg,#9147ff,#ff2d55 45%,#ffcc00 100%)",
-    src: "/magnum/images/gallery-42/mock-tetris.jpg",
+    src: "/magnum/images/gallery-42/42-cyber-01.jpg",
     desc: "Пиксели, сканлайны и цифра 42 из блоков.",
     tag: "пиксель",
   },

@@ -3,6 +3,12 @@ import { Link } from "react-router-dom";
 import gsap from "gsap";
 import styles from "./Match3Game.module.css";
 
+//Obscura-заглушка AudioParam: прямые вызовы ramp-методов могут кинуть — оборачиваем
+function safeRamp(param: AudioParam, fn: () => void, fallbackValue: number) {
+  try { fn(); } catch { param.value = fallbackValue; }
+}
+
+
 const PRESAVE = "https://music.thefence.me/psmagnum";
 const GRID = 8;
 const ITEMS = ["🪼", "🧥", "🕶️", "🍄", "⛓️", "🎵", "4️⃣", "2️⃣"];
@@ -29,8 +35,8 @@ function tone(freq: number, dur: number, type: OscillatorType = "sine", gain = 0
   const o = ctx.createOscillator(); const g = ctx.createGain();
   o.type = type; o.frequency.value = freq; o.connect(g); g.connect(ctx.destination);
   g.gain.setValueAtTime(gain, ctx.currentTime);
-  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
-  if (slideTo !== undefined) o.frequency.exponentialRampToValueAtTime(slideTo, ctx.currentTime + dur * 0.7);
+  safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur), 0.001);
+  if (slideTo !== undefined) safeRamp(o.frequency, () => o.frequency.exponentialRampToValueAtTime(slideTo, ctx.currentTime + dur * 0.7), slideTo);
   o.start(); o.stop(ctx.currentTime + dur);
 }
 function playSwap() { tone(420, 0.12, "square", 0.08); }

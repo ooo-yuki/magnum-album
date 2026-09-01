@@ -2,6 +2,12 @@ import { useRef, useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import styles from "./RunnerGame.module.css";
 
+//Obscura-заглушка AudioParam: прямые вызовы ramp-методов могут кинуть — оборачиваем
+function safeRamp(param: AudioParam, fn: () => void, fallbackValue: number) {
+  try { fn(); } catch { param.value = fallbackValue; }
+}
+
+
 const PRESAVE = "https://music.thefence.me/psmagnum";
 const WIN_SCORE = 4200;
 const GRAVITY = 0.6;
@@ -40,8 +46,10 @@ function playJumpSound(doubleJump = false) {
     o.frequency.value = doubleJump ? 880 : 660;
     o.connect(g); g.connect(audioCtx.destination);
     g.gain.setValueAtTime(0.18, audioCtx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.22);
-    o.frequency.exponentialRampToValueAtTime(doubleJump ? 440 : 330, audioCtx.currentTime + 0.12);
+    const at = audioCtx.currentTime;
+    safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, at + 0.22), 0.001);
+    const at = audioCtx.currentTime;
+    safeRamp(o.frequency, () => o.frequency.exponentialRampToValueAtTime(doubleJump ? 440 : 330, at + 0.12), 440);
     o.start(); o.stop(audioCtx.currentTime + 0.22);
     // click transient
     const o2 = audioCtx.createOscillator();
@@ -49,7 +57,8 @@ function playJumpSound(doubleJump = false) {
     o2.frequency.value = doubleJump ? 1200 : 900;
     o2.connect(g2); g2.connect(audioCtx.destination);
     g2.gain.setValueAtTime(0.08, audioCtx.currentTime);
-    g2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+    const at = audioCtx.currentTime;
+    safeRamp(g2.gain, () => g2.gain.exponentialRampToValueAtTime(0.001, at + 0.08), 0.001);
     o2.start(); o2.stop(audioCtx.currentTime + 0.08);
   } catch { /* ignore */ }
 }
@@ -61,9 +70,11 @@ function playCollectSound() {
     o.type = "sine"; o.frequency.value = 880;
     o.connect(g); g.connect(audioCtx.destination);
     g.gain.setValueAtTime(0.12, audioCtx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
+    const at = audioCtx.currentTime;
+    safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, at + 0.35), 0.001);
     o.frequency.setValueAtTime(880, audioCtx.currentTime);
-    o.frequency.linearRampToValueAtTime(1320, audioCtx.currentTime + 0.12);
+    const at = audioCtx.currentTime;
+    safeRamp(o.frequency, () => o.frequency.linearRampToValueAtTime(1320, at + 0.12), 1320);
     o.start(); o.stop(audioCtx.currentTime + 0.35);
   } catch { /* ignore */ }
 }

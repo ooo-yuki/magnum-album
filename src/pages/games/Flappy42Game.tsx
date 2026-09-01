@@ -25,12 +25,15 @@ function ensureAC() {
 function rampTo(param: AudioParam, value: number, endTime: number) {
   try { param.linearRampToValueAtTime(value, endTime); } catch { param.value = value; }
 }
+function expFade(param: AudioParam, value: number, endTime: number) {
+  try { param.exponentialRampToValueAtTime(value, endTime); } catch { param.value = value; }
+}
 function playFlap() {
   const ctx = ensureAC(); if (!ctx) return;
   const o = ctx.createOscillator(); const g = ctx.createGain();
   o.connect(g); g.connect(ctx.destination);
   o.type = "sine"; o.frequency.value = 520; rampTo(o.frequency, 680, ctx.currentTime + 0.06);
-  g.gain.setValueAtTime(0.1, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+  g.gain.setValueAtTime(0.1, ctx.currentTime); expFade(g.gain, 0.001, ctx.currentTime + 0.1);
   o.start(); o.stop(ctx.currentTime + 0.12);
 }
 function playScore() {
@@ -38,7 +41,7 @@ function playScore() {
   const o = ctx.createOscillator(); const g = ctx.createGain();
   o.connect(g); g.connect(ctx.destination);
   o.type = "sine"; o.frequency.value = 880; rampTo(o.frequency, 1320, ctx.currentTime + 0.1);
-  g.gain.setValueAtTime(0.15, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+  g.gain.setValueAtTime(0.15, ctx.currentTime); expFade(g.gain, 0.001, ctx.currentTime + 0.2);
   o.start(); o.stop(ctx.currentTime + 0.22);
 }
 function playHit() {
@@ -46,7 +49,7 @@ function playHit() {
   const o = ctx.createOscillator(); const g = ctx.createGain();
   o.connect(g); g.connect(ctx.destination);
   o.type = "square"; o.frequency.value = 160; rampTo(o.frequency, 60, ctx.currentTime + 0.2);
-  g.gain.setValueAtTime(0.18, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+  g.gain.setValueAtTime(0.18, ctx.currentTime); expFade(g.gain, 0.001, ctx.currentTime + 0.3);
   o.start(); o.stop(ctx.currentTime + 0.32);
 }
 

@@ -2,6 +2,12 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import styles from "./Game2042.module.css";
 
+//Obscura-заглушка AudioParam: прямые вызовы ramp-методов могут кинуть — оборачиваем
+function safeRamp(param: AudioParam, fn: () => void, fallbackValue: number) {
+  try { fn(); } catch { param.value = fallbackValue; }
+}
+
+
 const PRESAVE = "https://music.thefence.me/psmagnum";
 const SIZE = 4;
 const WIN_TILE = 2048; // displayed as "42" in MAGNUM theme
@@ -143,7 +149,7 @@ function playMerge(v: number) {
   o.type = "sine";
   o.frequency.value = 220 + Math.min(v, 2048) * 0.4;
   g.gain.setValueAtTime(0.12, ctx.currentTime);
-  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
+  safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18), 0.001);
   o.start(); o.stop(ctx.currentTime + 0.2);
 }
 

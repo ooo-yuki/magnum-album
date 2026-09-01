@@ -2,6 +2,12 @@ import { useRef, useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import styles from "./RhythmGame.module.css";
 
+//Obscura-заглушка AudioParam: прямые вызовы ramp-методов могут кинуть — оборачиваем
+function safeRamp(param: AudioParam, fn: () => void, fallbackValue: number) {
+  try { fn(); } catch { param.value = fallbackValue; }
+}
+
+
 const PRESAVE = "https://music.thefence.me/psmagnum";
 const WIN_SCORE = 5000;
 const LANE_COUNT = 4;
@@ -89,9 +95,9 @@ function playHit(j: Judgement) {
   const ctx = ensureAC(); if (!ctx) return;
   const o = ctx.createOscillator(); const g = ctx.createGain();
   o.connect(g); g.connect(ctx.destination);
-  if (j === "perfect") { o.type = "sine"; o.frequency.value = 880; o.frequency.linearRampToValueAtTime(1320, ctx.currentTime + 0.08); g.gain.setValueAtTime(0.22, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22); }
-  else if (j === "good") { o.type = "triangle"; o.frequency.value = 550; o.frequency.linearRampToValueAtTime(700, ctx.currentTime + 0.06); g.gain.setValueAtTime(0.16, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.16); }
-  else { o.type = "square"; o.frequency.value = 180; g.gain.setValueAtTime(0.12, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18); }
+  if (j === "perfect") { o.type = "sine"; o.frequency.value = 880; safeRamp(o.frequency, () => o.frequency.linearRampToValueAtTime(1320, ctx.currentTime + 0.08), 1320); g.gain.setValueAtTime(0.22, ctx.currentTime); safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22), 0.001); }
+  else if (j === "good") { o.type = "triangle"; o.frequency.value = 550; safeRamp(o.frequency, () => o.frequency.linearRampToValueAtTime(700, ctx.currentTime + 0.06), 700); g.gain.setValueAtTime(0.16, ctx.currentTime); safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.16), 0.001); }
+  else { o.type = "square"; o.frequency.value = 180; g.gain.setValueAtTime(0.12, ctx.currentTime); safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18), 0.001); }
   o.start(); o.stop(ctx.currentTime + 0.25);
 }
 function playKeyTap(lane: number) {
@@ -99,7 +105,7 @@ function playKeyTap(lane: number) {
   const o = ctx.createOscillator(); const g = ctx.createGain();
   o.connect(g); g.connect(ctx.destination);
   o.type = "sine"; o.frequency.value = 220 + lane * 80;
-  g.gain.setValueAtTime(0.08, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.10);
+  g.gain.setValueAtTime(0.08, ctx.currentTime); safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.10), 0.001);
   o.start(); o.stop(ctx.currentTime + 0.10);
 }
 

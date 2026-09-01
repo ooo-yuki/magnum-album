@@ -3,6 +3,12 @@ import { Link } from "react-router-dom";
 import gsap from "gsap";
 import styles from "./RouletteGame.module.css";
 
+//Obscura-заглушка AudioParam: прямые вызовы ramp-методов могут кинуть — оборачиваем
+function safeRamp(param: AudioParam, fn: () => void, fallbackValue: number) {
+  try { fn(); } catch { param.value = fallbackValue; }
+}
+
+
 const PRESAVE = "https://music.thefence.me/psmagnum";
 const START_BALANCE = 1000;
 const WIN_BALANCE = 4200;
@@ -42,9 +48,9 @@ function payout(bet: Bet, result: number, color: Color): number {
 
 let ac: AudioContext | null = null;
 function ensureAC(){ try{ if(!ac) ac=new (window.AudioContext||(window as unknown as {webkitAudioContext: typeof AudioContext}).webkitAudioContext)(); if(ac.state==="suspended") void ac.resume(); return ac; }catch{ return null; } }
-function playTick(){ const c=ensureAC(); if(!c) return; const o=c.createOscillator(),g=c.createGain(); o.connect(g); g.connect(c.destination); o.type="square"; o.frequency.value=720+Math.random()*200; g.gain.setValueAtTime(0.08,c.currentTime); g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.08); o.start(); o.stop(c.currentTime+0.08); }
-function playWinSound(){ const c=ensureAC(); if(!c) return; [0,0.12,0.24,0.38].forEach((d,i)=>{ const o=c.createOscillator(),g=c.createGain(); o.connect(g); g.connect(c.destination); o.type="sine"; o.frequency.value=520+i*120; g.gain.setValueAtTime(0.15,c.currentTime+d); g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+d+0.35); o.start(c.currentTime+d); o.stop(c.currentTime+d+0.35); }); }
-function playLoseSound(){ const c=ensureAC(); if(!c) return; const o=c.createOscillator(),g=c.createGain(); o.connect(g); g.connect(c.destination); o.type="sawtooth"; o.frequency.value=140; o.frequency.linearRampToValueAtTime(80,c.currentTime+0.3); g.gain.setValueAtTime(0.1,c.currentTime); g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.35); o.start(); o.stop(c.currentTime+0.35); }
+function playTick(){ const c=ensureAC(); if(!c) return; const o=c.createOscillator(),g=c.createGain(); o.connect(g); g.connect(c.destination); o.type="square"; o.frequency.value=720+Math.random()*200; g.gain.setValueAtTime(0.08,c.currentTime); safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.08), 0.001); o.start(); o.stop(c.currentTime+0.08); }
+function playWinSound(){ const c=ensureAC(); if(!c) return; [0,0.12,0.24,0.38].forEach((d,i)=>{ const o=c.createOscillator(),g=c.createGain(); o.connect(g); g.connect(c.destination); o.type="sine"; o.frequency.value=520+i*120; g.gain.setValueAtTime(0.15,c.currentTime+d); safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+d+0.35), 0.001); o.start(c.currentTime+d); o.stop(c.currentTime+d+0.35); }); }
+function playLoseSound(){ const c=ensureAC(); if(!c) return; const o=c.createOscillator(),g=c.createGain(); o.connect(g); g.connect(c.destination); o.type="sawtooth"; o.frequency.value=140; safeRamp(o.frequency, () => o.frequency.linearRampToValueAtTime(80,c.currentTime+0.3), 80); g.gain.setValueAtTime(0.1,c.currentTime); safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.35), 0.001); o.start(); o.stop(c.currentTime+0.35); }
 
 export function RouletteGame(){
   const canvasRef = useRef<HTMLCanvasElement>(null);

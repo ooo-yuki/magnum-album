@@ -2,6 +2,12 @@ import { useRef, useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import styles from "./Snake42Game.module.css";
 
+//Obscura-заглушка AudioParam: прямые вызовы ramp-методов могут кинуть — оборачиваем
+function safeRamp(param: AudioParam, fn: () => void, fallbackValue: number) {
+  try { fn(); } catch { param.value = fallbackValue; }
+}
+
+
 const PRESAVE = "https://music.thefence.me/psmagnum";
 const WIN_LENGTH = 42;
 const GRID = 20;
@@ -31,16 +37,16 @@ function playEat() {
   const ctx = ensureAC(); if (!ctx) return;
   const o = ctx.createOscillator(); const g = ctx.createGain();
   o.connect(g); g.connect(ctx.destination);
-  o.type = "sine"; o.frequency.value = 660; o.frequency.linearRampToValueAtTime(990, ctx.currentTime + 0.08);
-  g.gain.setValueAtTime(0.18, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
+  o.type = "sine"; o.frequency.value = 660; safeRamp(o.frequency, () => o.frequency.linearRampToValueAtTime(990, ctx.currentTime + 0.08), 990);
+  g.gain.setValueAtTime(0.18, ctx.currentTime); safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18), 0.001);
   o.start(); o.stop(ctx.currentTime + 0.2);
 }
 function playDie() {
   const ctx = ensureAC(); if (!ctx) return;
   const o = ctx.createOscillator(); const g = ctx.createGain();
   o.connect(g); g.connect(ctx.destination);
-  o.type = "square"; o.frequency.value = 200; o.frequency.linearRampToValueAtTime(80, ctx.currentTime + 0.3);
-  g.gain.setValueAtTime(0.15, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+  o.type = "square"; o.frequency.value = 200; safeRamp(o.frequency, () => o.frequency.linearRampToValueAtTime(80, ctx.currentTime + 0.3), 80);
+  g.gain.setValueAtTime(0.15, ctx.currentTime); safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35), 0.001);
   o.start(); o.stop(ctx.currentTime + 0.4);
 }
 function playWin() {
@@ -48,7 +54,7 @@ function playWin() {
   [0, 0.1, 0.2, 0.3].forEach((d, i) => {
     const o = ctx.createOscillator(); const g = ctx.createGain(); o.connect(g); g.connect(ctx.destination);
     o.type = "sine"; o.frequency.value = 440 + i * 110;
-    g.gain.setValueAtTime(0.14, ctx.currentTime + d); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + d + 0.35);
+    g.gain.setValueAtTime(0.14, ctx.currentTime + d); safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + d + 0.35), 0.001);
     o.start(ctx.currentTime + d); o.stop(ctx.currentTime + d + 0.4);
   });
 }
