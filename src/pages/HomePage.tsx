@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Hero } from "../components/Hero";
 import { Marquee } from "../components/Marquee";
 import { Stats } from "../components/Stats";
@@ -11,6 +12,8 @@ import { Timeline } from "../components/Timeline";
 import { PressWall } from "../components/PressWall";
 import { News2026 } from "../components/News2026";
 import { CTA } from "../components/CTA";
+
+gsap.registerPlugin(ScrollTrigger);
 
 const TARGET = 42;
 
@@ -130,7 +133,19 @@ function PromoBanners() {
         return;
       }
       gsap.set(cards, { y: 24, opacity: 0, scale: 0.96 });
-      gsap.to(cards, { y: 0, opacity: 1, scale: 1, duration: 0.62, stagger: 0.12, ease: "back.out(1.5)", delay: 0.12 });
+      gsap.to(cards, {
+        y: 0,
+        opacity: 1,
+        scale: 1,
+        duration: 0.62,
+        stagger: 0.12,
+        ease: "back.out(1.5)",
+        scrollTrigger: {
+          trigger: ref.current,
+          start: "top 85%",
+          toggleActions: "play none none none",
+        },
+      });
       cards.forEach((c) => {
         const glow = c.querySelector<HTMLElement>("[data-glow]");
         if (!glow) return;
