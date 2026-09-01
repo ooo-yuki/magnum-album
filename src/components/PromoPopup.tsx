@@ -12,16 +12,13 @@ export function PromoPopup() {
   const [sec, setSec] = useState(30);
   const [buying, setBuying] = useState<string | null>(null);
   const discount = sec > 0 ? 0.1 : 0;
-  const seenKey = "magnum-offer-seen";
   const overlayRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    try {
-      if (localStorage.getItem(seenKey)) return;
-      const t = setTimeout(() => setVisible(true), 800);
-      return () => clearTimeout(t);
-    } catch {}
+    // без localStorage: показываем один раз за сессию (in-memory), 800ms delay
+    const t = setTimeout(() => setVisible(true), 800);
+    return () => clearTimeout(t);
   }, []);
 
   // GSAP entrance + reduced-motion fallback + context cleanup (no white screen)
@@ -58,7 +55,6 @@ export function PromoPopup() {
   }, [visible, sec]);
 
   const close = useCallback(() => {
-    try { localStorage.setItem(seenKey, "1"); } catch {}
     setVisible(false);
   }, []);
 
@@ -94,8 +90,6 @@ export function PromoPopup() {
     } finally {
       setBuying(null);
     }
-    // always mark seen
-    try { localStorage.setItem(seenKey, String(Date.now())); } catch {}
   };
 
   if (!visible) return null;

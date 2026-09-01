@@ -2160,13 +2160,14 @@ async function handleHealth(): Promise<Response> {
       sql`SELECT count(*)::int as c FROM magnum_duel_history`,
     ]);
     let exchangesCount = 0; let commentsCount = 0; let reportsCount = 0; let modLogCount = 0; let chatCount = 0; let followsCount = 0; let aiUsageCount = 0;
-    try { const r = await sql`SELECT count(*)::int as c FROM magnum_mining_exchanges`; exchangesCount = Number((r[0] as {c:number}).c); } catch (e) { console.error("[health] mining_exchanges count failed", e); }
-    try { const r = await sql`SELECT count(*)::int as c FROM magnum_idea_comments`; commentsCount = Number((r[0] as {c:number}).c); } catch (e) { console.error("[health] idea_comments count failed", e); }
-    try { const r = await sql`SELECT count(*)::int as c FROM magnum_reports`; reportsCount = Number((r[0] as {c:number}).c); } catch (e) { console.error("[health] reports count failed", e); }
-    try { const r = await sql`SELECT count(*)::int as c FROM magnum_moderation_log`; modLogCount = Number((r[0] as {c:number}).c); } catch (e) { console.error("[health] mod_log count failed", e); }
-    try { const r = await sql`SELECT count(*)::int as c FROM magnum_chat_messages`; chatCount = Number((r[0] as {c:number}).c); } catch (e) { console.error("[health] chat_messages count failed", e); }
-    try { const r = await sql`SELECT count(*)::int as c FROM magnum_follows`; followsCount = Number((r[0] as {c:number}).c); } catch (e) { console.error("[health] follows count failed", e); }
-    try { const r = await sql`SELECT count(*)::int as c FROM magnum_ai_usage`; aiUsageCount = Number((r[0] as {c:number}).c); } catch (e) { console.error("[health] ai_usage count failed", e); }
+    const healthWarnings: string[] = [];
+    try { const r = await sql`SELECT count(*)::int as c FROM magnum_mining_exchanges`; exchangesCount = Number((r[0] as {c:number}).c); } catch (e) { console.error("[health] mining_exchanges count failed", e); healthWarnings.push("mining_exchanges: drift"); }
+    try { const r = await sql`SELECT count(*)::int as c FROM magnum_idea_comments`; commentsCount = Number((r[0] as {c:number}).c); } catch (e) { console.error("[health] idea_comments count failed", e); healthWarnings.push("idea_comments: drift"); }
+    try { const r = await sql`SELECT count(*)::int as c FROM magnum_reports`; reportsCount = Number((r[0] as {c:number}).c); } catch (e) { console.error("[health] reports count failed", e); healthWarnings.push("reports: drift"); }
+    try { const r = await sql`SELECT count(*)::int as c FROM magnum_moderation_log`; modLogCount = Number((r[0] as {c:number}).c); } catch (e) { console.error("[health] mod_log count failed", e); healthWarnings.push("moderation_log: drift"); }
+    try { const r = await sql`SELECT count(*)::int as c FROM magnum_chat_messages`; chatCount = Number((r[0] as {c:number}).c); } catch (e) { console.error("[health] chat_messages count failed", e); healthWarnings.push("chat_messages: drift"); }
+    try { const r = await sql`SELECT count(*)::int as c FROM magnum_follows`; followsCount = Number((r[0] as {c:number}).c); } catch (e) { console.error("[health] follows count failed", e); healthWarnings.push("magnum_follows 42P01 drift"); }
+    try { const r = await sql`SELECT count(*)::int as c FROM magnum_ai_usage`; aiUsageCount = Number((r[0] as {c:number}).c); } catch (e) { console.error("[health] ai_usage count failed", e); healthWarnings.push("magnum_ai_usage 42P01 drift"); }
     return Response.json({
       ok: true,
       ts: new Date().toISOString(),
@@ -2193,6 +2194,7 @@ async function handleHealth(): Promise<Response> {
         follows: followsCount,
         aiUsage: aiUsageCount,
       },
+      warnings: healthWarnings,
       uptime: process.uptime(),
     });
   } catch (e) {

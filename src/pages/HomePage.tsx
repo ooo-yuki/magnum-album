@@ -267,9 +267,7 @@ function PopupBanner() {
   const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    try {
-      if (localStorage.getItem("magnum-banner-closed") === "1") return;
-    } catch {}
+    // без localStorage: показываем один раз за сессию (in-memory), 3с delay — Neon-стейт для пресейва отдельно
     const t = window.setTimeout(() => setVisible(true), 3000);
     return () => window.clearTimeout(t);
   }, []);
@@ -285,7 +283,6 @@ function PopupBanner() {
     const el = cardRef.current;
     const doClose = () => {
       setVisible(false);
-      try { localStorage.setItem("magnum-banner-closed", "1"); } catch {}
     };
     if (!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) { doClose(); return; }
     gsap.to(el, { y: 24, opacity: 0, scale: 0.96, duration: 0.3, ease: "power2.in", onComplete: doClose });

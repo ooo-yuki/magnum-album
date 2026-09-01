@@ -74,7 +74,7 @@ async function getShopRecommendation(): Promise<string> {
     const cr = await fetch("/magnum/api/coins",{credentials:"include"});
     if(cr.ok){ const d=await cr.json() as {balance?:number;coins?:number}; balance = Number(d.balance ?? d.coins ?? 0); }
   }catch(e){ console.warn("[AiBot coins] failed", e); }
-  if(!balance){ try{ const v = localStorage.getItem("magnum_coins"); if(v) balance = Number(v)||0; }catch(e){ console.warn("[AiBot ls] failed", e); } }
+  // balance только из Neon /magnum/api/coins — без localStorage (консистентность мультитаб)
   try{
     const ir = await fetch("/magnum/api/shop/inventory",{credentials:"include"});
     if(ir.ok){
@@ -331,7 +331,7 @@ export function AiBot() {
           window.setTimeout(() => {
             const el = document.querySelector("[data-verified-badge]") as HTMLElement | null;
             flashVerified(el);
-            try { localStorage.setItem("magnum-frame-verified", "1"); } catch {}
+            // verified флаг — только Neon /magnum/api/frame/verify, без localStorage
           }, 60);
         } else if (/засчитан|легенда|подтверждаю/i.test(reply)) {
           window.setTimeout(() => {
@@ -352,7 +352,7 @@ export function AiBot() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ verified: true }),
           }).catch(()=>{});
-          try { localStorage.setItem("magnum-frame-verified","1"); } catch {}
+          // verified — только Neon, без localStorage
         }
         setMessages((m) => [...m, { role: "bot", text: fallback }]);
       } finally {
