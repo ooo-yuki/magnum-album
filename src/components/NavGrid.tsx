@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useCallback } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import styles from "./NavGrid.module.css";
@@ -76,12 +76,36 @@ export function NavGrid() {
     return () => ctx.revert();
   }, []);
 
+  // cursor-tracking glow spotlight
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
+    const card = e.currentTarget;
+    const glow = card.querySelector(`.${styles.glow}`) as HTMLElement | null;
+    if (!glow) return;
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left - 80;
+    const y = e.clientY - rect.top - 80;
+    gsap.to(glow, { x, y, opacity: 1, duration: 0.35, ease: "power2.out" });
+  }, []);
+
+  const handleMouseLeave = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
+    const glow = e.currentTarget.querySelector(`.${styles.glow}`) as HTMLElement | null;
+    if (!glow) return;
+    gsap.to(glow, { opacity: 0, duration: 0.3, ease: "power2.in" });
+  }, []);
+
   return (
     <section className={styles.section} ref={sectionRef}>
       <h2 className={styles.title}>Исследуй</h2>
       <div className={styles.grid}>
         {NAV_ITEMS.map((item) => (
-          <Link key={item.to} to={item.to} className={styles.card}>
+          <Link
+            key={item.to}
+            to={item.to}
+            className={styles.card}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+          >
+            <div className={styles.glow} aria-hidden />
             <span className={styles.icon}>{item.icon}</span>
             <div>
               <strong>{item.title}</strong>

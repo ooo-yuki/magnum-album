@@ -30,6 +30,27 @@
   transition: background 0.22s, border-color 0.22s, transform 0.2s;
   text-decoration: none;
   color: var(--text);
+  position: relative;
+  overflow: hidden;
+}
+
+.glow {
+  position: absolute;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 45, 85, 0.22), rgba(255, 204, 0, 0.08) 50%, transparent 72%);
+  pointer-events: none;
+  opacity: 0;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  will-change: transform, opacity;
+}
+
+.card > *:not(.glow) {
+  position: relative;
+  z-index: 1;
 }
 
 .card:hover {
