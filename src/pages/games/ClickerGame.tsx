@@ -682,3 +682,4 @@ export function ClickerGame() {
     </div>
   );
 }
+
