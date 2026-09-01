@@ -86,6 +86,10 @@ const ROUTES: Array<{ path: string; priority: string; changefreq?: string }> = [
   { path: "/game", priority: "0.4" },
   { path: "/studio", priority: "0.7" },
   { path: "/gacha", priority: "0.7" },
+  { path: "/tour", priority: "0.9", changefreq: "weekly" },
+  { path: "/flow", priority: "0.7" },
+  { path: "/chain", priority: "0.7" },
+  { path: "/chain/join/ABCD", priority: "0.6" },
 ];
 type BuildFileInfo = { name: string; path: string; bytes: number; gzipBytes: number; ext: string; kind: "entry" | "chunk" | "asset" | "css" | "js" };
 type DistMetrics = { files: BuildFileInfo[]; totalBytes: number; totalGzipBytes: number; byExt: Record<string, number>; largest: BuildFileInfo | null };

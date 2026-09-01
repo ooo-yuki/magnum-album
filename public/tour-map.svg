@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" width="1000" height="600" role="img" aria-label="Карта России ТУР 42">
+<title>ТУР 42 — карта России 12 городов</title>
+<rect width="1000" height="600" rx="24" fill="#0a1620"/>
+<path d="M 14 110 L 220 92 L 320 140 L 420 120 L 580 180 L 740 220 L 860 280 L 970 320 L 940 480 L 760 520 L 480 500 L 220 560 L 80 400 L 14 260 Z" fill="#0f2a32" stroke="#1e4a5a" stroke-width="3"/>
+<path id="tour-path" d="M 20 140 C 120 120 160 200 200 280 C 260 340 360 320 480 350 C 520 380 590 400 940 420" fill="none" stroke="#78dcff" stroke-width="6" stroke-linecap="round"/>
+<text x="500" y="42" text-anchor="middle" fill="#78dcff" font-size="13" font-weight="800" letter-spacing="0.12em">РОССИЯ 17.1 млн км² — ТУР 42</text>
+</svg>

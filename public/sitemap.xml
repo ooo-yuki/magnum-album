@@ -39,4 +39,8 @@
   <url><loc>https://5opka.ru/magnum/game</loc><lastmod>2026-09-01</lastmod><priority>0.4</priority></url>
   <url><loc>https://5opka.ru/magnum/studio</loc><lastmod>2026-09-01</lastmod><priority>0.7</priority></url>
   <url><loc>https://5opka.ru/magnum/gacha</loc><lastmod>2026-09-01</lastmod><priority>0.7</priority></url>
+  <url><loc>https://5opka.ru/magnum/tour</loc><lastmod>2026-09-01</lastmod><priority>0.9</priority><changefreq>weekly</changefreq></url>
+  <url><loc>https://5opka.ru/magnum/flow</loc><lastmod>2026-09-01</lastmod><priority>0.7</priority></url>
+  <url><loc>https://5opka.ru/magnum/chain</loc><lastmod>2026-09-01</lastmod><priority>0.7</priority></url>
+  <url><loc>https://5opka.ru/magnum/chain/join/ABCD</loc><lastmod>2026-09-01</lastmod><priority>0.6</priority></url>
 </urlset>

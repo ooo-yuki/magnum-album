@@ -1,0 +1,27 @@
+.wrap{max-width:980px;margin:0 auto;padding:24px 16px}
+.h1{font-size:28px;font-weight:900;margin:0 0 6px}
+.sub{opacity:.7;margin:0 0 14px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.tab{padding:8px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:#fff;cursor:pointer}
+.tabActive{border-color:#ffcc00;background:rgba(255,204,0,.18)}
+.sortRow{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.sortBtn{padding:6px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.1);background:transparent;color:#fff;cursor:pointer}
+.sortBtnActive{border-color:#ff2d55;background:rgba(255,45,85,.15)}
+.badge{font-size:12px;padding:2px 8px;border-radius:999px;background:rgba(255,204,0,.2);border:1px solid rgba(255,204,0,.4)}
+.barRow{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);margin-bottom:8px;position:relative;overflow:hidden}
+.rank{width:28px;text-align:center;font-weight:900}
+.track{font-weight:800;min-width:90px}
+.num{font-variant-numeric:tabular-nums}
+.deltaPos{color:#00ff88}
+.deltaNeg{color:#ff4d6d}
+.barTrack{flex:1;height:10px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden}
+.barFill{height:100%;border-radius:999px}
+.crown{animation:crownPulse 1.4s ease-in-out infinite}
+@keyframes crownPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+.conicGold{background:conic-gradient(from 0deg,#ffcc00,#ffd700,#ffcc00,#ff8a00,#ffcc00);border:2px solid #ffcc00;box-shadow:0 0 18px rgba(255,204,0,.55)}
+.shareBtn{padding:10px 16px;border-radius:12px;border:none;background:#ff2d55;color:#fff;font-weight:800;cursor:pointer}
+.guessRow{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.guessBtn{padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:#fff;cursor:pointer}
+.guessBtnActive{border-color:#00ff88;background:rgba(0,255,136,.14)}
+.flip{animation:flip .4s ease}
+@keyframes flip{0%{transform:rotateY(0)}50%{transform:rotateY(90deg)}100%{transform:rotateY(0)}}

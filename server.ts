@@ -14,6 +14,7 @@ import { XP_PER_LEVEL, MAX_LEVEL, SEASON_ID, PASS_REWARDS, xpForSource } from ".
 import { TRACKS as CHARTS_TRACKS, seededSnapshots, isPeriod } from "./src/lib/charts42.ts";
 import { FLASHMOB_TYPES, hashDayToSeed, getFlashmobForDay } from "./src/lib/flashmob42.ts";
 import { SPIN_SECTORS, getStreakMultiplier } from "./src/lib/spinRewards.ts";
+import { TOUR_STOPS as TOUR_STOPS_CANON, type TourStop as TourStopCanon, getTourCityId as getTourCityIdCanon, isTourCityId as isTourCityIdCanon } from "./src/lib/tour42.ts";
 try { (neonConfig as unknown as { webSocketConstructor?: unknown }).webSocketConstructor = ws; } catch {}
 
 const MIMO_BASE = process.env.MIMO_BASE_URL || "https://token-plan-sgp.xiaomimimo.com/v1";
@@ -1703,10 +1704,11 @@ async function handleShopBundleBuy(req:Request):Promise<Response>{
   }catch(e){ console.error("[bundle buy] failed",e); return Response.json({error:"db error"},{status:500}); }
 }
 
-// ---- Frame handlers (magnum_frames) ----
+// ---- Frame handlers (magnum_frames) ---- FRAME MAGMA GOLD: mimo-v2.5 + conic-magma #ff4500 + cross -42 glacier/duel
 async function ensureFrameTable(): Promise<void> {
   const sql = getSql();
-  await sql`CREATE TABLE IF NOT EXISTS magnum_frames (id serial PRIMARY KEY, user_id integer REFERENCES magnum_users(id) ON DELETE CASCADE, verified boolean NOT NULL DEFAULT false, created_at timestamp DEFAULT now() NOT NULL)`;
+  await sql`CREATE TABLE IF NOT EXISTS magnum_frames (id serial PRIMARY KEY, user_id integer REFERENCES magnum_users(id) ON DELETE CASCADE, verified boolean NOT NULL DEFAULT false, frame_date timestamp, created_at timestamp DEFAULT now() NOT NULL)`;
+  try { await sql`ALTER TABLE magnum_frames ADD COLUMN IF NOT EXISTS frame_date timestamp`; } catch {}
 }
 async function handleFrameVerify(req: Request): Promise<Response> {
   const token = extractToken(req);
@@ -1715,14 +1717,18 @@ async function handleFrameVerify(req: Request): Promise<Response> {
   if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
   const ip = getClientIp(req);
   if (!checkRateLimit(`frame:verify:${user.id}:${ip}`, 8, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
-  let body: { verified?: boolean };
+  let body: { verified?: boolean; frame_date?: string; frameDate?: string; frame_date_iso?: string };
   try { body = (await req.json()) as typeof body; } catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
+  // FRAME MAGMA GOLD — бесплатно verified cross -42 glacier/duel — любой authed может verified=true (mimo-v2.5 heuristic на клиенте)
   const verified = Boolean(body.verified);
+  let frameDateIso: string | null = (body.frame_date as string) ?? (body.frameDate as string) ?? (body.frame_date_iso as string) ?? null;
+  if (frameDateIso) { const d = new Date(frameDateIso); frameDateIso = Number.isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString(); } else frameDateIso = new Date().toISOString();
   try {
     await ensureFrameTable();
     const sql = getSql();
-    const rows = await sql`INSERT INTO magnum_frames (user_id, verified, created_at) VALUES (${user.id}, ${verified}, now()) RETURNING *`;
-    return Response.json({ ok: true, frame: rows[0], verified });
+    let rows: unknown[];
+    try { rows = await sql`INSERT INTO magnum_frames (user_id, verified, frame_date, created_at) VALUES (${user.id}, ${verified}, ${frameDateIso}::timestamp, now()) RETURNING *`; } catch { rows = await sql`INSERT INTO magnum_frames (user_id, verified, created_at) VALUES (${user.id}, ${verified}, now()) RETURNING *`; }
+    return Response.json({ ok: true, frame: rows[0], verified, frame_date: frameDateIso, frameDate: frameDateIso });
   } catch (e) {
     console.error("[frame verify] failed", e);
     return Response.json({ error: "db error" }, { status: 500 });
@@ -1738,16 +1744,20 @@ async function handleFrameStatus(req: Request): Promise<Response> {
   try {
     await ensureFrameTable();
     const sql = getSql();
-    const rows = await sql`SELECT f.id, u.username, f.verified, f.created_at, s.skin_id as avatar FROM magnum_frames f LEFT JOIN magnum_users u ON u.id = f.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id = f.user_id AND s.equipped = true WHERE f.user_id = ${user.id} ORDER BY f.created_at DESC LIMIT 50`;
+    let rows: unknown[];
+    try { rows = await sql`SELECT f.id, u.username, f.verified, f.frame_date, f.created_at, s.skin_id as avatar FROM magnum_frames f LEFT JOIN magnum_users u ON u.id = f.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id = f.user_id AND s.equipped = true WHERE f.user_id = ${user.id} ORDER BY f.created_at DESC LIMIT 50`; } catch { rows = await sql`SELECT f.id, u.username, f.verified, f.created_at, s.skin_id as avatar FROM magnum_frames f LEFT JOIN magnum_users u ON u.id = f.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id = f.user_id AND s.equipped = true WHERE f.user_id = ${user.id} ORDER BY f.created_at DESC LIMIT 50`; }
     const frames = rows.map((r: unknown) => {
-      const x = r as { id: number; username: string; verified: boolean | null; created_at: string; avatar: string | null };
-      return { id: Number(x.id), username: String(x.username || user!.username), verified: Boolean(x.verified), status: x.verified ? "verified" : "pending", created_at: x.created_at, avatar: x.avatar || null };
+      const x = r as { id: number; username: string; verified: boolean | null; frame_date?: string; created_at: string; avatar: string | null };
+      return { id: Number(x.id), username: String(x.username || user!.username), verified: Boolean(x.verified), status: x.verified ? "verified" : "pending", created_at: x.created_at, frame_date: (x as unknown as {frame_date:string}).frame_date ?? x.created_at, frameDate: (x as unknown as {frame_date:string}).frame_date ?? x.created_at, avatar: x.avatar || null };
     });
     const verified = frames.filter(f => f.verified).length;
-    // tier for FRAME VOLCANO GOLD — volcano-gold when verified, else none
-    const tier = verified > 0 ? "volcano-gold" : "none";
-    const tierLabel = verified > 0 ? "VOLCANO GOLD" : "NONE";
-    return Response.json({ frames, total: frames.length, verified, pending: frames.length - verified, user: user.username, tier, tierLabel });
+    // tier for FRAME MAGMA GOLD — magma-gold when verified, else none — conic-magma #ff4500 spin 3s + shadow 0 0 16 magma
+    const tier = verified > 0 ? "magma-gold" : "none";
+    const tierLabel = verified > 0 ? "MAGMA GOLD" : "NONE";
+    const magmaStyle = "conic-gradient(from 0deg,#ff4500,#ff8c00,#ffd700,#ff4500)";
+    const magmaShadow = "0 0 16px #ff4500";
+    const magmaSpin = "magmaSpin 3s linear infinite";
+    return Response.json({ frames, total: frames.length, verified, pending: frames.length - verified, user: user.username, tier, tierLabel, style: magmaStyle, shadow: magmaShadow, spin: magmaSpin });
   } catch (e) {
     console.error("[frame status] failed", e);
     return Response.json({ error: "db error" }, { status: 500 });
@@ -2115,6 +2125,89 @@ async function handleMapVerify(req: Request): Promise<Response> {
     await sql`COMMIT`;
     return Response.json({ ok:true, pointId:pid, points, completed, streak:nextStreak, coins, balance: Number((upd[0] as {balance:number}).balance) });
   }catch(e){ try{ await sql`ROLLBACK`; }catch{} throw e; }
+}
+
+// ---- TOUR 42 — 12 городов 2024-2026 (xp + map share) ----
+const TOUR_XP_COST_CANON = 42;
+const TOUR_SHARE_REWARD_CANON = 42;
+async function ensureTourTables(): Promise<void> {
+  const sql = getSql();
+  await sql`CREATE TABLE IF NOT EXISTS magnum_tour_progress (user_id integer PRIMARY KEY REFERENCES magnum_users(id) ON DELETE CASCADE, visited jsonb NOT NULL DEFAULT '[]'::jsonb, xp_spent integer NOT NULL DEFAULT 0, shares integer NOT NULL DEFAULT 0, updated_at timestamp DEFAULT now() NOT NULL)`;
+  await sql`CREATE TABLE IF NOT EXISTS magnum_tour_shares (id serial PRIMARY KEY, user_id integer NOT NULL REFERENCES magnum_users(id) ON DELETE CASCADE, city_id text NOT NULL, day_id text NOT NULL, created_at timestamp DEFAULT now() NOT NULL, UNIQUE(user_id, city_id, day_id))`;
+}
+void ensureTourTables().catch(e=>console.error("[tour tables] failed", String(e).slice(0,120)));
+async function handleTourProgress(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  let user: { id:number; username:string }|null = null;
+  if (token) { try { user = await getUserByToken(token); } catch {} }
+  try {
+    await ensureTourTables();
+    const sql = getSql();
+    const rows = user ? await sql`SELECT visited, xp_spent, shares FROM magnum_tour_progress WHERE user_id=${user.id} LIMIT 1` : [];
+    const visited: string[] = rows.length ? (Array.isArray((rows[0] as {visited:unknown}).visited) ? (rows[0] as {visited:string[]}).visited : []) : [];
+    const xp_spent = rows.length ? Number((rows[0] as {xp_spent:number}).xp_spent) : 0;
+    const shares = rows.length ? Number((rows[0] as {shares:number}).shares) : 0;
+    return Response.json({ stops: TOUR_STOPS_CANON, visited, xpSpent: xp_spent, shares, xpCost: TOUR_XP_COST_CANON, shareReward: TOUR_SHARE_REWARD_CANON, authed: Boolean(user) });
+  } catch(e){ console.error("[tour progress] failed", e); return Response.json({ error:"db error" },{status:500}); }
+}
+async function handleTourVisit(req: Request): Promise<Response> {
+  const auth = await requireAuth(req); if (auth instanceof Response) return auth; const { user } = auth;
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`tour:visit:${user.id}:${ip}`, 20, 60_000)) return Response.json({ error:"rate limited" },{status:429});
+  let body: { cityId?: string; id?: string };
+  try { body = (await req.json()) as typeof body; } catch { return Response.json({ error:"Invalid JSON" },{status:400}); }
+  const cityId = String(body.cityId ?? body.id ?? "").trim();
+  if (!isTourCityIdCanon(cityId as TourStopCanon["id"])) return Response.json({ error:"unknown cityId", valid: TOUR_STOPS_CANON.map(s=>s.id) },{status:400});
+  try {
+    await ensureTourTables();
+    const sql = getSql();
+    const rows = await sql`SELECT visited, xp_spent FROM magnum_tour_progress WHERE user_id=${user.id} LIMIT 1`;
+    let visited: string[] = rows.length && Array.isArray((rows[0] as {visited:unknown}).visited) ? (rows[0] as {visited:string[]}).visited : [];
+    if (visited.includes(cityId)) return Response.json({ error:"already visited", cityId },{status:409});
+    // check pass xp
+    await ensurePassSeasonRow();
+    const passRow = await getPassRow(user.id);
+    if (passRow.xp < TOUR_XP_COST_CANON) return Response.json({ error:"not enough xp", need: TOUR_XP_COST_CANON, have: passRow.xp },{status:402});
+    // deduct xp: update magnum_pass_progress xp -42
+    const newXp = Math.max(0, passRow.xp - TOUR_XP_COST_CANON);
+    const newLevel = Math.min(MAX_LEVEL, Math.floor(newXp / XP_PER_LEVEL));
+    await sql`UPDATE magnum_pass_progress SET xp=${newXp}, level=${newLevel}, updated_at=now() WHERE user_id=${user.id}`;
+    visited = [...visited, cityId];
+    const xpSpent = (rows.length ? Number((rows[0] as {xp_spent:number}).xp_spent) : 0) + TOUR_XP_COST_CANON;
+    await sql`INSERT INTO magnum_tour_progress (user_id, visited, xp_spent, shares) VALUES (${user.id}, ${JSON.stringify(visited)}::jsonb, ${xpSpent}, 0) ON CONFLICT (user_id) DO UPDATE SET visited=${JSON.stringify(visited)}::jsonb, xp_spent=${xpSpent}, updated_at=now()`;
+    await sql`INSERT INTO magnum_transactions (user_id, amount, reason, meta) VALUES (${user.id}, ${-TOUR_XP_COST_CANON}, 'tour_visit', ${JSON.stringify({ cityId })}::jsonb)`;
+    const city = TOUR_STOPS_CANON.find(s=>s.id===cityId);
+    return Response.json({ ok:true, cityId, city, visited, xp: newXp, level: newLevel, xpSpent });
+  } catch(e){ console.error("[tour visit] failed", e); return Response.json({ error:"db error" },{status:500}); }
+}
+async function handleTourShare(req: Request): Promise<Response> {
+  const auth = await requireAuth(req); if (auth instanceof Response) return auth; const { user } = auth;
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`tour:share:${user.id}:${ip}`, 10, 60_000)) return Response.json({ error:"rate limited" },{status:429});
+  let body: { cityId?: string; id?: string };
+  try { body = (await req.json()) as typeof body; } catch { body = {}; }
+  const cityId = String(body.cityId ?? body.id ?? "").trim();
+  if (cityId && !isTourCityIdCanon(cityId as TourStopCanon["id"])) return Response.json({ error:"unknown cityId" },{status:400});
+  try {
+    await ensureTourTables();
+    const sql = getSql();
+    const today = new Date().toISOString().slice(0,10);
+    const keyCity = cityId || "tour";
+    const dup = await sql`SELECT id FROM magnum_tour_shares WHERE user_id=${user.id} AND city_id=${keyCity} AND day_id=${today} LIMIT 1`;
+    if (dup.length > 0) return Response.json({ error:"already shared today", cityId: keyCity, dayId: today },{status:429});
+    await sql`INSERT INTO magnum_tour_shares (user_id, city_id, day_id) VALUES (${user.id}, ${keyCity}, ${today})`;
+    await sql`INSERT INTO magnum_coins (user_id, balance) VALUES (${user.id}, 1000) ON CONFLICT (user_id) DO NOTHING`;
+    const upd = await sql`UPDATE magnum_coins SET balance = balance + ${TOUR_SHARE_REWARD_CANON} WHERE user_id=${user.id} RETURNING balance`;
+    const balance = Number((upd[0] as {balance:number}).balance);
+    await sql`INSERT INTO magnum_transactions (user_id, amount, reason, meta) VALUES (${user.id}, ${TOUR_SHARE_REWARD_CANON}, 'tour_share', ${JSON.stringify({ cityId: keyCity, dayId: today })}::jsonb)`;
+    await sql`INSERT INTO magnum_tour_progress (user_id, visited, xp_spent, shares) VALUES (${user.id}, '[]'::jsonb, 0, 1) ON CONFLICT (user_id) DO UPDATE SET shares = magnum_tour_progress.shares + 1, updated_at=now()`;
+    try { await addPassXp(user.id, 5, 'tour_share'); } catch {}
+    return Response.json({ ok:true, reward: TOUR_SHARE_REWARD_CANON, balance, cityId: keyCity, dayId: today });
+  } catch(e){
+    const msg = String(e);
+    if (msg.includes("duplicate") || msg.includes("23505")) return Response.json({ error:"already shared today" },{status:429});
+    console.error("[tour share] failed", e); return Response.json({ error:"db error" },{status:500});
+  }
 }
 
 // ---- Mining handlers ----
@@ -4496,7 +4589,230 @@ async function handleFlashmobShare(req:Request):Promise<Response>{
   return Response.json({ ok:true, day, coins:42, balance:Number((upd[0] as {balance:number}).balance) });
 }
 
+// ---- ЦЕПЬ 42 — челлендж-цепочка 42ч + лента топ-цепей + OG 1080x1920 ----
+async function ensureChainTables(): Promise<void> {
+  const sql = getSql();
+  await sql`CREATE TABLE IF NOT EXISTS magnum_chains (id serial PRIMARY KEY, root_user_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, code text UNIQUE NOT NULL, length integer NOT NULL DEFAULT 1, created_at timestamp DEFAULT now() NOT NULL, expires_at timestamp NOT NULL, broken boolean NOT NULL DEFAULT false)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_chains_root ON magnum_chains(root_user_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_chains_code ON magnum_chains(code)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_chains_length ON magnum_chains(length DESC)`;
+  await sql`CREATE TABLE IF NOT EXISTS magnum_chain_links (id serial PRIMARY KEY, chain_id integer REFERENCES magnum_chains(id) ON DELETE CASCADE NOT NULL, user_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, joined_at timestamp DEFAULT now() NOT NULL, challenge_type text NOT NULL)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_chain_links_chain ON magnum_chain_links(chain_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_chain_links_user ON magnum_chain_links(user_id, joined_at DESC)`;
+  await sql`CREATE TABLE IF NOT EXISTS magnum_chain_shares (id serial PRIMARY KEY, user_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, day_id text NOT NULL, created_at timestamp DEFAULT now() NOT NULL, UNIQUE(user_id, day_id))`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_chain_shares_day ON magnum_chain_shares(day_id)`;
+}
+void ensureChainTables().then(()=> console.log("[startup] magnum_chains ensured")).catch(e=> console.error("[startup] chain ensure failed",e));
 
+async function expireStaleChains(): Promise<void> {
+  try { const sql=getSql(); await sql`UPDATE magnum_chains SET broken=true WHERE broken=false AND expires_at < now()`; } catch {}
+}
+
+async function getActiveChainForUser(userId: number): Promise<null | { id:number; root_user_id:number; code:string; length:number; created_at:string; expires_at:string; broken:boolean }> {
+  await ensureChainTables();
+  await expireStaleChains();
+  const sql=getSql();
+  const rows=await sql`SELECT id, root_user_id, code, length, created_at, expires_at, broken FROM magnum_chains WHERE root_user_id=${userId} AND broken=false AND expires_at > now() ORDER BY created_at DESC LIMIT 1`;
+  if(rows.length===0) return null;
+  const r=rows[0] as { id:number; root_user_id:number; code:string; length:number; created_at:string; expires_at:string; broken:boolean };
+  return { id:Number(r.id), root_user_id:Number(r.root_user_id), code:String(r.code), length:Number(r.length), created_at:String(r.created_at), expires_at:String(r.expires_at), broken:Boolean(r.broken) };
+}
+
+async function getChainByCode(code: string){
+  await ensureChainTables();
+  await expireStaleChains();
+  const sql=getSql();
+  const rows=await sql`SELECT c.id, c.root_user_id, c.code, c.length, c.created_at, c.expires_at, c.broken, u.username as root_username FROM magnum_chains c LEFT JOIN magnum_users u ON u.id=c.root_user_id WHERE c.code=${code} LIMIT 1`;
+  if(rows.length===0) return null;
+  const r=rows[0] as { id:number; root_user_id:number; code:string; length:number; created_at:string; expires_at:string; broken:boolean; root_username:string|null };
+  return { id:Number(r.id), root_user_id:Number(r.root_user_id), code:String(r.code), length:Number(r.length), created_at:String(r.created_at), expires_at:String(r.expires_at), broken:Boolean(r.broken), root_username: r.root_username? String(r.root_username): `user#${r.root_user_id}` };
+}
+
+async function handleChainMe(req: Request): Promise<Response> {
+  const auth = await requireAuth(req); if (auth instanceof Response) return auth; const { user } = auth;
+  const chain = await getActiveChainForUser(user.id);
+  if(!chain) return Response.json({ chain: null, length: 0, broken: false });
+  const sql=getSql();
+  let links: unknown[] = [];
+  try { links = await sql`SELECT l.id, l.user_id, l.joined_at, l.challenge_type, u.username FROM magnum_chain_links l LEFT JOIN magnum_users u ON u.id=l.user_id WHERE l.chain_id=${chain.id} ORDER BY l.joined_at ASC LIMIT 42`; } catch {}
+  const remainMs = Math.max(0, new Date(chain.expires_at).getTime() - Date.now());
+  const mult = chainMult(chain.length);
+  const items = (links as {id:number; user_id:number; joined_at:string; challenge_type:string; username:string|null}[]).map(r=> ({ id:Number(r.id), userId:Number(r.user_id), username: r.username? String(r.username): `user#${r.user_id}`, joined_at:String(r.joined_at), challenge_type:String(r.challenge_type) }));
+  return Response.json({ chain: { ...chain, remainMs, mult, broken: chain.broken || remainMs===0 }, links: items, length: chain.length, mult, remainMs, broken: chain.broken || remainMs===0, code: chain.code, link: `/magnum/chain/join/${chain.code}` });
+}
+
+async function handleChainCreate(req: Request): Promise<Response> {
+  const auth = await requireAuth(req); if (auth instanceof Response) return auth; const { user } = auth;
+  const ip=getClientIp(req);
+  if(!checkRateLimit(`chain:create:${user.id}:${ip}`, 5, 60_000)) return Response.json({ error:"rate limited 5/мин"},{status:429});
+  if(!checkRateLimit(`chain:create:ip:${ip}`, 5, 60_000)) return Response.json({ error:"rate limited ip 5/мин"},{status:429});
+  let body:{challenge_type?:unknown; challengeType?:unknown}; try{ body=await req.json() as typeof body; }catch{ return Response.json({error:"Invalid JSON"},{status:400}); }
+  const ctRaw=String(body.challenge_type ?? body.challengeType ?? "").trim().toLowerCase();
+  if(!LINK_TYPES.some(t=> t.id===ctRaw)) return Response.json({ error:"challenge_type must be click-10s|quiz-1q|mem-like"},{status:400});
+  const challenge_type=ctRaw as typeof LINK_TYPES[number]["id"];
+  await ensureChainTables();
+  const sql=getSql();
+  try{
+    const recent=await sql`SELECT id FROM magnum_chain_links WHERE user_id=${user.id} AND joined_at > now() - interval '1 hour' LIMIT 1`;
+    if(recent.length>0) return Response.json({ error:"1 звено/час — попробуй через час"},{status:429});
+  }catch{}
+  await expireStaleChains();
+  let chain = await getActiveChainForUser(user.id);
+  if(!chain){
+    let code=genChainCode();
+    for(let attempt=0; attempt<3; attempt++){
+      try{
+        const expires=new Date(Date.now()+ CHAIN_RULES.TTL_MS).toISOString();
+        const rows=await sql`INSERT INTO magnum_chains (root_user_id, code, length, expires_at, broken) VALUES (${user.id}, ${code}, 1, ${expires}, false) RETURNING id, code, length, expires_at, created_at`;
+        const r=rows[0] as {id:number; code:string; length:number; expires_at:string; created_at:string};
+        const nid=Number(r.id);
+        await sql`INSERT INTO magnum_chain_links (chain_id, user_id, challenge_type) VALUES (${nid}, ${user.id}, ${challenge_type})`;
+        const newChain={ id:nid, root_user_id:user.id, code:String(r.code), length:1, created_at:String(r.created_at), expires_at:String(r.expires_at), broken:false };
+        const remainMs=Math.max(0, new Date(newChain.expires_at).getTime()-Date.now());
+        return Response.json({ ok:true, chain: { ...newChain, remainMs, mult: chainMult(1) }, code: newChain.code, link:`/magnum/chain/join/${newChain.code}`, length:1, created:true, reward:0 }, {status:201});
+      }catch(e){
+        const msg=String(e);
+        if(msg.includes("duplicate")||msg.includes("23505")){ code=genChainCode(); continue; }
+        console.error("[chain create] failed",e);
+        return Response.json({error:"db error"},{status:500});
+      }
+    }
+    return Response.json({error:"code collision retry failed"},{status:500});
+  } else {
+    try{
+      const expires=new Date(Date.now()+ CHAIN_RULES.TTL_MS).toISOString();
+      await sql`UPDATE magnum_chains SET length = length + 1, expires_at=${expires} WHERE id=${chain.id}`;
+      await sql`INSERT INTO magnum_chain_links (chain_id, user_id, challenge_type) VALUES (${chain.id}, ${user.id}, ${challenge_type})`;
+      const upd=await sql`SELECT length, expires_at FROM magnum_chains WHERE id=${chain.id} LIMIT 1`;
+      const nl=Number((upd[0] as {length:number}).length);
+      const ne=String((upd[0] as {expires_at:string}).expires_at);
+      const remainMs=Math.max(0, new Date(ne).getTime()-Date.now());
+      const mult=chainMult(nl);
+      return Response.json({ ok:true, chain: { ...chain, length:nl, expires_at:ne, remainMs, mult }, code: chain.code, link:`/magnum/chain/join/${chain.code}`, length:nl, mult, remainMs, created:false, reward:0 });
+    }catch(e){ console.error("[chain create extend] failed",e); return Response.json({error:"db error"},{status:500}); }
+  }
+}
+
+async function handleChainJoin(req: Request): Promise<Response> {
+  const auth = await requireAuth(req); if (auth instanceof Response) return auth; const { user } = auth;
+  const ip=getClientIp(req);
+  if(!checkRateLimit(`chain:join:${user.id}:${ip}`, 5, 60_000)) return Response.json({ error:"rate limited 5/мин"},{status:429});
+  if(!checkRateLimit(`chain:join:ip:${ip}`, 5, 60_000)) return Response.json({ error:"rate limited ip 5/мин"},{status:429});
+  let body:{code?:unknown; challenge_type?:unknown; challengeType?:unknown}; try{ body=await req.json() as typeof body; }catch{ return Response.json({error:"Invalid JSON"},{status:400}); }
+  const rawCode=String(body.code??"").trim();
+  const norm=normalizeCode(rawCode);
+  if(!norm) return Response.json({error:"code 4 символа A-Z2-9"},{status:400});
+  const ctRaw=String(body.challenge_type ?? body.challengeType ?? "quiz-1q").trim().toLowerCase();
+  const challenge_type = LINK_TYPES.some(t=> t.id===ctRaw) ? ctRaw as typeof LINK_TYPES[number]["id"] : "quiz-1q" as const;
+  try{
+    const sql=getSql();
+    const recent=await sql`SELECT id FROM magnum_chain_links WHERE user_id=${user.id} AND joined_at > now() - interval '1 day' LIMIT 1`;
+    if(recent.length>0) return Response.json({ error:"1 приём/день — завтра, братуха"},{status:429});
+  }catch{}
+  const chain=await getChainByCode(norm);
+  if(!chain) return Response.json({error:"цепь не найдена по коду"},{status:404});
+  if(chain.broken) return Response.json({error:"цепь оборвана — 42ч истекли"},{status:410});
+  if(new Date(chain.expires_at).getTime() <= Date.now()) return Response.json({error:"цепь истекла — 42ч истекли"},{status:410});
+  if(chain.root_user_id===user.id) return Response.json({error:"нельзя вступить в свою цепь"},{status:400});
+  const sql=getSql();
+  try{
+    const mem=await sql`SELECT id FROM magnum_chain_links WHERE chain_id=${chain.id} AND user_id=${user.id} LIMIT 1`;
+    if(mem.length>0) return Response.json({error:"уже в цепи"},{status:409});
+  }catch{}
+  try{
+    const expires=new Date(Date.now()+ CHAIN_RULES.TTL_MS).toISOString();
+    await sql`UPDATE magnum_chains SET length = length + 1, expires_at=${expires} WHERE id=${chain.id}`;
+    await sql`INSERT INTO magnum_chain_links (chain_id, user_id, challenge_type) VALUES (${chain.id}, ${user.id}, ${challenge_type})`;
+    const upd=await sql`SELECT length, expires_at FROM magnum_chains WHERE id=${chain.id} LIMIT 1`;
+    const nl=Number((upd[0] as {length:number}).length);
+    const ne=String((upd[0] as {expires_at:string}).expires_at);
+    const remainMs=Math.max(0, new Date(ne).getTime()-Date.now());
+    const mult=chainMult(nl);
+    const rewardBase=CHAIN_RULES.REWARD_JOIN;
+    const reward=Math.round(rewardBase * mult);
+    const bankBonus=Math.floor(reward * 0.1);
+    const totalReward=reward + bankBonus;
+    await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${user.id},1000) ON CONFLICT (user_id) DO NOTHING`;
+    await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${chain.root_user_id},1000) ON CONFLICT (user_id) DO NOTHING`;
+    await sql`UPDATE magnum_coins SET balance = balance + ${totalReward} WHERE user_id=${user.id}`;
+    await sql`UPDATE magnum_coins SET balance = balance + ${totalReward} WHERE user_id=${chain.root_user_id}`;
+    await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${totalReward},'chain-join',${JSON.stringify({chainId: chain.id, code: chain.code, mult, bankBonus, base: rewardBase})}::jsonb)`;
+    await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${chain.root_user_id},${totalReward},'chain-join-root',${JSON.stringify({chainId: chain.id, code: chain.code, joiner: user.id, mult, bankBonus})}::jsonb)`;
+    try{ await sql`INSERT INTO magnum_notifications (user_id,title,body,kind) VALUES (${chain.root_user_id},'Цепь +1 звено! 🔗','Братуха ${user.username} вступил в твою цепь — длина ${nl} • +${totalReward} каждому • mult x${mult}','social')`; }catch{}
+    const balRows=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+    const balance=Number((balRows[0] as {balance:number}).balance);
+    return Response.json({ ok:true, chain:{ ...chain, length:nl, expires_at:ne, remainMs, mult }, length:nl, mult, remainMs, reward: totalReward, bankBonus, base:rewardBase, balance, joiner:user.username });
+  }catch(e){ console.error("[chain join] failed",e); return Response.json({error:"db error"},{status:500}); }
+}
+
+async function handleChainFeed(): Promise<Response> {
+  try{
+    await ensureChainTables();
+    await expireStaleChains();
+    const sql=getSql();
+    const rows=await sql`SELECT c.id, c.root_user_id, c.code, c.length, c.created_at, c.expires_at, c.broken, u.username as root_username FROM magnum_chains c LEFT JOIN magnum_users u ON u.id=c.root_user_id WHERE c.broken=false AND c.expires_at > now() ORDER BY c.length DESC, c.created_at ASC LIMIT 10`;
+    const items=(rows as {id:number; root_user_id:number; code:string; length:number; created_at:string; expires_at:string; broken:boolean; root_username:string|null}[]).map((r,i)=> {
+      const remainMs=Math.max(0, new Date(r.expires_at).getTime()-Date.now());
+      const mult=chainMult(Number(r.length));
+      return { id:Number(r.id), root_user_id:Number(r.root_user_id), code:String(r.code), length:Number(r.length), created_at:String(r.created_at), expires_at:String(r.expires_at), broken:Boolean(r.broken), root_username: r.root_username? String(r.root_username): `user#${r.root_user_id}`, username: r.root_username? String(r.root_username): `user#${r.root_user_id}`, mult, remainMs, rank:i+1, crown: i===0, isTop3: i<3 };
+    });
+    return Response.json({ ok:true, feed: items, top: items, count: items.length });
+  }catch(e){ console.error("[chain feed] failed",e); return Response.json({error:"db error"},{status:500}); }
+}
+
+async function handleChainCode(req: Request, codeParam: string): Promise<Response> {
+  const norm=normalizeCode(codeParam);
+  if(!norm) return Response.json({error:"code 4 символа"},{status:400});
+  const chain=await getChainByCode(norm);
+  if(!chain) return Response.json({error:"цепь не найдена"},{status:404});
+  const remainMs=Math.max(0, new Date(chain.expires_at).getTime()-Date.now());
+  const mult=chainMult(chain.length);
+  const sql=getSql();
+  let links: unknown[]=[];
+  try{ links=await sql`SELECT l.user_id, l.joined_at, l.challenge_type, u.username FROM magnum_chain_links l LEFT JOIN magnum_users u ON u.id=l.user_id WHERE l.chain_id=${chain.id} ORDER BY l.joined_at ASC LIMIT 42`; }catch{}
+  const linkRows=(links as {user_id:number; joined_at:string; challenge_type:string; username:string|null}[]).map(r=> ({ userId:Number(r.user_id), username: r.username? String(r.username): `user#${r.user_id}`, joined_at:String(r.joined_at), challenge_type:String(r.challenge_type) }));
+  const broken=chain.broken || remainMs===0;
+  return Response.json({ ok:true, chain:{ ...chain, remainMs, mult, broken }, links: linkRows, length:chain.length, mult, remainMs, broken, code: chain.code, link:`/magnum/chain/join/${chain.code}` });
+}
+
+async function handleChainShare(req: Request): Promise<Response> {
+  const auth = await requireAuth(req); if (auth instanceof Response) return auth; const { user } = auth;
+  const dayId=new Date().toISOString().slice(0,10);
+  await ensureChainTables();
+  const sql=getSql();
+  const dup=await sql`SELECT id FROM magnum_chain_shares WHERE user_id=${user.id} AND day_id=${dayId} LIMIT 1`;
+  if(dup.length>0) return Response.json({error:"already shared today", dayId, coins:0},{status:409});
+  await sql`INSERT INTO magnum_chain_shares (user_id, day_id) VALUES (${user.id}, ${dayId})`;
+  await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${user.id},1000) ON CONFLICT (user_id) DO NOTHING`;
+  await sql`UPDATE magnum_coins SET balance=balance+42 WHERE user_id=${user.id}`;
+  await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},42,'chain-share',${JSON.stringify({dayId})}::jsonb)`;
+  const upd=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+  return Response.json({ ok:true, coins:42, dayId, balance:Number((upd[0] as {balance:number}).balance) });
+}
+
+async function handleChainOg(req: Request): Promise<Response> {
+  const url=new URL(req.url);
+  const codeParam=(url.searchParams.get("code")|| url.searchParams.get("chain")|| "").trim().toUpperCase();
+  let chain: { id:number; root_user_id:number; code:string; length:number; created_at:string; expires_at:string; broken:boolean; root_username:string } | null = null;
+  let length=1; let mult=1; let remainMs=CHAIN_RULES.TTL_MS; let username="Братуха";
+  if(codeParam){
+    const norm=normalizeCode(codeParam);
+    if(norm) chain=await getChainByCode(norm) as unknown as typeof chain;
+    if(chain){ length=chain.length; mult=chainMult(length); remainMs=Math.max(0, new Date(chain.expires_at).getTime()-Date.now()); username=chain.root_username; }
+  } else {
+    const token=extractToken(req);
+    if(token){ try{ const u=await getUserByToken(token); if(u){ const c=await getActiveChainForUser(u.id); if(c){ length=c.length; mult=chainMult(length); remainMs=Math.max(0, new Date(c.expires_at).getTime()-Date.now()); username=u.username; chain={ id:c.id, root_user_id:c.root_user_id, code:c.code, length:c.length, created_at:c.created_at, expires_at:c.expires_at, broken:c.broken, root_username:u.username } as unknown as typeof chain; } } }catch{} }
+  }
+  const codeDisp=chain? chain.code : (codeParam || "42CE");
+  const crown = length>=10 ? "👑" : length>=5 ? "🔥" : "🔗";
+  const bg=`<linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0a0a0a"/><stop offset="55%" stop-color="#1a1020"/><stop offset="100%" stop-color="#ff2d55"/></linearGradient>`;
+  const remainClock = remainMs>0 ? `${String(Math.floor(remainMs/3600000)).padStart(2,"0")}:${String(Math.floor((remainMs%3600000)/60000)).padStart(2,"0")}:${String(Math.floor((remainMs%60000)/1000)).padStart(2,"0")}` : "00:00:00 ОБРЫВ";
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920"><defs>${bg}<linearGradient id="gold" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#ffcc00"/><stop offset="100%" stop-color="#ff2d55"/></linearGradient></defs><rect width="1080" height="1920" rx="0" fill="url(#g)"/><text x="48" y="120" font-family="Inter,sans-serif" font-size="84" font-weight="900" fill="#fff">ЦЕПЬ 42 ${crown}</text><text x="48" y="190" font-family="Inter,sans-serif" font-size="36" font-weight="700" fill="rgba(255,255,255,.92)">братуха ${username} • длина ${length} • x${mult}</text><text x="48" y="250" font-family="Inter,sans-serif" font-size="28" font-weight="600" fill="#ffcc00">42ч до обрыва • ${remainClock}</text><rect x="48" y="320" width="984" height="220" rx="18" fill="rgba(255,255,255,.06)" stroke="rgba(255,255,255,.12)"/><text x="78" y="380" font-family="Inter,sans-serif" font-size="26" font-weight="700" fill="#fff">Код цепи</text><text x="78" y="470" font-family="monospace" font-size="96" font-weight="900" fill="url(#gold)" letter-spacing="8">${codeDisp}</text><text x="78" y="520" font-family="Inter,sans-serif" font-size="22" fill="rgba(255,255,255,.7)">/magnum/chain/join/${codeDisp} • кинь звено другу</text><rect x="340" y="680" width="400" height="400" rx="18" fill="#fff" stroke="rgba(255,204,0,.4)" stroke-width="4"/><text x="540" y="880" text-anchor="middle" font-family="monospace" font-size="48" font-weight="900" fill="#111">QR</text><text x="540" y="930" text-anchor="middle" font-family="monospace" font-size="18" fill="#555">magnum/chain/join/${codeDisp}</text><rect x="48" y="1180" width="984" height="280" rx="18" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.08)"/><text x="78" y="1240" font-family="Inter,sans-serif" font-size="22" font-weight="700" fill="#fff">Лента топ-цепей • mult x1.05 кап x2.0 • топ-1 👑 +1420 epic</text><text x="78" y="1280" font-family="Inter,sans-serif" font-size="18" fill="rgba(255,255,255,.7)">1 звено/час • 1 приём/день • шаринг +42/день • приём +42 обоим</text><text x="78" y="1340" font-family="monospace" font-size="20" fill="#ffcc00">chain 1080×1920 • MAGNUM 42 • 5opka.ru/magnum/chain</text><text x="48" y="1860" font-family="Inter,sans-serif" font-size="22" fill="rgba(255,255,255,.8)">MAGNUM • ЦЕПЬ 42 • кидай звенья, держи 42 часа</text><text x="48" y="1890" font-family="Inter,sans-serif" font-size="18" fill="rgba(255,255,255,.55)">5opka.ru/magnum/chain • цепь ${codeDisp} • ${new Date().toISOString().slice(0,10)}</text></svg>`;
+  return new Response(svg, { headers: { "Content-Type":"image/svg+xml; charset=utf-8", "Cache-Control":"public, max-age=60", "Content-Length": String(Buffer.byteLength(svg)) } });
+}
+
+
+async function handleBoardFeed
 async function handleBoardFeed(req:Request):Promise<Response>{
   const url=new URL(req.url);
   const game=url.searchParams.get("game")?.trim().toLowerCase()||"";
@@ -4822,6 +5138,130 @@ async function handlePassBuyLevels(req:Request):Promise<Response>{
   const upd2=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
   return Response.json({ ok:true, count, price, xpAdded: xpAdd, xp: prog.xp, level: prog.level, balance: Number((upd2[0] as {balance:number}).balance), leveled: res.leveled });
 }
+
+
+// ---- FLOW 42 — битва флоу: judge + wager + ELO + streak + share
+async function ensureFlowTables(){
+  const sql=getSql();
+  await sql`CREATE TABLE IF NOT EXISTS magnum_flow_battles (id serial PRIMARY KEY, user_id integer REFERENCES magnum_users(id) ON DELETE CASCADE, opponent text NOT NULL DEFAULT 'bot', wager integer NOT NULL DEFAULT 0, lines jsonb NOT NULL, scores jsonb NOT NULL, verdict text NOT NULL, wpm integer NOT NULL DEFAULT 0, created_at timestamp DEFAULT now())`;
+  await sql`CREATE TABLE IF NOT EXISTS magnum_flow_season (user_id integer PRIMARY KEY REFERENCES magnum_users(id) ON DELETE CASCADE, rating integer NOT NULL DEFAULT 1000, wins integer NOT NULL DEFAULT 0, losses integer NOT NULL DEFAULT 0, streak integer NOT NULL DEFAULT 0, best_streak integer NOT NULL DEFAULT 0, updated_at timestamp DEFAULT now())`;
+  await sql`CREATE TABLE IF NOT EXISTS magnum_flow_shares (user_id integer REFERENCES magnum_users(id) ON DELETE CASCADE, day text NOT NULL, created_at timestamp DEFAULT now(), PRIMARY KEY (user_id, day))`;
+  try{ await sql`CREATE TABLE IF NOT EXISTS magnum_leaderboard (id serial PRIMARY KEY, player text NOT NULL, score integer NOT NULL, game text NOT NULL, created_at timestamp DEFAULT now())`; }catch{}
+}
+void ensureFlowTables().catch(()=>{});
+async function callMimoJudge(lines: string[]){
+  const key=process.env.XIAOMI_API_KEY;
+  if(!key) return null;
+  try{
+    const prompt="Ты — AI-судья рэп-баттла БИТВА ФЛОУ 42. Оцени 4 строки по 3 критериям 0-42 каждый: рифма, панч, флоу. Верни JSON {rhyme:0-42,punch:0-42,flow:0-42} строго. Строки:\n"+lines.map((l,i)=> (i+1)+". "+(l||"(пропуск)")).join("\n");
+    const base=process.env.MIMO_BASE_URL||"https://token-plan-sgp.xiaomimimo.com/v1";
+    const model=process.env.MIMO_MODEL||"mimo-v2.5";
+    const r=await fetch(base+"/chat/completions",{method:"POST",headers:{"api-key":key,"Content-Type":"application/json"},body:JSON.stringify({model,messages:[{role:"user",content:prompt}],max_tokens:200,temperature:0.7})});
+    if(!r.ok) return null;
+    const j=await r.json() as {choices?:{message?:{content?:string}}[]};
+    const txt=j.choices?.[0]?.message?.content||"";
+    const m=txt.match(/\{[\s\S]*?\}/);
+    if(!m) return null;
+    const o=JSON.parse(m[0]) as {rhyme:number;punch:number;flow:number};
+    const rv=Math.max(0,Math.min(42,Math.floor(Number(o.rhyme)||0)));
+    const pv=Math.max(0,Math.min(42,Math.floor(Number(o.punch)||0)));
+    const fv=Math.max(0,Math.min(42,Math.floor(Number(o.flow)||0)));
+    return {rhyme:rv,punch:pv,flow:fv};
+  }catch{ return null; }
+}
+async function handleFlowJudge(req: Request): Promise<Response>{
+  const auth=await requireAuth(req); if(auth instanceof Response) return auth; const user=(auth as {user:{id:number;username:string}}).user;
+  const ip=getClientIp(req); if(!checkRateLimit("flow:judge:"+user.id+":"+ip,12,60000)) return Response.json({error:"rate limited"},{status:429});
+  let body: {lines?:unknown;wager?:unknown;wpm?:unknown;beat?:unknown}; try{ body=await req.json() as typeof body; }catch{ return Response.json({error:"Invalid JSON"},{status:400}); }
+  const lines=Array.isArray(body.lines)? (body.lines as unknown[]).slice(0,4).map(s=>String(s||"").slice(0,80)) : [];
+  while(lines.length<4) lines.push("");
+  const wager=[0,42,142,420].includes(Number(body.wager))?Number(body.wager):0;
+  const wpmVal=Math.max(0,Math.min(300,Math.floor(Number(body.wpm)||0)));
+  const beat=[86,73,142].includes(Number(body.beat))?Number(body.beat):86;
+  await ensureFlowTables();
+  const sql=getSql();
+  if(wager>0){
+    const balRows=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+    const bal=balRows.length?Number((balRows[0] as {balance:number}).balance):1000;
+    if(balRows.length===0) await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${user.id},1000) ON CONFLICT (user_id) DO NOTHING`;
+    const cur=balRows.length?bal:1000;
+    if(cur < wager) return Response.json({error:"not enough coins",required:wager,balance:cur},{status:402});
+    await sql`UPDATE magnum_coins SET balance=balance-${wager} WHERE user_id=${user.id}`;
+    await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${-wager},'flow_wager',${JSON.stringify({wager,beat})}::jsonb)`;
+  }
+  const heur=flowHeuristic(lines);
+  const mimo=await callMimoJudge(lines);
+  const rhyme=mimo?mimo.rhyme:heur.rhyme;
+  const punch=mimo?mimo.punch:heur.punch;
+  const flow=mimo?mimo.flow:heur.flow;
+  const total=Math.max(0,Math.min(126,rhyme+punch+flow));
+  const bonus=wpmVal>80?1.2:1;
+  const final=Math.round(total*bonus);
+  const botScore=60+Math.floor(Math.random()*31);
+  let verdict="draw"; if(final>botScore) verdict="win"; else if(final<botScore) verdict="lose";
+  const scores={rhyme,punch,flow,total,wpm:wpmVal,wpmBonus:bonus,final};
+  const botLinesArr=[["брат на бите 86 — качаю как XXL","42 братухи в зале — кричи братуха","мой флоу — лава, твой — вода из крана","проверь свой панч — где твой удар, братан?"],["семьдесят три — медленный джаз на районе","пишу как 5opka — каждый бар в законе","ты пропустил такт — я считаю секунды","финал MAGNUM — пять пуль, не секунды"],["сто сорок два — трэп-скорострел","печатай быстрее — или проиграл","WPM за 80 — бонус летит","БРАТ-БОТ не спит — он тебя глотает"]];
+  const bi=[86,73,142].indexOf(beat); const botLines=(botLinesArr[bi>=0?bi:0]||botLinesArr[0])!;
+  try{
+    await sql`INSERT INTO magnum_flow_battles (user_id,opponent,wager,lines,scores,verdict,wpm) VALUES (${user.id},'bot',${wager},${JSON.stringify(lines)}::jsonb,${JSON.stringify(scores)}::jsonb,${verdict},${wpmVal})`;
+    await sql`INSERT INTO magnum_leaderboard (player,score,game) VALUES (${user.username},${final},'flow42')`;
+  }catch(e){ console.error("[flow persist] failed",e); }
+  let reward: {coins:number;elo:number;streak:number;rating:number;balance:number}|null=null;
+  try{
+    await sql`INSERT INTO magnum_flow_season (user_id,rating,wins,losses,streak,best_streak) VALUES (${user.id},1000,0,0,0,0) ON CONFLICT (user_id) DO NOTHING`;
+    const sRows=await sql`SELECT rating,wins,losses,streak,best_streak FROM magnum_flow_season WHERE user_id=${user.id} LIMIT 1`;
+    let rating=Number((sRows[0] as {rating:number}).rating||1000), wins=Number((sRows[0] as {wins:number}).wins||0), losses=Number((sRows[0] as {losses:number}).losses||0), streak=Number((sRows[0] as {streak:number}).streak||0), best=Number((sRows[0] as {best_streak:number}).best_streak||0);
+    let elo=0, coinsAdd=0;
+    if(verdict==="win"){ elo=42; wins++; streak++; if(streak>best) best=streak; if(wager>0) coinsAdd=Math.round(wager*1.5); if(streak>=3) coinsAdd+=142; }
+    else if(verdict==="lose"){ elo=-12; losses++; streak=0; }
+    rating=Math.max(0,rating+elo);
+    await sql`UPDATE magnum_flow_season SET rating=${rating},wins=${wins},losses=${losses},streak=${streak},best_streak=${best},updated_at=now() WHERE user_id=${user.id}`;
+    if(coinsAdd>0){
+      await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${user.id},1000) ON CONFLICT (user_id) DO NOTHING`;
+      await sql`UPDATE magnum_coins SET balance=balance+${coinsAdd} WHERE user_id=${user.id}`;
+      await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${coinsAdd},'flow_win',${JSON.stringify({verdict,wager,final,botScore,wpm:wpmVal})}::jsonb)`;
+    }
+    const balRows2=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+    const bal2=balRows2.length?Number((balRows2[0] as {balance:number}).balance):1000;
+    reward={coins:coinsAdd,elo,streak,rating,balance:bal2};
+  }catch(e){ console.error("[flow reward] failed",e); }
+  const balF=reward?reward.balance: await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`.then(r=>r.length?Number((r[0] as {balance:number}).balance):1000).catch(()=>1000);
+  return Response.json({ok:true,scores,botScore,verdict,botLines,reward,balance:balF});
+}
+async function handleFlowShare(req: Request): Promise<Response>{
+  const auth=await requireAuth(req); if(auth instanceof Response) return auth; const user=(auth as {user:{id:number}}).user;
+  const ip=getClientIp(req); if(!checkRateLimit("flow:share:"+user.id+":"+ip,12,60000)) return Response.json({error:"rate limited"},{status:429});
+  let body: {dayId?:string;day?:string}; try{ body=await req.json() as typeof body; }catch{ body={}; }
+  const day=String(body.dayId||body.day||new Date().toISOString().slice(0,10)).slice(0,10);
+  await ensureFlowTables();
+  const sql=getSql();
+  try{ await sql`INSERT INTO magnum_flow_shares (user_id,day) VALUES (${user.id},${day})`; }catch(e){
+    const m=String(e);
+    if(m.includes("23505")||m.includes("duplicate")||m.includes("unique")) return Response.json({error:"already shared today"},{status:409});
+    console.error("[flow share] failed",e); return Response.json({error:"db error"},{status:500});
+  }
+  await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${user.id},1000) ON CONFLICT (user_id) DO NOTHING`;
+  await sql`UPDATE magnum_coins SET balance=balance+42 WHERE user_id=${user.id}`;
+  await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},42,'flow_share',${JSON.stringify({day})}::jsonb)`;
+  const balRows=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+  return Response.json({ok:true,coins:42,balance:Number((balRows[0] as {balance:number}).balance),day});
+}
+async function handleFlowLeaderboard(): Promise<Response>{
+  await ensureFlowTables();
+  try{
+    const sql=getSql();
+    const rows=await sql`SELECT player as username, max(score) as score FROM magnum_leaderboard WHERE game='flow42' GROUP BY player ORDER BY score DESC LIMIT 5`;
+    return Response.json({top: rows.map((r: unknown)=>{ const x=r as {username:string;score:number}; return {username:String(x.username),score:Number(x.score)}; })});
+  }catch(e){ console.error("[flow lb] failed",e); return Response.json({top:[]}); }
+}
+async function handleFlowHistory(req: Request): Promise<Response>{
+  const auth=await requireAuth(req); if(auth instanceof Response) return auth; const user=(auth as {user:{id:number}}).user;
+  await ensureFlowTables();
+  const sql=getSql();
+  const rows=await sql`SELECT wager,lines,scores,verdict,wpm,created_at FROM magnum_flow_battles WHERE user_id=${user.id} ORDER BY created_at DESC LIMIT 20`;
+  return Response.json({items:rows});
+}
+
 
 const wsReady=new Map<import("bun").ServerWebSocket<WSData>,boolean>();
 
@@ -5427,6 +5867,10 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/map/share" && req.method === "POST") return handleMapShare(req);
     if (url.pathname === "/magnum/api/map/freeze" && req.method === "POST") return handleMapFreeze(req);
     if (url.pathname === "/magnum/api/map/verify" && req.method === "POST") return handleMapVerify(req);
+    // tour 42
+    if (url.pathname === "/magnum/api/tour/progress" && req.method === "GET") return handleTourProgress(req);
+    if (url.pathname === "/magnum/api/tour/visit" && req.method === "POST") return handleTourVisit(req);
+    if (url.pathname === "/magnum/api/tour/share" && req.method === "POST") return handleTourShare(req);
 
     // shop
     if (url.pathname === "/magnum/api/shop/buy" && req.method === "POST") return handleShopBuy(req);
@@ -5594,6 +6038,19 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/search" && req.method === "GET") return handleSearch(req);
     if (url.pathname === "/magnum/api/log" && req.method === "POST") return handleLog(req);
 
+    if (url.pathname === "/magnum/api/flow/judge" && req.method === "POST") return handleFlowJudge(req);
+    if (url.pathname === "/magnum/api/flow/share" && req.method === "POST") return handleFlowShare(req);
+    if (url.pathname === "/magnum/api/flow/leaderboard" && req.method === "GET") return handleFlowLeaderboard();
+    if (url.pathname === "/magnum/api/flow/history" && req.method === "GET") return handleFlowHistory(req);
+    // ЦЕПЬ 42 — цепочка 42ч
+    if (url.pathname === "/magnum/api/chain/me" && req.method === "GET") return handleChainMe(req);
+    if (url.pathname === "/magnum/api/chain/create" && req.method === "POST") return handleChainCreate(req);
+    if (url.pathname === "/magnum/api/chain/join" && req.method === "POST") return handleChainJoin(req);
+    if (url.pathname.startsWith("/magnum/api/chain/join/") && req.method === "GET") { const code=url.pathname.replace("/magnum/api/chain/join/","").split("/")[0] ?? ""; return handleChainCode(req, code); }
+    if (url.pathname === "/magnum/api/chain/code" && req.method === "GET") { const c=new URL(req.url).searchParams.get("code")||""; return handleChainCode(req, c); }
+    if (url.pathname === "/magnum/api/chain/feed" && req.method === "GET") return handleChainFeed();
+    if (url.pathname === "/magnum/api/chain/share" && req.method === "POST") return handleChainShare(req);
+    if (url.pathname === "/magnum/api/chain/og" && req.method === "GET") return handleChainOg(req);
     // SPEC-42: unknown /magnum/api/* → 404 JSON (не отдавать index.html — SPA fallback только для страниц)
     if (url.pathname.startsWith("/magnum/api/")) {
       return Response.json({ error: "not found" }, { status: 404 });

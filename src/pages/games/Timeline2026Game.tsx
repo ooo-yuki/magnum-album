@@ -38,8 +38,10 @@ interface Event {
   yearHint: string;
 }
 
-// ─── Expanded chronology: 14 events — full 2026 MAGNUM lore ────────────────
+// ─── Expanded chronology: 15 events — full 2026 MAGNUM lore + Pushka interview 16.08.2025 yt-2026-09-01-2320 карточка 14 ────────────────
 const EVENTS: Event[] = [
+  { id: "pushka", date: "16.08.2025", sortKey: 20250816, title: "Интервью ПУШКА — «сливки общества» + 42.000 просмотров", detail: "ПУШКА 83:11 62k — подарок сливки «вы приглашаете такие сливки общества как я» + прогноз 42.000 просмотров — youtube.com/watch?v=_D_BZuqM_eE — темы рунет/Minecraft/42/SLAY/свадьба 02:25/11:46/28:53/30:30", emoji: "🎙️", yearHint: "Август 2025 — сливки" },
+  { id: "slava-bossu", date: "11.12.2025", sortKey: 20251211, title: "СЛАВА БОССУ — нейро-клип SLAY DISS", detail: "ФУГА TV 3:07 370k 23k — outsideinclub + 3 нейрогения (komaclinical/zxseeczs/tenzedit) — music.thefence.me/slavabo55u", emoji: "👑", yearHint: "Декабрь 2025 — дисс" },
   { id: "presave", date: "01.01.2026", sortKey: 20260101, title: "Пресейв MAGNUM открыт", detail: "Bandlink The Fence — один клик и 5 пуль прилетят первыми в личку.", emoji: "🔗", yearHint: "Первый день года" },
   { id: "newyear", date: "12.01.2026", sortKey: 20260112, title: "Тизер MAGNUM в соцсетях", detail: "5opka дропнул чёрный постер с надписью MAGNUM • 5 пуль. Фанаты гадают.", emoji: "👁️", yearHint: "Январь — первые намёки" },
   { id: "clay", date: "03.04.2026", sortKey: 20260403, title: "CLAY EP — 5 треков", detail: "РЗТ 73/100. Clowns Laugh At You — пасхалка на 10 лет вместе.", emoji: "🤡", yearHint: "Весна — глина" },
@@ -58,6 +60,7 @@ const EVENTS: Event[] = [
 
 // ─── Lore facts shown on win/fail (content array 50+ lines) ────────────────
 const LORE_FACTS: string[] = [
+  "16.08.2025 ПУШКА 83:11 62k — подарок «сливки общества» + прогноз 42.000 просмотров — youtube.com/watch?v=_D_BZuqM_eE — таймкоды 02:25/11:46/28:53/30:30.",
   "42 — число движения: 42 участника, 42 винила, 42 клетки змейки.",
   "CLAY — глина: 5opka лепил биты как из глины, 5 треков за 5 дней.",
   "VPN — про связь сквозь стены, как будто сигнал проходит через запреты.",

@@ -120,6 +120,11 @@ export const PRISM_IDS = new Set(COSMETICS_CATALOG.filter(c=>c.id.includes("pris
 export function isPrismCosmetic(id:string):boolean{ return PRISM_IDS.has(id); }
 export const PRISM_CATALOG = COSMETICS_CATALOG.filter(c=>PRISM_IDS.has(c.id));
 export const PRISM_IDS_SET = PRISM_IDS;
+// NEON_PRISM 42 stubs — alias for PrismVaultPage (aurora vault)
+export const NEON_PRISM_CATALOG = PRISM_CATALOG;
+export const NEON_PRISM_IDS_SET = PRISM_IDS_SET;
+export function isNeonPrismCosmetic(id:string):boolean{ return isPrismCosmetic(id); }
+export const NEON_PRISM_IDS = PRISM_IDS;
 
 export const CRYSTAL_IDS = new Set(COSMETICS_CATALOG.filter(c=>c.id.includes("crystal")||c.id.includes("quartz")).map(c=>c.id));
 export function isCrystalCosmetic(id:string):boolean{ return CRYSTAL_IDS.has(id); }
@@ -161,6 +166,20 @@ export const OBSIDIAN_GOLD_FRAME_ID = "frame-gold-obsidian-spin";
 export const OBSIDIAN_GOLD_STYLE = "conic-gradient(from 0deg,#1a1a1a,#ff4500,#ffcc00,#ffd700,#1a1a1a)";
 export const OBSIDIAN_SHADOW = "0 0 16px #ff5722";
 export const OBSIDIAN_SPIN = "obsidianSpin 3s linear infinite";
+
+// ── MAGMA GOLD 42 — 12 magma: conic-magma #ff4500 spin 3s + lava glow — cross -42 glacier/duel ──
+export const MAGMA_IDS_LIST = [
+  "frame-magma-ash","banner-magma-ash","title-magma-ash",
+  "frame-magma-lava","banner-magma-lava","title-magma-lava",
+  "frame-magma-eruption","banner-magma-eruption","title-magma-eruption",
+  "frame-magma-gold-spin","banner-magma-gold","title-magma-gold",
+] as const;
+export const MAGMA_IDS = new Set<string>(MAGMA_IDS_LIST as unknown as string[]);
+export function isMagmaCosmetic(id:string):boolean{ return MAGMA_IDS.has(id); }
+export const MAGMA_GOLD_FRAME_ID = "frame-magma-gold-spin";
+export const MAGMA_GOLD_STYLE = "conic-gradient(from 0deg,#ff4500,#ff8c00,#ffd700,#ff4500)";
+export const MAGMA_SHADOW = "0 0 16px #ff4500";
+export const MAGMA_SPIN = "magmaSpin 3s linear infinite";
 
 // aliases for ShopPage imports
 export const COSMETICS = COSMETICS_CATALOG;

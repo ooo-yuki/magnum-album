@@ -265,6 +265,25 @@ export function About42Page() {
           </div>
         </div>
 
+        {/* манифест СЛАВА БОССУ 11.12.2025 — yt-2026-09-01-2320 карточка 13 — ZeIFBdoOZXo VTT 1765 симв. frag 2-9 transcript:true — «Я никогда не был хорошим примером… Со мной моё племя» + «Шрек из Ростова будет коронован» — куда: About42 Био-манифест + RecapsPage + прессвол + игра Угадай трек + Ритм42 — без выдумок */}
+        <div className={styles.section} id="manifest-slava-bossu">
+          <h2>Манифест — СЛАВА БОССУ «Я никогда не был хорошим примером» (11.12.2025)</h2>
+          <div className={styles.storyCard} style={{ borderLeft: "3px solid #ff4500" }}>
+            <blockquote style={{ borderLeft: "3px solid #ff2d55", paddingLeft: 14, margin: "8px 0", fontStyle: "italic" }}>
+              «Я никогда не был хорошим примером, да и просто хорошим я не был. Я просто стремился быть первым. Этот выбор единственно верный. Не зарекайся от парадайса и до инферно. Мой путь от майнкрафтовой эры. До признания всех ваших премий. Пришло моё время. Со мной моё племя.»
+              <cite style={{ display: "block", marginTop: 8, opacity: 0.7, fontSize: "0.85rem" }}>— 5opka, СЛАВА БОССУ (SLAY DISS), 11.12.2025 — VTT ZeIFBdoOZXo.ru.vtt frag 2-9, 1765 симв., transcript:true</cite>
+            </blockquote>
+            <p><strong>Рефрен:</strong> «Слава боссу» (≈14 повторов «бос, бос, бос… 42» на интро) + «Не возьму я Слейкинга, не рекламлю я буков. На вашу вечеринку влетаю с двух ног я без стука. Слава боссу.» — рефрен-дисс на SLAY.</p>
+            <p><strong>Финал манифеста:</strong> «На счетах полно нулей, пятёрку испугались. Со мной мои люди на свете, на Ютубе, на концерте, на студии, в Ростове… Мы пришли чтобы забрать всё. Король вне номинации. Это моя трансляция. Шрек из Ростова будет коронован.» — «Шрек из Ростова» — самоирония 5opka (Ростов-на-Дону, 05.04.1996) как короля вне номинации.</p>
+            <p style={{ opacity: 0.6, fontSize: "0.78rem", marginTop: 10 }}>Источник: https://www.youtube.com/watch?v=ZeIFBdoOZXo (ФУГА TV, 11.12.2025, 3:07, 370k/23k, реж. outsideinclub, 3 нейрогения komaclinical/zxseeczs/tenzedit) — VTT /tmp/yt42/ZeIFBdoOZXo.ru.vtt (19K, 53 фрагм.) — transcript:true, без выдумок. Смотри также Recaps → «СЛАВА БОССУ — манифест» и прессвол «СЛАВА БОССУ».</p>
+            <div className={styles.trackLinks} style={{ marginTop: 10 }}>
+              <a href="https://www.youtube.com/watch?v=ZeIFBdoOZXo" target="_blank" rel="noreferrer">YouTube СЛАВА БОССУ →</a>
+              <a href="https://music.thefence.me/slavabo55u" target="_blank" rel="noreferrer">Слушать slavabo55u →</a>
+              <a href="/magnum/recaps">→ Recaps манифест</a>
+            </div>
+          </div>
+        </div>
+
         <div className={styles.section}>
           <h2>Таймлайн</h2>
           <div className={styles.timeline}>
@@ -424,6 +443,7 @@ export function About42Page() {
           <div className={styles.conflicts}>
             <div className={styles.conflict}><strong>vs Guacamolemolly («52»)</strong><p>Пародийный ответ 42 на его «52, братуха» (рэп-объединение 52, Петербург)</p></div>
             <div className={styles.conflict}><strong>vs Вова Солодков</strong><p>Братухи сорвали концерт (14 лет) яйцами на сцену — вмешалась Екатерина Мизулина, СМИ</p></div>
+            <div className={styles.conflict}><strong>Бан Twitch 06.04.2026 — «сексуальный контент»</strong><p>Временный бан 06.04.2026 за «сексуальный контент» (Taverna.gg 06.04.26). Реакция: «Хорошо, что забанили, потому что завтра мы клип снимаем. Этот вечер не мог закончиться эпичнее.» — совпало с планом съёмки клипа на следующий день. Накануне — женитьба на Sonasheka 05.04.2026. Пара с баном 19.04.2026 «Безопасность несовершеннолетних» 7д — тема модерации Twitch в прессволе и игре Идеи42.</p></div>
           </div>
           <div className={styles.sources}>
             <a href="https://trends.rbc.ru/trends/social/67d9d9a09a7947c6be91168f" target="_blank" rel="noreferrer">РБК Тренды</a>

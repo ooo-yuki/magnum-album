@@ -191,3 +191,6 @@
   .fab, .send, .attach, .headerLink { transition: none !important; }
   .dots { animation: none; }
 }
+@keyframes magmaSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes volcanoSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes goldSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

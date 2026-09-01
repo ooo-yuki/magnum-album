@@ -88,6 +88,7 @@ const IDEA_TEMPLATES: Array<{ title: string; desc: string; category: IdeaCategor
   { title: "Эмодзи-реакции на идеи", desc: "🔥/💀/🧡 быстрые реакции, счётчик в Neon.", category: "social" },
   { title: "Карта идей Кузбасса", desc: "Точки идей на карте Кемерово — клик → кард.", category: "eco" },
   { title: "Пресейв-бонус в идеях", desc: "Сделал пресейв — +1 голос к своей идее.", category: "cosmetic" },
+  { title: "Twitch-модерация: бан 06.04 «сексуальный контент»", desc: "06.04.2026 5opka — временный бан Twitch «сексуальный контент»: «Хорошо, что забанили, завтра клип снимаем. Этот вечер не мог закончиться эпичнее.» Накануне — женитьба Sonasheka 05.04. Пара к бану 19.04 «Безопасность несовершеннолетних» 7д — правила Twitch в игре Идеи42.", category: "other" },
 ];
 
 export function IdeasPage() {

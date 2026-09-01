@@ -1,0 +1,35 @@
+.page{max-width:980px;margin:0 auto;padding:24px 16px;color:#e8e8ef}
+.header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+.title{font-size:28px;font-weight:900;letter-spacing:-0.02em}
+.title span{color:#ff2d55}
+.sub{opacity:.7;margin-top:6px;font-size:13px}
+.card{background:linear-gradient(135deg,#14141a 0%,#1a1020 100%);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:18px}
+.chainRow{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.badge{padding:6px 10px;border-radius:999px;background:rgba(255,204,0,.14);border:1px solid rgba(255,204,0,.25);font-size:12px;font-weight:800}
+.timer{font-size:42px;font-weight:900;letter-spacing:-0.02em;display:flex;align-items:center;gap:8px}
+.timer span{opacity:.5;font-size:18px}
+.pulse{animation:pulse42 2s ease-in-out infinite}
+@keyframes pulse42{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+.linkList{display:flex;gap:8px;overflow-x:auto;padding:8px 0}
+.linkDot{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-weight:900;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);flex-shrink:0}
+.linkDotActive{border-color:#ff2d55;background:rgba(255,45,85,.18);box-shadow:0 4px 24px rgba(255,45,85,.25)}
+.feed{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.feedRow{display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06)}
+.feedMe{border-color:rgba(0,255,136,.35);background:rgba(0,255,136,.08)}
+.rank{width:28px;height:28px;border-radius:999px;display:grid;place-items:center;background:linear-gradient(135deg,#ffcc00,#ff2d55);color:#111;font-weight:900;font-size:12px}
+.btn{padding:12px 20px;border-radius:12px;border:1px solid #ff2d55;background:rgba(255,45,85,.18);color:#fff;font-weight:900;cursor:pointer}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btnGhost{padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#fff;font-weight:700;cursor:pointer}
+.btnShare{padding:10px 16px;border-radius:12px;border:1px solid #00ff88;background:rgba(0,255,136,.14);color:#00ff88;font-weight:800;cursor:pointer}
+.btnShare:disabled{opacity:.4}
+.challengeGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+@media(max-width:640px){.challengeGrid{grid-template-columns:1fr}}
+.challengeCard{padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);cursor:pointer;text-align:left}
+.challengeActive{border-color:#ffcc00;background:rgba(255,204,0,.12)}
+.challengeCard h4{margin:0;font-size:14px}
+.challengeCard p{margin:6px 0 0;opacity:.6;font-size:12px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:grid;place-items:center;z-index:99}
+.modalCard{background:#14141a;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:20px;max-width:560px;width:92%;text-align:center}
+.confetti{position:absolute;width:7px;height:7px;border-radius:2px;pointer-events:none;z-index:99}
+.flip{transition:transform .4s ease}
+.qrBox{width:220px;height:220px;background:#fff;border-radius:12px;display:grid;place-items:center;margin:12px auto;border:2px solid rgba(255,204,0,.3)}

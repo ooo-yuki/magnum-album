@@ -23,6 +23,9 @@ const Map42Page = lazy(() => import("./pages/Map42Page").then(m => ({ default: m
 const ArenaPage = lazy(() => import("./pages/ArenaPage").then(m => ({ default: m.ArenaPage })));
 const Board42Page = lazy(() => import("./pages/Board42Page").then(m => ({ default: m.Board42Page })));
 const GachaPage = lazy(() => import("./pages/GachaPage").then(m => ({ default: m.GachaPage })));
+const Tour42Page = lazy(() => import("./pages/Tour42Page").then(m => ({ default: m.Tour42Page })));
+const Flow42Page = lazy(() => import("./pages/Flow42Page").then(m => ({ default: m.Flow42Page})));
+const Chain42Page = lazy(() => import("./pages/Chain42Page").then(m => ({ default: m.Chain42Page})));
 // opt 15:06 — 5 оставшихся eager страниц → lazy (тяжёлые чанки >50KB каждый не нужен на /)
 const About42Page = lazy(() => import("./pages/About42Page").then(m => ({ default: m.About42Page })));
 const TrackPage = lazy(() => import("./pages/TrackPage").then(m => ({ default: m.TrackPage })));
@@ -108,6 +111,10 @@ export default function App() {
           <Route path="share-card" element={<Suspense fallback={<PageFallback />}><ShareCardPage /></Suspense>} />
           <Route path="board" element={<Suspense fallback={<PageFallback />}><Board42Page /></Suspense>} />
           <Route path="gacha" element={<Suspense fallback={<PageFallback />}><GachaPage /></Suspense>} />
+          <Route path="tour" element={<Suspense fallback={<PageFallback />}><Tour42Page /></Suspense>} />
+          <Route path="flow" element={<Suspense fallback={<PageFallback />}><Flow42Page /></Suspense>} />
+          <Route path="chain" element={<Suspense fallback={<PageFallback />}><Chain42Page /></Suspense>} />
+          <Route path="chain/join/:code" element={<Suspense fallback={<PageFallback />}><Chain42Page /></Suspense>} />
         </Route>
       </Routes>
     </BrowserRouter>

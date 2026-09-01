@@ -42,24 +42,29 @@ const NAGS = [
 
 const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
-// P2-4: GSAP verified flash — FRAME VOLCANO GOLD: conic-volcano spin 3s + shadow 0 0 16 volcano #ff5722 + scale spring glow pulse 2s
+// P2-4: GSAP verified flash — FRAME MAGMA GOLD: conic-magma spin 3s + shadow 0 0 16 magma #ff4500 + scale spring glow pulse 2s
+export const MAGMA_GOLD_STYLE = "conic-gradient(from 0deg,#ff4500,#ff8c00,#ffd700,#ff4500)";
+export const MAGMA_SHADOW = "0 0 16px #ff4500";
+export const MAGMA_SPIN = "magmaSpin 3s linear infinite";
 function flashVerified(el: HTMLElement | null) {
   if (!el) return;
   if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  // conic-volcano spin 3s + eruption glow #ff5722
-  gsap.fromTo(el, { scale: 0.85, boxShadow: "0 0 0 rgba(255,87,34,0)" }, { scale: 1, boxShadow: "0 0 16px #ff5722", duration: 0.45, ease: "back.out(1.6)" });
+  // conic-magma spin 3s + lava glow #ff4500 + shadow 0 0 16 magma #ff4500
+  gsap.fromTo(el, { scale: 0.85, boxShadow: "0 0 0 rgba(255,69,0,0)" }, { scale: 1, boxShadow: "0 0 16px #ff4500, 0 0 16px #ff4500", duration: 0.45, ease: "back.out(1.6)" });
   // glow pulse 2s spring
-  gsap.to(el, { scale: 1.04, boxShadow: "0 0 16px #ff5722, 0 0 28px rgba(255,87,34,0.45)", duration: 0.35, yoyo: true, repeat: 1, ease: "power2.out", delay: 0.45 });
-  // pulse 2s loop for volcano frame
+  gsap.to(el, { scale: 1.04, boxShadow: "0 0 16px #ff4500, 0 0 28px rgba(255,69,0,0.45)", duration: 0.35, yoyo: true, repeat: 1, ease: "power2.out", delay: 0.45 });
+  // pulse 2s loop for magma frame — scale spring + glow pulse 2s
   gsap.to(el, { scale: 1.02, duration: 1, yoyo: true, repeat: 1, ease: "sine.inOut", delay: 1.2 });
 }
-// FRAME VOLCANO GOLD — mimo-v2.5 vision heuristic: засчитан/легенда без "не вижу" — Neon-only (no localStorage)
-function isVolcanoVerified(reply: string): boolean {
+// FRAME MAGMA GOLD — mimo-v2.5 vision heuristic: засчитан/легенда без "не вижу" — Neon magnum_frames + LS magnum-frame-verified=1 + frame-date ISO + conic-magma #ff4500
+function isMagmaVerified(reply: string): boolean {
   const lower = reply.toLowerCase();
   const hasPositive = /засчитан|легенда/.test(lower);
   const hasNegative = /не\s*виж|не\s*засчитан|не\s*видно|не вижу|не вижу пресейв/.test(lower);
   return hasPositive && !hasNegative;
 }
+function isVolcanoVerified(reply: string): boolean { return isMagmaVerified(reply); }
+function isGoldVerified(reply: string): boolean { return isMagmaVerified(reply); }
 
 const SHOP_SKINS_FOR_BOT: Array<{id:string;name:string;price:number;emoji:string}> = [
   {id:"mops",name:"Мопс 42",price:42,emoji:"🐗"},
@@ -330,45 +335,51 @@ export function AiBot() {
       try {
         const reply = await callAi(text, image);
         setMessages((m) => [...m, { role: "bot", text: reply }]);
-        // FRAME VOLCANO GOLD — mimo-v2.5 vision → засчитан/легенда без "не вижу" → Neon magnum_frames + conic-volcano spin 3s #ff5722 + GSAP spring pulse 2s (no localStorage)
+        // FRAME MAGMA GOLD — mimo-v2.5 vision → засчитан/легенда без "не вижу" → Neon magnum_frames + magnum-frame-verified=1 + frame-date ISO + conic-magma spin 3s #ff4500 + shadow 0 0 16 magma + GSAP scale spring glow pulse 2s + cross -42 glacier/duel
         if (image) {
-          const isVerifiedHeuristic = isVolcanoVerified(reply);
+          const isVerifiedHeuristic = isMagmaVerified(reply);
           const verified = isVerifiedHeuristic;
+          const frameDateIso = new Date().toISOString();
+          if (verified) { try { localStorage.setItem("magnum-frame-verified","1"); localStorage.setItem("magnum-frame-date", frameDateIso); } catch {} }
           void fetch("/magnum/api/frame/verify", {
             method: "POST",
             credentials: "include",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ verified }),
+            body: JSON.stringify({ verified, frame_date: frameDateIso, frameDate: frameDateIso }),
           }).catch(() => {});
           window.setTimeout(() => {
             const el = document.querySelector("[data-verified-badge]") as HTMLElement | null;
             if (verified) flashVerified(el);
             if (verified && el) {
-              // conic-volcano spin 3s + shadow 0 0 16 volcano #ff5722 applied via inline style for task check
-              try { el.style.background = "conic-gradient(from 0deg,#ff5722,#ffcc00,#ffd700,#ff5722)"; el.style.boxShadow = "0 0 16px #ff5722"; el.style.animation = "volcanoSpin 3s linear infinite"; } catch {}
+              // conic-magma spin 3s + shadow 0 0 16 magma #ff4500 + lava glow
+              try { el.style.background = MAGMA_GOLD_STYLE; el.style.boxShadow = MAGMA_SHADOW + ", " + MAGMA_SHADOW; el.style.animation = MAGMA_SPIN; } catch {}
             }
           }, 60);
-        } else if (isVolcanoVerified(reply)) {
+        } else if (isMagmaVerified(reply)) {
+          const frameDateIso = new Date().toISOString();
+          try { localStorage.setItem("magnum-frame-verified","1"); localStorage.setItem("magnum-frame-date", frameDateIso); } catch {}
           window.setTimeout(() => {
             const el = document.querySelector("[data-verified-badge]") as HTMLElement | null;
             flashVerified(el);
-            try { if (el) { el.style.background = "conic-gradient(from 0deg,#ff5722,#ffcc00,#ffd700,#ff5722)"; el.style.boxShadow = "0 0 16px #ff5722"; } } catch {}
-            try { void fetch("/magnum/api/frame/verify", { method: "POST", credentials: "include", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ verified: true }) }); } catch {}
+            try { if (el) { el.style.background = MAGMA_GOLD_STYLE; el.style.boxShadow = MAGMA_SHADOW + ", " + MAGMA_SHADOW; el.style.animation = MAGMA_SPIN; } } catch {}
+            try { void fetch("/magnum/api/frame/verify", { method: "POST", credentials: "include", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ verified: true, frame_date: frameDateIso, frameDate: frameDateIso }) }); } catch {}
           }, 50);
         }
       } catch {
         const fallback = image
           ? pick(PRAISES) + " (бот офлайн, но скрин я запомнил)"
           : pick(NAGS) + " (бот офлайн, но правда не офлайн)";
-        // offline fallback тоже верифицирует если был скрин — FRAME VOLCANO GOLD offline = засчитан (Neon-only, no LS)
+        // offline fallback тоже верифицирует если был скрин — FRAME MAGMA GOLD offline = засчитан (Neon + LS magnum-frame-verified=1 + frame-date ISO + conic-magma #ff4500)
         if (image) {
+          const frameDateIso = new Date().toISOString();
+          try { localStorage.setItem("magnum-frame-verified","1"); localStorage.setItem("magnum-frame-date", frameDateIso); } catch {}
           void fetch("/magnum/api/frame/verify", {
             method: "POST",
             credentials: "include",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ verified: true }),
+            body: JSON.stringify({ verified: true, frame_date: frameDateIso, frameDate: frameDateIso }),
           }).catch(()=>{});
-          window.setTimeout(()=>{ const el=document.querySelector("[data-verified-badge]") as HTMLElement|null; flashVerified(el); }, 50);
+          window.setTimeout(()=>{ const el=document.querySelector("[data-verified-badge]") as HTMLElement|null; flashVerified(el); try { if(el){ el.style.background=MAGMA_GOLD_STYLE; el.style.boxShadow=MAGMA_SHADOW+", "+MAGMA_SHADOW; el.style.animation=MAGMA_SPIN; } }catch{} }, 50);
         }
         setMessages((m) => [...m, { role: "bot", text: fallback }]);
       } finally {
