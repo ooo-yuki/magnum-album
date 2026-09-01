@@ -48,15 +48,26 @@ function ensureAC() {
   if (ac && ac.state === "suspended") void ac.resume();
   return ac;
 }
-function playKey(correct: boolean) {
+function playKey(correct: boolean, combo: number) {
   const ctx = ensureAC(); if (!ctx) return;
   const o = ctx.createOscillator(); const g = ctx.createGain();
   o.connect(g); g.connect(ctx.destination);
   o.type = correct ? "sine" : "square";
-  o.frequency.value = correct ? 660 : 180;
-  g.gain.setValueAtTime(correct ? 0.06 : 0.1, ctx.currentTime);
-  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+  // pitch scales with combo
+  const base = correct ? 560 + Math.min(combo * 22, 240) : 180;
+  o.frequency.value = base;
+  g.gain.setValueAtTime(correct ? 0.07 : 0.1, ctx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (correct ? 0.08 : 0.12));
   o.start(); o.stop(ctx.currentTime + 0.1);
+  // combo chime every 5
+  if (correct && combo > 0 && combo % 5 === 0) {
+    const o2 = ctx.createOscillator(); const g2 = ctx.createGain();
+    o2.connect(g2); g2.connect(ctx.destination);
+    o2.type = "triangle"; o2.frequency.value = 880 + combo * 10;
+    g2.gain.setValueAtTime(0.12, ctx.currentTime + 0.02);
+    g2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
+    o2.start(ctx.currentTime + 0.02); o2.stop(ctx.currentTime + 0.25);
+  }
 }
 function playWin() {
   const ctx = ensureAC(); if (!ctx) return;
@@ -81,6 +92,9 @@ export function TypingGame() {
   const [totalChars, setTotalChars] = useState(0);
   const [totalTime, setTotalTime] = useState(0);
   const [shake, setShake] = useState(false);
+  const [combo, setCombo] = useState(0);
+  const [maxCombo, setMaxCombo] = useState(0);
+  const [comboPop, setComboPop] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const phrase = PHRASES[phraseIdx]!;
 
@@ -92,14 +106,26 @@ export function TypingGame() {
     setCompleted(0);
     setTotalChars(0);
     setTotalTime(0);
+    setCombo(0);
+    setMaxCombo(0);
     setState("playing");
     setTimeout(() => inputRef.current?.focus(), 80);
   }, []);
 
+  // live WPM ticker
+  useEffect(() => {
+    if (state !== "playing" || startTime === 0) return;
+    const id = window.setInterval(() => {
+      const elapsed = totalTime + (performance.now() - startTime);
+      const chars = totalChars + typed.length;
+      setWpm(calcWPM(chars, elapsed));
+    }, 150);
+    return () => window.clearInterval(id);
+  }, [state, startTime, totalTime, totalChars, typed.length]);
+
   const nextPhrase = useCallback(() => {
     const now = performance.now();
     const elapsed = now - startTime;
-    const phraseWpm = calcWPM(phrase.text.length, elapsed);
     const newCompleted = completed + 1;
     const newTotalChars = totalChars + phrase.text.length;
     const newTotalTime = totalTime + elapsed;
@@ -109,7 +135,6 @@ export function TypingGame() {
     setWpm(calcWPM(newTotalChars, newTotalTime));
 
     if (newCompleted >= PHRASES.length) {
-      // finished all phrases
       const finalWpm = calcWPM(newTotalChars, newTotalTime);
       if (finalWpm > bestWpm) {
         setBestWpm(finalWpm);
@@ -124,6 +149,7 @@ export function TypingGame() {
     setPhraseIdx(nextIdx);
     setTyped("");
     setStartTime(0);
+    // keep combo across phrases, only reset on error
     setTimeout(() => inputRef.current?.focus(), 40);
   }, [startTime, phrase, completed, totalChars, totalTime, phraseIdx, bestWpm]);
 
@@ -136,15 +162,33 @@ export function TypingGame() {
       setStartTime(performance.now());
     }
 
-    // check each char
-    const lastChar = val[val.length - 1];
-    const expectedChar = phrase.text[val.length - 1];
-    if (lastChar !== undefined && lastChar !== expectedChar) {
-      playKey(false);
-      setShake(true);
-      setTimeout(() => setShake(false), 200);
-    } else if (lastChar !== undefined) {
-      playKey(true);
+    // handle deletion (backspace) — don't break combo, just update typed
+    if (val.length < typed.length) {
+      setTyped(val);
+      return;
+    }
+
+    // check each new char
+    if (val.length > typed.length) {
+      const newCharIdx = val.length - 1;
+      const expectedChar = phrase.text[newCharIdx];
+      const newChar = val[newCharIdx];
+      const correct = newChar === expectedChar;
+      if (!correct) {
+        playKey(false, combo);
+        setShake(true);
+        setTimeout(() => setShake(false), 200);
+        setCombo(0);
+      } else {
+        const newCombo = combo + 1;
+        setCombo(newCombo);
+        setMaxCombo((m) => Math.max(m, newCombo));
+        if (newCombo % 5 === 0) {
+          setComboPop(true);
+          setTimeout(() => setComboPop(false), 280);
+        }
+        playKey(true, newCombo);
+      }
     }
 
     setTyped(val);
@@ -153,7 +197,7 @@ export function TypingGame() {
     if (val === phrase.text) {
       nextPhrase();
     }
-  }, [state, startTime, phrase, nextPhrase]);
+  }, [state, startTime, phrase, nextPhrase, typed.length, combo]);
 
   // keyboard shortcut: Escape to restart
   useEffect(() => {
@@ -168,6 +212,7 @@ export function TypingGame() {
 
   const accuracy = calcAccuracy(typed, phrase.text);
   const progress = (completed / PHRASES.length) * 100;
+  const comboTier = combo >= 10 ? "god" : combo >= 5 ? "hot" : combo >= 3 ? "warm" : "";
 
   return (
     <div className={styles.page}>
@@ -179,6 +224,7 @@ export function TypingGame() {
           <div className={styles.rules}>
             <p>⌨️ Печатай текст точно как на экране</p>
             <p>⏱️ Скорость считается в словах в минуту (WPM)</p>
+            <p>🔥 Комбо растёт за точные символы подряд — не ошибайся!</p>
             <p>🎯 {PHRASES.length} фраз про MAGNUM, 42 и альбом 2026</p>
             <p>🏆 Цель: {WIN_WPM}+ WPM — скорость братухи</p>
           </div>
@@ -194,8 +240,10 @@ export function TypingGame() {
             <div className={styles.stat}><span>Фраза</span><strong>{completed + 1} / {PHRASES.length}</strong></div>
             <div className={styles.stat}><span>WPM</span><strong className={wpm >= WIN_WPM ? styles.hot : ""}>{wpm}</strong></div>
             <div className={styles.stat}><span>Точность</span><strong>{accuracy}%</strong></div>
+            <div className={`${styles.stat} ${comboTier ? styles[comboTier] : ""} ${comboPop ? styles.pop : ""}`}><span>Комбо</span><strong>{combo > 0 ? `×${combo}` : "—"}{combo >= 5 ? " 🔥" : ""}</strong></div>
             <div className={styles.stat}><span>Тег</span><strong className={styles.tag}>{phrase.tag}</strong></div>
           </div>
+          {combo >= 3 && <div className={`${styles.comboBar} ${styles[comboTier]}`}>КОМБО ×{combo} {combo >= 10 ? "— БОГ ПЕЧАТИ!" : combo >= 5 ? "— ОГОНЬ!" : ""}</div>}
           <div className={styles.progress}><div className={styles.fill} style={{ width: `${progress}%` }} /></div>
 
           <div className={`${styles.phraseBox} ${shake ? styles.shake : ""}`}>
@@ -241,11 +289,13 @@ export function TypingGame() {
               <div className={styles.resultItem}><span>WPM</span><strong>{wpm}</strong></div>
               <div className={styles.resultItem}><span>Фраз</span><strong>{completed}</strong></div>
               <div className={styles.resultItem}><span>Рекорд</span><strong>{bestWpm}</strong></div>
+              <div className={styles.resultItem}><span>Макс комбо</span><strong>×{maxCombo}</strong></div>
             </div>
             <p className={styles.resultText}>
               {wpm >= WIN_WPM
                 ? `${wpm} WPM — ты печатаешь как настоящий 42 братуха! Все ${PHRASES.length} фраз пройдены.`
                 : `Набрано ${wpm} WPM из ${WIN_WPM} нужных. Попробуй ещё — тренируйся на фразах MAGNUM!`}
+              {maxCombo >= 10 ? " 🔥 Комбо ×10 — бог печати!" : maxCombo >= 5 ? " Комбо радует!" : ""}
             </p>
             <a href={PRESAVE} target="_blank" rel="noreferrer" className={styles.presaveBtn}>Пресейв MAGNUM →</a>
             <div className={styles.modalActions}>

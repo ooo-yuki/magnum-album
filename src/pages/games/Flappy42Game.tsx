@@ -21,11 +21,15 @@ function ensureAC() {
   if (ac && ac.state === "suspended") void ac.resume();
   return ac;
 }
+//Obscura-заглушка AudioParam без linearRampToValueAtTime — не роняем игру на звуке
+function rampTo(param: AudioParam, value: number, endTime: number) {
+  try { param.linearRampToValueAtTime(value, endTime); } catch { param.value = value; }
+}
 function playFlap() {
   const ctx = ensureAC(); if (!ctx) return;
   const o = ctx.createOscillator(); const g = ctx.createGain();
   o.connect(g); g.connect(ctx.destination);
-  o.type = "sine"; o.frequency.value = 520; o.frequency.linearRampToValueAtTime(680, ctx.currentTime + 0.06);
+  o.type = "sine"; o.frequency.value = 520; rampTo(o.frequency, 680, ctx.currentTime + 0.06);
   g.gain.setValueAtTime(0.1, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
   o.start(); o.stop(ctx.currentTime + 0.12);
 }
@@ -33,7 +37,7 @@ function playScore() {
   const ctx = ensureAC(); if (!ctx) return;
   const o = ctx.createOscillator(); const g = ctx.createGain();
   o.connect(g); g.connect(ctx.destination);
-  o.type = "sine"; o.frequency.value = 880; o.frequency.linearRampToValueAtTime(1320, ctx.currentTime + 0.1);
+  o.type = "sine"; o.frequency.value = 880; rampTo(o.frequency, 1320, ctx.currentTime + 0.1);
   g.gain.setValueAtTime(0.15, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
   o.start(); o.stop(ctx.currentTime + 0.22);
 }
@@ -41,7 +45,7 @@ function playHit() {
   const ctx = ensureAC(); if (!ctx) return;
   const o = ctx.createOscillator(); const g = ctx.createGain();
   o.connect(g); g.connect(ctx.destination);
-  o.type = "square"; o.frequency.value = 160; o.frequency.linearRampToValueAtTime(60, ctx.currentTime + 0.2);
+  o.type = "square"; o.frequency.value = 160; rampTo(o.frequency, 60, ctx.currentTime + 0.2);
   g.gain.setValueAtTime(0.18, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
   o.start(); o.stop(ctx.currentTime + 0.32);
 }

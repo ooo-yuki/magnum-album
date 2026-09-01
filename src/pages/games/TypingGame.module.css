@@ -10,11 +10,22 @@
 .back { display: inline-block; margin-top: 0.5rem; padding: 0.55rem 1.1rem; border-radius: 100px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: rgba(240,240,240,0.6); font-size: 0.85rem; text-decoration: none; }
 .gameArea { width: 100%; max-width: 640px; display: flex; flex-direction: column; align-items: center; gap: 0.8rem; margin-top: 0.5rem; padding: 0 1rem; }
 .hud { display: flex; gap: 0.6rem; flex-wrap: wrap; justify-content: center; }
-.stat { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; padding: 0.45rem 0.75rem; min-width: 78px; }
+.stat { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; padding: 0.45rem 0.75rem; min-width: 78px; transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s; }
 .stat span { display: block; font-size: 0.64rem; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(240,240,240,0.45); }
 .stat strong { display: block; font-size: 1.05rem; font-weight: 900; }
 .hot { color: #ffcc00; text-shadow: 0 0 10px rgba(255,204,0,0.6); }
+.warm { border-color: rgba(255,140,0,0.35); box-shadow: 0 0 12px rgba(255,140,0,0.25); }
+.warm strong { color: #ff8c00; }
+.hot strong { color: #ffcc00; }
+.god { border-color: rgba(255,45,85,0.5); box-shadow: 0 0 16px rgba(255,45,85,0.4), 0 0 32px rgba(255,45,85,0.15); animation: godPulse 1s infinite; }
+.god strong { color: #ff2d55; text-shadow: 0 0 10px rgba(255,45,85,0.6); }
+.pop { transform: scale(1.08); }
+@keyframes godPulse { 0%,100% { box-shadow: 0 0 16px rgba(255,45,85,0.4); } 50% { box-shadow: 0 0 24px rgba(255,45,85,0.7); } }
 .tag { color: #00ff88; font-size: 0.82rem !important; }
+.comboBar { font-weight: 900; letter-spacing: 0.08em; font-size: 0.85rem; padding: 0.35rem 1rem; border-radius: 100px; background: rgba(255,140,0,0.12); border: 1px solid rgba(255,140,0,0.25); color: #ffb84d; animation: comboIn 0.25s ease; }
+.comboBar.hot { background: rgba(255,204,0,0.15); border-color: rgba(255,204,0,0.35); color: #ffcc00; box-shadow: 0 0 12px rgba(255,204,0,0.25); }
+.comboBar.god { background: rgba(255,45,85,0.18); border-color: rgba(255,45,85,0.4); color: #ff6b8a; box-shadow: 0 0 16px rgba(255,45,85,0.35); }
+@keyframes comboIn { from { opacity: 0; transform: translateY(-6px) scale(0.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
 .progress { width: 100%; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.06); overflow: hidden; }
 .fill { height: 100%; background: linear-gradient(90deg, #ff2d55, #ffcc00); transition: width 0.3s; box-shadow: 0 0 10px rgba(255,45,85,0.5); }
 .phraseBox { font-family: "JetBrains Mono", "Fira Code", monospace; font-size: clamp(1rem, 2.5vw, 1.35rem); line-height: 2; padding: 1.2rem 1.5rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; max-width: 600px; width: 100%; min-height: 80px; letter-spacing: 0.02em; transition: transform 0.1s; }
@@ -30,9 +41,9 @@
 .restartBtn { padding: 0.55rem 1.1rem; border-radius: 100px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); color: var(--text); cursor: pointer; }
 .backInline { color: rgba(240,240,240,0.55); font-size: 0.85rem; padding: 0.4rem 0.8rem; text-decoration: none; }
 .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.78); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 1rem; }
-.modalCard { background: #12122a; border: 1px solid rgba(255,255,255,0.10); border-radius: 16px; padding: 2rem 1.5rem; max-width: 420px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 0.7rem; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
+.modalCard { background: #12122a; border: 1px solid rgba(255,255,255,0.10); border-radius: 16px; padding: 2rem 1.5rem; max-width: 460px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 0.7rem; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
 .modalCard h2 { font-size: 1.5rem; }
-.resultGrid { display: flex; gap: 1rem; margin: 0.5rem 0; }
+.resultGrid { display: flex; gap: 0.7rem; margin: 0.5rem 0; flex-wrap: wrap; justify-content: center; }
 .resultItem { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 0.6rem 1rem; min-width: 80px; }
 .resultItem span { display: block; font-size: 0.64rem; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(240,240,240,0.45); }
 .resultItem strong { display: block; font-size: 1.3rem; font-weight: 900; }
