@@ -7,18 +7,19 @@ function safeRamp(param: AudioParam, fn: () => void, fallbackValue: number) {
   try { fn(); } catch { param.value = fallbackValue; }
 }
 
-
 const PRESAVE = "https://music.thefence.me/psmagnum";
 const WIN_HEIGHT = 15;
+const WIN_PTS = 4200;
 const BLOCK_H = 22;
 const BASE_W = 220;
-// — баланс сложности v2: мягкий старт, круче рост к финалу
-const SPEED_BASE = 1.85;
-const SPEED_INC = 0.14;
-const SPEED_MAX = 6.2;
-const PERFECT_TOL = 7; // было 5, чуть щадящее окно
-const COMBO_AT = 3;    // streak для активации x2
-const MEGA_AT = 5;     // streak для MEGA
+// — баланс сложности v3: SPEED_START 1.8 → капа 6.5, плавная кривая
+const SPEED_START = 1.8;
+const SPEED_BASE = SPEED_START;
+const SPEED_INC = 0.11;
+const SPEED_MAX = 6.5;
+const PERFECT_TOL = 7;
+const COMBO_AT = 3;
+const MEGA_AT = 5;
 
 interface Block { x: number; y: number; w: number; color: string; }
 interface Particle { x: number; y: number; vx: number; vy: number; life: number; color: string; size: number; }
@@ -43,11 +44,16 @@ function playDrop(ok: boolean, perfect: boolean, streak = 0) {
   const ctx = ensureAC(); if (!ctx) return;
   const o = ctx.createOscillator(); const g = ctx.createGain();
   o.connect(g); g.connect(ctx.destination);
-  if (!ok) { o.type = "square"; o.frequency.value = 120; g.gain.setValueAtTime(0.2, ctx.currentTime); safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.38), 0.001); safeRamp(o.frequency, () => o.frequency.linearRampToValueAtTime(58, ctx.currentTime + 0.22), 58); }
+  if (!ok) {
+    // WebAudio звук падения — промах: низкий square + падение частоты + шум
+    o.type = "square"; o.frequency.value = 130; g.gain.setValueAtTime(0.26, ctx.currentTime); safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45), 0.001); safeRamp(o.frequency, () => o.frequency.linearRampToValueAtTime(45, ctx.currentTime + 0.28), 45);
+    // второй осциллятор для баса падения
+    const o2 = ctx.createOscillator(); const g2 = ctx.createGain(); o2.connect(g2); g2.connect(ctx.destination);
+    o2.type = "triangle"; o2.frequency.value = 90; g2.gain.setValueAtTime(0.18, ctx.currentTime); safeRamp(g2.gain, () => g2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35), 0.001); safeRamp(o2.frequency, () => o2.frequency.linearRampToValueAtTime(30, ctx.currentTime + 0.3), 30); o2.start(); o2.stop(ctx.currentTime + 0.36);
+  }
   else if (perfect) {
     const base = streak >= MEGA_AT ? 960 : streak >= COMBO_AT ? 800 : 660;
     o.type = "sine"; o.frequency.value = base; safeRamp(o.frequency, () => o.frequency.linearRampToValueAtTime(base * 1.55, ctx.currentTime + 0.14), 1.55); g.gain.setValueAtTime(0.24, ctx.currentTime); safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.42), 0.001);
-    // sparkle second osc for combo
     if (streak >= COMBO_AT) {
       const o2 = ctx.createOscillator(); const g2 = ctx.createGain(); o2.connect(g2); g2.connect(ctx.destination);
       o2.type = "sine"; o2.frequency.value = base * 2; g2.gain.setValueAtTime(0.10, ctx.currentTime); safeRamp(g2.gain, () => g2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.28), 0.001); o2.start(); o2.stop(ctx.currentTime + 0.3);
@@ -81,7 +87,7 @@ export function Stack42Game() {
   const [perfectStreak, setPerfectStreak] = useState(0);
 
   const blocksRef = useRef<Block[]>([]);
-  const movingRef = useRef<{ x: number; w: number; dir: number; speed: number }>({ x: 0, w: BASE_W, dir: 1, speed: SPEED_BASE });
+  const movingRef = useRef<{ x: number; w: number; dir: number; speed: number }>({ x: 0, w: BASE_W, dir: 1, speed: SPEED_START });
   const particlesRef = useRef<Particle[]>([]);
   const floatsRef = useRef<Floating[]>([]);
   const camYRef = useRef(0);
@@ -96,7 +102,7 @@ export function Stack42Game() {
   const reset = useCallback(() => {
     const base: Block = { x: 0, y: 0, w: BASE_W, color: "#1a1a2e" };
     blocksRef.current = [base];
-    movingRef.current = { x: -BASE_W * 0.2, w: BASE_W, dir: 1, speed: SPEED_BASE };
+    movingRef.current = { x: -BASE_W * 0.2, w: BASE_W, dir: 1, speed: SPEED_START };
     particlesRef.current = []; floatsRef.current = [];
     camYRef.current = 0; targetCamYRef.current = 0; shakeRef.current = 0; pulseRef.current = 0; bgPhaseRef.current = 0;
     ptsRef.current = 0;
@@ -119,7 +125,8 @@ export function Stack42Game() {
       for (let i = 0; i < 18; i++) {
         particlesRef.current.push({ x: m.x + m.w / 2, y: blocks.length * BLOCK_H, vx: (Math.random() - 0.5) * 8, vy: -Math.random() * 6 - 1, life: 1, color: blockColor(blocks.length), size: 3 + Math.random() * 4 });
       }
-      shakeRef.current = 15;
+      // шейк при промахе — усиленный
+      shakeRef.current = 18;
       playDrop(false, false);
       setState("over");
       const h = blocks.length - 1;
@@ -134,19 +141,16 @@ export function Stack42Game() {
       const nextStreak = perfectStreak + 1;
       const isCombo = nextStreak >= COMBO_AT;
       const isMega = nextStreak >= MEGA_AT;
-      // perfect keeps full width + heal if narrowed
       let w = top.w;
       if (isMega && w < BASE_W) w = Math.min(BASE_W, w + 10);
       else if (isCombo && w < BASE_W) w = Math.min(BASE_W, w + 6);
       const nb: Block = { x: top.x, y: blocks.length * BLOCK_H, w, color: blockColor(blocks.length) };
       blocks.push(nb);
       setPerfectStreak(nextStreak);
-      // — комбо-множитель x2: очки удваиваются с 3го perfect подряд
       const mult = isCombo ? 2 : 1;
       addPts = (isMega ? 250 : isCombo ? 200 : 120) * mult;
       const label = isMega ? `MEGA x2 🔥 x${nextStreak}` : isCombo ? `COMBO x2 🔥 x${nextStreak}` : "PERFECT!";
       floatsRef.current.push({ id: floatIdRef.current++, text: label, x: 0, y: nb.y + BLOCK_H / 2, life: 1 });
-      // частицы на perfect — сочно: золото + больше
       const pCount = isMega ? 22 : isCombo ? 16 : 11;
       const pColor = isCombo ? "#ffcc00" : "#ffe88a";
       for (let i = 0; i < pCount; i++) particlesRef.current.push({
@@ -163,6 +167,8 @@ export function Stack42Game() {
       }
       blocks.push(nb);
       setPerfectStreak(0);
+      // лёгкий шейк при срезе (не perfect)
+      shakeRef.current = Math.max(shakeRef.current, 4);
       addPts = overlap < top.w * 0.55 ? 40 : 70;
       floatsRef.current.push({ id: floatIdRef.current++, text: overlap < top.w * 0.6 ? "Аккуратно!" : "OK", x: 0, y: nb.y, life: 1 });
       playDrop(true, false);
@@ -174,18 +180,22 @@ export function Stack42Game() {
     setScore(h);
     const nextW = blocks[blocks.length - 1]!.w;
     const fromLeft = blocks.length % 2 === 0;
-    // — баланс: кривая скорости с потолком
-    const rawSpeed = SPEED_BASE + h * SPEED_INC + (h > 10 ? (h - 10) * 0.06 : 0);
+    // баланс скорости: SPEED_START 1.8 → капа 6.5
+    const rawSpeed = SPEED_START + h * SPEED_INC + (h > 10 ? (h - 10) * 0.06 : 0);
     const spd = Math.min(SPEED_MAX, rawSpeed);
     movingRef.current = { x: fromLeft ? -nextW - 40 : 40, w: nextW, dir: fromLeft ? 1 : -1, speed: spd };
     targetCamYRef.current = Math.max(0, h * BLOCK_H - 220);
-    if (h >= WIN_HEIGHT) {
+    // победа 4200 pts → presave модалка (также оставляем WIN_HEIGHT как фолбэк)
+    if (ptsRef.current >= WIN_PTS || h >= 42) {
       playWin();
       for (let i = 0; i < 40; i++) particlesRef.current.push({ x: (Math.random() - 0.5) * 190, y: h * BLOCK_H, vx: (Math.random() - 0.5) * 8, vy: -Math.random() * 8 - 2, life: 1, color: ["#ff2d55", "#ffcc00", "#00ff88", "#5865f2"][i % 4]!, size: 3 + Math.random() * 4.5 });
       const nb = Math.max(best, h); setBest(nb);
       const npts = Math.max(bestPts, ptsRef.current); setBestPts(npts);
       try { localStorage.setItem("stack42-best", String(nb)); localStorage.setItem("stack42-bestPts", String(npts)); } catch {}
       setState("win");
+    } else if (h >= WIN_HEIGHT && ptsRef.current < WIN_PTS) {
+      // промежуточный прогресс — не победа, просто камера/частицы
+      void 0;
     }
   }, [state, best, bestPts, perfectStreak]);
 
@@ -228,7 +238,6 @@ export function Stack42Game() {
       const g = ctx.createLinearGradient(0, 0, 0, h);
       g.addColorStop(0, "#07081e"); g.addColorStop(0.6, "#1a0a2e"); g.addColorStop(1, "#2a0a1e");
       ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
-      // combo aura bg
       if (isComboActive) {
         ctx.fillStyle = pulseRef.current > 0.08 ? `rgba(255,204,0,${0.07 + pulseRef.current * 0.08})` : "rgba(255,204,0,0.04)";
         ctx.fillRect(0, 0, w, h);
@@ -326,7 +335,6 @@ export function Stack42Game() {
       const vig = ctx.createLinearGradient(0, 0, 0, h);
       vig.addColorStop(0, "rgba(0,0,0,0.18)"); vig.addColorStop(0.5, "rgba(0,0,0,0)"); vig.addColorStop(1, "rgba(0,0,0,0.35)");
       ctx.fillStyle = vig; ctx.fillRect(0, 0, w, h);
-      // combo border pulse
       if (isComboActive && pulseRef.current > 0.05) {
         ctx.strokeStyle = `rgba(255,204,0,${pulseRef.current * 0.5})`; ctx.lineWidth = 2 + pulseRef.current * 4; ctx.strokeRect(1, 1, w - 2, h - 2);
       }
@@ -348,11 +356,12 @@ export function Stack42Game() {
 
   const comboActive = perfectStreak >= COMBO_AT;
   const comboLabel = perfectStreak >= MEGA_AT ? `MEGA x2` : comboActive ? `COMBO x2` : `x1`;
+  const progressPct = Math.min((pts / WIN_PTS) * 100, 100);
 
   return (
     <div className={styles.page}>
       <h1>СТОПКА 42</h1>
-      <p className={styles.sub}>Тапай чтобы ставить блок — собери {WIN_HEIGHT} этажей! {comboActive ? "🔥 x2 активен!" : ""}</p>
+      <p className={styles.sub}>Тапай чтобы ставить блок — набери {WIN_PTS} очков! {comboActive ? "🔥 x2 активен!" : ""}</p>
 
       {state === "menu" && (
         <div className={styles.menu}>
@@ -362,7 +371,8 @@ export function Stack42Game() {
             <p>⭐ Идеально вровень = ширина сохраняется + Perfect!</p>
             <p>🔥 3 Perfect подряд = <b>COMBO x2</b> — очки ×2, частицы, звук!</p>
             <p>💎 5 Perfect = MEGA — +хил ширины + большой бах</p>
-            <p>💥 Промах = башня падает</p>
+            <p>💥 Промах = башня падает + шейк + звук падения</p>
+            <p>🏆 {WIN_PTS} очков = победа + пресейв</p>
           </div>
           <button className={styles.playBtn} onClick={start}>Начать!</button>
           <p className={styles.hint}>Пробел тоже ставит блок • Рекорд: {best} этажей • {bestPts} pts</p>
@@ -374,11 +384,11 @@ export function Stack42Game() {
         <div className={styles.gameArea}>
           <div className={styles.hud}>
             <div className={styles.stat}><span>Этажей</span><strong>{score} / {WIN_HEIGHT}</strong></div>
-            <div className={styles.stat}><span>Очки</span><strong>{pts}</strong></div>
+            <div className={styles.stat}><span>Очки</span><strong>{pts} / {WIN_PTS}</strong></div>
             <div className={styles.stat}><span>Множитель</span><strong style={{ color: comboActive ? "#ffcc00" : undefined }}>{comboLabel}</strong></div>
             <div className={styles.stat}><span>Ширина</span><strong>{blocksRef.current[blocksRef.current.length - 1]?.w.toFixed(0) ?? BASE_W}px</strong></div>
           </div>
-          <div className={styles.progress}><div className={styles.fill} style={{ width: `${Math.min((score / WIN_HEIGHT) * 100, 100)}%` }} /></div>
+          <div className={styles.progress}><div className={styles.fill} style={{ width: `${progressPct}%` }} /></div>
           {comboActive && <div className={styles.streak}>⭐ {perfectStreak >= MEGA_AT ? "MEGA" : "COMBO"} x2 — Perfect x{perfectStreak}! Очки ×2</div>}
           {!comboActive && perfectStreak > 0 && perfectStreak < COMBO_AT && <div className={styles.streak} style={{ color: "rgba(255,255,255,0.7)" }}>Perfect x{perfectStreak} — ещё {COMBO_AT - perfectStreak} до x2!</div>}
           <div className={styles.canvasWrap} style={comboActive ? { boxShadow: "0 0 28px rgba(255,204,0,0.35), 0 10px 40px rgba(0,0,0,0.45)" } : undefined}>
@@ -396,8 +406,8 @@ export function Stack42Game() {
         <div className={styles.modal}>
           <div className={styles.modalCard}>
             <h2>🏆 Башня 42 готова!</h2>
-            <p>{WIN_HEIGHT} этажей • {pts} pts • ширина {blocksRef.current[blocksRef.current.length - 1]?.w.toFixed(0)}px</p>
-            <p className={styles.winSub}>Ты — архитектор 42!</p>
+            <p>{score} этажей • {pts} pts • ширина {blocksRef.current[blocksRef.current.length - 1]?.w.toFixed(0)}px</p>
+            <p className={styles.winSub}>Ты — архитектор 42! {WIN_PTS} очков — победа!</p>
             <a href={PRESAVE} target="_blank" rel="noreferrer" className={styles.presaveBtn}>Пресейв MAGNUM →</a>
             <button className={styles.restartBtn} onClick={start}>Ещё башню</button>
           </div>
@@ -407,7 +417,7 @@ export function Stack42Game() {
         <div className={styles.modal}>
           <div className={styles.modalCard}>
             <h2>💥 Башня рухнула!</h2>
-            <p>{score} / {WIN_HEIGHT} этажей • {pts} pts • Рекорд {best} / {bestPts} pts</p>
+            <p>{score} / {WIN_HEIGHT} этажей • {pts} / {WIN_PTS} pts • Рекорд {best} / {bestPts} pts</p>
             <button className={styles.playBtn} onClick={start}>Ещё попытка</button>
             <Link to="/magnum/games" className={styles.backInline}>← К играм</Link>
           </div>
