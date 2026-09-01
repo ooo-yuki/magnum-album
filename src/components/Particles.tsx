@@ -9,6 +9,8 @@ export function Particles() {
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+    // respect reduced motion — skip all particle animation
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     const ctx = gsap.context(() => {
       for (let i = 0; i < 30; i++) {

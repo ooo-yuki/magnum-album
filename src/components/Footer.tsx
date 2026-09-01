@@ -95,7 +95,9 @@ export function Footer() {
 
   const trigger = useCallback(() => {
     setShow(true);
-    spawnKonamiConfetti();
+    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      spawnKonamiConfetti();
+    }
     // haptic if available
     try { navigator.vibrate?.(120); } catch {}
   }, []);

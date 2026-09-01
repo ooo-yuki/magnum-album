@@ -144,14 +144,18 @@ export function HomePage() {
       setUnlocked(true);
       clicksRef.current = 0;
       setProgress(0);
-      spawnBigConfetti();
+      if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        spawnBigConfetti();
+      }
       // allow re-trigger after 4s
       setTimeout(() => setUnlocked(false), 4000);
     } else if (c >= TARGET) {
       // already unlocked — still celebrate but less spam
       clicksRef.current = 0;
       setProgress(0);
-      spawnBigConfetti();
+      if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        spawnBigConfetti();
+      }
     }
 
     // subtle hint at 10, 20, 30
