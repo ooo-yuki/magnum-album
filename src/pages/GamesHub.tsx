@@ -14,8 +14,9 @@ const GAMES = [
 
 export function GamesHub() {
   const ref = useRef<HTMLDivElement>(null);
+  const badgeRef = useRef<HTMLDivElement>(null);
 
-  // GSAP entrance stagger
+  // GSAP entrance stagger + badge glow-pulse
   useEffect(() => {
     if (!ref.current) return;
     const ctx = gsap.context(() => {
@@ -24,6 +25,18 @@ export function GamesHub() {
         y: 0, opacity: 1, scale: 1,
         stagger: 0.1, duration: 0.6, ease: "back.out(1.7)",
       });
+
+      // badge float + glow pulse
+      if (badgeRef.current && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        gsap.to(badgeRef.current, {
+          y: -3,
+          boxShadow: "0 0 18px rgba(255,45,85,0.45), 0 0 36px rgba(255,45,85,0.15)",
+          duration: 1.6,
+          repeat: -1,
+          yoyo: true,
+          ease: "sine.inOut",
+        });
+      }
     }, ref);
     return () => ctx.revert();
   }, []);
@@ -68,7 +81,7 @@ export function GamesHub() {
   return (
     <div className={styles.page} ref={ref}>
       <div className={styles.header}>
-        <div className={styles.badge}>Мини-игры</div>
+        <div className={styles.badge} ref={badgeRef}>Мини-игры</div>
         <h1>Играй и выигрывай</h1>
         <p className={styles.subtitle}>Победи в любой игре — получи пресейв MAGNUM</p>
       </div>
