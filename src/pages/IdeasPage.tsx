@@ -103,6 +103,13 @@ export function IdeasPage() {
   const [votedIds, setVotedIds] = useState<Set<number>>(new Set());
   const [bookmarked, setBookmarked] = useState<Set<number>>(new Set());
   const [bookmarksOnly, setBookmarksOnly] = useState(false);
+  // ── Комменты Neon magnum_idea_comments — без localStorage, y24 stagger 0.12 ──
+  type Comment = { id: number; body: string; created_at: string; username: string };
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [comments, setComments] = useState<Record<number, Comment[]>>({});
+  const [commentsLoading, setCommentsLoading] = useState<Record<number, boolean>>({});
+  const [commentDraft, setCommentDraft] = useState<Record<number, string>>({});
+  const [commentSending, setCommentSending] = useState<Record<number, boolean>>({});
 
   const rootRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -241,6 +248,67 @@ export function IdeasPage() {
     }
   };
 
+  // ── Валидаторы + Neon комменты ──
+  function isValidComment(v: string): string | null {
+    const tt = v.trim();
+    if (tt.length < 2) return "Минимум 2 символа";
+    if (tt.length > 200) return "Максимум 200 символов";
+    if (/^(.)\1{5,}/.test(tt)) return "Без спама повторов";
+    if (/<script|javascript:/i.test(tt)) return "Без скриптов";
+    return null;
+  }
+  const loadComments = async (ideaId: number) => {
+    const vid = validateIdeaId(ideaId); if (vid === null) return;
+    setCommentsLoading(s => ({ ...s, [vid]: true }));
+    try {
+      const r = await fetch(`/magnum/api/ideas/${vid}/comments`, { credentials: "include" });
+      if (!r.ok) throw new Error();
+      const d = await r.json() as { comments: Comment[] };
+      setComments(s => ({ ...s, [vid]: d.comments || [] }));
+      requestAnimationFrame(() => {
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+        const list = document.querySelector(`[data-comments="${vid}"]`);
+        if (!list) return;
+        const items = list.querySelectorAll<HTMLElement>("[data-comment]");
+        if (!items.length) return;
+        gsap.set(items, { y: 12, opacity: 0 });
+        gsap.to(items, { y: 0, opacity: 1, stagger: 0.08, duration: 0.35, ease: "power2.out", overwrite: true });
+      });
+    } catch { } finally { setCommentsLoading(s => ({ ...s, [vid]: false })); }
+  };
+  const toggleComments = (id: number) => {
+    const vid = validateIdeaId(id); if (vid === null) return;
+    if (expandedId === vid) { setExpandedId(null); return; }
+    setExpandedId(vid);
+    if (!comments[vid]) void loadComments(vid);
+    else requestAnimationFrame(() => {
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      const list = document.querySelector(`[data-comments="${vid}"]`);
+      if (!list) return;
+      gsap.fromTo(list, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.3, ease: "power2.out" });
+    });
+  };
+  const postComment = async (ideaId: number) => {
+    const vid = validateIdeaId(ideaId); if (vid === null) return;
+    const text = (commentDraft[vid] || "").trim();
+    const err = isValidComment(text); if (err) { setMsg(err); setTimeout(() => setMsg(""), 2000); return; }
+    setCommentSending(s => ({ ...s, [vid]: true }));
+    try {
+      const r = await fetch(`/magnum/api/ideas/${vid}/comments`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ body: text }) });
+      const j = await r.json() as { comment?: Comment; error?: string };
+      if (!r.ok) throw new Error(j.error || String(r.status));
+      setComments(s => ({ ...s, [vid]: [...(s[vid] || []), j.comment!] }));
+      setCommentDraft(s => ({ ...s, [vid]: "" }));
+      setMsg("Коммент улетел ✅");
+      setTimeout(() => setMsg(""), 1800);
+      if (gridRef.current) {
+        const el = gridRef.current.querySelector(`[data-idea="${vid}"]`) as HTMLElement | null;
+        if (el && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) gsap.fromTo(el, { scale: 1 }, { scale: 1.02, duration: 0.16, yoyo: true, repeat: 1, ease: "power2.inOut" });
+      }
+    } catch (e) { setMsg(String(e).slice(0, 120) || "Нужен вход — комменты в Neon"); setTimeout(() => setMsg(""), 2000); }
+    finally { setCommentSending(s => ({ ...s, [vid]: false })); }
+  };
+
   const useTemplate = (t: typeof IDEA_TEMPLATES[number]) => {
     setTitle(t.title);
     setDesc(t.desc);
@@ -355,7 +423,24 @@ export function IdeasPage() {
               <div style={{ display: "flex", gap: 8 }}>
                 <button className={styles.vote} onClick={() => vote(it.id)} disabled={votedIds.has(it.id)} style={{ opacity: votedIds.has(it.id) ? 0.5 : 1, flex: 1 }}>{votedIds.has(it.id) ? "✓ Голос засчитан" : "Голосовать"}</button>
                 <button type="button" onClick={() => toggleBookmark(it.id)} title={bookmarked.has(it.id) ? "Убрать из закладок" : "В закладки (Neon)"} style={{ padding: "8px 10px", borderRadius: 10, border: bookmarked.has(it.id) ? "1px solid #ffcc00" : "1px solid rgba(255,255,255,.12)", background: bookmarked.has(it.id) ? "rgba(255,204,0,.18)" : "rgba(255,255,255,.06)", color: bookmarked.has(it.id) ? "#ffcc00" : "#fff", cursor: "pointer", fontSize: 13 }}>{bookmarked.has(it.id) ? "⭐" : "☆"}</button>
+                <button type="button" onClick={() => toggleComments(it.id)} title={expandedId === it.id ? "Скрыть комменты" : "Комменты Neon"} style={{ padding: "8px 10px", borderRadius: 10, border: expandedId === it.id ? "1px solid #00ff88" : "1px solid rgba(255,255,255,.12)", background: expandedId === it.id ? "rgba(0,255,136,.14)" : "rgba(255,255,255,.06)", color: expandedId === it.id ? "#00ff88" : "#fff", cursor: "pointer", fontSize: 13 }}>💬 {comments[it.id]?.length ?? "·"}</button>
               </div>
+              {expandedId === it.id && (
+                <div data-comments={it.id} style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,.08)", display: "flex", flexDirection: "column", gap: 6 }}>
+                  {commentsLoading[it.id] ? <span style={{ fontSize: 12, opacity: 0.5 }}>Гружу комменты…</span> : (comments[it.id] || []).length === 0 ? <span style={{ fontSize: 12, opacity: 0.5 }}>Пока нет комментов — будь первым, братуха</span> : (comments[it.id] || []).map(c => (
+                    <div key={c.id} data-comment={c.id} style={{ padding: "7px 10px", borderRadius: 10, background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.06)", fontSize: 12, lineHeight: 1.4 }}>
+                      <span style={{ fontWeight: 700, color: "#ffd700" }}>{c.username}</span> <span style={{ opacity: 0.45 }}>{new Date(c.created_at).toLocaleDateString("ru-RU")}</span>
+                      <div style={{ color: "rgba(255,255,255,.88)", marginTop: 2, wordBreak: "break-word" }}>{c.body}</div>
+                    </div>
+                  ))}
+                  <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+                    <input value={commentDraft[it.id] || ""} onChange={e => setCommentDraft(s => ({ ...s, [it.id]: e.target.value }))} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void postComment(it.id); } }} placeholder="Напиши коммент… (2–200)" maxLength={200} style={{ flex: 1, background: "rgba(255,255,255,.05)", border: `1px solid ${isValidComment(commentDraft[it.id] || "") && (commentDraft[it.id] || "").trim().length > 0 ? "rgba(255,107,107,.35)" : "rgba(255,255,255,.1)"}`, borderRadius: 10, color: "#fff", padding: "8px 10px", fontSize: 12, outline: "none" }} />
+                    <button type="button" onClick={() => void postComment(it.id)} disabled={!!commentSending[it.id] || !!isValidComment(commentDraft[it.id] || "")} style={{ padding: "8px 12px", borderRadius: 10, border: "1px solid rgba(0,255,136,.25)", background: "rgba(0,255,136,.14)", color: "#00ff88", fontSize: 12, cursor: commentSending[it.id] ? "wait" : "pointer", opacity: isValidComment(commentDraft[it.id] || "") ? 0.5 : 1 }}>{commentSending[it.id] ? "…" : "Отправить"}</button>
+                  </div>
+                  {commentDraft[it.id] && isValidComment(commentDraft[it.id]) && <span style={{ fontSize: 11, color: "#ff6b6b" }}>{isValidComment(commentDraft[it.id])}</span>}
+                  <span style={{ fontSize: 10, opacity: 0.35 }}>Neon magnum_idea_comments • /magnum/api/ideas/{it.id}/comments • 10/60с rate limit</span>
+                </div>
+              )}
             </div>
             );
           })}
