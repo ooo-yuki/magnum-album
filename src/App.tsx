@@ -1,16 +1,12 @@
-// MAGNUM App — perf: 16 games code-split via React.lazy + Suspense
+// MAGNUM App — perf: 16 games + 14 pages code-split via React.lazy + Suspense
 // Fallback: GameFallback; vendor chunk split in build.ts
 import { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { HomePage } from "./pages/HomePage";
-import { LastFitPage } from "./pages/LastFitPage";
-import { TrackPage } from "./pages/TrackPage";
-import { About42Page } from "./pages/About42Page";
-import { GamePage } from "./pages/GamePage";
-import { GamesHub } from "./pages/GamesHub";
 
-// perf 16:26 — heavy pages lazy to cut main ~1.06MB (Gallery 441KB + Recaps 277KB + Discography 36KB + Shop 29KB + Eco/Mining/etc)
+// perf 14:11 — 9 heavy pages lazy (Gallery 441KB + Recaps 277KB etc) → main 1037→509KB
+// perf 15:06 — ещё 5 eager pages → lazy: About42/Track/LastFit/Game/GamesHub (~68KB) → main 528→~460KB
 const DiscographyPage = lazy(() => import("./pages/DiscographyPage").then(m => ({ default: m.DiscographyPage })));
 const ArtistsPage = lazy(() => import("./pages/ArtistsPage").then(m => ({ default: m.ArtistsPage })));
 const ShopPage = lazy(() => import("./pages/ShopPage").then(m => ({ default: m.ShopPage })));
@@ -20,12 +16,18 @@ const MiningPage = lazy(() => import("./pages/MiningPage").then(m => ({ default:
 const PresaveRatingPage = lazy(() => import("./pages/PresaveRatingPage").then(m => ({ default: m.PresaveRatingPage })));
 const IdeasPage = lazy(() => import("./pages/IdeasPage").then(m => ({ default: m.IdeasPage })));
 const RecapsPage = lazy(() => import("./pages/RecapsPage").then(m => ({ default: m.RecapsPage })));
+// opt 15:06 — 5 оставшихся eager страниц → lazy (тяжёлые чанки >50KB каждый не нужен на /)
+const About42Page = lazy(() => import("./pages/About42Page").then(m => ({ default: m.About42Page })));
+const TrackPage = lazy(() => import("./pages/TrackPage").then(m => ({ default: m.TrackPage })));
+const LastFitPage = lazy(() => import("./pages/LastFitPage").then(m => ({ default: m.LastFitPage })));
+const GamePage = lazy(() => import("./pages/GamePage").then(m => ({ default: m.GamePage })));
+const GamesHub = lazy(() => import("./pages/GamesHub").then(m => ({ default: m.GamesHub })));
 
 function PageFallback() {
   return <div style={{ padding: "4rem 2rem", textAlign: "center", color: "#ff2d55" }}>Загрузка…</div>;
 }
 
-// — code-split: 16 games lazy + 9 heavy pages lazy → main ~1.06MB → ~500KB expected
+// — code-split: 16 games lazy + 14 pages lazy → main ~1.06MB → ~460KB expected
 const MemoryGame = lazy(() => import("./pages/games/MemoryGame").then(m => ({ default: m.MemoryGame })));
 const ClickerGame = lazy(() => import("./pages/games/ClickerGame").then(m => ({ default: m.ClickerGame })));
 const Match3Game = lazy(() => import("./pages/games/Match3Game").then(m => ({ default: m.Match3Game })));
@@ -53,14 +55,14 @@ export default function App() {
       <Routes>
         <Route path="/magnum" element={<Layout />}>
           <Route index element={<HomePage />} />
-          <Route path="last-fit" element={<LastFitPage />} />
-          <Route path="track/:slug" element={<TrackPage />} />
+          <Route path="last-fit" element={<Suspense fallback={<PageFallback />}><LastFitPage /></Suspense>} />
+          <Route path="track/:slug" element={<Suspense fallback={<PageFallback />}><TrackPage /></Suspense>} />
           <Route path="discography" element={<Suspense fallback={<PageFallback />}><DiscographyPage /></Suspense>} />
-          <Route path="42" element={<About42Page />} />
+          <Route path="42" element={<Suspense fallback={<PageFallback />}><About42Page /></Suspense>} />
           <Route path="about" element={<Navigate to="/magnum/42" replace />} />  {/* P2-1: AboutPage vs About42Page dedupe, redirect /about -> /42 */}
           <Route path="artists" element={<Suspense fallback={<PageFallback />}><ArtistsPage /></Suspense>} />
-          <Route path="game" element={<GamePage />} />
-          <Route path="games" element={<GamesHub />} />
+          <Route path="game" element={<Suspense fallback={<PageFallback />}><GamePage /></Suspense>} />
+          <Route path="games" element={<Suspense fallback={<PageFallback />}><GamesHub /></Suspense>} />
           <Route path="games/runner" element={<Suspense fallback={<GameFallback />}><RunnerGame /></Suspense>} />
           <Route path="games/match3" element={<Suspense fallback={<GameFallback />}><Match3Game /></Suspense>} />
           <Route path="games/knife" element={<Suspense fallback={<GameFallback />}><KnifeHitGame /></Suspense>} />
