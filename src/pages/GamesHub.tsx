@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useCallback } from "react";
 import gsap from "gsap";
 import styles from "./GamesHub.module.css";
 
@@ -15,6 +15,7 @@ const GAMES = [
 export function GamesHub() {
   const ref = useRef<HTMLDivElement>(null);
 
+  // GSAP entrance stagger
   useEffect(() => {
     if (!ref.current) return;
     const ctx = gsap.context(() => {
@@ -27,6 +28,43 @@ export function GamesHub() {
     return () => ctx.revert();
   }, []);
 
+  // Magnetic 3D tilt on hover
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
+    const card = e.currentTarget;
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const rotateX = ((y - centerY) / centerY) * -8; // tilt up/down
+    const rotateY = ((x - centerX) / centerX) * 8;  // tilt left/right
+
+    gsap.to(card, {
+      rotateX,
+      rotateY,
+      duration: 0.35,
+      ease: "power2.out",
+    });
+  }, []);
+
+  const handleMouseLeave = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
+    gsap.to(e.currentTarget, {
+      rotateX: 0,
+      rotateY: 0,
+      y: 0,
+      duration: 0.5,
+      ease: "elastic.out(1, 0.5)",
+    });
+  }, []);
+
+  const handleMouseEnter = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
+    gsap.to(e.currentTarget, {
+      y: -6,
+      duration: 0.3,
+      ease: "power2.out",
+    });
+  }, []);
+
   return (
     <div className={styles.page} ref={ref}>
       <div className={styles.header}>
@@ -36,11 +74,19 @@ export function GamesHub() {
       </div>
       <div className={styles.grid}>
         {GAMES.map((g) => (
-          <Link key={g.to} to={g.to} className={styles.card}>
-            <span className={styles.icon}>{g.icon}</span>
-            <strong>{g.title}</strong>
-            <p>{g.desc}</p>
-          </Link>
+          <div key={g.to} className={styles.cardWrap}>
+            <Link
+              to={g.to}
+              className={styles.card}
+              onMouseMove={handleMouseMove}
+              onMouseEnter={handleMouseEnter}
+              onMouseLeave={handleMouseLeave}
+            >
+              <span className={styles.icon}>{g.icon}</span>
+              <strong>{g.title}</strong>
+              <p>{g.desc}</p>
+            </Link>
+          </div>
         ))}
       </div>
       <Link to="/magnum" className={styles.back}>← На главную</Link>
