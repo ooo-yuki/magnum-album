@@ -19,6 +19,7 @@ const GAMES = [
   { to: "/magnum/games/typing", icon: "⌨️", title: "Скоропечатание", desc: "Печатай фразы MAGNUM — набери 42 WPM" },
   { to: "/magnum/games/snake", icon: "🐍", title: "Змейка 42", desc: "Стрелками или свайпом — вырасти до 42!" },
   { to: "/magnum/games/dodge", icon: "💥", title: "5 ПУЛЬ", desc: "Уклоняйся 42с — 5 цветных пуль атакуют!" },
+  { to: "/magnum/games/timeline", icon: "📅", title: "ХРОНОЛОГИЯ 2026", desc: "Расставь события MAGNUM по порядку" },
 ];
 
 export function GamesHub() {
@@ -92,7 +93,7 @@ export function GamesHub() {
       <div className={styles.header}>
         <div className={styles.badge} ref={badgeRef}>Мини-игры</div>
         <h1>Играй и выигрывай</h1>
-        <p className={styles.subtitle}>14 игр — победи в любой и получи пресейв MAGNUM</p>
+        <p className={styles.subtitle}>16 игр — победи в любой и получи пресейв MAGNUM</p>
       </div>
       <div className={styles.grid}>
         {GAMES.map((g) => (

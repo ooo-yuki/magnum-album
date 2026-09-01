@@ -152,6 +152,28 @@ function playMerge(v: number) {
   safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18), 0.001);
   o.start(); o.stop(ctx.currentTime + 0.2);
 }
+function playWin() {
+  const ctx = ensureAC(); if (!ctx) return;
+  [0, 0.1, 0.2, 0.32, 0.46].forEach((d, i) => {
+    const o = ctx.createOscillator(); const g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type = i % 2 === 0 ? "sine" : "triangle";
+    o.frequency.value = 440 + i * 110;
+    g.gain.setValueAtTime(0.14, ctx.currentTime + d);
+    safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + d + 0.4), 0.001);
+    o.start(ctx.currentTime + d); o.stop(ctx.currentTime + d + 0.45);
+  });
+}
+function playGameOver() {
+  const ctx = ensureAC(); if (!ctx) return;
+  const o = ctx.createOscillator(); const g = ctx.createGain();
+  o.connect(g); g.connect(ctx.destination);
+  o.type = "sawtooth"; o.frequency.value = 200;
+  safeRamp(o.frequency, () => o.frequency.linearRampToValueAtTime(80, ctx.currentTime + 0.4), 80);
+  g.gain.setValueAtTime(0.1, ctx.currentTime);
+  safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45), 0.001);
+  o.start(); o.stop(ctx.currentTime + 0.48);
+}
 
 export function Game2042() {
   const [grid, setGrid] = useState<Grid>(() => addRandom(addRandom(emptyGrid())));
@@ -162,6 +184,7 @@ export function Game2042() {
   const touchRef = useRef<{ x: number; y: number } | null>(null);
   const gridRef = useRef(grid);
   const scoreRef = useRef(score);
+  const pageRef = useRef<HTMLDivElement>(null);
   gridRef.current = grid;
   scoreRef.current = score;
 
@@ -179,8 +202,12 @@ export function Game2042() {
       try { localStorage.setItem("2042-best", String(newScore)); } catch {}
     }
     if (s > 0) playMerge(s);
-    if (hasWon(withNew) && !keepPlaying) setState("win");
-    else if (!canMove(withNew)) setState("over");
+    if (hasWon(withNew) && !keepPlaying) { setState("win"); playWin(); }
+    else if (!canMove(withNew)) {
+      setState("over");
+      playGameOver();
+      if (pageRef.current) gsap.to(pageRef.current, { x: 5, duration: 0.05, yoyo: true, repeat: 7, ease: "power1.inOut", onComplete: () => gsap.set(pageRef.current!, { x: 0 }) });
+    }
   }, [state, keepPlaying, best]);
 
   // keyboard
@@ -225,7 +252,7 @@ export function Game2042() {
   }, []);
 
   return (
-    <div className={styles.page}>
+    <div className={styles.page} ref={pageRef}>
       <h1>ПАЗЛ 2042</h1>
       <p className={styles.sub}>Свайпай или стрелками — собери 42!</p>
 
