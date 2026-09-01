@@ -249,7 +249,7 @@ export function MiningPage() {
         <h1 className={styles.heroTitle}>МАЙНИ 42-КОИНЫ<br /><span>КОПАЙ КАК ШАХТЁР</span></h1>
         <p className={styles.subtitle}>
           Кликер без крипты и без скама. Кликай по породе, покупай лопаты и кирки, включай авто-бур — и стань легендой Кузбасса.
-          Всё хранится в Neon (magnum_mining) — без localStorage, токен в cookie.
+          Всё сохраняется — токен в cookie.
         </p>
       </header>
 
@@ -291,7 +291,7 @@ export function MiningPage() {
           <p>💡 Совет братухи: купи <b>Лопата 42</b> за 42 — окупается за 42 клика. Кирка 142 — для трушных.</p>
           <div className={styles.digActions}>
             <input className={styles.nickInput} value={nick} onChange={(e) => setNick(e.target.value)} placeholder="Твой ник" maxLength={18} aria-label="Ник для дуэли" />
-            <button className={styles.btnGhost} onClick={() => showToast("Баланс синхронизирован с Neon ✅")}>Синк</button>
+            <button className={styles.btnGhost} onClick={() => showToast("Баланс синхронизирован ✅")}>Синк</button>
           </div>
         </div>
       </section>

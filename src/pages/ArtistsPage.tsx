@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useCallback } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import styles from "./ArtistsPage.module.css";
@@ -10,18 +10,23 @@ export function ArtistsPage() {
   const timelineRef = useRef<HTMLDivElement>(null);
   const mediaRef = useRef<HTMLDivElement>(null);
 
+  // ── GSAP entrance y24 stagger 0.12 • reduced-motion • context cleanup
   useEffect(() => {
     if (!containerRef.current) return;
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const ctx = gsap.context(() => {
-      gsap.set(`.${styles.artistCard}`, { y: 60, opacity: 0 });
-      gsap.to(`.${styles.artistCard}`, {
-        y: 0,
-        opacity: 1,
-        stagger: 0.3,
-        duration: 1,
-        ease: "power3.out",
-      });
+      if (prefersReduced) {
+        gsap.set(`.${styles.header} > *`, { y: 0, opacity: 1, clearProps: "transform" });
+        gsap.set(`.${styles.artistCard}`, { y: 0, opacity: 1, clearProps: "transform" });
+        return;
+      }
+      gsap.set(`.${styles.header} > *`, { y: 24, opacity: 0 });
+      gsap.to(`.${styles.header} > *`, { y: 0, opacity: 1, stagger: 0.12, duration: 0.55, ease: "power2.out", delay: 0.05 });
+
+      gsap.set(`.${styles.artistCard}`, { y: 24, opacity: 0 });
+      gsap.to(`.${styles.artistCard}`, { y: 0, opacity: 1, stagger: 0.12, duration: 0.55, ease: "power2.out", delay: 0.28 });
+
+      // parallax photo — respect reduced-motion already gated
       gsap.to(`.${styles.photo}`, {
         yPercent: -10,
         scrollTrigger: {
@@ -31,45 +36,78 @@ export function ArtistsPage() {
           scrub: 1,
         },
       });
-
-      // staggered reveal for timeline items
-      if (!reducedMotion && timelineRef.current) {
-        const items = timelineRef.current.querySelectorAll(`.${styles.timelineMiniItem}`);
-        gsap.set(items, { y: 24, opacity: 0, scale: 0.95 });
-        gsap.to(items, {
-          scrollTrigger: {
-            trigger: timelineRef.current,
-            start: "top 85%",
-            toggleActions: "play none none none",
-          },
-          y: 0,
-          opacity: 1,
-          scale: 1,
-          stagger: 0.1,
-          duration: 0.5,
-          ease: "back.out(1.4)",
-        });
-      }
-
-      // staggered reveal for media cards
-      if (!reducedMotion && mediaRef.current) {
-        const cards = mediaRef.current.querySelectorAll(`.${styles.mediaCard}`);
-        gsap.set(cards, { y: 20, opacity: 0 });
-        gsap.to(cards, {
-          scrollTrigger: {
-            trigger: mediaRef.current,
-            start: "top 85%",
-            toggleActions: "play none none none",
-          },
-          y: 0,
-          opacity: 1,
-          stagger: 0.08,
-          duration: 0.45,
-          ease: "power2.out",
-        });
-      }
     }, containerRef);
     return () => ctx.revert();
+  }, []);
+
+  // timelineMini items stagger on scroll
+  useEffect(() => {
+    if (!timelineRef.current) return;
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReduced) {
+      gsap.set(timelineRef.current.querySelectorAll(`.${styles.timelineMiniItem}`), { y: 0, opacity: 1, clearProps: "transform" });
+      return;
+    }
+    const ctx = gsap.context(() => {
+      const items = timelineRef.current!.querySelectorAll(`.${styles.timelineMiniItem}`);
+      gsap.set(items, { y: 24, opacity: 0 });
+      gsap.to(items, {
+        y: 0,
+        opacity: 1,
+        stagger: 0.12,
+        duration: 0.5,
+        ease: "power2.out",
+        scrollTrigger: { trigger: timelineRef.current, start: "top 85%", toggleActions: "play none none none" },
+      });
+    }, timelineRef);
+    return () => ctx.revert();
+  }, []);
+
+  // media cards stagger on scroll
+  useEffect(() => {
+    if (!mediaRef.current) return;
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReduced) {
+      gsap.set(mediaRef.current.querySelectorAll(`.${styles.mediaCard}`), { y: 0, opacity: 1, clearProps: "transform" });
+      return;
+    }
+    const ctx = gsap.context(() => {
+      const cards = mediaRef.current!.querySelectorAll(`.${styles.mediaCard}`);
+      gsap.set(cards, { y: 24, opacity: 0 });
+      gsap.to(cards, {
+        y: 0,
+        opacity: 1,
+        stagger: 0.12,
+        duration: 0.5,
+        ease: "power2.out",
+        scrollTrigger: { trigger: mediaRef.current, start: "top 85%", toggleActions: "play none none none" },
+      });
+    }, mediaRef);
+    return () => ctx.revert();
+  }, []);
+
+  // hover RGB — chromatic lift + tri-color shadow
+  const onCardEnter = useCallback((e: React.MouseEvent<HTMLElement>) => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    gsap.to(e.currentTarget, {
+      y: -4,
+      boxShadow: "0 12px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,45,85,0.20), 0 0 22px rgba(255,45,85,0.20), 0 0 22px rgba(0,255,136,0.12), 0 0 28px rgba(255,204,0,0.10)",
+      borderColor: "rgba(255,45,85,0.35)",
+      duration: 0.28,
+      ease: "power2.out",
+      overwrite: true,
+    });
+  }, []);
+  const onCardLeave = useCallback((e: React.MouseEvent<HTMLElement>) => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    gsap.to(e.currentTarget, {
+      y: 0,
+      boxShadow: "0 0 0 transparent",
+      borderColor: "rgba(255,255,255,0.06)",
+      duration: 0.35,
+      ease: "power2.out",
+      overwrite: true,
+    });
   }, []);
 
   return (
@@ -83,7 +121,7 @@ export function ArtistsPage() {
       </div>
 
       <div className={styles.artists}>
-        <div className={styles.artistCard}>
+        <div className={styles.artistCard} onMouseEnter={onCardEnter} onMouseLeave={onCardLeave}>
           <div className={styles.photoWrap}>
             <img src="/magnum/images/artists/5opka.jpg" alt="5opka — Кирилл Баранов" className={styles.photo} loading="lazy" decoding="async" width={385} height={385} />
             <div className={styles.photoGlow} />
@@ -134,7 +172,7 @@ export function ArtistsPage() {
           </div>
         </div>
 
-        <div className={styles.artistCard}>
+        <div className={styles.artistCard} onMouseEnter={onCardEnter} onMouseLeave={onCardLeave}>
           <div className={styles.photoWrap}>
             <div className={styles.photoPlaceholder}>
               <span>🎙️</span>
@@ -188,11 +226,11 @@ export function ArtistsPage() {
           Дальше — сольные пути: Кирилл как хип-хоп (CLAY, 73), Игорь как серьёзный поп-артист. Все старые фиты останутся на площадках, новые подпишутся как <strong>MlSh</strong>.
         </p>
         <div className={styles.timelineMini} ref={timelineRef}>
-          <div className={styles.timelineMiniItem}><span>20.09.2024</span><strong>SUPERNOVA</strong><small>Мерси — главный хит</small></div>
-          <div className={styles.timelineMiniItem}><span>25.07.2025</span><strong>SUPER PUPER NOVA</strong><small>80 • альбом месяца • XXL 86</small></div>
-          <div className={styles.timelineMiniItem}><span>03.04.2026</span><strong>CLAY (соло 5opka)</strong><small>73 • 81 рецензия</small></div>
-          <div className={styles.timelineMiniItem}><span>14.08.2026</span><strong>ТУСА МЕДУЗА + VPN</strong><small>синглы MAGNUM</small></div>
-          <div className={styles.timelineMiniItem}><span>2026</span><strong>MAGNUM</strong><small>5 треков — 5 пуль • последний фит</small></div>
+          <div className={styles.timelineMiniItem} onMouseEnter={onCardEnter} onMouseLeave={onCardLeave}><span>20.09.2024</span><strong>SUPERNOVA</strong><small>Мерси — главный хит</small></div>
+          <div className={styles.timelineMiniItem} onMouseEnter={onCardEnter} onMouseLeave={onCardLeave}><span>25.07.2025</span><strong>SUPER PUPER NOVA</strong><small>80 • альбом месяца • XXL 86</small></div>
+          <div className={styles.timelineMiniItem} onMouseEnter={onCardEnter} onMouseLeave={onCardLeave}><span>03.04.2026</span><strong>CLAY (соло 5opka)</strong><small>73 • 81 рецензия</small></div>
+          <div className={styles.timelineMiniItem} onMouseEnter={onCardEnter} onMouseLeave={onCardLeave}><span>14.08.2026</span><strong>ТУСА МЕДУЗА + VPN</strong><small>синглы MAGNUM</small></div>
+          <div className={styles.timelineMiniItem} onMouseEnter={onCardEnter} onMouseLeave={onCardLeave}><span>2026</span><strong>MAGNUM</strong><small>5 треков — 5 пуль • последний фит</small></div>
         </div>
         <div className={styles.duoLinks}>
           <a href="https://risazatvorchestvo.com/artist/5opka/reviews" target="_blank" rel="noreferrer">Все рецензии РЗТ →</a>
@@ -205,12 +243,12 @@ export function ArtistsPage() {
       <div className={styles.media} ref={mediaRef}>
         <h2>Где слушать и смотреть</h2>
         <div className={styles.mediaGrid}>
-          <a href="https://music.yandex.ru/artist/7544304" target="_blank" rel="noreferrer" className={styles.mediaCard}><strong>Яндекс Музыка</strong><span>400K+ слушателей • 5opka</span></a>
-          <a href="https://open.spotify.com/artist/6hSwHa5Se498WfUj6zf4WN" target="_blank" rel="noreferrer" className={styles.mediaCard}><strong>Spotify</strong><span>140–263K monthly listeners</span></a>
-          <a href="https://www.deezer.com/ru/artist/67614242" target="_blank" rel="noreferrer" className={styles.mediaCard}><strong>Deezer</strong><span>5opka</span></a>
-          <a href="https://music.amazon.com/artists/B07T2DVLP9/5opka" target="_blank" rel="noreferrer" className={styles.mediaCard}><strong>Amazon Music</strong><span>5opka</span></a>
-          <a href="https://youtu.be/Mz69bLRpBEs" target="_blank" rel="noreferrer" className={styles.mediaCard}><strong>ТУСА МЕДУЗА • клип</strong><span>YouTube • ~200K • 8K TikTok</span></a>
-          <a href="https://youtu.be/or8Xj5kC1Ho" target="_blank" rel="noreferrer" className={styles.mediaCard}><strong>VPN • клип</strong><span>YouTube</span></a>
+          <a href="https://music.yandex.ru/artist/7544304" target="_blank" rel="noreferrer" className={styles.mediaCard} onMouseEnter={onCardEnter as never} onMouseLeave={onCardLeave as never}><strong>Яндекс Музыка</strong><span>400K+ слушателей • 5opka</span></a>
+          <a href="https://open.spotify.com/artist/6hSwHa5Se498WfUj6zf4WN" target="_blank" rel="noreferrer" className={styles.mediaCard} onMouseEnter={onCardEnter as never} onMouseLeave={onCardLeave as never}><strong>Spotify</strong><span>140–263K monthly listeners</span></a>
+          <a href="https://www.deezer.com/ru/artist/67614242" target="_blank" rel="noreferrer" className={styles.mediaCard} onMouseEnter={onCardEnter as never} onMouseLeave={onCardLeave as never}><strong>Deezer</strong><span>5opka</span></a>
+          <a href="https://music.amazon.com/artists/B07T2DVLP9/5opka" target="_blank" rel="noreferrer" className={styles.mediaCard} onMouseEnter={onCardEnter as never} onMouseLeave={onCardLeave as never}><strong>Amazon Music</strong><span>5opka</span></a>
+          <a href="https://youtu.be/Mz69bLRpBEs" target="_blank" rel="noreferrer" className={styles.mediaCard} onMouseEnter={onCardEnter as never} onMouseLeave={onCardLeave as never}><strong>ТУСА МЕДУЗА • клип</strong><span>YouTube • ~200K • 8K TikTok</span></a>
+          <a href="https://youtu.be/or8Xj5kC1Ho" target="_blank" rel="noreferrer" className={styles.mediaCard} onMouseEnter={onCardEnter as never} onMouseLeave={onCardLeave as never}><strong>VPN • клип</strong><span>YouTube</span></a>
         </div>
       </div>
     </div>

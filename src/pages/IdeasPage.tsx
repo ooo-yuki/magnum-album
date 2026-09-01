@@ -104,7 +104,7 @@ export function IdeasPage() {
     try {
       const r = await fetch("/magnum/api/ideas", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: title.trim(), description: desc.trim() }) });
       if (!r.ok) throw new Error(await r.text());
-      setTitle(""); setDesc(""); setMsg("Идея улетела в Neon ✅"); await load();
+      setTitle(""); setDesc(""); setMsg("Идея улетела ✅"); await load();
     } catch (e) { setMsg(String(e).slice(0, 120)); }
     finally { setSubmitting(false); setTimeout(() => setMsg(""), 2500); }
   };
@@ -112,20 +112,20 @@ export function IdeasPage() {
   return (
     <div className={styles.page} ref={rootRef}>
       <div className={styles.header}>
-        <span className={styles.badge}>Neon • magnum_ideas</span>
+        <span className={styles.badge}>Идеи 42 • братухи решают</span>
         <h1>Генератор идей 42</h1>
-        <p className={styles.sub}>Предлагай фичи — братухи голосуют. Топ улетает в прод. Всё в Lakebase, не в localStorage.</p>
+        <p className={styles.sub}>Предлагай фичи — братухи голосуют. Топ улетает в прод.</p>
       </div>
 
       <div className={styles.form} ref={formRef}>
         <h2>Предложить идею</h2>
         <input className={styles.input} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Заголовок — напр. Турнир по майнингу" maxLength={80} />
         <textarea className={styles.textarea} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Описание, как это должно работать" rows={3} maxLength={300} />
-        <button className={styles.submit} onClick={submit} disabled={submitting}>{submitting ? "Отправка…" : "Отправить в Neon →"}</button>
+        <button className={styles.submit} onClick={submit} disabled={submitting}>{submitting ? "Отправка…" : "Отправить →"}</button>
         {msg && <span className={styles.msg}>{msg}</span>}
       </div>
 
-      {loading ? <p className={styles.loading}>Гружу идеи из Neon…</p> : ideas.length === 0 ? (
+      {loading ? <p className={styles.loading}>Загружаю идеи…</p> : ideas.length === 0 ? (
         <p className={styles.loading}>Пока нет идей — зарегистрируйся и стань первым, братуха. Только реальные игроки.</p>
       ) : (
         <div className={styles.grid} ref={gridRef}>

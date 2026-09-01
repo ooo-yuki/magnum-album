@@ -157,7 +157,7 @@ export function AiBot() {
             <img src="/magnum/images/ai-bot-avatar.png" alt="" className={styles.avatar} width={40} height={40} />
             <div className={styles.headerText}>
               <strong>БРАТ-БОТ 42</strong>
-              <span className={styles.status}>● mimo-v2.5 • онлайн</span>
+              <span className={styles.status}>● онлайн</span>
             </div>
             <a href={PRESAVE_URL} target="_blank" rel="noreferrer" className={styles.headerLink}>
               Пресейв →

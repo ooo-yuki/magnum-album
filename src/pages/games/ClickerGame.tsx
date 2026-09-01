@@ -97,7 +97,8 @@ export function ClickerGame() {
 
   const handleClick = () => {
     if (!started || won || lost) return;
-    const next = clicks + 1;
+    // clicksRef — источник истины: быстрые клики подряд не теряются из-за стейта
+    const next = clicksRef.current + 1;
     clicksRef.current = next;
     setClicks(next);
     if (numRef.current) gsap.fromTo(numRef.current, { scale: 1.35 }, { scale: 1, duration: 0.14, ease: "back.out(2)" });

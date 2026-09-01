@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useMemo } from "react";
+import { useRef, useEffect, useState, useMemo, useCallback } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import styles from "./DiscographyPage.module.css";
@@ -183,6 +183,7 @@ function parseYear(y: string): number {
 
 export function DiscographyPage() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const albumsRef = useRef<HTMLDivElement>(null);
   const counterRef = useRef<HTMLSpanElement>(null);
   const counterDurationRef = useRef<HTMLSpanElement>(null);
   const counterScoreRef = useRef<HTMLSpanElement>(null);

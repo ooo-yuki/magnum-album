@@ -200,10 +200,10 @@ export function PresaveRatingPage() {
   return (
     <div className={styles.page}>
       <header ref={heroRef} className={styles.header}>
-        <div className={styles.badge}>★ РЕЙТИНГ ПРЕСЕЙВА · MAGNUM · 42 БРАТУХИ · Neon</div>
+        <div className={styles.badge}>★ РЕЙТИНГ ПРЕСЕЙВА · MAGNUM · 42 БРАТУХИ</div>
         <h1 className={styles.title}>КТО ПОСТАВИЛ<br />ПРЕСЕЙВ — ТОТ БРАТУХА</h1>
         <p className={styles.subtitle}>
-          Реальный рейтинг из Neon: <b>magnum_frames</b> + <b>magnum_eco_results</b> + <b>magnum_ideas</b>. Никакого мока — только живые данные.
+          Реальный рейтинг — только живые братухи, без фейков.
           Проверка — через <b>БРАТ-БОТа</b>.
         </p>
       </header>
@@ -223,8 +223,8 @@ export function PresaveRatingPage() {
         </div>
         <div className={styles.kpi}>
           <div className={styles.kpiNum}>{loading ? "…" : stats.ideasCount}</div>
-          <div className={styles.kpiLbl}>идей в Neon</div>
-          <div className={styles.kpiHint}>magnum_ideas · {stats.totalVotes} голосов</div>
+          <div className={styles.kpiLbl}>идей</div>
+          <div className={styles.kpiHint}>{stats.totalVotes} голосов</div>
         </div>
         <div className={styles.kpi}>
           <div className={styles.kpiNum}>{loading ? "…" : stats.verified}</div>
@@ -239,8 +239,8 @@ export function PresaveRatingPage() {
           onClick={runCheck}
           disabled={check === "checking"}
         >
-          {check === "idle" && "Обновить из Neon →"}
-          {check === "checking" && "Гружу Neon…"}
+          {check === "idle" && "Обновить →"}
+          {check === "checking" && "Загружаю…"}
           {check === "ok" && "✓ Обновлено"}
           {check === "fail" && "× Пока пусто"}
         </button>
@@ -269,8 +269,8 @@ export function PresaveRatingPage() {
           <span className={styles.thStatus}>Статус</span>
         </div>
         <div className={styles.tableBody}>
-          {loading && <div className={styles.empty}>Гружу Neon…</div>}
-          {!loading && err && <div className={styles.empty}>Ошибка Neon: {err}</div>}
+          {loading && <div className={styles.empty}>Загружаю…</div>}
+          {!loading && err && <div className={styles.empty}>Ошибка: {err}</div>}
           {!loading && !err && isEmpty && <div className={styles.empty}>{EMPTY_FALLBACK}</div>}
           {!loading && !err && !isEmpty && filtered.length === 0 && <div className={styles.empty}>{EMPTY_FALLBACK}</div>}
           {!loading && !err && filtered.map((r) => (
@@ -300,11 +300,11 @@ export function PresaveRatingPage() {
 
       <div className={styles.foot}>
         <div className={styles.footCard}>
-          <strong>Как попасть в топ?</strong> Поставь пресейв → эко-тест /magnum/eco → идея /magnum/ideas → данные падают в Neon и появляются здесь.
+          <strong>Как попасть в топ?</strong> Поставь пресейв → эко-тест /magnum/eco → идея /magnum/ideas → появишься здесь.
           Топ-3 получают рамку 42 + респект.
         </div>
         <div className={styles.footStats}>
-          Live Neon: magnum_frames {stats.frames} · magnum_eco_results {stats.ecoCount} · magnum_ideas {stats.ideasCount} · {new Date().toISOString().slice(0,10)} · proud-bar-62331523
+          {stats.frames} фреймов · {stats.ecoCount} эко · {stats.ideasCount} идей · {new Date().toISOString().slice(0,10)}
         </div>
       </div>
     </div>

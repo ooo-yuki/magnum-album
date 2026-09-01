@@ -304,4 +304,25 @@ frontend: localStorage.setItem('magnum-frame-verified','1'), setItem('magnum-fra
 | v2 (server) | `Bun.serve` WebSocket `/magnum/api/ws` для дуэлей · `verified:boolean` от `/magnum/api/ai` · серверный инвентарь |
 | v3 (социал) | Шаринг результатов (OG-картинки) · глобальный лидерборд · пресейв-топ братух |
 
+## 7. Следующие идеи
+
+> Бэклог хайп-фич для следующих итераций. Приоритет — по голосам в `magnum_ideas` / `IdeasPage`.
+
+### 7.1 Freakland Recap Roulette — рандомный пересказ за 42 монеты
+**Идея:** Кнопка «🎲 Рандомный пересказ» на `RecapsPage` — крутит рулетку из 7+ карточек, выпадает одна, юзер читает и получает +42 `magnum-coins` если дочитал до конца (скролл-трекинг `IntersectionObserver` на последнем параграфе). Анти-абуз: 1 прокрут/час (`magnum-roulette-last` в LS).
+**Файлы:** `src/pages/RecapsPage.tsx` (кнопка + `gsap` конфетти), `src/lib/recapRoulette.ts` (LS-кулдаун), `src/lib/coins.ts` (награда).
+**Edge:** `prefers-reduced-motion` — без конфетти; приватный режим — fallback в память без сохранения кулдауна.
+
+### 7.2 Ежедневный челлендж 42 — streak + награда
+**Идея:** На `HomePage` виджет «Челлендж дня»: 1 мини-задание в сутки (кликер 42 клика / квиз 1 вопрос / открыть 3 пересказа). Streak считается в `magnum-daily-streak:{count,lastDate}`, награда 42/142/420 за 1/3/7 дней подряд. Пропуск — сброс в 0, но с «заморозкой» за 420 монет.
+**Файлы:** `src/components/Daily42.tsx`, `src/lib/daily.ts`, `src/pages/HomePage.tsx`.
+**Edge:** смена часового пояса — сравниваем `toDateString()` по локальному времени; читерский инкремент LS — валидируем `lastDate` не в будущем.
+
+### 7.3 Братуха-озвучка — TTS пересказов
+**Идея:** Кнопка «🔊 Слушать пересказ» в каждой карточке `RecapsPage` — Web Speech API `speechSynthesis` читает `paragraphs.join(' ')` голосом `ru-RU`. Прогресс-бар чтения, пауза/стоп. Fallback — ссылка на YouTube если API недоступен.
+**Файлы:** `src/hooks/useTts.ts`, `src/pages/RecapsPage.tsx`.
+**Edge:** iOS не авто-плей — только по клику; длинный текст >5K — чанкуем по предложениям.
+
+---
+
 > 42 — кринжа не существует. Делай, братуха. 🔥
