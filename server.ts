@@ -1788,17 +1788,14 @@ const server = Bun.serve<WSData>({
   async fetch(req, server) {
     const url = new URL(req.url);
 
-    // upgrade WS
+    // upgrade WS — требует авторизацию, анонимов не пускаем
     if (url.pathname === "/magnum/api/ws" || url.pathname === "/magnum/api/ws/") {
-      const username = (url.searchParams.get("username") || url.searchParams.get("name") || "").trim().slice(0, 24) || `Братуха_${Math.floor(Math.random()*900+100)}`;
-      // try token for auth name
-      let authName: string | null = null;
       const token = extractToken(req);
-      if (token) {
-        try { const u = await getUserByToken(token); if (u) authName = u.username; } catch {}
-      }
-      const finalName = authName ?? username;
-      const ok = server.upgrade(req, { data: { id: crypto.randomUUID(), username: finalName, roomId: null } });
+      if (!token) return Response.json({ error: "unauthorized — войди, братуха" }, { status: 401 });
+      let user: { id: number; username: string } | null = null;
+      try { user = await getUserByToken(token); } catch {}
+      if (!user) return Response.json({ error: "unauthorized — войди, братуха" }, { status: 401 });
+      const ok = server.upgrade(req, { data: { id: String(user.id), username: user.username, roomId: null } });
       if (ok) return undefined as unknown as Response;
       return Response.json({ error: "Upgrade failed" }, { status: 426 });
     }
