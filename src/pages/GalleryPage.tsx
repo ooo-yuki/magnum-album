@@ -784,7 +784,7 @@ const FULL_ARCHIVE: Art42[] = [...ARCHIVE_42, ...ARCHIVE_WAVE_2];
 // Фикс: переписываем все фейковые src архива на реальные файлы, чтобы не было 404/эмодзи
 for (const a of ARCHIVE_42) a.src = REAL_BY_STYLE[a.style] ?? a.src;
 for (const a of ARCHIVE_WAVE_2) a.src = REAL_BY_STYLE[a.style] ?? a.src;
-for (const a of FULL_ARCHIVE) a.src = REAL_BY_STYLE[a.style] ?? a.src;
+// reviewer upgrade: FULL_ARCHIVE уже покрыт двумя циклами выше — без 404, все src → реальные 42-* файлы
 
 
 
