@@ -1276,9 +1276,9 @@ async function handleObsidianCraft(req: Request): Promise<Response> {
 // ---- GACHA CORE 42 — pity 90/180 + 50/50 + soft-pity 65 + magnum_pity ----
 async function handleGachaRoll(req: Request): Promise<Response> {
   const token = extractToken(req);
-  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401, headers: { "magnum:need-auth": "1" } });
   const user = await getUserByToken(token);
-  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401, headers: { "magnum:need-auth": "1" } });
   const ip = getClientIp(req);
   if (!checkRateLimit(`gacha:roll:${user.id}:${ip}`, 10, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
   let body: { banner?: string; banner_type?: string; count?: number };
@@ -1357,6 +1357,8 @@ async function handleGachaRoll(req: Request): Promise<Response> {
   }
   // upsert pity
   await sql`INSERT INTO magnum_pity (user_id, banner_type, pity_counter, pity_5star, lost_50_50, pulls, updated_at) VALUES (${user.id}, ${banner}, ${curPityCounter}, ${curPity5}, ${curLost}, ${curPulls}, now()) ON CONFLICT (user_id, banner_type) DO UPDATE SET pity_counter=${curPityCounter}, pity_5star=${curPity5}, lost_50_50=${curLost}, pulls=${curPulls}, updated_at=now()`;
+  await ensureGachaHistoryTable();
+  for(const r of results){ await sql`INSERT INTO magnum_gacha_history (user_id,banner_type,rarity,cosmetic_id,is_new) VALUES (${user.id},${banner},${r.rarity},${r.id},${r.isNew})`; }
   await sql`INSERT INTO magnum_transactions (user_id, amount, reason, meta) VALUES (${user.id}, ${-price}, 'gacha_roll', ${JSON.stringify({ banner, count, price, results: results.map(r=>({id:r.id, rarity:r.rarity})) })}::jsonb)`;
   const balAfter = await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
   const newBal = balAfter.length ? Number((balAfter[0] as { balance: number }).balance) : 0;
@@ -4673,6 +4675,10 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/gacha/roll" && req.method === "POST") return handleGachaRoll(req);
     if (url.pathname === "/magnum/api/gacha/status" && req.method === "GET") return handleGachaStatus(req);
     if (url.pathname === "/magnum/api/gacha/catalog" && req.method === "GET") return handleGachaCatalog();
+    if (url.pathname === "/magnum/api/gacha/banners" && req.method === "GET") return handleGachaBanners();
+    if (url.pathname === "/magnum/api/gacha/history" && req.method === "GET") return handleGachaHistory(req);
+    if (url.pathname === "/magnum/api/gacha/pity" && req.method === "GET") return handleGachaPity(req);
+    if (url.pathname === "/magnum/api/gacha/free-roll" && req.method === "POST") return handleGachaFreeRoll(req);
 
     // mining
     if (url.pathname === "/magnum/api/mining" && req.method === "GET") return handleMiningGet(req);

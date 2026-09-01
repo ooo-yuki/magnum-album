@@ -22,6 +22,7 @@ const ConveyorPage = lazy(() => import("./pages/ConveyorPage").then(m => ({ defa
 const Map42Page = lazy(() => import("./pages/Map42Page").then(m => ({ default: m.Map42Page })));
 const ArenaPage = lazy(() => import("./pages/ArenaPage").then(m => ({ default: m.ArenaPage })));
 const Board42Page = lazy(() => import("./pages/Board42Page").then(m => ({ default: m.Board42Page })));
+const GachaPage = lazy(() => import("./pages/GachaPage").then(m => ({ default: m.GachaPage })));
 // opt 15:06 — 5 оставшихся eager страниц → lazy (тяжёлые чанки >50KB каждый не нужен на /)
 const About42Page = lazy(() => import("./pages/About42Page").then(m => ({ default: m.About42Page })));
 const TrackPage = lazy(() => import("./pages/TrackPage").then(m => ({ default: m.TrackPage })));
@@ -106,6 +107,7 @@ export default function App() {
           <Route path="studio" element={<Suspense fallback={<PageFallback />}><Studio42Page /></Suspense>} />
           <Route path="share-card" element={<Suspense fallback={<PageFallback />}><ShareCardPage /></Suspense>} />
           <Route path="board" element={<Suspense fallback={<PageFallback />}><Board42Page /></Suspense>} />
+          <Route path="gacha" element={<Suspense fallback={<PageFallback />}><GachaPage /></Suspense>} />
         </Route>
       </Routes>
     </BrowserRouter>

@@ -550,7 +550,7 @@ export function PresaveRatingPage() {
           {shareBusy ? "Готовлю 1080…" : "Поделиться · Я в 42"}
         </button>
         <Link to="/magnum/share-card" className={styles.presaveLink} style={{ border: "1px solid rgba(255,204,0,0.22)", padding: "8px 12px", borderRadius: 999, textDecoration: "none" }}>Открыть шаринг-карточку 1080×1080 →</Link>
-        <a className={styles.presaveLink} href="https://music.thefence.me/psmagnum" target="_blank" rel="noopener noreferrer">Поставить пресейв на BandLink →</a>
+        <a className={styles.presaveLink} href="https://music.thefence.me/psmagnum?utm_source=share&utm_medium=42&utm_campaign=presave7" target="_blank" rel="noopener noreferrer">Поставить пресейв на BandLink →</a>
         <span className={styles.verifyHint}>GET /magnum/api/frame/status · /magnum/api/eco/leaderboard · /magnum/api/ideas — live · {bandlink?.ok ? "BandLink OK" : bandlink ? "BandLink OG fallback" : "BandLink…"} · 1080×1080 Web Share → PNG</span>
       </div>
 

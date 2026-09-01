@@ -49,6 +49,12 @@ const NAV_ITEMS = [
     title: "Игры",
     desc: "Мини-игры, выиграй пресейв",
   },
+  {
+    to: "/magnum/gacha",
+    icon: "🎰",
+    title: "GACHA 42",
+    desc: "Витрина кейсов — крутки 42/420",
+  },
 ];
 
 export function NavGrid() {
