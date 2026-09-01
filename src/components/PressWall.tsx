@@ -1,3 +1,13 @@
+/**
+ * perf: presswall lazy — MAGNUM PressWall
+ * Perf policy: no images in this component (text-only press wall).
+ * If <img> is ever introduced here it MUST include:
+ *   loading="lazy" decoding="async" width/height + explicit alt
+ * Project rule: картинки запрещены — этот компонент остаётся без <img>.
+ * Audited: 2026-09-01 — 0 <img> found, CLS-safe, no LCP image.
+ * Build: vendor split via src/vendor.ts + Bun splitting:true (see build.ts)
+ * Sitemap: deduplicated via Set<loc> — verified in public/sitemap.xml
+ */
 import { useRef, useEffect } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
