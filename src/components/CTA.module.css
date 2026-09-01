@@ -119,3 +119,6 @@
   .btn::before, .btn:hover { animation: none !important; }
   .shimmer { display: none; }
 }
+@media (max-width: 480px) {
+  .btn { padding: 0.9rem 1.5rem; font-size: 0.95rem; }
+}
