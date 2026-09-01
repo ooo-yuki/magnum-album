@@ -107,13 +107,13 @@ const MOCK_POOL: Omit<Art42, "id">[] = [
     tag: "пиксель",
   },
   {
-    title: "Кибер-гараж",
+    title: "Шахта 42 — Неон-Кузбасс 2142",
     style: "киберпанк",
-    emoji: "🏚️",
+    emoji: "🌃",
     gradient: "linear-gradient(135deg,#00ff88,#0a2e1a 40%,#ff2d55 80%,#000 100%)",
-    src: "/magnum/images/gallery-42/mock-garage.jpg",
-    desc: "Гараж с неоном и жигулями будущего.",
-    tag: "гараж-панк",
+    src: "/magnum/images/gallery-42/42-cyber-01.jpg",
+    desc: "Кемерово 2142 — шахтный копёр в неоне, дождь и жигули-хoвер с номером 42.",
+    tag: "неон-кузбасс",
   },
   {
     title: "Геометрия 42",
