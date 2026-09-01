@@ -14,6 +14,7 @@ export function CTA() {
   const textRef = useRef<HTMLParagraphElement>(null);
   const btnRef = useRef<HTMLAnchorElement>(null);
   const shimmerRef = useRef<HTMLSpanElement>(null);
+  const magnetRef = useRef<HTMLAnchorElement | null>(null);
 
   useEffect(() => {
     if (!sectionRef.current) return;
@@ -59,6 +60,22 @@ export function CTA() {
         delay: 0.4,
       });
 
+      // cta-magnetic — subtle magnet follow on hover (6px, spring)
+      if (btnRef.current && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        const btn = btnRef.current;
+        const onMove = (e: MouseEvent) => {
+          const r = btn.getBoundingClientRect();
+          const dx = ((e.clientX - (r.left + r.width / 2)) / r.width) * 8;
+          const dy = ((e.clientY - (r.top + r.height / 2)) / r.height) * 6;
+          gsap.to(btn, { x: dx, y: dy, duration: 0.45, ease: "power3.out", overwrite: "auto" });
+        };
+        const onLeave = () => gsap.to(btn, { x: 0, y: 0, duration: 0.6, ease: "elastic.out(1,0.4)", overwrite: "auto" });
+        btn.addEventListener("mousemove", onMove);
+        btn.addEventListener("mouseleave", onLeave);
+        // store cleanup
+        (btn as any)._ctaCleanup = () => { btn.removeEventListener("mousemove", onMove); btn.removeEventListener("mouseleave", onLeave); };
+      }
+
       // periodic shimmer sweep across the CTA button
       if (shimmerRef.current) {
         // respect reduced motion
@@ -82,7 +99,7 @@ export function CTA() {
       }
     }, sectionRef);
 
-    return () => ctx.revert();
+    return () => { (btnRef.current as any)?._ctaCleanup?.(); ctx.revert(); }
   }, []);
 
   return (
