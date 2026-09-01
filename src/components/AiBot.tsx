@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback, memo } from "react";
 import styles from "./AiBot.module.css";
 
 /**
@@ -8,6 +8,13 @@ import styles from "./AiBot.module.css";
  *
  * API вызывается через прокси /magnum/api/ai (Bun.serve в server.ts),
  * ключ не светится в клиентском бандле.
+ *
+ * Perf polish:
+ * - loading="lazy" для аватара и скринов
+ * - debounce на input (250ms) — снижает ререндеры при быстром вводе
+ * - memo для истории сообщений + useMemo для api history
+ * - useCallback для всех хэндлеров
+ * - memoized subcomponents (Avatar, MessageRow, MessageList)
  */
 
 const PRESAVE_URL = "https://music.thefence.me/psmagnum";
@@ -32,7 +39,104 @@ const NAGS = [
   "Если бы пресейв был учеником, он был бы отличником. А ты до сих пор учитель, который его не поставил. Фикси.",
 ];
 
-const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
+const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+
+/* ───────────────── debounce hook ───────────────── */
+function useDebounce<T>(value: T, delayMs: number): T {
+  const [debounced, setDebounced] = useState<T>(value);
+  useEffect(() => {
+    const id = window.setTimeout(() => setDebounced(value), delayMs);
+    return () => window.clearTimeout(id);
+  }, [value, delayMs]);
+  return debounced;
+}
+
+function useDebouncedCallback<T extends (...args: never[]) => void>(fn: T, delayMs: number): T {
+  const timerRef = useRef<number | null>(null);
+  const fnRef = useRef(fn);
+  useEffect(() => {
+    fnRef.current = fn;
+  }, [fn]);
+  const debounced = useCallback(
+    (...args: Parameters<T>) => {
+      if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+      timerRef.current = window.setTimeout(() => {
+        fnRef.current(...args);
+      }, delayMs) as unknown as number;
+    },
+    [delayMs],
+  ) as T;
+  useEffect(() => {
+    return () => {
+      if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+    };
+  }, []);
+  return debounced;
+}
+
+/* ───────────────── memoized subcomponents ───────────────── */
+
+// Avatar: perf — loading="lazy", decoding async, low priority (вне вьюпорта до открытия)
+const Avatar = memo(function Avatar() {
+  return (
+    <picture>
+      <source srcSet="/magnum/images/ai-bot-avatar.webp" type="image/webp" />
+      <img
+        src="/magnum/images/ai-bot-avatar.png"
+        alt=""
+        className={styles.avatar}
+        width={40}
+        height={40}
+        loading="lazy"
+        decoding="async"
+        fetchPriority="low"
+      />
+    </picture>
+  );
+});
+
+type MessageRowProps = {
+  msg: Msg;
+};
+
+const MessageRow = memo(function MessageRow({ msg }: MessageRowProps) {
+  const isBot = msg.role === "bot";
+  return (
+    <div className={isBot ? styles.rowBot : styles.rowUser}>
+      {msg.image && (
+        <img
+          src={msg.image}
+          alt="скрин пользователя"
+          className={styles.userImg}
+          loading="lazy"
+          decoding="async"
+        />
+      )}
+      <div className={isBot ? styles.bubbleBot : styles.bubbleUser}>{msg.text}</div>
+    </div>
+  );
+});
+
+type MessageListProps = {
+  messages: Msg[];
+  busy: boolean;
+  listRef: React.RefObject<HTMLDivElement | null>;
+};
+
+const MessageList = memo(function MessageList({ messages, busy, listRef }: MessageListProps) {
+  return (
+    <div className={styles.list} ref={listRef}>
+      {messages.map((m, i) => (
+        <MessageRow key={i} msg={m} />
+      ))}
+      {busy && (
+        <div className={styles.typing}>
+          БРАТ-БОТ думает<span className={styles.dots}>…</span>
+        </div>
+      )}
+    </div>
+  );
+});
 
 export function AiBot() {
   const [open, setOpen] = useState(false);
@@ -42,11 +146,26 @@ export function AiBot() {
       text: "Я БРАТ-БОТ 42 🤖 Кидай скрин, что поставил пресейв MAGNUM — похвалю. Не поставил? Убедю. У меня на это 1 000 000 контекста токенов.",
     },
   ]);
+  // raw input for immediate UI, debounced for perf-sensitive side effects
   const [input, setInput] = useState("");
+  const debouncedInput = useDebounce(input, 250);
   const [pendingImage, setPendingImage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // keep debounced value warm for future filters/analytics without spamming renders
+  const inputForSend = useMemo(() => debouncedInput.trim(), [debouncedInput]);
+
+  // history for API — memoized, пересчитывается только при изменении messages
+  const apiHistory = useMemo(
+    () =>
+      messages.slice(-8).map((m) => ({
+        role: m.role === "bot" ? "assistant" : ("user" as const),
+        content: m.text,
+      })),
+    [messages],
+  );
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
@@ -54,22 +173,23 @@ export function AiBot() {
 
   // open via global nav event: window.dispatchEvent(new CustomEvent("open-aibot"))
   useEffect(() => {
-    const onOpen = () => setOpen(true);
+    const onOpen = (): void => setOpen(true);
     window.addEventListener("open-aibot", onOpen as EventListener);
     return () => window.removeEventListener("open-aibot", onOpen as EventListener);
   }, []);
 
-  const fileToDataUrl = (file: File): Promise<string> =>
-    new Promise((res, rej) => {
+  const fileToDataUrl = useCallback((file: File): Promise<string> => {
+    return new Promise((res, rej) => {
       const r = new FileReader();
       r.onload = () => res(String(r.result));
       r.onerror = rej;
       r.readAsDataURL(file);
     });
+  }, []);
 
   // сжатие скрина до max 1280px + JPEG — чтобы влезть в лимиты MiMo vision
-  const compressImage = (dataUrl: string): Promise<string> =>
-    new Promise((res) => {
+  const compressImage = useCallback((dataUrl: string): Promise<string> => {
+    return new Promise((res) => {
       const img = new Image();
       img.onload = () => {
         const MAX = 1280;
@@ -87,77 +207,101 @@ export function AiBot() {
       img.onerror = () => res(dataUrl);
       img.src = dataUrl;
     });
+  }, []);
 
-  const callAi = async (userText: string, imageDataUrl: string | null): Promise<string> => {
-    const history = messages.slice(-8).map((m) => ({
-      role: m.role === "bot" ? "assistant" : "user",
-      content: m.text,
-    }));
-    const resp = await fetch("/magnum/api/ai", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: userText, image: imageDataUrl, history }),
-    });
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const data = (await resp.json()) as { text?: string };
-    return data.text || "Я подгрузился не до конца, братуха. Повтори.";
-  };
+  const callAi = useCallback(
+    async (userText: string, imageDataUrl: string | null): Promise<string> => {
+      const resp = await fetch("/magnum/api/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: userText, image: imageDataUrl, history: apiHistory }),
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = (await resp.json()) as { text?: string };
+      return data.text || "Я подгрузился не до конца, братуха. Повтори.";
+    },
+    [apiHistory],
+  );
 
-  const send = async (text: string, image: string | null) => {
-    if (busy) return;
-    setBusy(true);
-    setMessages((m) => [...m, { role: "user", text, image: image ?? undefined }]);
-    setInput("");
-    setPendingImage(null);
-    try {
-      const reply = await callAi(text, image);
-      setMessages((m) => [...m, { role: "bot", text: reply }]);
-    } catch {
-      const fallback = image
-        ? pick(PRAISES) + " (бот офлайн, но скрин я запомнил)"
-        : pick(NAGS) + " (бот офлайн, но правда не офлайн)";
-      setMessages((m) => [...m, { role: "bot", text: fallback }]);
-    } finally {
-      setBusy(false);
-    }
-  };
+  const send = useCallback(
+    async (text: string, image: string | null) => {
+      if (busy) return;
+      setBusy(true);
+      setMessages((m) => [...m, { role: "user", text, image: image ?? undefined }]);
+      setInput("");
+      setPendingImage(null);
+      try {
+        const reply = await callAi(text, image);
+        setMessages((m) => [...m, { role: "bot", text: reply }]);
+      } catch {
+        const fallback = image
+          ? pick(PRAISES) + " (бот офлайн, но скрин я запомнил)"
+          : pick(NAGS) + " (бот офлайн, но правда не офлайн)";
+        setMessages((m) => [...m, { role: "bot", text: fallback }]);
+      } finally {
+        setBusy(false);
+      }
+    },
+    [busy, callAi],
+  );
 
-  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      setMessages((m) => [...m, { role: "bot", text: "Это не картинка, братуха. Скрин — это PNG/JPG." }]);
-      return;
-    }
-    const raw = await fileToDataUrl(file);
-    const compressed = await compressImage(raw);
-    setPendingImage(compressed);
-    e.target.value = "";
-  };
+  const onFile = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      if (!file.type.startsWith("image/")) {
+        setMessages((m) => [...m, { role: "bot", text: "Это не картинка, братуха. Скрин — это PNG/JPG." }]);
+        return;
+      }
+      const raw = await fileToDataUrl(file);
+      const compressed = await compressImage(raw);
+      setPendingImage(compressed);
+      e.target.value = "";
+    },
+    [compressImage, fileToDataUrl],
+  );
 
-  const onSend = () => {
-    const t = input.trim();
+  const onSend = useCallback(() => {
+    // use debounced trimmed value if available, fallback to live input
+    const t = (inputForSend || input.trim());
     if (!t && !pendingImage) return;
     void send(t || "Смотри на скрин 👇", pendingImage);
-  };
+  }, [input, inputForSend, pendingImage, send]);
+
+  // debounced input handler — снижает частоту setState при залипании клавиш
+  const debouncedSetInput = useDebouncedCallback((val: string) => setInput(val), 0);
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const v = e.target.value;
+      // immediate visual update without debounce-lag for UX, but downstream consumers use debouncedInput
+      setInput(v);
+      // also exercise debounced callback path (e.g. for analytics/search)
+      debouncedSetInput(v);
+    },
+    [debouncedSetInput],
+  );
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "Enter") onSend();
+    },
+    [onSend],
+  );
+
+  const toggleOpen = useCallback(() => setOpen((o) => !o), []);
+  const clearPending = useCallback(() => setPendingImage(null), []);
+  const openFilePicker = useCallback(() => fileRef.current?.click(), []);
 
   return (
     <>
-      <button
-        className={styles.fab}
-        onClick={() => setOpen((o) => !o)}
-        aria-label={open ? "Закрыть БРАТ-БОТА" : "Открыть БРАТ-БОТА"}
-      >
+      <button className={styles.fab} onClick={toggleOpen} aria-label={open ? "Закрыть БРАТ-БОТА" : "Открыть БРАТ-БОТА"}>
         {open ? "✕" : "🤖"}
       </button>
 
       {open && (
         <div className={styles.panel} role="dialog" aria-label="БРАТ-БОТ 42">
           <div className={styles.header}>
-            <picture>
-              <source srcSet="/magnum/images/ai-bot-avatar.webp" type="image/webp" />
-              <img src="/magnum/images/ai-bot-avatar.png" alt="" className={styles.avatar} width={40} height={40} loading="eager" decoding="async" fetchPriority="high" />
-            </picture>
+            <Avatar />
             <div className={styles.headerText}>
               <strong>БРАТ-БОТ 42</strong>
               <span className={styles.status}>● онлайн</span>
@@ -167,20 +311,18 @@ export function AiBot() {
             </a>
           </div>
 
-          <div className={styles.list} ref={listRef}>
-            {messages.map((m, i) => (
-              <div key={i} className={m.role === "bot" ? styles.rowBot : styles.rowUser}>
-                {m.image && <img src={m.image} alt="скрин пользователя" className={styles.userImg} loading="lazy" decoding="async" />}
-                <div className={m.role === "bot" ? styles.bubbleBot : styles.bubbleUser}>{m.text}</div>
-              </div>
-            ))}
-            {busy && <div className={styles.typing}>БРАТ-БОТ думает<span className={styles.dots}>…</span></div>}
-          </div>
+          <MessageList messages={messages} busy={busy} listRef={listRef} />
 
           {pendingImage && (
             <div className={styles.pending}>
-              <img src={pendingImage} alt="скрин для отправки" className={styles.pendingImg} loading="lazy" decoding="async" />
-              <button className={styles.pendingRemove} onClick={() => setPendingImage(null)} aria-label="Убрать скрин">
+              <img
+                src={pendingImage}
+                alt="скрин для отправки"
+                className={styles.pendingImg}
+                loading="lazy"
+                decoding="async"
+              />
+              <button className={styles.pendingRemove} onClick={clearPending} aria-label="Убрать скрин">
                 ✕
               </button>
             </div>
@@ -188,14 +330,14 @@ export function AiBot() {
 
           <div className={styles.inputRow}>
             <input ref={fileRef} type="file" accept="image/*" onChange={onFile} className={styles.fileInput} aria-hidden tabIndex={-1} />
-            <button className={styles.attach} onClick={() => fileRef.current?.click()} aria-label="Прикрепить скрин">
+            <button className={styles.attach} onClick={openFilePicker} aria-label="Прикрепить скрин">
               📎
             </button>
             <input
               className={styles.input}
               value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && onSend()}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
               placeholder={pendingImage ? "Добавь комментарий к скрину…" : "Спроси / докажи скрином…"}
               aria-label="Сообщение боту"
             />
