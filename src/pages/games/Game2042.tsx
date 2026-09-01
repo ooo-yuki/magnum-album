@@ -164,14 +164,14 @@ const TILE_LORE: Record<number, { title: string; lore: string }> = {
   4:    { title: "4 — Квадрат",           lore: "Стабильность. База, на которой строится хип-хоп." },
   8:    { title: "8 — Октава",            lore: "Взлёт на октаву выше. Туса медуза начинается." },
   16:   { title: "16 — Фирменный флоу",   lore: "Шестнадцать строк — классический куплет 5opka." },
-  32:   { title: "32 — Двойной куплет",   lore: "Фристайл без остановки. Энергия Twitch 28K." },
-  64:   { title: "64 — Бит на репит",     lore: "На репите у каждого братухи. CLAY вайб." },
-  128:  { title: "128 — Саундчек",        lore: "Звук заполняет зал. NDA-тур на подходе." },
-  256:  { title: "256 — Превью",          lore: "Половина пути к MAGNUM. Фанаты уже гадают." },
-  512:  { title: "512 — Хайп",            lore: "TikTok 8K клипов. Алгоритмы сдались." },
-  1024: { title: "1024 — Предрелиз",      lore: "За день до дропа. Сервера Bandlink дрожат." },
-  2048: { title: "42 — MAGNUM",           lore: "Магическое число. 5 пуль — 5 треков. Пресейв открыт!" },
-  4096: { title: "84 — Легенда",          lore: "За гранью. Ты уже не игрок — ты братуха 42." },
+  32:   { title: "32 — Двойной куплет",   lore: "Фристайл без остановки. ТУСА МЕДУЗА 14.08 — на репите." },
+  64:   { title: "64 — Бит на репит",     lore: "На репите у каждого братухи. CLAY 03.04 вайб." },
+  128:  { title: "128 — Саундчек",        lore: "VPN хук заполняет зал. Тур 5opka 2026 на подходе." },
+  256:  { title: "256 — Превью",          lore: "Половина пути к MAGNUM. 5 пуль — 5 треков, пресейв https://music.thefence.me/psmagnum." },
+  512:  { title: "512 — Хайп",            lore: "TikTok 8K клипов про ТУСА МЕДУЗА. Алгоритмы сдались." },
+  1024: { title: "1024 — Предрелиз",      lore: "За день до дропа MAGNUM. Сервера Bandlink дрожат." },
+  2048: { title: "42 — MAGNUM",           lore: "Магическое число. 5 пуль = 14.08 ТУСА МЕДУЗА + VPN + CLAY + 42 + MAGNUM." },
+  4096: { title: "84 — Легенда 42",       lore: "За гранью. Ты уже не игрок — ты братуха 42. Пресейв закрыт — ты успел!" },
 };
 
 // ── WebAudio ─────────────────────────────────────────────────────────────
@@ -262,6 +262,9 @@ export function Game2042() {
   const [mergeStreak, setMergeStreak] = useState(0);
   const [lastMergeVal, setLastMergeVal] = useState<number | null>(null);
   const [confetti, setConfetti] = useState<Confetti[]>([]);
+  const [dailyMode, setDailyMode] = useState(false);
+  const [shareMsg, setShareMsg] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
   // undo stack: last 6 states
   const historyRef = useRef<Array<{ grid: Grid; score: number; moves: number }>>([]);
   const touchRef = useRef<{ x: number; y: number } | null>(null);
@@ -273,6 +276,23 @@ export function Game2042() {
   gridRef.current = grid;
   scoreRef.current = score;
 
+  // submit best to Neon magnum_game_scores (game=2042)
+  async function submitScore(s: number) {
+    if (submitted || s < 100) return;
+    setSubmitted(true);
+    try {
+      const tk = (()=>{ try{ return localStorage.getItem("auth_token")||localStorage.getItem("magnum_token")||"";}catch{return "";}})();
+      await fetch("/magnum/api/games/submit", { method: "POST", headers: { "Content-Type":"application/json", ...(tk?{Authorization:"Bearer "+tk}:{}) }, body: JSON.stringify({ game:"2042", score:s }) });
+    } catch {}
+  }
+  async function shareResult() {
+    const txt = `🧩 ПАЗЛ 2042 — ${score} очков, макс ${curMax>=WIN_TILE?"42":curMax}, ${moves} ходов! Собери 42 на magnum — пресейв https://music.thefence.me/psmagnum`;
+    try {
+      if (navigator.share) await navigator.share({ title: "ПАЗЛ 2042 — MAGNUM", text: txt, url: "https://music.thefence.me/psmagnum" });
+      else { await navigator.clipboard.writeText(txt); setShareMsg("Скопировано!"); setTimeout(()=>setShareMsg(null),1600); }
+    } catch {}
+  }
+  const efficiency = moves ? (score / moves).toFixed(1) : "0";
   const curMax = maxTile(grid);
   const curLore = TILE_LORE[curMax] ?? TILE_LORE[2048]!;
 
@@ -311,7 +331,7 @@ export function Game2042() {
     const nt = maxTile(withNew);
     if (nt > bestTile) { setBestTile(nt); try { localStorage.setItem("2042-bestTile", String(nt)); } catch {} }
     if (hasWon(withNew) && !keepPlaying) {
-      setState("win"); playWin();
+      setState("win"); playWin(); void submitScore(newScore);
       // confetti burst
       const colors = ["#ff2d55","#ffcc00","#00ff88","#5865f2","#a855f7","#fff"];
       const burst: Confetti[] = Array.from({ length: 44 }, () => ({
@@ -323,7 +343,7 @@ export function Game2042() {
       setConfetti(burst);
     } else if (!canMove(withNew)) {
       setState("over");
-      playGameOver();
+      playGameOver(); void submitScore(newScore);
       setMergeStreak(0);
       if (pageRef.current) gsap.to(pageRef.current, { x: 5, duration: 0.05, yoyo: true, repeat: 7, ease: "power1.inOut", onComplete: () => gsap.set(pageRef.current!, { x: 0 }) });
     }
@@ -338,7 +358,7 @@ export function Game2042() {
     gsap.from(boardRef.current.querySelectorAll(`.${styles.tile}`), { scale: 0.8, opacity: 0, stagger: 0.014, duration: 0.32, ease: "back.out(1.4)", delay: 0.12 });
   }, []);
 
-  // confetti animation loop
+  // confetti animation loop — fixed: no nested useEffect
   useEffect(() => {
     if (confetti.length === 0) return;
     let raf = 0;
@@ -365,37 +385,35 @@ export function Game2042() {
       else setConfetti([]);
     };
     raf = requestAnimationFrame(draw);
-  
-  // GSAP spec: y24 stagger 0.12 ScrollTrigger batch + reduced-motion gate + gsap.context cleanup + hover y:-4 RGB glow
-  useEffect(() => {
-    const root: HTMLElement | null = document.querySelector<HTMLElement>("[data-gsap-root]") || (document.body as unknown as HTMLElement);
-    if (!root) return;
-    if (prefersReducedMotion()) {
-      const els = root.querySelectorAll<HTMLElement>(".card, [data-card]");
-      if (els.length) gsap.set(els, { y: 0, opacity: 1, clearProps: "transform" });
-      return;
-    }
-    const ctx = gsap.context(() => {
-      const cards = root.querySelectorAll<HTMLElement>(".card, [data-card], .tile, .cell");
-      if (cards.length) {
-        gsap.set(cards, { y: 24, opacity: 0 });
-        ScrollTrigger.batch(cards, {
-          onEnter: (batch) => gsap.to(batch, { y: 0, opacity: 1, stagger: 0.12, duration: 0.55, ease: "power2.out", overwrite: true }),
-          start: "top 92%",
-          once: true,
-        });
-      }
-      const heroEls = root.querySelectorAll<HTMLElement>(".hero > *, [data-hero] > *");
-      if (heroEls.length) {
-        gsap.set(heroEls, { y: 24, opacity: 0 });
-        gsap.to(heroEls, { y: 0, opacity: 1, stagger: 0.12, duration: 0.55, ease: "power2.out", delay: 0.05, overwrite: true });
-      }
-    }, root);
-    return () => ctx.revert();
-  }, []);
-
-  return () => cancelAnimationFrame(raf);
+    return () => cancelAnimationFrame(raf);
   }, [confetti]);
+
+  // ── MAGNUM DAAILY CHALLENGE — seed by date, submit to Neon ──
+  const DAILY_KEY = "2042-daily"; void DAILY_KEY;
+  function dailySeed(): number {
+    const d = new Date();
+    return d.getFullYear()*10000 + (d.getMonth()+1)*100 + d.getDate();
+  }
+  function mulberry32(a: number) {
+    return function() {
+      let t = a += 0x6D2B79F5;
+      t = Math.imul(t ^ t >>> 15, t | 1);
+      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  function seededBoard(seed: number): Grid {
+    const rnd = mulberry32(seed);
+    let g = emptyGrid();
+    for(let k=0;k<2;k++){
+      const empty: [number,number][]=[];
+      for(let r=0;r<SIZE;r++) for(let c=0;c<SIZE;c++) if(g[r]![c]===0) empty.push([r,c]);
+      if(!empty.length) break;
+      const [r,c]=empty[Math.floor(rnd()*empty.length)]!;
+      g[r]![c]=rnd()<0.9?2:4;
+    }
+    return g;
+  }
 
   // keyboard — arrows + WASD
   useEffect(() => {
@@ -429,8 +447,12 @@ export function Game2042() {
     touchRef.current = null;
   }, [doMove]);
 
+  const startDaily = useCallback(() => {
+    setGrid(seededBoard(dailySeed()));
+    setDailyMode(true); setScore(0); setMoves(0); setHint(null); setMergeStreak(0); setLastMergeVal(null); setConfetti([]); setShake(0); historyRef.current=[]; setState("playing"); setKeepPlaying(false); setSubmitted(false);
+  }, []);
   const restart = useCallback(() => {
-    setGrid(addRandom(addRandom(emptyGrid())));
+    if (dailyMode) { setGrid(seededBoard(dailySeed()+moves+score)); } else setGrid(addRandom(addRandom(emptyGrid())));
     setScore(0);
     setMoves(0);
     setHint(null);
@@ -440,9 +462,10 @@ export function Game2042() {
     setShake(0);
     historyRef.current = [];
     setState("playing");
-    setKeepPlaying(false);
+    setKeepPlaying(false); setSubmitted(false);
+    if (!dailyMode) setDailyMode(false);
     if (boardRef.current) gsap.from(boardRef.current.querySelectorAll(`.${styles.tile}`), { scale: 0.7, opacity: 0, stagger: 0.015, duration: 0.28, ease: "back.out(1.6)" });
-  }, []);
+  }, [dailyMode, moves, score]);
 
   const undo = useCallback(() => {
     const prev = historyRef.current.pop();
@@ -494,6 +517,13 @@ export function Game2042() {
         <div className={styles.stat}><span>Ходы</span><strong>{moves}</strong></div>
         <div className={styles.stat}><span>Рекорд</span><strong>{best}</strong></div>
         <div className={styles.stat}><span>Плитка</span><strong style={{ color: tileColor(curMax) }}>{curMax >= WIN_TILE ? "42" : curMax}</strong></div>
+        <div className={styles.stat}><span>Эффект.</span><strong style={{ color: Number(efficiency)>55?"#ffcc00":"rgba(240,240,240,0.7)" }}>{efficiency}</strong></div>
+      </div>
+      {dailyMode && <div style={{ fontSize:"0.78rem", fontWeight:800, color:"#00ff88", letterSpacing:"0.06em", marginBottom:6 }}>📅 ЕЖЕДНЕВНЫЙ ЧЕЛЛЕНДЖ — {dailySeed()} · одна попытка в день — топ попадёт в рейтинг MAGNUM</div>}
+      <div style={{ display:"flex", gap:8, justifyContent:"center", flexWrap:"wrap", marginBottom:10 }}>
+        <button onClick={startDaily} style={{ padding:"0.5rem 1rem", borderRadius:999, fontWeight:800, fontSize:"0.82rem", cursor:"pointer", border:"1px solid rgba(0,255,136,0.32)", background: dailyMode?"rgba(0,255,136,0.16)":"rgba(255,255,255,0.06)", color: dailyMode?"#00ff88":"rgba(240,240,240,0.7)" }}>📅 Ежедневный челлендж</button>
+        <button onClick={shareResult} style={{ padding:"0.5rem 1rem", borderRadius:999, fontWeight:700, fontSize:"0.82rem", cursor:"pointer", border:"1px solid rgba(255,255,255,0.12)", background:"rgba(255,255,255,0.06)", color:"rgba(240,240,240,0.7)" }}>⤴ Поделиться</button>
+        {shareMsg && <span style={{ fontSize:"0.78rem", color:"#00ff88", alignSelf:"center" }}>{shareMsg}</span>}
       </div>
 
       <div className={styles.progress} aria-label="прогресс к 42" style={{ height: 6, background: "rgba(255,255,255,0.08)", borderRadius: 99, overflow: "hidden", maxWidth: 380, margin: "0 auto 10px" }}>
@@ -541,9 +571,10 @@ export function Game2042() {
       </div>
 
       <div className={styles.navRow}>
-        <button className={styles.restartBtn} onClick={undo} disabled={historyRef.current.length === 0} title="Отменить ход (Ctrl+Z)">↩ Отменить</button>
+        <button className={styles.restartBtn} onClick={undo} disabled={historyRef.current.length === 0} title="Отменить ход (Ctrl+Z)">↩ Отменить ({historyRef.current.length}/6)</button>
         <button className={styles.restartBtn} onClick={showHint}>💡 Подсказка (H)</button>
         <button className={styles.restartBtn} onClick={restart}>Заново</button>
+        <button className={styles.restartBtn} onClick={shareResult}>⤴ Поделиться</button>
         <Link to="/magnum/games" className={styles.back}>← К играм</Link>
       </div>
       <p style={{ fontSize: "0.7rem", color: "rgba(240,240,240,0.32)", marginTop: 10 }}>WASD / стрелки · свайп · H-подсказка · Ctrl+Z отмена · плитка 2048 = 42 MAGNUM</p>
@@ -552,8 +583,10 @@ export function Game2042() {
         <div className={styles.modal}>
           <div className={styles.modalCard}>
             <h2>🎉 42 СОБРАНО!</h2>
-            <p>{score} очков • {moves} ходов • {curLore.lore}</p>
+            <p>{score} очков • {moves} ходов • эффективность {efficiency} • {curLore.lore}</p>
+            <p style={{ fontSize:"0.78rem", color:"rgba(255,204,0,0.85)" }}>5 пуль MAGNUM: ТУСА МЕДУЗА 14.08 + VPN + CLAY 03.04 + 42 + MAGNUM — пресейв открыт</p>
             <a href={PRESAVE} target="_blank" rel="noreferrer" className={styles.presaveBtn}>Пресейв MAGNUM →</a>
+            <div style={{ display:"flex", gap:8, justifyContent:"center", marginBottom:8 }}><button className={styles.restartBtn} onClick={shareResult}>⤴ Поделиться результатом</button></div>
             <div className={styles.modalActions}>
               <button className={styles.playBtn} onClick={continuePlay}>Продолжить (к 4096)</button>
               <button className={styles.restartBtn} onClick={restart}>Заново</button>
@@ -566,7 +599,8 @@ export function Game2042() {
         <div className={styles.modal}>
           <div className={styles.modalCard}>
             <h2>💥 Ходов больше нет!</h2>
-            <p>{score} очков • макс {curMax} • рекорд {best} (плитка {bestTile >= WIN_TILE ? "42" : bestTile})</p>
+            <p>{score} очков • макс {curMax} • рекорд {best} (плитка {bestTile >= WIN_TILE ? "42" : bestTile}) • эффект. {efficiency}</p>
+            <div style={{ display:"flex", gap:8, justifyContent:"center", marginBottom:8, flexWrap:"wrap" }}><button className={styles.restartBtn} onClick={shareResult}>⤴ Поделиться</button><button className={styles.restartBtn} onClick={startDaily}>📅 Челлендж</button></div>
             <button className={styles.playBtn} onClick={restart}>Ещё попытка</button>
             <Link to="/magnum/games" className={styles.back}>← К играм</Link>
           </div>
