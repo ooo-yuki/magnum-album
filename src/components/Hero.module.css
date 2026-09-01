@@ -316,4 +316,19 @@
   .badgeDot, .btnPulse, .scrollIndicator span::after {
     animation: none !important;
   }
+  .titleScramble {
+    filter: none !important;
+  }
+}
+
+/* text-scramble glitch shimmer */
+.titleScramble {
+  filter: drop-shadow(0 0 18px rgba(255, 45, 85, 0.5)) drop-shadow(0 0 40px rgba(88, 101, 242, 0.3));
+  animation: scrambleFlicker 0.09s steps(2) infinite;
+}
+
+@keyframes scrambleFlicker {
+  0% { opacity: 1; }
+  50% { opacity: 0.92; }
+  100% { opacity: 1; }
 }

@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import styles from "./Hero.module.css";
@@ -7,6 +7,9 @@ gsap.registerPlugin(ScrollTrigger);
 
 const PRESAVE_URL =
   "https://music.yandex.ru/artist/7544304?utm_medium=copy_link&ref_id=41b45b35-e5b0-4286-9a53-2c1163828366";
+
+const SCRAMBLE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*!?";
+const TITLE_TARGET = "MAGNUM";
 
 export function Hero() {
   const sectionRef = useRef<HTMLElement>(null);
@@ -19,6 +22,28 @@ export function Hero() {
   const orb2Ref = useRef<HTMLDivElement>(null);
   const orb3Ref = useRef<HTMLDivElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
+  const [titleText, setTitleText] = useState(SCRAMBLE_CHARS.slice(0, TITLE_TARGET.length));
+
+  // text-scramble effect on mount
+  useEffect(() => {
+    let frame = 0;
+    const totalFrames = 18;
+    const interval = setInterval(() => {
+      frame++;
+      if (frame >= totalFrames) {
+        setTitleText(TITLE_TARGET);
+        clearInterval(interval);
+        return;
+      }
+      const revealed = Math.floor((frame / totalFrames) * TITLE_TARGET.length);
+      let text = TITLE_TARGET.slice(0, revealed);
+      for (let i = revealed; i < TITLE_TARGET.length; i++) {
+        text += SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
+      }
+      setTitleText(text);
+    }, 45);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -175,8 +200,8 @@ export function Hero() {
         Новый альбом · скоро
       </div>
 
-      <h1 className={styles.title} ref={titleRef}>
-        MAGNUM
+      <h1 className={`${styles.title} ${titleText !== TITLE_TARGET ? styles.titleScramble : ""}`} ref={titleRef}>
+        {titleText}
       </h1>
 
       <p className={styles.subtitle} ref={subtitleRef}>
