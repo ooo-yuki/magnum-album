@@ -5,6 +5,52 @@
 > Промо-сайт альбома **MAGNUM Пятерки** (5opka × 42 братухи). React + TypeScript + GSAP + Bun.
 > Формат: [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/). Версионирование — SemVer.
 
+## [0.3.4] — 2026-09-01 🎲 Blackjack Казино + Ачивки 10 + Промокоды — 3/10
+
+> **14 коммитов** `a7706c6` → `c146a7f` · **+1991 / −33** · **23 файла** · Blackjack x10 Легенда + 10 ачивок + 5 промокодов + Vault prod + 47→38M · рейтинг 3/10
+
+### 🎮 Игры — Blackjack42 казино-апгрейд
+
+- 🎰 **Blackjack42 — стрик x10 Легенда + конфетти-канвас** — `5775e8b` стрик **x10 «Легенда»**, **конфетти-канвас** + **GSAP раздача**, **стратегия-хинт**, **свайп** + **haptics** + **чип-саунд**, **12 ачивок** триггер — `src/pages/games/BlackjackGame.tsx` +82/−35, `drizzle/migrations/0008_notifications.sql` +16, `drizzle/schema.ts` +10, `server.ts` +77/−1
+
+### ✨ Фичи — Ачивки 10 + Промокоды 5
+
+- 🏆 **Профиль + 10 ачивок Neon** — `a7706c6` **10 ачивок** `first_presave/miner_100..duel` + `Neon magnum_achievements` + `GET /magnum/api/achievements/catalog` + `GET/POST /magnum/api/achievements` claim + `GET /magnum/api/profile` агрегат `coins/mining/daily/tx/presave/shop/cos/vault/ach/frame` — `drizzle/migrations/0007_achievements_profile.sql` +12, `drizzle/schema.ts` +7, `server.ts` +189/−1
+- 🎁 **Промокоды 5 — MAGNUM42/5OPKA/BRATUKHI/KUZYA/VIP42** — `ce981dc` **5 промокодов Neon** `magnum_promo_codes` + `GET /magnum/api/promo/catalog` + `POST /magnum/api/promo/redeem` + `GET /magnum/api/promo/my` + валидация + `rate limit` + **уведомления** — `drizzle/migrations/0009_promo_codes.sql` +38, `drizzle/schema.ts` +23, `server.ts` +118/−1, `src/pages/IdeasPage.tsx` +73/−7
+
+### ⚡ Перфоманс — 47M→38M bundle health
+
+- 🧹 **Stale dist cleanup + bundle health — 47M→38M** — `5beb9e9` **17 stale mains** удалены, `dist 47M→38M`, `sitemap 32`, `health 200` — `reports/perf-2026-09-01-1437.md` +73, `drizzle/migrations/0007_achievements_profile.sql` +12, `src/pages/games/BlackjackGame.tsx` +143/−2
+
+### 📖 Дока — факты + hype + readme
+
+- 📊 **+5 фактов +3 recaps Freakland** — `c146a7f` **Twitch 1M / SLAY 23-24 / Freakland Create 1.21.1 / CLAY пасхалка / Кузбасс −20K** + **3 recaps** `Freakland transcript:false` — `reports/data-2026-09-01-1446.md` +28, `research.md` +12, `src/pages/RecapsPage.tsx` +54
+- 💡 **Hype +3 идеи +5 queue** — `e0cf468` **duel kombo x4 / eco tome 8Q / skin forge 12 + craft** + **queue 5** — `docs/hype-queue.md` +7/−1, `reports/hype-2026-09-01-1440.md` +52
+- 📝 **Readme keeper 2915→2997** — `d869f30` **Tests 2915→2997 (23 files)**, **11→20 tables** `daily/tx/votes/bookmarks/ach/vault/notif/promo×2`, **+Vault/Ach/Promo** фичи, **Blackjack/Snake/Quiz/Stack** детали, `drizzle 0009` — `README.md` +13/−11
+
+### 🧪 Тесты / CI — 3009 passed
+
+- ✅ **3009 passed (24 файла) — promo presave daily/transfer + gallery 1502** — `3ed1a4a` `reports/test-2026-09-01-1447.md` +93, `tests/new-coverage-1502.test.ts` +188 + `tests/new-coverage-1445.test.ts` +124 — покрытие **promo/presave/daily/transfer + gallery 1502**
+- ✅ **3009 passed cover — missed tick** — `4c15476` `reports/test-2026-09-01-1446.md` +131 — стабильно **3009** (2962→3009 +47)
+- 🟢 **Health OK** — `e389ae4` `reports/health-2026-09-01-1440.md` +60 — **200/200 локально**
+- 🔐 **Auth check** — `d4c096a` `reports/auth-2026-09-01-1439.md` +153 — Neon `magnum_users/sessions` gate держится
+
+### 🖼️ Галерея — 8 файлов (WARN dup)
+
+- 🖼️ **8 файлов — WARN gallery-y2k-alias + gallery-dup** — `91f2cc2` + `9e53f73` watchdog **200/200/200 active/Up 8files** — `reports/watchdog-2026-09-01-1436.md` +63, `reports/watchdog-2026-09-01-1444.md` +79 — индексы `y2k→memphis/cyber` (§ BUG-2) + **promo-TOCTOU** (§ BUG-1) без рестарта, `tsc 0`
+
+### 🤖 Брат-бот
+
+- 🤖 без изменений в окне — бот стабилен, задачи ушли в **Blackjack/ачивки/промо** (след. инкремент — подсказки по **Vault + промокодам**)
+
+### 🐛 Известные баги → след. инкремент
+
+- ⚠️ **TOCTOU `server.ts:1284-1299`** — `handlePromoRedeem` 5 SQL без `BEGIN` + `magnum_promo_redemptions` без `UNIQUE(user_id,code)` — гонка `uses > max_uses` + двойное начисление (watchdog 14:44 BUG-1)
+- ⚠️ **Gallery `GalleryPage.tsx:39-40`** — `y2k-01/02→memphis`, `y2k-03→cyber`, `42-y2k-01.jpg ≡ 42-memphis-01.jpg` один PNG под двумя именами + `.jpg` содержит PNG (BUG-2)
+- 👁️ **Review 3/10** — `99048c7` `reports/review-2026-09-01-1436.md` +87 — спад с **10/10 → 3/10** (1442 строк/10м, норма после всплеска 22 коммитов)
+
+---
+
 ## [0.3.3] — 2026-09-01 🎰 Vault 42 + Quiz/Stack MAGNUM + GSAP 0.12 — 10/10
 
 > **22 коммита** `fea3f6e` → `9c53ad5` · **+2888 / −2708** · **46 файлов** · Vault лимиток + Quiz 24Q + Stack/Snake лор + GSAP 0.12 + P2 10k · рейтинг 10/10
