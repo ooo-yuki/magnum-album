@@ -1,0 +1,24 @@
+.page{max-width:1100px;margin:0 auto;padding:5rem 1.2rem 3rem}
+.header{text-align:center;margin-bottom:1.6rem}
+.badge{display:inline-block;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);border:1px solid rgba(255,45,85,.22);padding:.28rem .65rem;border-radius:999px;background:rgba(255,45,85,.06)}
+.header h1{margin:.7rem 0 .3rem;font-size:clamp(1.9rem,4vw,2.8rem);font-weight:900;letter-spacing:-.03em}
+.sub{color:rgba(240,240,240,.62);max-width:640px;margin:0 auto;line-height:1.5}
+.form{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:1rem;display:flex;flex-direction:column;gap:.6rem;margin-bottom:1.2rem}
+.form h2{font-size:1rem;margin:0}
+.input,.textarea{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px;color:#fff;padding:.6rem .7rem;font-size:.9rem;outline:none;width:100%}
+.input:focus,.textarea:focus{border-color:rgba(255,45,85,.5)}
+.submit{align-self:flex-start;background:var(--accent,#ff2d55);color:#fff;border:none;border-radius:999px;padding:.55rem 1rem;font-weight:700;cursor:pointer}
+.submit:disabled{opacity:.5}
+.msg{font-size:.8rem;color:#ffcc00}
+.loading{color:rgba(240,240,240,.5);text-align:center;padding:1rem}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.9rem}
+@media(max-width:860px){.grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.grid{grid-template-columns:1fr}}
+.card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:.9rem;display:flex;flex-direction:column;gap:.4rem}
+.top{display:flex;justify-content:space-between;align-items:center}
+.votes{font-weight:800;color:#ffcc00;font-size:.85rem}
+.status{font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:rgba(240,240,240,.45);border:1px solid rgba(255,255,255,.08);padding:.18rem .45rem;border-radius:999px}
+.title{font-size:1rem;font-weight:800;margin:0}
+.desc{font-size:.85rem;line-height:1.45;color:rgba(240,240,240,.7);margin:0;min-height:2.2rem}
+.vote{margin-top:.2rem;align-self:flex-start;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#fff;border-radius:999px;padding:.4rem .7rem;font-size:.8rem;font-weight:600;cursor:pointer}
+.vote:hover{border-color:rgba(255,45,85,.4)}
