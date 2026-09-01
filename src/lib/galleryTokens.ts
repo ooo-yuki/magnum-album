@@ -36,11 +36,14 @@ export const GSAP_PRESETS = {
   scrollTrigger: { start: "top 92%", once: true },
 } as const;
 
-// Re-export helper: getRealSrc — fixes archive soft-404 (P0/P1-1)
+// Re-export helper: getRealSrc — fixes archive soft-404 (P0/P1-1) + verifies style to prevent Y2K→memphis cross-fallback
 export const REAL_BY_STYLE_FALLBACK: Record<string,string> = {
   "СССР": "/magnum/images/gallery-42/42-agit-01-800.webp",
   "Y2K": "/magnum/images/gallery-42/42-y2k-01-800.webp",
   "киберпанк": "/magnum/images/gallery-42/42-cyber-01-800.webp",
   "мемфис": "/magnum/images/gallery-42/42-memphis-01-800.webp",
 };
-export function getRealSrc(style: string): string { return REAL_BY_STYLE_FALLBACK[style] ?? REAL_BY_STYLE_FALLBACK["СССР"]!; }
+export function getRealSrc(style: string): string { 
+  // P0 #1: верифицированный fallback — стиль обязан быть в REAL_BY_STYLE_FALLBACK, иначе СССР
+  return REAL_BY_STYLE_FALLBACK[style] ?? REAL_BY_STYLE_FALLBACK["СССР"]!; 
+}

@@ -313,10 +313,9 @@ async function handleIdeasVote(req: Request, idStr: string): Promise<Response> {
       // ledger: +1 coin for vote?
       return Response.json({ idea: rows[0], voted: true });
     }
-    // anon: allow vote but rate limited by IP, no dedup persistence
-    const rows = await sql`UPDATE magnum_ideas SET votes = COALESCE(votes,0) + 1 WHERE id = ${id} RETURNING *`;
-    if (rows.length === 0) return Response.json({ error: "not found" }, { status: 404 });
-    return Response.json({ idea: rows[0], anon: true });
+    // P0 #4: anon vote blocked — requires auth to prevent IP-rotation farm (was anon votes+1 without dedup)
+    if (!authed) return Response.json({ error: "unauthorized — войди чтобы голосовать" }, { status: 401 });
+    // dead code removed: anon branch no longer allowed
   } catch (e) {
     console.error("[ideas vote] failed", e);
     return Response.json({ error: "db error" }, { status: 500 });
@@ -486,13 +485,8 @@ const SHOP_PRICES: Record<string, number> = {
 
 function getSkinPrice(skinId: string): number | null {
   if (SHOP_PRICES[skinId] != null) return SHOP_PRICES[skinId];
-  // fallback pattern: infer by substring
-  if (skinId.includes("1420") || skinId.includes("legendary")) return 1420;
-  if (skinId.includes("420") || skinId.includes("epic")) return 420;
-  if (skinId.includes("142") || skinId.includes("rare")) return 142;
-  if (skinId.includes("42") || skinId.includes("common") || skinId.includes("basic")) return 42;
-  // generic fallback 42 for any custom skin
-  return 42;
+  // P0 #5: strict — no heuristic fallback (was substring 42/142/etc allowed price bypass 13-33% discount abuse)
+  return null;
 }
 
 async function handleShopBuy(req: Request): Promise<Response> {
@@ -683,7 +677,7 @@ export function isPrismCosmetic(id:string):boolean{ return PRISM_IDS.has(id); }
 export const PRISM_CATALOG = COSMETICS_CATALOG.filter(c=>c.id.includes("prism"));
 function getCosmeticPrice(id: string): number | null { return COSMETICS_CATALOG.find(c=>c.id===id)?.price ?? null; }
 function getCosmeticSlot(id: string): CosmeticSlot | null { return COSMETICS_CATALOG.find(c=>c.id===id)?.slot ?? null; }
-function validateCosmeticId(id: unknown): string | null { if(typeof id!=="string") return null; const sv=id.trim(); if(!sv||sv.length>64||!/^[a-z0-9-]+$/.test(sv)) return null; return sv; }
+function validateCosmeticId(id: unknown): string | null { if(typeof id!=="string") return null; const sv=id.trim(); if(!sv||sv.length<2||sv.length>64||!/^[a-z0-9-]{2,64}$/.test(sv)) return null; if(sv.startsWith("-")||sv.endsWith("-")||sv.includes("--")) return null; return sv; }
 async function handleCosmeticCatalog(): Promise<Response> { return Response.json({ catalog: COSMETICS_CATALOG, count: COSMETICS_CATALOG.length }); }
 async function handleCosmeticInventory(req: Request): Promise<Response> {
   const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
@@ -802,7 +796,8 @@ export const SHOP_BUNDLES: ShopBundle[] = [
   { id:"bundle-void",     name:"Войд-сет",        desc:"Войд-рамка + Туманность + VIP", emoji:"🕳️", items:["frame-void","banner-nebula","title-vip"], slots:["frame","banner","title"], price:2800, origPrice:3220, rarity:"legendary", tag:"−13%" },
   { id:"bundle-full42",   name:"FULL 42",         desc:"6 хитов: Лиса/Сова/Акула + Голо/Holo + MAGNUM", emoji:"💎", items:["fox","owl","shark","frame-holo","banner-magnum","title-magnum"], slots:["skin","skin","skin","frame","banner","title"], price:980, origPrice:1168, rarity:"epic", tag:"−16%" },
 ];
-export function isValidBundleId(v:unknown):string|null{ if(typeof v!=="string")return null; const s=v.trim(); if(!s||s.length>40||!/^[a-z0-9-]+$/.test(s))return null; return s; }
+export function isValidBundleId(v:unknown):string|null{ if(typeof v!=="string")return null; const s=v.trim(); if(!s||s.length<2||s.length>40||!/^[a-z0-9-]{2,40}$/.test(s))return null; if(s.startsWith("-")||s.endsWith("-")||s.includes("--"))return null; // P0 #5 sync with ShopPage.tsx:114 — min 2, no 1-char degenerate keys
+ return s; }
 export function getBundleById(id:string):ShopBundle|null{ return SHOP_BUNDLES.find(b=>b.id===id)??null; }
 async function handleShopBundleCatalog():Promise<Response>{ return Response.json({bundles:SHOP_BUNDLES,count:SHOP_BUNDLES.length}); }
 async function handleShopBundleBuy(req:Request):Promise<Response>{
@@ -2269,8 +2264,10 @@ async function handleAi(req: Request): Promise<Response> {
   const ledgerPromise = (async () => {
     try {
       const sql = getSql();
-      // таблица создаётся миграцией 0017; на старых инстансах — IF NOT EXISTS без DDL в hot path позже
-      await sql`INSERT INTO magnum_ai_usage (user_id, ip, has_image, model, tokens_requested) VALUES (${aiUser.id}, ${ip}, ${imageDataUrl ? true : false}, ${MIMO_MODEL}, 400)`;
+      // P0 #2: aiUser.id safe — auth-gate guarantees non-null; fallback to null if race (schema allows NULL)
+      const uid: number | null = (aiUser as { id: number } | null)?.id ?? null;
+      if (uid == null) return;
+      await sql`INSERT INTO magnum_ai_usage (user_id, ip, has_image, model, tokens_requested) VALUES (${uid}, ${ip}, ${imageDataUrl ? true : false}, ${MIMO_MODEL}, 400)`;
     } catch (e) {
       // таблица может отсутствовать до применения миграции — молча игнор, есть in-memory rateLimit
       const msg = e instanceof Error ? e.message : String(e);
