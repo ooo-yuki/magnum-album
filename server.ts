@@ -2120,6 +2120,56 @@ async function handleDuelSeasonTop(req: Request, idStr: string): Promise<Respons
   }catch(e){ console.error("[duel season top] failed",e); return Response.json({error:"db error"},{status:500}); }
 }
 const MINING_BOOST_PRICE=142; const MINING_BOOST_MS=60_000; const miningBoostUntil=new Map<number,number>();
+// ---- DUEL MAGMA 42: season 7d leaderboard + ELO + wager ----
+async function handleDuel42Leaderboard(req: Request): Promise<Response> {
+  try {
+    const sql=getSql();
+    const url=new URL(req.url);
+    const limit=Math.min(30,Math.max(1,Number(url.searchParams.get("limit")||20)));
+    // season 7d: game=duel42 + created_at > now-7d
+    const rows=await sql`SELECT player, score, created_at, s.skin_id as avatar FROM magnum_leaderboard l LEFT JOIN magnum_users u ON u.username=l.player LEFT JOIN magnum_shop_inventory s ON s.user_id=u.id AND s.equipped=true WHERE l.game='duel42' AND l.created_at > now() - interval '7 days' ORDER BY l.score DESC, l.created_at ASC LIMIT ${limit}`;
+    const board=rows.map((r:unknown)=>{const x=r as {player:string;score:number;created_at:string;avatar:string|null}; return {player:String(x.player),score:Number(x.score),created_at:x.created_at,avatar:x.avatar||null};});
+    // top 3 crown bonus info
+    return Response.json({ leaderboard:board, season:"7d", game:"duel42", count:board.length, top3Bonus:1420, crown:"magma-crown-42" });
+  } catch(e){ console.error("[duel42 lb] failed",e); return Response.json({error:"db error"},{status:500}); }
+}
+async function handleDuel42Elo(req: Request): Promise<Response> {
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401}); const user=await getUserByToken(token); if(!user) return Response.json({error:"unauthorized"},{status:401});
+  try{
+    const sql=getSql();
+    await sql`CREATE TABLE IF NOT EXISTS magnum_duel42_elo (user_id integer PRIMARY KEY REFERENCES magnum_users(id) ON DELETE CASCADE, elo integer NOT NULL DEFAULT 1000, updated_at timestamp DEFAULT now())`;
+    const r=await sql`SELECT elo FROM magnum_duel42_elo WHERE user_id=${user.id} LIMIT 1`;
+    const elo=r.length?Number((r[0] as {elo:number}).elo):1000;
+    const top=await sql`SELECT u.username, e.elo FROM magnum_duel42_elo e JOIN magnum_users u ON u.id=e.user_id ORDER BY e.elo DESC LIMIT 20`;
+    return Response.json({ elo, top: top.map((x:unknown)=>{const r=x as {username:string;elo:number}; return {username:String(r.username),elo:Number(r.elo)};}) });
+  }catch(e){ console.error("[duel42 elo] failed",e); return Response.json({error:"db error"},{status:500}); }
+}
+async function handleDuel42Wager(req: Request): Promise<Response> {
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401}); const user=await getUserByToken(token); if(!user) return Response.json({error:"unauthorized"},{status:401});
+  const ip=getClientIp(req); if(!checkRateLimit(`duel42:wager:${user.id}:${ip}`,12,60_000)) return Response.json({error:"rate limited"},{status:429});
+  let body:{wager?:unknown;roomId?:unknown}; try{body=(await req.json()) as typeof body;}catch{return Response.json({error:"Invalid JSON"},{status:400});}
+  const wagerRaw=Number(body.wager ?? 0);
+  const wager=[0,42,142,420].includes(wagerRaw)?wagerRaw:null;
+  if(wager===null) return Response.json({error:"wager must be 0/42/142/420"},{status:400});
+  if(wager===0) return Response.json({ok:true,wager:0});
+  try{
+    const sql=getSql();
+    const cr=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+    let bal=cr.length?Number((cr[0] as {balance:number}).balance):1000;
+    if(cr.length===0) { await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${user.id},1000) ON CONFLICT (user_id) DO NOTHING`; bal=1000; }
+    if(bal<wager) return Response.json({error:"not enough coins",required:wager,balance:bal},{status:402});
+    await sql`UPDATE magnum_coins SET balance=balance-${wager} WHERE user_id=${user.id}`;
+    await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${-wager},'duel42_wager_hold',${JSON.stringify({wager,roomId:String(body.roomId||"")})}::jsonb)`;
+    const upd=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+    const nb=Number((upd[0] as {balance:number}).balance);
+    // attach to in-memory room if exists
+    if(typeof body.roomId==="string" && body.roomId){
+      const r=rooms.get(body.roomId) || rooms.get(`room:${body.roomId}`);
+      if(r) r.wager=Math.max(r.wager,wager);
+    }
+    return Response.json({ok:true,wager,balance:nb});
+  }catch(e){ console.error("[duel42 wager] failed",e); return Response.json({error:"db error"},{status:500}); }
+}
 async function handleMiningBoost(req: Request): Promise<Response> {
   const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
   const user=await getUserByToken(token); if(!user) return Response.json({error:"unauthorized"},{status:401});
@@ -2156,15 +2206,18 @@ async function handleHealth(): Promise<Response> {
       sql`SELECT count(*)::int as c FROM magnum_referrals`,
       sql`SELECT count(*)::int as c FROM magnum_duel_history`,
     ]);
-    let exchangesCount = 0; let commentsCount = 0; let reportsCount = 0; let modLogCount = 0; let chatCount = 0; let followsCount = 0; let aiUsageCount = 0;
+    let exchangesCount = 0; let commentsCount = 0; let reportsCount = 0; let modLogCount = 0; let chatCount = 0;
     const healthWarnings: string[] = [];
     try { const r = await sql`SELECT count(*)::int as c FROM magnum_mining_exchanges`; exchangesCount = Number((r[0] as {c:number}).c); } catch (e) { console.error("[health] mining_exchanges count failed", e); healthWarnings.push("mining_exchanges: drift"); }
     try { const r = await sql`SELECT count(*)::int as c FROM magnum_idea_comments`; commentsCount = Number((r[0] as {c:number}).c); } catch (e) { console.error("[health] idea_comments count failed", e); healthWarnings.push("idea_comments: drift"); }
     try { const r = await sql`SELECT count(*)::int as c FROM magnum_reports`; reportsCount = Number((r[0] as {c:number}).c); } catch (e) { console.error("[health] reports count failed", e); healthWarnings.push("reports: drift"); }
     try { const r = await sql`SELECT count(*)::int as c FROM magnum_moderation_log`; modLogCount = Number((r[0] as {c:number}).c); } catch (e) { console.error("[health] mod_log count failed", e); healthWarnings.push("moderation_log: drift"); }
     try { const r = await sql`SELECT count(*)::int as c FROM magnum_chat_messages`; chatCount = Number((r[0] as {c:number}).c); } catch (e) { console.error("[health] chat_messages count failed", e); healthWarnings.push("chat_messages: drift"); }
-    try { const r = await sql`SELECT count(*)::int as c FROM magnum_follows`; followsCount = Number((r[0] as {c:number}).c); } catch (e) { console.error("[health] follows count failed", e); healthWarnings.push("magnum_follows 42P01 drift"); }
-    try { const r = await sql`SELECT count(*)::int as c FROM magnum_ai_usage`; aiUsageCount = Number((r[0] as {c:number}).c); } catch (e) { console.error("[health] ai_usage count failed", e); healthWarnings.push("magnum_ai_usage 42P01 drift"); }
+    // P0: follows/aiUsage must fail health honestly (500) on 42P01 — no try/catch masking
+    const followsRes = await sql`SELECT count(*)::int as c FROM magnum_follows`;
+    const followsCount = Number((followsRes[0] as {c:number}).c);
+    const aiUsageRes = await sql`SELECT count(*)::int as c FROM magnum_ai_usage`;
+    const aiUsageCount = Number((aiUsageRes[0] as {c:number}).c);
     return Response.json({
       ok: true,
       ts: new Date().toISOString(),
@@ -2392,7 +2445,7 @@ function wsChatRateOk(wsId: string): boolean {
   return true;
 }
 
-// ---- WebSocket duel (2-4 игрока) ----
+// ---- WebSocket duel (2-4 игрока) + DUEL MAGMA 42 2-4 magma x10 lava-spike ghost wager ELO heartbeat ----
 type WSData = { id: string; username: string; roomId: string | null };
 
 type DuelRoom = {
@@ -2404,16 +2457,25 @@ type DuelRoom = {
   startedAt: number | null;
   timer: ReturnType<typeof setTimeout> | null;
   durationSec: number;
+  // MAGMA 42 extensions
+  wager: number;
+  magma: Map<import("bun").ServerWebSocket<WSData>, number>;
+  lastClickAt: Map<import("bun").ServerWebSocket<WSData>, number>;
+  heldMaxSince: Map<import("bun").ServerWebSocket<WSData>, number | null>;
+  suspect: Set<import("bun").ServerWebSocket<WSData>>;
+  overheatUntil: Map<import("bun").ServerWebSocket<WSData>, number>;
+  heartbeat: ReturnType<typeof setInterval> | null;
+  clickCounts: Map<import("bun").ServerWebSocket<WSData>, number[]>;
 };
 
 const rooms = new Map<string, DuelRoom>();
 
 function roomPublic(room: DuelRoom) {
-  const players: Array<{ name: string; score: number; ready: boolean }> = [];
+  const players: Array<{ name: string; score: number; ready: boolean; magma?: number; suspect?: boolean }> = [];
   for (const ws of room.players) {
-    players.push({ name: room.names.get(ws) ?? "Братуха", score: room.scores.get(ws) ?? 0, ready: wsReady.get(ws) ?? false });
+    players.push({ name: room.names.get(ws) ?? "Братуха", score: room.scores.get(ws) ?? 0, ready: wsReady.get(ws) ?? false, magma: room.magma.get(ws) ?? 0, suspect: room.suspect.has(ws) });
   }
-  return { id: room.id, state: room.state, players, durationSec: room.durationSec };
+  return { id: room.id, state: room.state, players, durationSec: room.durationSec, wager: room.wager };
 }
 
 function broadcast(room: DuelRoom, payload: unknown) {
@@ -2428,9 +2490,20 @@ function findOrCreateRoom(): DuelRoom {
     if (r.state === "waiting" && r.players.size < 4) return r;
   }
   const id = `room-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
-  const room: DuelRoom = { id, players: new Set(), scores: new Map(), names: new Map(), state: "waiting", startedAt: null, timer: null, durationSec: 10 };
+  const room: DuelRoom = { id, players: new Set(), scores: new Map(), names: new Map(), state: "waiting", startedAt: null, timer: null, durationSec: 10, wager: 0, magma: new Map(), lastClickAt: new Map(), heldMaxSince: new Map(), suspect: new Set(), overheatUntil: new Map(), heartbeat: null, clickCounts: new Map() };
   rooms.set(id, room);
   return room;
+}
+function findOrCreateRoomABCD(code?: string): DuelRoom {
+  if (code) {
+    const cid = code.toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,8);
+    if (cid.length===4 && rooms.has(`room:${cid}`)) return rooms.get(`room:${cid}`)!;
+    if (cid.length===4) {
+      const r: DuelRoom = { id:`room:${cid}`, players:new Set(), scores:new Map(), names:new Map(), state:"waiting", startedAt:null, timer:null, durationSec:10, wager:0, magma:new Map(), lastClickAt:new Map(), heldMaxSince:new Map(), suspect:new Set(), overheatUntil:new Map(), heartbeat:null, clickCounts:new Map() };
+      rooms.set(r.id,r); return r;
+    }
+  }
+  return findOrCreateRoom();
 }
 
 async function persistDuelResults(room: DuelRoom) {
@@ -2443,13 +2516,45 @@ async function persistDuelResults(room: DuelRoom) {
     for (const ws of room.players) {
       const name = room.names.get(ws) ?? "Братуха";
       const score = room.scores.get(ws) ?? 0;
-      scoresJson.push({ name, score });
-      await sql`INSERT INTO magnum_leaderboard (player, score, game, created_at) VALUES (${name}, ${score}, 'duel', ${now})`;
-      if (score > maxScore) { maxScore = score; winner = name; }
+      const isSuspect = room.suspect.has(ws);
+      scoresJson.push({ name, score, suspect: isSuspect });
+      // duel42 season: skip suspect from leaderboard, otherwise persist both duel + duel42
+      if (!isSuspect) {
+        await sql`INSERT INTO magnum_leaderboard (player, score, game, created_at) VALUES (${name}, ${score}, 'duel', ${now})`;
+        await sql`INSERT INTO magnum_leaderboard (player, score, game, created_at) VALUES (${name}, ${score}, 'duel42', ${now})`;
+      }
+      if (!isSuspect && score > maxScore) { maxScore = score; winner = name; }
     }
     try {
       await sql`INSERT INTO magnum_duel_history (room_id, winner, scores, duration_sec, player_count) VALUES (${room.id}, ${winner}, ${JSON.stringify(scoresJson)}::jsonb, ${room.durationSec}, ${room.players.size})`;
     } catch (e) { console.error("[duel history insert] failed", e); }
+    // wager + ELO settlement (only if not all suspect and wager>0)
+    if (scoresJson.length >= 2 && room.wager >= 42) {
+      try {
+        await sql`CREATE TABLE IF NOT EXISTS magnum_duel42_elo (user_id integer PRIMARY KEY REFERENCES magnum_users(id) ON DELETE CASCADE, elo integer NOT NULL DEFAULT 1000, updated_at timestamp DEFAULT now())`;
+        // detect draw: top 2 equal
+        const sorted = [...scoresJson].sort((a,b)=>b.score-a.score);
+        const isDraw = sorted.length>=2 && sorted[0]!.score===sorted[1]!.score;
+        for (const ws of room.players) {
+          const name = room.names.get(ws) ?? "Братуха";
+          const uid = Number(ws.data.id);
+          if (!Number.isFinite(uid) || room.suspect.has(ws)) continue;
+          const sc = room.scores.get(ws) ?? 0;
+          const isWin = !isDraw && name===winner;
+          let eloDelta = 0; let coinsDelta = 0;
+          if (isDraw) { coinsDelta = room.wager; eloDelta = 0; }
+          else if (isWin) { coinsDelta = room.wager * 2; eloDelta = 42; }
+          else { coinsDelta = 0; eloDelta = -12; }
+          if (coinsDelta>0) {
+            await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${uid},1000) ON CONFLICT (user_id) DO NOTHING`;
+            await sql`UPDATE magnum_coins SET balance = balance + ${coinsDelta} WHERE user_id=${uid}`;
+            await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${uid},${coinsDelta},${isWin?'duel42_win':'duel42_draw'},${JSON.stringify({room:room.id,wager:room.wager,winner})}::jsonb)`;
+          }
+          await sql`INSERT INTO magnum_duel42_elo (user_id,elo) VALUES (${uid},1000) ON CONFLICT (user_id) DO NOTHING`;
+          if (eloDelta!==0) await sql`UPDATE magnum_duel42_elo SET elo = elo + ${eloDelta}, updated_at=now() WHERE user_id=${uid}`;
+        }
+      } catch(e){ console.error("[duel42 settle] failed",e); }
+    }
   } catch (e) {
     console.error("[ws persist] failed", e);
   }
@@ -2460,17 +2565,21 @@ function startDuel(room: DuelRoom) {
   room.state = "playing";
   room.startedAt = Date.now();
   // reset scores for new round
-  for (const ws of room.players) room.scores.set(ws, 0);
+  for (const ws of room.players) { room.scores.set(ws, 0); room.magma.set(ws,0); room.lastClickAt.set(ws,0); room.heldMaxSince.set(ws,null); room.overheatUntil.set(ws,0); room.suspect.delete(ws); room.clickCounts.set(ws, []); }
   broadcast(room, { type: "start", room: roomPublic(room), duration: room.durationSec });
+  // heartbeat 25s
+  if (room.heartbeat) clearInterval(room.heartbeat);
+  room.heartbeat = setInterval(()=>{ broadcast(room,{type:"ping"}); },25000);
   if (room.timer) clearTimeout(room.timer);
   room.timer = setTimeout(() => {
     room.state = "finished";
+    if (room.heartbeat) { clearInterval(room.heartbeat); room.heartbeat=null; }
     broadcast(room, { type: "finish", room: roomPublic(room) });
     void persistDuelResults(room);
     // reset to waiting after 5s for rematch
     setTimeout(() => {
       room.state = "waiting";
-      for (const ws of room.players) room.scores.set(ws, 0);
+      for (const ws of room.players) { room.scores.set(ws, 0); room.magma.set(ws,0); room.suspect.delete(ws); }
       broadcast(room, { type: "room", room: roomPublic(room) });
     }, 5000);
   }, room.durationSec * 1000);
@@ -2639,6 +2748,9 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/duel/seasons" && req.method === "POST") return handleDuelSeasonCreate(req);
     if (url.pathname.startsWith("/magnum/api/duel/invite/") && url.pathname.endsWith("/respond") && req.method === "POST") { const parts=url.pathname.split("/"); const idStr=parts[5] ?? ""; return handleDuelInviteRespond(req,idStr); }
     if (url.pathname.startsWith("/magnum/api/duel/seasons/") && url.pathname.endsWith("/top") && req.method === "GET") { const parts=url.pathname.split("/"); const idStr=parts[4] ?? ""; return handleDuelSeasonTop(req,idStr); }
+    if (url.pathname === "/magnum/api/duel42/leaderboard" && req.method === "GET") return handleDuel42Leaderboard(req);
+    if (url.pathname === "/magnum/api/duel42/elo" && req.method === "GET") return handleDuel42Elo(req);
+    if (url.pathname === "/magnum/api/duel42/wager" && req.method === "POST") return handleDuel42Wager(req);
     if (url.pathname === "/magnum/api/mining/boost" && req.method === "POST") return handleMiningBoost(req);
     if (url.pathname === "/magnum/api/mining/boost" && req.method === "GET") return handleMiningBoost(req);
     // chat 42 persisted (Neon, rate limit 12/min, 1..500 char, no <>)
@@ -2686,6 +2798,7 @@ const server = Bun.serve<WSData>({
       room.players.add(ws);
       room.scores.set(ws, 0);
       room.names.set(ws, ws.data.username);
+      room.magma.set(ws,0); room.lastClickAt.set(ws,0); room.heldMaxSince.set(ws,null); room.overheatUntil.set(ws,0); room.clickCounts.set(ws,[]);
       wsReady.set(ws,false);
       (ws.data as WSData).roomId = room.id;
       ws.subscribe(room.id);
@@ -2700,22 +2813,69 @@ const server = Bun.serve<WSData>({
     message(ws, message) {
       const data = ws.data as WSData;
       const roomId = data.roomId;
+      // allow lobby:create before room assigned
+      let parsed: unknown;
+      try { parsed = JSON.parse(String(message)); } catch { return; }
+      const msg = parsed as { type?: string; username?: string; text?: string; message?: string; code?: string; wager?: unknown; magma?: unknown };
+      // lobby:create → ABCD
+      if (msg.type === "lobby:create") {
+        const w = [0,42,142,420].includes(Number(msg.wager)) ? Number(msg.wager) : 0;
+        const letters="ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let abcd=""; for(let i=0;i<4;i++) abcd+=letters[Math.floor(Math.random()*letters.length)]!;
+        const nr: DuelRoom = { id:`room:${abcd}`, players:new Set(), scores:new Map(), names:new Map(), state:"waiting", startedAt:null, timer:null, durationSec:10, wager:w, magma:new Map(), lastClickAt:new Map(), heldMaxSince:new Map(), suspect:new Set(), overheatUntil:new Map(), heartbeat:null, clickCounts:new Map() };
+        rooms.set(nr.id,nr);
+        // move ws to new room
+        const oldId = data.roomId; if(oldId){ const old=rooms.get(oldId); if(old){ old.players.delete(ws); old.scores.delete(ws); old.names.delete(ws); try{ws.unsubscribe(oldId);}catch{} } }
+        nr.players.add(ws); nr.scores.set(ws,0); nr.names.set(ws, ws.data.username); nr.magma.set(ws,0); nr.lastClickAt.set(ws,0); nr.heldMaxSince.set(ws,null); (ws.data as WSData).roomId=nr.id; ws.subscribe(nr.id); wsReady.set(ws,false);
+        broadcast(nr,{type:"lobby:created", code:abcd, room:roomPublic(nr), wager:w}); broadcast(nr,{type:"room", room:roomPublic(nr)}); return;
+      }
+      if (msg.type === "join" && typeof msg.code === "string" && msg.code.trim().length===4) {
+        const code = msg.code.trim().toUpperCase(); const target = rooms.get(`room:${code}`);
+        if(target && target.players.size<4 && target.state==="waiting"){
+          const oldId=data.roomId; if(oldId && oldId!==target.id){ const old=rooms.get(oldId); if(old){ old.players.delete(ws); old.scores.delete(ws); old.names.delete(ws); try{ws.unsubscribe(oldId);}catch{} } }
+          target.players.add(ws); target.scores.set(ws,0); target.names.set(ws, ws.data.username); target.magma.set(ws,0); (ws.data as WSData).roomId=target.id; ws.subscribe(target.id); wsReady.set(ws,false);
+          broadcast(target,{type:"room", room:roomPublic(target)}); return;
+        }
+      }
       if (!roomId) return;
       const room = rooms.get(roomId);
       if (!room) return;
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(String(message));
-      } catch {
-        return;
-      }
-      const msg = parsed as { type?: string; username?: string; text?: string; message?: string };
+      // re-parse for room-bound messages already have msg
       if (msg.type === "click") {
         if (room.state !== "playing") return;
-        if (!wsRateOk(ws.data.id)) return; // anti-cheat throttle
-        const cur = room.scores.get(ws) ?? 0;
-        room.scores.set(ws, cur + 1);
+        if (!wsRateOk(ws.data.id)) { room.suspect.add(ws); broadcast(room,{type:"suspect", from:ws.data.username}); return; }
+        // overheat cooldown 1.2s
+        const ohUntil = room.overheatUntil.get(ws) ?? 0;
+        if (Date.now() < ohUntil) return;
+        // CPS>20 suspect
+        const now = Date.now();
+        const arr = room.clickCounts.get(ws) ?? [];
+        const fresh = arr.filter(t=> now - t < 1000);
+        fresh.push(now); room.clickCounts.set(ws, fresh);
+        const total10 = (room.clickCounts.get(ws) ?? []).filter(t=> now - t < 10000).length;
+        if (fresh.length>20 || total10>160) { room.suspect.add(ws); broadcast(room,{type:"suspect", from:ws.data.username, cps:fresh.length}); }
+        // magma logic <0.15s +8% cap x10, lava-spike 2x, overheat 3.5s→1.2s -60%
+        const last = room.lastClickAt.get(ws) ?? 0;
+        const dt = last? now - last : 999;
+        let magma = room.magma.get(ws) ?? 0;
+        if (dt < 150) magma = Math.min(10, magma+1); else magma = 1;
+        room.magma.set(ws, magma); room.lastClickAt.set(ws, now);
+        let held = room.heldMaxSince.get(ws) ?? null;
+        if (magma>=10) { if(held===null) held=now; } else held=null;
+        room.heldMaxSince.set(ws, held);
+        const heldMs = held!==null? now - held : 0;
+        const overheat = heldMs >= 3500;
+        let cur = room.scores.get(ws) ?? 0;
+        let mult = magma<=1?1:Math.min(1.8, 1+(magma-1)*0.08);
+        let add = 1*mult;
+        const lavaSpike = magma>=10;
+        if (lavaSpike) add *= 2;
+        if (overheat) { add = cur*0.4 - cur; room.overheatUntil.set(ws, now+1200); room.heldMaxSince.set(ws,null); broadcast(room,{type:"overheat", from:ws.data.username}); }
+        cur = Math.max(0, cur + add);
+        room.scores.set(ws, cur);
+        broadcast(room, { type: "tick", from:ws.data.username, magma, score:cur, lavaSpike, overheat });
         broadcast(room, { type: "scores", room: roomPublic(room) });
+      } else if (msg.type === "ping") { try{ ws.send(JSON.stringify({type:"pong"})); }catch{} return;
+      } else if (msg.type === "pong") { return;
       } else if (msg.type === "chat") {
         const raw = typeof msg.text === "string" ? msg.text : typeof msg.message === "string" ? msg.message : "";
         const text = raw.trim().slice(0, 200);
@@ -2765,12 +2925,13 @@ const server = Bun.serve<WSData>({
       room.players.delete(ws);
       room.scores.delete(ws);
       room.names.delete(ws);
+      room.magma.delete(ws); room.lastClickAt.delete(ws); room.heldMaxSince.delete(ws); room.overheatUntil.delete(ws); room.clickCounts.delete(ws); room.suspect.delete(ws);
       wsReady.delete(ws);
       wsClickTimes.delete(ws.data.id);
       wsChatTimes.delete(ws.data.id);
       try { ws.unsubscribe(roomId); } catch (e) { console.error("[ws unsubscribe] failed", e); }
       if (room.players.size === 0) {
-        if (room.timer) clearTimeout(room.timer);
+        if (room.timer) clearTimeout(room.timer); if(room.heartbeat) clearInterval(room.heartbeat);
         rooms.delete(roomId);
       } else {
         broadcast(room, { type: "room", room: roomPublic(room) });
