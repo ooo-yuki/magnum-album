@@ -3,14 +3,8 @@ import { Link } from "react-router-dom";
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
 import { REAL_BY_STYLE, getRealSrc as _getRealSrc } from "@/lib/galleryTokens";
-// Content-test compat: inline REAL_BY_STYLE mapping for CI (canonical source is @/lib/galleryTokens)
- // eslint-disable-next-line @typescript-eslint/no-unused-vars
- export const _REAL_BY_STYLE_FALLBACK_INLINE = {
-  "СССР": "/magnum/images/gallery-42/42-agit-01-800.webp",
-  "Y2K": "/magnum/images/gallery-42/42-y2k-01-800.webp",
-  "киберпанк": "/magnum/images/gallery-42/42-cyber-01-800.webp",
-  "мемфис": "/magnum/images/gallery-42/42-memphis-01-800.webp",
-} as const;
+// Re-export for tests — single source of truth is @/lib/galleryTokens
+export const _REAL_BY_STYLE_FALLBACK_INLINE = REAL_BY_STYLE;
 export function getRealSrc(style: string, src?: string): string { return _getRealSrc(style, src); }
 import styles from "./GalleryPage.module.css";
 
@@ -38,7 +32,6 @@ interface Art42 {
 
 // Реальные файлы — 4 стиля webp-only (тяжёлые jpg 2.4-3.4M исключены, LCP −3с) — единый источник @/lib/galleryTokens
 const REAL_FALLBACK: Record<string, string> = {
-  // P1 #3: все webp 67-133K, y2k-02/03 reuse webp но разные bytes vs jpg, дубль лёгкий; тяжёлые jpg не грузим
   "ussr-01": "/magnum/images/gallery-42/42-agit-01-800.webp",
   "ussr-02": "/magnum/images/gallery-42/42-agit-01-800.webp",
   "y2k-01": "/magnum/images/gallery-42/42-y2k-01-800.webp",
@@ -163,7 +156,7 @@ const MOCK_POOL: Omit<Art42, "id">[] = [
     style: "СССР",
     emoji: "🥤",
     gradient: "linear-gradient(135deg,#ff2d55,#7a0a1a 40%,#c9c9c9 100%)",
-    src: "/magnum/images/gallery-42/42-agit-01.jpg",
+    src: "/magnum/images/gallery-42/42-agit-01-800.webp",
     desc: "Газировка по 3 копейки — стакан гранёный.",
     tag: "автомат",
   },
@@ -172,7 +165,7 @@ const MOCK_POOL: Omit<Art42, "id">[] = [
     style: "Y2K",
     emoji: "🥚",
     gradient: "linear-gradient(135deg,#ff9ad5,#ffcc00 35%,#00ff88 70%,#5865f2 100%)",
-    src: "/magnum/images/gallery-42/42-y2k-01.jpg",
+    src: "/magnum/images/gallery-42/42-y2k-02-800.webp",
     desc: "Корми братуху каждые 42 минуты.",
     tag: "тамагочи",
   },

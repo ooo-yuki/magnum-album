@@ -49,5 +49,9 @@ export function getRealSrc(style: string, src?: string): string {
   if (style in REAL_BY_STYLE) return REAL_BY_STYLE[style]!;
   if (src && src.startsWith("/magnum/")) return src;
   if (typeof console !== "undefined") console.warn("[gallery] unknown style", style);
+  // DEV: fail fast to catch typos like "Y2k"/"ссср" in ARCHIVE_42
+  if (typeof import.meta !== "undefined" && (import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV) {
+    throw new Error(`[gallery] unknown style "${style}" — expected one of ${Object.keys(REAL_BY_STYLE).join(", ")}`);
+  }
   return REAL_BY_STYLE["СССР"]!;
 }

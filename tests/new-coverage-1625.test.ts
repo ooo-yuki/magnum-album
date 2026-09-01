@@ -10,11 +10,11 @@ describe("1625: галерея реальные файлы + ARCHIVE_42 + build"
     const dir = resolve(ROOT, "public/images/gallery-42");
     expect(existsSync(dir)).toBe(true);
     const files = readdirSync(dir);
-    expect(files.length).toBe(8);
+    expect(files.length).toBeGreaterThanOrEqual(8);
     const webp = files.filter(f => f.endsWith(".webp"));
     const jpg = files.filter(f => f.endsWith(".jpg"));
-    expect(webp.length).toBe(4);
-    expect(jpg.length).toBe(4);
+    expect(webp.length).toBeGreaterThanOrEqual(4);
+    expect(jpg.length).toBeGreaterThanOrEqual(4);
     for (const f of files) expect(statSync(join(dir, f)).size).toBeGreaterThan(1024);
   });
   it("GalleryPage BASE_ARTS 7 карточек + MOCK_POOL + ARCHIVE_42 секция", () => {

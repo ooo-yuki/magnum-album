@@ -7,7 +7,7 @@ function read(p: string) { return readFileSync(resolve(ROOT, p), "utf8"); }
 // ── галерея: реальные файлы ──
 describe("1527 gallery real src", () => {
   it("REAL_BY_STYLE маппит 4 стиля на реальные webp", () => {
-    const src = read("src/pages/GalleryPage.tsx");
+    const src = read("src/lib/galleryTokens.ts");
     expect(src).toContain('"СССР": "/magnum/images/gallery-42/42-agit-01-800.webp"');
     expect(src).toContain('"Y2K": "/magnum/images/gallery-42/42-y2k-01-800.webp"');
     expect(src).toContain('"киберпанк": "/magnum/images/gallery-42/42-cyber-01-800.webp"');

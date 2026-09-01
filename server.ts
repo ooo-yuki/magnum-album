@@ -917,8 +917,10 @@ async function handleEcoLeaderboard(): Promise<Response> {
 
 async function handleEcoSubmit(req: Request): Promise<Response> {
   const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized — войди, братуха" }, { status: 401 });
   let authedUser: { id: number; username: string } | null = null;
-  if (token) { try { authedUser = await getUserByToken(token); } catch (e) { console.error("[eco submit] getUserByToken failed", e); } }
+  try { authedUser = await getUserByToken(token); } catch (e) { console.error("[eco submit] getUserByToken failed", e); }
+  if (!authedUser) return Response.json({ error: "unauthorized — войди, братуха" }, { status: 401 });
   let body: { player?: string; name?: string; username?: string; score?: number; rank?: string };
   try {
     body = (await req.json()) as typeof body;
@@ -928,19 +930,14 @@ async function handleEcoSubmit(req: Request): Promise<Response> {
   const score = Number(body.score);
   const rank = typeof body.rank === "string" ? body.rank.trim().slice(0, 32) : "pending";
   if (!Number.isFinite(score)) return Response.json({ error: "score required" }, { status: 400 });
-  // if auth required and no user, allow anonymous with player field but prefer auth
-  if (authedUser) {
-    try {
-      const sql = getSql();
-      const rows = await sql`INSERT INTO magnum_eco_results (user_id, player, score, rank) VALUES (${authedUser.id}, ${authedUser.username}, ${Math.round(score)}, ${rank}) RETURNING *`;
-      return Response.json({ ok: true, entry: rows[0] }, { status: 201 });
-    } catch (e) {
-      console.error("[eco submit auth] failed", e);
-      return Response.json({ error: "db error" }, { status: 500 });
-    }
+  try {
+    const sql = getSql();
+    const rows = await sql`INSERT INTO magnum_eco_results (user_id, player, score, rank) VALUES (${authedUser.id}, ${authedUser.username}, ${Math.round(score)}, ${rank}) RETURNING *`;
+    return Response.json({ ok: true, entry: rows[0] }, { status: 201 });
+  } catch (e) {
+    console.error("[eco submit auth] failed", e);
+    return Response.json({ error: "db error" }, { status: 500 });
   }
-  // no anonymous — leaderboard only for authed users (no fake players)
-  return Response.json({ error: "unauthorized — войди, братуха" }, { status: 401 });
 }
 
 // ---- Eco Rating 0-10 (magnum_eco_ratings) ----

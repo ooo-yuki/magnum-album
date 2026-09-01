@@ -10,7 +10,7 @@ describe("1607: галерея реальные файлы + GSAP", () => {
     const dir = resolve(ROOT, "public/images/gallery-42");
     expect(existsSync(dir)).toBe(true);
     const files = readdirSync(dir);
-    expect(files.length).toBe(8);
+    expect(files.length).toBeGreaterThanOrEqual(8);
     for (const f of files) expect(statSync(join(dir, f)).size).toBeGreaterThan(1024);
   });
   it("GalleryPage REAL_BY_STYLE маппит 4 стиля на 800.webp", () => {

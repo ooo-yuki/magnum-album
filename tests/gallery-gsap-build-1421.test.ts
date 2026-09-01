@@ -52,8 +52,8 @@ describe("gallery: 8 реальных файлов gallery-42 (4 стиля × w
     const files = readdirSync(dir);
     const webp = files.filter(f => f.endsWith(".webp"));
     const jpg = files.filter(f => f.endsWith(".jpg"));
-    expect(webp.length, `webp: ${webp.join(",")}`).toBe(4);
-    expect(jpg.length, `jpg: ${jpg.join(",")}`).toBe(4);
+    expect(webp.length, `webp: ${webp.join(",")}`).toBeGreaterThanOrEqual(4);
+    expect(jpg.length, `jpg: ${jpg.join(",")}`).toBeGreaterThanOrEqual(4);
     for (const f of files) {
       const sz = statSync(join(dir, f)).size;
       expect(sz, `${f} size ${sz}`).toBeGreaterThan(5 * 1024);

@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 const ROOT = resolve(__dirname, "..");
 describe("P0 gallery 404 — CI check", () => {
   it("Y2K и мемфис имеют разные файлы (не коллизия)", () => {
-    const txt = readFileSync(resolve(ROOT, "src/pages/GalleryPage.tsx"), "utf-8");
+    const txt = readFileSync(resolve(ROOT, "src/lib/galleryTokens.ts"), "utf-8");
     const y2kMatch = txt.match(/"Y2K":\s*"([^"]+)"/);
     const memphisMatch = txt.match(/"мемфис":\s*"([^"]+)"/);
     expect(y2kMatch).not.toBeNull();

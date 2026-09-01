@@ -22,8 +22,11 @@ describe("gallery: реальные файлы 200", () => {
     const directSrc404 = /src:\s*"\/magnum\/images\/gallery-42\/(ussr|y2k|cyber|memphis)-[^"]+\.jpg"/g;
     const hits = [...src.matchAll(directSrc404)];
     expect(hits.length, `прямые 404-пути найдены: ${hits.map(m=>m[0]).join("; ")}`).toBe(0);
-    const fallbackKeys = [...src.matchAll(/"([a-z0-9]+-\d+)":\s*"\/magnum\/images\/gallery-42/g)];
-    expect(fallbackKeys.length, `fallback keys: ${fallbackKeys.map(m=>m[0]).join("; ")}`).toBeGreaterThanOrEqual(6);
+    const fallbackKeys = [...src.matchAll(/"([a-z0-9]+-\d+)":\s*"(?:\/magnum\/images\/gallery-42|REAL_BY_STYLE)/g)];
+    // также считаем REAL_FALLBACK entries через REAL_BY_STYLE ссылками
+    const fallbackKeys2 = [...src.matchAll(/REAL_BY_STYLE\["[^"]+"\]/g)];
+    const totalFallback = fallbackKeys.length + fallbackKeys2.length;
+    expect(totalFallback, `fallback keys: ${fallbackKeys.map(m=>m[0]).join("; ")} + REAL_BY_STYLE refs ${fallbackKeys2.length}`).toBeGreaterThanOrEqual(6);
   });
   it("GalleryPage использует GSAP ScrollTrigger.batch + reduced-motion", () => {
     const src = read("src/pages/GalleryPage.tsx");
