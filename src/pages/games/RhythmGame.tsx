@@ -83,11 +83,17 @@ interface Song {
   duration: number;
   patternSeed: number;
 }
+// MAGNUM 2026 — 5 пуль = 5 треков (Туса Медуза 14.08, VPN, +3 тизера MAGNUM)
 const SONGS: Song[] = [
-  { name: "ТУСА МЕДУЗА", bpm: 128, duration: 45, patternSeed: 42 },
-  { name: "VPN", bpm: 142, duration: 40, patternSeed: 7 },
-  { name: "MAGNUM — Intro", bpm: 100, duration: 50, patternSeed: 99 },
+  { name: "ТУСА МЕДУЗА 🪼", bpm: 128, duration: 45, patternSeed: 42 },
+  { name: "VPN 🔒", bpm: 142, duration: 40, patternSeed: 7 },
+  { name: "CLAY — СЛАВА БОССУ 🧱", bpm: 118, duration: 42, patternSeed: 73 },
+  { name: "42 ✌️", bpm: 135, duration: 44, patternSeed: 42 },
+  { name: "MAGNUM — 5 пуль ●", bpm: 108, duration: 50, patternSeed: 99 },
 ];
+// MAGNUM FEVER — 5 perfect подряд = 5 пуль заряжены, x2 очки 6с + золотая аура
+const FEVER_NEED = 5;
+const FEVER_MS = 6000;
 
 let noteId = 0;
 function genChart(song: Song, totalNotes = 64): { time: number; lane: number }[] {
@@ -160,6 +166,8 @@ export function RhythmGame() {
   const [judgement, setJudgement] = useState<Judgement>(null);
   const [accuracy, setAccuracy] = useState(100);
   const [missStreak, setMissStreak] = useState(0);
+  const [fever, setFever] = useState(false);
+  const [feverCount, setFeverCount] = useState(0);
 
   const statsRef = useRef({ score: 0, combo: 0, maxCombo: 0, perfect: 0, good: 0, miss: 0, total: 0 });
   const notesRef = useRef<Note[]>([]);
@@ -175,6 +183,9 @@ export function RhythmGame() {
   const pausedTimeRef = useRef(0);
   const pauseStartRef = useRef(0);
   const missStreakRef = useRef(0);
+  const feverActiveRef = useRef(false);
+  const feverTimerRef = useRef(0);
+  const perfectStreakRef = useRef(0);
   const animRef = useRef(0);
   const canvasSizeRef = useRef({ w: 600, h: 560 });
 
@@ -200,14 +211,29 @@ export function RhythmGame() {
     best.judgement = j;
     const s = statsRef.current;
     s.total++;
-    if (j === "perfect") { s.perfect++; s.score += 100 + Math.min(s.combo * 5, 100); }
-    else { s.good++; s.score += 55 + Math.min(s.combo * 2, 40); }
+    const feverMult = feverActiveRef.current ? 2 : 1;
+    if (j === "perfect") {
+      s.perfect++;
+      perfectStreakRef.current++;
+      if (!feverActiveRef.current && perfectStreakRef.current >= FEVER_NEED) {
+        feverActiveRef.current = true;
+        feverTimerRef.current = performance.now() + FEVER_MS;
+        setFever(true);
+        setFeverCount((c) => c + 1);
+        pulseRef.current = 1.5;
+        shakeRef.current = 8;
+        for (let k = 0; k < 22; k++) particlesRef.current.push({ x: lane, y: 0, vx: (Math.random()-0.5)*10, vy: -Math.random()*7-2, life: 1, color: k%2===0 ? "#ffcc00" : "#ff2d55", size: 3+Math.random()*3 });
+      }
+      s.score += (100 + Math.min(s.combo * 5, 100)) * feverMult;
+    } else { s.good++; perfectStreakRef.current = 0; s.score += (55 + Math.min(s.combo * 2, 40)) * feverMult; }
     s.combo++; s.maxCombo = Math.max(s.maxCombo, s.combo);
     setScore(s.score); setCombo(s.combo); setMaxCombo(s.maxCombo);
     setJudgement(j); setTimeout(() => setJudgement((prev) => prev === j ? null : prev), 280);
     setAccuracy(Math.round(((s.perfect * 1 + s.good * 0.6) / Math.max(1, s.total)) * 100));
     const isPerfect = j === "perfect";
-    effectsRef.current.push({ lane, text: isPerfect ? "PERFECT!" : "GOOD!", color: isPerfect ? "#ffcc00" : "#00ff88", life: 1, scale: 1 });
+    const feverLabel = feverActiveRef.current ? "FEVER x2!" : (isPerfect ? "PERFECT!" : "GOOD!");
+    const feverColor = feverActiveRef.current ? "#ffcc00" : (isPerfect ? "#ffcc00" : "#00ff88");
+    effectsRef.current.push({ lane, text: feverLabel, color: feverColor, life: 1, scale: feverActiveRef.current ? 1.2 : 1 });
     flashesRef.current.push({ lane, alpha: 1 });
     missStreakRef.current = 0; setMissStreak(0);
     // частицы + шейк
@@ -238,8 +264,9 @@ export function RhythmGame() {
     noteId = 0;
     notesRef.current = chart.map((c) => ({ id: noteId++, lane: c.lane, y: -200, hitTime: c.time, judged: false, judgement: null }));
     statsRef.current = { score: 0, combo: 0, maxCombo: 0, perfect: 0, good: 0, miss: 0, total: 0 };
-    setScore(0); setCombo(0); setMaxCombo(0); setAccuracy(100); setJudgement(null); setMissStreak(0);
+    setScore(0); setCombo(0); setMaxCombo(0); setAccuracy(100); setJudgement(null); setMissStreak(0); setFever(false); setFeverCount(0);
     effectsRef.current = []; flashesRef.current = []; particlesRef.current = []; shakeRef.current = 0; pulseRef.current = 0;
+    feverActiveRef.current = false; feverTimerRef.current = 0; perfectStreakRef.current = 0;
     startTimeRef.current = performance.now(); pausedTimeRef.current = 0; missStreakRef.current = 0;
     setSongIdx(idx);
     setState("playing");
@@ -271,7 +298,9 @@ export function RhythmGame() {
     };
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
-  
+    return () => { window.removeEventListener("keydown", onKeyDown); window.removeEventListener("keyup", onKeyUp); };
+  }, [state, hitNote, togglePause]);
+
   // GSAP spec: y24 stagger 0.12 ScrollTrigger batch + reduced-motion gate + gsap.context cleanup + hover y:-4 RGB glow
   useEffect(() => {
     const root: HTMLElement | null = document.querySelector<HTMLElement>("[data-gsap-root]") || (document.body as unknown as HTMLElement);
@@ -299,9 +328,6 @@ export function RhythmGame() {
     }, root);
     return () => ctx.revert();
   }, []);
-
-  return () => { window.removeEventListener("keydown", onKeyDown); window.removeEventListener("keyup", onKeyUp); };
-  }, [state, hitNote]);
 
   // canvas loop
   useEffect(() => {
@@ -338,8 +364,14 @@ export function RhythmGame() {
       const bg = ctx.createLinearGradient(0, 0, 0, h);
       bg.addColorStop(0, "#08081a"); bg.addColorStop(0.5, "#12082e"); bg.addColorStop(1, "#1a0a2e");
       ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
-      // combo aura
-      if (combo > 5) {
+      // combo aura + MAGNUM FEVER aura (золотая вспышка 5 пуль)
+      if (feverActiveRef.current) {
+        const feverPulse = 0.5 + Math.sin(performance.now() * 0.012) * 0.3;
+        ctx.fillStyle = `rgba(255,204,0,${0.10 + feverPulse * 0.08})`;
+        ctx.fillRect(0, 0, w, h);
+        ctx.strokeStyle = `rgba(255,204,0,${0.4 + feverPulse * 0.2})`; ctx.lineWidth = 3;
+        ctx.strokeRect(1, 1, w - 2, h - 2);
+      } else if (combo > 5) {
         ctx.fillStyle = `rgba(255,204,0,${0.04 + pulseRef.current * 0.07})`;
         ctx.fillRect(0, 0, w, h);
       }
@@ -363,6 +395,12 @@ export function RhythmGame() {
 
       if (state === "playing") {
         const now = performance.now() - startTimeRef.current - pausedTimeRef.current;
+        // fever expiry — гаснет через 6с
+        if (feverActiveRef.current && performance.now() > feverTimerRef.current) {
+          feverActiveRef.current = false;
+          perfectStreakRef.current = 0;
+          setFever(false);
+        }
         const curD = DIFFICULTY[diff];
         for (const n of notesRef.current) {
           if (n.judged && n.y < -100) continue;
@@ -370,6 +408,8 @@ export function RhythmGame() {
           if (!n.judged && now - n.hitTime > curD.good) {
             n.judged = true; n.judgement = "miss";
             const s = statsRef.current; s.miss++; s.total++; s.combo = 0;
+            perfectStreakRef.current = 0;
+            if (feverActiveRef.current) { feverActiveRef.current = false; setFever(false); }
             setCombo(0); missStreakRef.current++; setMissStreak(missStreakRef.current);
             setJudgement("miss"); setTimeout(() => setJudgement((p) => p === "miss" ? null : p), 280);
             setAccuracy(Math.round(((s.perfect * 1 + s.good * 0.6) / Math.max(1, s.total)) * 100));
@@ -490,14 +530,14 @@ export function RhythmGame() {
     };
     animRef.current = requestAnimationFrame(draw);
     return () => { cancelAnimationFrame(animRef.current); window.removeEventListener("resize", resize); };
-  }, [state, songIdx, combo, diff]);
+  }, [state, songIdx, combo, diff, fever]);
 
   const song = SONGS[songIdx]!;
 
   return (
     <div className={styles.page}>
       <h1>РИТМ MAGNUM</h1>
-      <p className={styles.sub}>Лови ноты в такт — D F J K или тапай по дорожкам {combo >= 5 ? "🔥" : ""}</p>
+      <p className={styles.sub}>Лови ноты в такт — D F J K или тапай по дорожкам {fever ? "⚡ MAGNUM FEVER x2!" : combo >= 5 ? "🔥" : ""}</p>
 
       {state === "menu" && (
         <div className={styles.menu}>
@@ -515,7 +555,7 @@ export function RhythmGame() {
             ))}
           </div>
           <button className={styles.playBtn} onClick={() => startGame(songIdx)}>Играть — {song.name}!</button>
-          <p className={styles.hint}>Клавиши D F J K • Perfect +100 (+комбо) • Good +55 • Нужно {DIFFICULTY[diff].win} очков • {DIFFICULTY[diff].label}</p>
+          <p className={styles.hint}>Клавиши D F J K • Perfect +100 (+комбо) • Good +55 • 5 Perfect подряд = MAGNUM FEVER x2 (6с) • Нужно {DIFFICULTY[diff].win} очков • {DIFFICULTY[diff].label} • 5 пуль = 5 треков</p>
           <Link to="/magnum/games" className={styles.back}>← К играм</Link>
         </div>
       )}
@@ -523,12 +563,14 @@ export function RhythmGame() {
       {(state === "playing" || state === "paused" || state === "win" || state === "fail") && (
         <div className={styles.gameArea}>
           <div className={styles.hud}>
-            <div className={styles.stat}><span>Очки</span><strong>{score}</strong></div>
-            <div className={styles.stat}><span>Комбо</span><strong className={combo > 6 ? styles.comboHot : ""}>{combo} {combo > 3 ? "🔥" : ""}</strong></div>
+            <div className={styles.stat}><span>Очки</span><strong>{score}{fever ? " x2" : ""}</strong></div>
+            <div className={styles.stat}><span>Комбо</span><strong className={combo > 6 ? styles.comboHot : ""} style={fever ? { color: "#ffcc00", textShadow: "0 0 10px rgba(255,204,0,0.8)" } : undefined}>{combo} {fever ? "⚡" : combo > 3 ? "🔥" : ""}</strong></div>
             <div className={styles.stat}><span>Макс</span><strong>{maxCombo}</strong></div>
             <div className={styles.stat}><span>Точность</span><strong>{accuracy}%</strong></div>
+            {fever && <div className={styles.stat} style={{ background: "rgba(255,204,0,0.14)", borderColor: "rgba(255,204,0,0.45)" }}><span>FEVER</span><strong style={{ color: "#ffcc00" }}>x2 {feverCount}⚡</strong></div>}
           </div>
-          <div className={styles.progress}><div className={styles.fill} style={{ width: `${Math.min((score / DIFFICULTY[diff].win) * 100, 100)}%` }} /></div>
+          <div className={styles.progress}><div className={styles.fill} style={{ width: `${Math.min((score / DIFFICULTY[diff].win) * 100, 100)}%`, background: fever ? "linear-gradient(90deg,#ffcc00,#ff2d55)" : undefined }} /></div>
+          {fever && <div style={{ fontSize: "0.78rem", fontWeight: 800, color: "#ffcc00", textShadow: "0 0 12px rgba(255,204,0,0.7)", letterSpacing: "0.08em", marginBottom: 4 }}>⚡ MAGNUM FEVER — 5 ПУЛЬ ЗАРЯЖЕНЫ! x2 ОЧКИ ⚡</div>}
           {judgement && <div className={`${styles.judgement} ${styles[judgement]}`}>{judgement === "perfect" ? "PERFECT!" : judgement === "good" ? "GOOD!" : "MISS"}</div>}
           <div className={styles.canvasWrap}>
             <canvas
@@ -566,8 +608,8 @@ export function RhythmGame() {
         <div className={styles.modal} onClick={() => setState("menu")}>
           <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
             <h2>🎉 Ритм-мастер!</h2>
-            <p>{score} очков • макс комбо {maxCombo} • {accuracy}% точность</p>
-            <p className={styles.songDone}>{song.name} — пройден!</p>
+            <p>{score} очков • макс комбо {maxCombo} • {accuracy}% точность{feverCount > 0 ? ` • FEVER x${feverCount}⚡` : ""}</p>
+            <p className={styles.songDone}>{song.name} — пройден!{feverCount > 0 ? " · 5 пуль заряжены!" : ""}</p>
             <a href={PRESAVE} target="_blank" rel="noreferrer" className={styles.presaveBtn}>Пресейв MAGNUM →</a>
             <button className={styles.restartBtn} onClick={() => startGame(songIdx)}>Ещё раз</button>
           </div>
