@@ -117,6 +117,9 @@ export function Layout() {
           <AuthStatus />
         </div>
 
+        <div className={styles.mobileAuth}>
+          <AuthStatus />
+        </div>
         <button
           className={`${styles.burger} ${menuOpen ? styles.burgerOpen : ""}`}
           aria-label={menuOpen ? "Закрыть меню" : "Открыть меню"}
@@ -164,6 +167,9 @@ export function Layout() {
               >
                 🤖 БРАТ-БОТ
               </button>
+              <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                <AuthStatus />
+              </div>
             </div>
             <a
               href="https://music.yandex.ru/artist/7544304"

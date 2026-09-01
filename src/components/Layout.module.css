@@ -266,7 +266,10 @@
   .nav { padding: 0.7rem 0.9rem 0.7rem 1rem; }
   .links { display: none; }
   .burger { display: flex; }
+  .mobileAuth { display: flex !important; }
 }
+
+.mobileAuth { display: none; align-items: center; margin-left: auto; margin-right: .6rem; }
 
 @media (max-width: 860px) {
   .nav { padding: 0.7rem 0.9rem 0.7rem 1rem; }
