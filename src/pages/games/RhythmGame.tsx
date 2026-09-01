@@ -21,6 +21,13 @@ const PERFECT_WINDOW = 75;
 const GOOD_WINDOW = 145;
 const NOTE_SPEED = 360; // было 380 — чуть комфортнее
 
+const DIFFICULTY = {
+  easy: { perfect: 95, good: 170, speed: 300, win: 3500, label: "Легко" },
+  normal: { perfect: 75, good: 145, speed: 360, win: 5000, label: "Нормал" },
+  hard: { perfect: 55, good: 115, speed: 440, win: 6500, label: "Хард" },
+} as const;
+type DiffKey = keyof typeof DIFFICULTY;
+
 type Judgement = "perfect" | "good" | "miss" | null;
 interface Note {
   id: number;
@@ -125,6 +132,7 @@ function playWinSound() {
 export function RhythmGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [songIdx, setSongIdx] = useState(0);
+  const [diff, setDiff] = useState<DiffKey>("normal");
   const [state, setState] = useState<"menu" | "playing" | "win" | "fail">("menu");
   const [score, setScore] = useState(0);
   const [combo, setCombo] = useState(0);
@@ -147,13 +155,14 @@ export function RhythmGame() {
   const canvasSizeRef = useRef({ w: 600, h: 560 });
 
   const hitNote = useCallback((lane: number, nowMs: number) => {
+    const d = DIFFICULTY[diff];
     const notes = notesRef.current;
     let best: Note | null = null;
     let bestDiff = Infinity;
     for (const n of notes) {
       if (n.judged || n.lane !== lane) continue;
-      const diff = Math.abs(nowMs - n.hitTime);
-      if (diff < bestDiff && diff <= GOOD_WINDOW) { bestDiff = diff; best = n; }
+      const dff = Math.abs(nowMs - n.hitTime);
+      if (dff < bestDiff && dff <= d.good) { bestDiff = dff; best = n; }
     }
     if (!best) {
       playKeyTap(lane);
@@ -161,7 +170,7 @@ export function RhythmGame() {
       return;
     }
     let j: Judgement;
-    if (bestDiff <= PERFECT_WINDOW) j = "perfect";
+    if (bestDiff <= d.perfect) j = "perfect";
     else j = "good";
     best.judged = true;
     best.judgement = j;
@@ -194,7 +203,7 @@ export function RhythmGame() {
     }
     playHit(j);
     setTimeout(() => { best.y = -9999; }, 120);
-  }, []);
+  }, [diff]);
 
   const startGame = useCallback((idx: number) => {
     const song = SONGS[idx]!;
@@ -294,10 +303,11 @@ export function RhythmGame() {
 
       if (state === "playing") {
         const now = performance.now() - startTimeRef.current;
+        const curD = DIFFICULTY[diff];
         for (const n of notesRef.current) {
           if (n.judged && n.y < -100) continue;
-          n.y = hitY - (n.hitTime - now) * (NOTE_SPEED / 1000);
-          if (!n.judged && now - n.hitTime > GOOD_WINDOW) {
+          n.y = hitY - (n.hitTime - now) * (curD.speed / 1000);
+          if (!n.judged && now - n.hitTime > curD.good) {
             n.judged = true; n.judgement = "miss";
             const s = statsRef.current; s.miss++; s.total++; s.combo = 0;
             setCombo(0);
@@ -346,7 +356,7 @@ export function RhythmGame() {
         const allJudged = notesRef.current.every((n) => n.judged);
         if (now > song.duration * 1000 + 1200 || allJudged) {
           const s = statsRef.current;
-          if (s.score >= WIN_SCORE) { playWinSound(); setState("win"); }
+          if (s.score >= DIFFICULTY[diff].win) { playWinSound(); setState("win"); }
           else setState("fail");
         }
       } else {
@@ -420,7 +430,7 @@ export function RhythmGame() {
     };
     animRef.current = requestAnimationFrame(draw);
     return () => { cancelAnimationFrame(animRef.current); window.removeEventListener("resize", resize); };
-  }, [state, songIdx, combo]);
+  }, [state, songIdx, combo, diff]);
 
   const song = SONGS[songIdx]!;
 
@@ -439,8 +449,13 @@ export function RhythmGame() {
               </button>
             ))}
           </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
+            {(Object.keys(DIFFICULTY) as DiffKey[]).map((k) => (
+              <button key={k} onClick={() => setDiff(k)} style={{ padding: "0.45rem 0.9rem", borderRadius: 999, fontSize: "0.82rem", fontWeight: 800, cursor: "pointer", border: "1px solid", borderColor: diff === k ? "rgba(255,45,85,0.6)" : "rgba(255,255,255,0.12)", background: diff === k ? "rgba(255,45,85,0.14)" : "rgba(255,255,255,0.06)", color: diff === k ? "#ffcc00" : "rgba(240,240,240,0.7)" }}>{DIFFICULTY[k].label} · {DIFFICULTY[k].win}</button>
+            ))}
+          </div>
           <button className={styles.playBtn} onClick={() => startGame(songIdx)}>Играть — {song.name}!</button>
-          <p className={styles.hint}>Клавиши D F J K • Perfect +100 (+комбо) • Good +55 • Нужно {WIN_SCORE} очков</p>
+          <p className={styles.hint}>Клавиши D F J K • Perfect +100 (+комбо) • Good +55 • Нужно {DIFFICULTY[diff].win} очков • {DIFFICULTY[diff].label}</p>
           <Link to="/magnum/games" className={styles.back}>← К играм</Link>
         </div>
       )}
@@ -453,7 +468,7 @@ export function RhythmGame() {
             <div className={styles.stat}><span>Макс</span><strong>{maxCombo}</strong></div>
             <div className={styles.stat}><span>Точность</span><strong>{accuracy}%</strong></div>
           </div>
-          <div className={styles.progress}><div className={styles.fill} style={{ width: `${Math.min((score / WIN_SCORE) * 100, 100)}%` }} /></div>
+          <div className={styles.progress}><div className={styles.fill} style={{ width: `${Math.min((score / DIFFICULTY[diff].win) * 100, 100)}%` }} /></div>
           {judgement && <div className={`${styles.judgement} ${styles[judgement]}`}>{judgement === "perfect" ? "PERFECT!" : judgement === "good" ? "GOOD!" : "MISS"}</div>}
           <div className={styles.canvasWrap}>
             <canvas
@@ -499,7 +514,7 @@ export function RhythmGame() {
         <div className={styles.modal} onClick={() => setState("menu")}>
           <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
             <h2>Попробуй ещё! 🥁</h2>
-            <p>{score} / {WIN_SCORE} • комбо {maxCombo} • {accuracy}%</p>
+            <p>{score} / {DIFFICULTY[diff].win} • комбо {maxCombo} • {accuracy}%</p>
             <p className={styles.failHint}>Нужно больше Perfect — бей точнее в такт!</p>
             <button className={styles.playBtn} onClick={() => startGame(songIdx)}>Ещё попытка</button>
             <Link to="/magnum/games" className={styles.backInline}>← К играм</Link>

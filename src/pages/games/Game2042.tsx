@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
+import gsap from "gsap";
 import styles from "./Game2042.module.css";
 
 //Obscura-заглушка AudioParam: прямые вызовы ramp-методов могут кинуть — оборачиваем
@@ -181,6 +182,10 @@ export function Game2042() {
   const [best, setBest] = useState(() => { try { return Number(localStorage.getItem("2042-best")) || 0; } catch { return 0; } });
   const [state, setState] = useState<"playing" | "win" | "over">("playing");
   const [keepPlaying, setKeepPlaying] = useState(false);
+  const [moves, setMoves] = useState(0);
+  const [hint, setHint] = useState<Dir | null>(null);
+  // undo stack: last 6 states
+  const historyRef = useRef<Array<{ grid: Grid; score: number; moves: number }>>([]);
   const touchRef = useRef<{ x: number; y: number } | null>(null);
   const gridRef = useRef(grid);
   const scoreRef = useRef(score);
@@ -193,10 +198,15 @@ export function Game2042() {
     if (state === "win" && !keepPlaying) return;
     const { grid: ng, score: s, moved } = moveGrid(gridRef.current, dir);
     if (!moved) return;
+    // push undo history (keep 6)
+    historyRef.current.push({ grid: cloneGrid(gridRef.current), score: scoreRef.current, moves });
+    if (historyRef.current.length > 6) historyRef.current.shift();
     const withNew = addRandom(ng);
     setGrid(withNew);
     const newScore = scoreRef.current + s;
     setScore(newScore);
+    setMoves((m) => m + 1);
+    setHint(null);
     if (newScore > best) {
       setBest(newScore);
       try { localStorage.setItem("2042-best", String(newScore)); } catch {}
@@ -208,7 +218,7 @@ export function Game2042() {
       playGameOver();
       if (pageRef.current) gsap.to(pageRef.current, { x: 5, duration: 0.05, yoyo: true, repeat: 7, ease: "power1.inOut", onComplete: () => gsap.set(pageRef.current!, { x: 0 }) });
     }
-  }, [state, keepPlaying, best]);
+  }, [state, keepPlaying, best, moves]);
 
   // keyboard
   useEffect(() => {
@@ -242,8 +252,38 @@ export function Game2042() {
   const restart = useCallback(() => {
     setGrid(addRandom(addRandom(emptyGrid())));
     setScore(0);
+    setMoves(0);
+    setHint(null);
+    historyRef.current = [];
     setState("playing");
     setKeepPlaying(false);
+  }, []);
+
+  const undo = useCallback(() => {
+    const prev = historyRef.current.pop();
+    if (!prev) return;
+    setGrid(prev.grid);
+    setScore(prev.score);
+    setMoves(prev.moves);
+    setState("playing");
+  }, []);
+
+  const showHint = useCallback(() => {
+    // pick move with best immediate score gain
+    let bestDir: Dir | null = null;
+    let bestScore = -1;
+    for (const d of (["up", "down", "left", "right"] as Dir[])) {
+      const { score: s, moved } = moveGrid(gridRef.current, d);
+      if (moved && s >= bestScore) { bestScore = s; bestDir = d; }
+    }
+    // fallback: any movable
+    if (!bestDir) {
+      for (const d of (["up", "down", "left", "right"] as Dir[])) {
+        if (moveGrid(gridRef.current, d).moved) { bestDir = d; break; }
+      }
+    }
+    setHint(bestDir);
+    setTimeout(() => setHint(null), 1400);
   }, []);
 
   const continuePlay = useCallback(() => {
@@ -254,10 +294,11 @@ export function Game2042() {
   return (
     <div className={styles.page} ref={pageRef}>
       <h1>ПАЗЛ 2042</h1>
-      <p className={styles.sub}>Свайпай или стрелками — собери 42!</p>
+      <p className={styles.sub}>Свайпай или стрелками — собери 42! · было ходов: {moves}</p>
 
       <div className={styles.hud}>
         <div className={styles.stat}><span>Очки</span><strong>{score}</strong></div>
+        <div className={styles.stat}><span>Ходы</span><strong>{moves}</strong></div>
         <div className={styles.stat}><span>Рекорд</span><strong>{best}</strong></div>
       </div>
 
@@ -286,16 +327,18 @@ export function Game2042() {
 
       <div className={styles.controls}>
         <div className={styles.arrowRow}>
-          <button className={styles.arrow} onClick={() => doMove("up")} aria-label="Вверх">▲</button>
+          <button className={`${styles.arrow} ${hint === "up" ? styles.hintGlow : ""}`} onClick={() => doMove("up")} aria-label="Вверх">▲</button>
         </div>
         <div className={styles.arrowRow}>
-          <button className={styles.arrow} onClick={() => doMove("left")} aria-label="Влево">◀</button>
-          <button className={styles.arrow} onClick={() => doMove("down")} aria-label="Вниз">▼</button>
-          <button className={styles.arrow} onClick={() => doMove("right")} aria-label="Вправо">▶</button>
+          <button className={`${styles.arrow} ${hint === "left" ? styles.hintGlow : ""}`} onClick={() => doMove("left")} aria-label="Влево">◀</button>
+          <button className={`${styles.arrow} ${hint === "down" ? styles.hintGlow : ""}`} onClick={() => doMove("down")} aria-label="Вниз">▼</button>
+          <button className={`${styles.arrow} ${hint === "right" ? styles.hintGlow : ""}`} onClick={() => doMove("right")} aria-label="Вправо">▶</button>
         </div>
       </div>
 
       <div className={styles.navRow}>
+        <button className={styles.restartBtn} onClick={undo} disabled={historyRef.current.length === 0} title="Отменить ход">↩ Отменить</button>
+        <button className={styles.restartBtn} onClick={showHint}>💡 Подсказка</button>
         <button className={styles.restartBtn} onClick={restart}>Заново</button>
         <Link to="/magnum/games" className={styles.back}>← К играм</Link>
       </div>

@@ -11,6 +11,8 @@ export function PageLoader() {
 
   useEffect(() => {
     if (!containerRef.current) return;
+    // failsafe: hide even if GSAP stalls (Obscura / headless / reduced-motion)
+    const fallback = window.setTimeout(() => setVisible(false), 2200);
 
     const ctx = gsap.context(() => {
       // initial states
@@ -71,7 +73,7 @@ export function PageLoader() {
       );
     }, containerRef);
 
-    return () => ctx.revert();
+    return () => { clearTimeout(fallback); ctx.revert(); }
   }, []);
 
   if (!visible) return null;
