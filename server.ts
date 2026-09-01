@@ -323,6 +323,48 @@ async function handleIdeasVote(req: Request, idStr: string): Promise<Response> {
   }
 }
 
+// ---- Idea bookmarks (Neon magnum_idea_bookmarks) — закладки без localStorage ----
+async function handleIdeaBookmark(req: Request, idStr: string): Promise<Response> {
+  const id = Number(idStr);
+  if (!Number.isInteger(id) || id <= 0) return Response.json({ error: "invalid id" }, { status: 400 });
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`idea:bookmark:${user.id}:${ip}`, 20, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
+  try {
+    const sql = getSql();
+    const exists = await sql`SELECT id FROM magnum_ideas WHERE id=${id} LIMIT 1`;
+    if (exists.length === 0) return Response.json({ error: "not found" }, { status: 404 });
+    const already = await sql`SELECT id FROM magnum_idea_bookmarks WHERE user_id=${user.id} AND idea_id=${id} LIMIT 1`;
+    if (already.length > 0) {
+      await sql`DELETE FROM magnum_idea_bookmarks WHERE user_id=${user.id} AND idea_id=${id}`;
+      return Response.json({ ok: true, bookmarked: false, ideaId: id });
+    }
+    await sql`INSERT INTO magnum_idea_bookmarks (user_id, idea_id) VALUES (${user.id}, ${id})`;
+    return Response.json({ ok: true, bookmarked: true, ideaId: id });
+  } catch (e) {
+    console.error("[idea bookmark] failed", e);
+    return Response.json({ error: "db error" }, { status: 500 });
+  }
+}
+async function handleIdeaBookmarksGet(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  try {
+    const sql = getSql();
+    const rows = await sql`SELECT idea_id FROM magnum_idea_bookmarks WHERE user_id=${user.id} ORDER BY created_at DESC`;
+    const ids = rows.map((r: unknown) => Number((r as { idea_id: number }).idea_id));
+    return Response.json({ bookmarks: ids });
+  } catch (e) {
+    console.error("[bookmarks get] failed", e);
+    return Response.json({ error: "db error" }, { status: 500 });
+  }
+}
+
 // ---- Daily claim (streak 1-7, reward 42*streak) + ledger ----
 async function handleDailyStatus(req: Request): Promise<Response> {
   const token = extractToken(req);
@@ -1207,6 +1249,68 @@ async function handleNotificationsClear(req: Request): Promise<Response> {
   } catch (e) { console.error("[notifications clear] failed", e); return Response.json({ error: "db error" }, { status: 500 }); }
 }
 
+// ---- Promo codes (Neon magnum_promo_codes + redemptions) ----
+function normalizePromo(code: unknown): string | null {
+  if (typeof code !== "string") return null;
+  const s = code.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (!s || s.length < 3 || s.length > 24) return null;
+  return s;
+}
+async function handlePromoCatalog(): Promise<Response> {
+  try {
+    const sql = getSql();
+    const rows = await sql`SELECT code, reward, max_uses, uses, expires_at FROM magnum_promo_codes ORDER BY reward ASC`;
+    return Response.json({
+      promos: rows.map((r: unknown) => {
+        const x = r as { code: string; reward: number; max_uses: number; uses: number; expires_at: string | null };
+        return { code: String(x.code), reward: Number(x.reward), maxUses: Number(x.max_uses), uses: Number(x.uses), expiresAt: x.expires_at };
+      }),
+      count: rows.length,
+    });
+  } catch (e) { console.error("[promo catalog] failed", e); return Response.json({ error: "db error" }, { status: 500 }); }
+}
+async function handlePromoRedeem(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`promo:redeem:${user.id}:${ip}`, 12, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
+  let body: { code?: string };
+  try { body = (await req.json()) as typeof body; } catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
+  const code = normalizePromo(body.code);
+  if (!code) return Response.json({ error: "code required (3-24 A-Z0-9)" }, { status: 400 });
+  try {
+    const sql = getSql();
+    const promoRows = await sql`SELECT code, reward, max_uses, uses, expires_at FROM magnum_promo_codes WHERE code=${code} LIMIT 1`;
+    if (promoRows.length === 0) return Response.json({ error: "unknown code", code }, { status: 404 });
+    const promo = promoRows[0] as { code: string; reward: number; max_uses: number; uses: number; expires_at: string | null };
+    if (promo.expires_at && new Date(promo.expires_at).getTime() < Date.now()) return Response.json({ error: "expired", code }, { status: 400 });
+    if (Number(promo.uses) >= Number(promo.max_uses)) return Response.json({ error: "sold out", code, maxUses: promo.max_uses }, { status: 409 });
+    const ex = await sql`SELECT id FROM magnum_promo_redemptions WHERE user_id=${user.id} AND code=${code} LIMIT 1`;
+    if (ex.length > 0) return Response.json({ error: "already redeemed", code }, { status: 409 });
+    await sql`INSERT INTO magnum_promo_redemptions (user_id, code, redeemed_at) VALUES (${user.id}, ${code}, now())`;
+    await sql`UPDATE magnum_promo_codes SET uses = uses + 1 WHERE code=${code}`;
+    await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${user.id},1000) ON CONFLICT (user_id) DO NOTHING`;
+    const upd = await sql`UPDATE magnum_coins SET balance = balance + ${Number(promo.reward)} WHERE user_id=${user.id} RETURNING balance`;
+    const bal = Number((upd[0] as { balance: number }).balance);
+    await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${Number(promo.reward)},'promo',${JSON.stringify({ code })}::jsonb)`;
+    await ensureNotification(user.id, `Промокод ${code}`, `+${promo.reward} монет за код ${code}`, "promo");
+    return Response.json({ ok: true, code, reward: Number(promo.reward), balance: bal });
+  } catch (e) { console.error("[promo redeem] failed", e); return Response.json({ error: "db error" }, { status: 500 }); }
+}
+async function handlePromoMy(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  try {
+    const sql = getSql();
+    const rows = await sql`SELECT code, redeemed_at FROM magnum_promo_redemptions WHERE user_id=${user.id} ORDER BY redeemed_at DESC`;
+    return Response.json({ redemptions: rows.map((r: unknown) => { const x=r as {code:string;redeemed_at:string}; return { code:String(x.code), redeemed_at:x.redeemed_at }; }), count: rows.length });
+  } catch (e) { console.error("[promo my] failed", e); return Response.json({ error: "db error" }, { status: 500 }); }
+}
+
 // ---- Presave handlers (rate limit + validation, stats) ----
 async function handlePresaveClick(req: Request): Promise<Response> {
   const ip = getClientIp(req);
@@ -1271,7 +1375,7 @@ async function handleMiningTop(): Promise<Response> {
 async function handleHealth(): Promise<Response> {
   try {
     const sql = getSql();
-    const [users, coins, mining, presave, ideas, daily, tx, votes, ach, notif] = await Promise.all([
+    const [users, coins, mining, presave, ideas, daily, tx, votes, ach, notif, promos] = await Promise.all([
       sql`SELECT count(*)::int as c FROM magnum_users`,
       sql`SELECT count(*)::int as c FROM magnum_coins`,
       sql`SELECT count(*)::int as c FROM magnum_mining`,
@@ -1282,6 +1386,7 @@ async function handleHealth(): Promise<Response> {
       sql`SELECT count(*)::int as c FROM magnum_idea_votes`,
       sql`SELECT count(*)::int as c FROM magnum_user_achievements`,
       sql`SELECT count(*)::int as c FROM magnum_notifications`,
+      sql`SELECT count(*)::int as c FROM magnum_promo_codes`,
     ]);
     return Response.json({
       ok: true,
@@ -1297,6 +1402,7 @@ async function handleHealth(): Promise<Response> {
         ideaVotes: Number((votes[0] as { c: number }).c),
         achievements: Number((ach[0] as { c: number }).c),
         notifications: Number((notif[0] as { c: number }).c),
+        promos: Number((promos[0] as { c: number }).c),
       },
       uptime: process.uptime(),
     });
@@ -1563,12 +1669,18 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/presave/stats" && req.method === "GET") return handlePresaveStats(req);
 
     // ideas
+    if (url.pathname === "/magnum/api/ideas/bookmarks" && req.method === "GET") return handleIdeaBookmarksGet(req);
     if (url.pathname === "/magnum/api/ideas" && req.method === "GET") return handleIdeasGet();
     if (url.pathname === "/magnum/api/ideas" && req.method === "POST") return handleIdeasPost(req);
     if (url.pathname.startsWith("/magnum/api/ideas/") && url.pathname.endsWith("/vote") && req.method === "POST") {
       const parts = url.pathname.split("/");
       const idStr = parts[4] ?? "";
       return handleIdeasVote(req, idStr);
+    }
+    if (url.pathname.startsWith("/magnum/api/ideas/") && url.pathname.endsWith("/bookmark") && req.method === "POST") {
+      const parts = url.pathname.split("/");
+      const idStr = parts[4] ?? "";
+      return handleIdeaBookmark(req, idStr);
     }
 
     // frame status (rating)
@@ -1610,6 +1722,11 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/notifications" && req.method === "GET") return handleNotificationsGet(req);
     if (url.pathname === "/magnum/api/notifications/read" && req.method === "POST") return handleNotificationsRead(req);
     if (url.pathname === "/magnum/api/notifications/clear" && req.method === "POST") return handleNotificationsClear(req);
+
+    // promo codes
+    if (url.pathname === "/magnum/api/promo/catalog" && req.method === "GET") return handlePromoCatalog();
+    if (url.pathname === "/magnum/api/promo/redeem" && req.method === "POST") return handlePromoRedeem(req);
+    if (url.pathname === "/magnum/api/promo/my" && req.method === "GET") return handlePromoMy(req);
 
     if (url.pathname === "/magnum" || url.pathname.startsWith("/magnum/")) {
       const rel = url.pathname.replace(/^\/magnum\/?/, "");

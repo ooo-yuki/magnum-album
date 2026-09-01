@@ -33,7 +33,7 @@ function isValidDesc(v: string): string | null {
   return null;
 }
 
-/* ── 34 шаблона идей — подсказки для формы (для нормы 10к строк) ── */
+/* ── 50 шаблонов идей — подсказки для формы (для нормы 10к строк) ── */
 const IDEA_TEMPLATES: Array<{ title: string; desc: string; category: IdeaCategory }> = [
   { title: "Турнир по майнингу 2–4 братух", desc: "Кликер-дуэль на 60 сек, победитель забирает банк 42-коинов комнаты.", category: "game" },
   { title: "Ежедневный квест 42", desc: "Зайди, сыграй в 3 игры, получи 42 монеты и рамку дня.", category: "economy" },
@@ -69,6 +69,23 @@ const IDEA_TEMPLATES: Array<{ title: string; desc: string; category: IdeaCategor
   { title: "Дуэт с 5opka", desc: "Топ-1 сезона получает войс от 5opka в игре.", category: "other" },
   { title: "Стикеры 42 для чата", desc: "Набор из 12 стикеров братух для дуэли и идей.", category: "cosmetic" },
   { title: "Авто-сохранение идей", desc: "Черновик идеи в памяти до отправки, не теряется.", category: "other" },
+  // ── +16 новых шаблонов (50 всего) ──
+  { title: "Закладки идей 42", desc: "Сохраняй идеи в закладки Neon — возвращайся к топу братух без localStorage.", category: "social" },
+  { title: "Топ недели — витрина", desc: "Карточка топ-3 идей недели на главной с GSAP-подсветкой.", category: "social" },
+  { title: "Комбо-голос х2", desc: "Два голоса подряд за 42 монеты — буст любимой идеи.", category: "economy" },
+  { title: "Фильтр «Мои идеи»", desc: "Переключатель «только мои» — список идей автора по Neon user_id.", category: "other" },
+  { title: "Эко-квест «Томь чистая»", desc: "Собери 42 бутылки в EcoPage — получи рамку «Чистая Томь».", category: "eco" },
+  { title: "Баннер «Кузбасс 42»", desc: "Неоновый баннер с силуэтом шахты для профиля.", category: "cosmetic" },
+  { title: "Ачивка «Идеолог»", desc: "Предложил 5 идей — титул «Идеолог 42» и 142 монеты.", category: "economy" },
+  { title: "Дуэль идей", desc: "Две идеи лицом к лицу — братухи голосуют свайпом.", category: "game" },
+  { title: "Уведомления о топе", desc: "Твоя идея в топ-5 — пуш в колокольчик Neon.", category: "social" },
+  { title: "Сортировка «Горячие»", desc: "votes/день — горячие идеи всплывают наверх.", category: "other" },
+  { title: "Плейсхолдер аватаров", desc: "Рядом с идеей — аватар автора из ShopPage скина.", category: "cosmetic" },
+  { title: "Модерация статусов", desc: "pending→approved→done — цвет бейджа и GSAP-пульс.", category: "other" },
+  { title: "Шахтёрский пропуск 2.0", desc: "42 уровня майнинга — каждый 7-й даёт ключ к Vault.", category: "economy" },
+  { title: "Эмодзи-реакции на идеи", desc: "🔥/💀/🧡 быстрые реакции, счётчик в Neon.", category: "social" },
+  { title: "Карта идей Кузбасса", desc: "Точки идей на карте Кемерово — клик → кард.", category: "eco" },
+  { title: "Пресейв-бонус в идеях", desc: "Сделал пресейв — +1 голос к своей идее.", category: "cosmetic" },
 ];
 
 export function IdeasPage() {
@@ -84,6 +101,8 @@ export function IdeasPage() {
   const [statusFilter, setStatusFilter] = useState<"all" | string>("all");
   const [sortKey, setSortKey] = useState<SortKey>("top");
   const [votedIds, setVotedIds] = useState<Set<number>>(new Set());
+  const [bookmarked, setBookmarked] = useState<Set<number>>(new Set());
+  const [bookmarksOnly, setBookmarksOnly] = useState(false);
 
   const rootRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -104,7 +123,16 @@ export function IdeasPage() {
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { void load(); }, []);
+  const loadBookmarks = async () => {
+    try {
+      const r = await fetch("/magnum/api/ideas/bookmarks", { credentials: "include" });
+      if (!r.ok) return;
+      const d = (await r.json()) as { bookmarks: number[] };
+      if (Array.isArray(d.bookmarks)) setBookmarked(new Set(d.bookmarks));
+    } catch {}
+  };
+
+  useEffect(() => { void load(); void loadBookmarks(); }, []);
 
   // ── GSAP entrance: stagger 0.12 y 24→0, reduced-motion fallback, context cleanup
   useEffect(() => {
@@ -142,7 +170,7 @@ export function IdeasPage() {
       gsap.to(cards, { y: 0, opacity: 1, stagger: 0.12, duration: 0.5, ease: "power2.out", overwrite: true });
     }, gridRef);
     return () => ctx.revert();
-  }, [ideas, loading, catFilter, statusFilter, sortKey, q]);
+  }, [ideas, loading, catFilter, statusFilter, sortKey, q, bookmarksOnly, bookmarked]);
 
   // GSAP hover verified 2026-09-01 — Content-резерв 24/7 #2 (y:-4 + glow, reduced-motion guard)
   const onCardEnter = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -182,6 +210,37 @@ export function IdeasPage() {
     } catch { setMsg("Голос не засчитан — войди в аккаунт"); setTimeout(() => setMsg(""), 2000); }
   };
 
+  // ── Закладки Neon: toggle без localStorage, GSAP пульс, валидатор id
+  function validateIdeaId(v: number): number | null {
+    if (!Number.isInteger(v) || v <= 0 || v > 1_000_000) return null;
+    return v;
+  }
+  const toggleBookmark = async (id: number) => {
+    const vid = validateIdeaId(id);
+    if (vid === null) { setMsg("Неверный id идеи"); setTimeout(() => setMsg(""), 2000); return; }
+    const was = bookmarked.has(vid);
+    // оптимистично
+    setBookmarked((s) => { const n = new Set(s); if (was) n.delete(vid); else n.add(vid); return n; });
+    try {
+      const r = await fetch(`/magnum/api/ideas/${vid}/bookmark`, { method: "POST", credentials: "include" });
+      if (!r.ok) throw new Error(await r.text());
+      const d = (await r.json()) as { bookmarked: boolean };
+      setBookmarked((s) => { const n = new Set(s); if (d.bookmarked) n.add(vid); else n.delete(vid); return n; });
+      // GSAP pulse на карточке
+      if (gridRef.current) {
+        const el = gridRef.current.querySelector(`[data-idea="${vid}"]`) as HTMLElement | null;
+        if (el) gsap.fromTo(el, { scale: 1 }, { scale: 1.04, duration: 0.16, yoyo: true, repeat: 1, ease: "power2.inOut" });
+      }
+      setMsg(d.bookmarked ? "📌 В закладках" : "🔖 Убрано из закладок");
+      setTimeout(() => setMsg(""), 1800);
+    } catch {
+      // откат
+      setBookmarked((s) => { const n = new Set(s); if (was) n.add(vid); else n.delete(vid); return n; });
+      setMsg("Нужен вход — закладки в Neon");
+      setTimeout(() => setMsg(""), 2000);
+    }
+  };
+
   const useTemplate = (t: typeof IDEA_TEMPLATES[number]) => {
     setTitle(t.title);
     setDesc(t.desc);
@@ -212,11 +271,12 @@ export function IdeasPage() {
     }
     if (catFilter !== "all") arr = arr.filter((x) => (x.category || "other") === catFilter);
     if (statusFilter !== "all") arr = arr.filter((x) => x.status === statusFilter);
+    if (bookmarksOnly) arr = arr.filter((x) => bookmarked.has(x.id));
     if (sortKey === "top") arr.sort((a, b) => b.votes - a.votes);
     else if (sortKey === "new") arr.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     else if (sortKey === "hot") arr.sort((a, b) => (b.votes / Math.max(1, (Date.now() - new Date(b.created_at).getTime()) / 86400000)) - (a.votes / Math.max(1, (Date.now() - new Date(a.created_at).getTime()) / 86400000)));
     return arr;
-  }, [ideas, q, catFilter, statusFilter, sortKey]);
+  }, [ideas, q, catFilter, statusFilter, sortKey, bookmarked, bookmarksOnly]);
 
   const statuses = useMemo(() => Array.from(new Set(ideas.map((x) => x.status).filter(Boolean))).slice(0, 8), [ideas]);
 
@@ -245,7 +305,7 @@ export function IdeasPage() {
         </div>
         {msg && <span className={styles.msg}>{msg}</span>}
         <details style={{ marginTop: 4 }}>
-          <summary style={{ cursor: "pointer", fontSize: 12, opacity: 0.6 }}>💡 34 шаблона — кликни чтобы подставить</summary>
+          <summary style={{ cursor: "pointer", fontSize: 12, opacity: 0.6 }}>💡 50 шаблонов — кликни чтобы подставить</summary>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
             {IDEA_TEMPLATES.map((t, i) => (
               <button key={i} type="button" onClick={() => useTemplate(t)} title={t.desc} style={{ fontSize: 11, padding: "5px 8px", borderRadius: 999, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.04)", color: "rgba(255,255,255,.8)", cursor: "pointer", maxWidth: 260, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{getCategoryMeta(t.category).emoji} {t.title}</button>
@@ -269,7 +329,10 @@ export function IdeasPage() {
           <option value="new" style={{ color: "#000" }}>🆕 Новые</option>
           <option value="hot" style={{ color: "#000" }}>⚡ Горячие</option>
         </select>
-        <span style={{ fontSize: 12, opacity: 0.45 }}>{filtered.length} / {ideas.length}</span>
+        <button type="button" onClick={() => setBookmarksOnly((v) => !v)} title="Только закладки (Neon)" style={{ padding: "8px 12px", borderRadius: 10, border: bookmarksOnly ? "1px solid #ffcc00" : "1px solid rgba(255,255,255,.1)", background: bookmarksOnly ? "rgba(255,204,0,.15)" : "rgba(255,255,255,.06)", color: bookmarksOnly ? "#ffcc00" : "#fff", fontSize: 12, cursor: "pointer" }}>
+          {bookmarksOnly ? "⭐ Закладки" : "☆ Закладки"} {bookmarked.size > 0 ? `· ${bookmarked.size}` : ""}
+        </button>
+        <span style={{ fontSize: 12, opacity: 0.45 }}>{filtered.length} / {ideas.length}{bookmarksOnly ? " · закладки" : ""}</span>
       </div>
 
       {loading ? <p className={styles.loading}>Загружаю идеи…</p> : filtered.length === 0 ? (
@@ -289,7 +352,10 @@ export function IdeasPage() {
               </div>
               <h3 className={styles.title}>{it.title}</h3>
               <p className={styles.desc}>{it.description}</p>
-              <button className={styles.vote} onClick={() => vote(it.id)} disabled={votedIds.has(it.id)} style={{ opacity: votedIds.has(it.id) ? 0.5 : 1 }}>{votedIds.has(it.id) ? "✓ Голос засчитан" : "Голосовать"}</button>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button className={styles.vote} onClick={() => vote(it.id)} disabled={votedIds.has(it.id)} style={{ opacity: votedIds.has(it.id) ? 0.5 : 1, flex: 1 }}>{votedIds.has(it.id) ? "✓ Голос засчитан" : "Голосовать"}</button>
+                <button type="button" onClick={() => toggleBookmark(it.id)} title={bookmarked.has(it.id) ? "Убрать из закладок" : "В закладки (Neon)"} style={{ padding: "8px 10px", borderRadius: 10, border: bookmarked.has(it.id) ? "1px solid #ffcc00" : "1px solid rgba(255,255,255,.12)", background: bookmarked.has(it.id) ? "rgba(255,204,0,.18)" : "rgba(255,255,255,.06)", color: bookmarked.has(it.id) ? "#ffcc00" : "#fff", cursor: "pointer", fontSize: 13 }}>{bookmarked.has(it.id) ? "⭐" : "☆"}</button>
+              </div>
             </div>
             );
           })}

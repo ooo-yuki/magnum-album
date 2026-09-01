@@ -135,3 +135,26 @@ export const magnumNotifications = pgTable("magnum_notifications", {
   read: boolean("read").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+export const magnumIdeaBookmarks = pgTable("magnum_idea_bookmarks", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => magnumUsers.id).notNull(),
+  ideaId: integer("idea_id").references(() => magnumIdeas.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const magnumPromoCodes = pgTable("magnum_promo_codes", {
+  code: text("code").primaryKey(),
+  reward: integer("reward").notNull(),
+  maxUses: integer("max_uses").default(1000),
+  uses: integer("uses").default(0).notNull(),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const magnumPromoRedemptions = pgTable("magnum_promo_redemptions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => magnumUsers.id).notNull(),
+  code: text("code").references(() => magnumPromoCodes.code).notNull(),
+  redeemedAt: timestamp("redeemed_at").defaultNow().notNull(),
+});
