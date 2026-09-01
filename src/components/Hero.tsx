@@ -26,6 +26,11 @@ export function Hero() {
 
   const [titleText, setTitleText] = useState(SCRAMBLE_CHARS.slice(0, TITLE_TARGET.length));
 
+  const handlePresave = () => {
+    try { localStorage.setItem("presave_done", "1"); } catch {}
+    fetch("/magnum/api/presave/click", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: PRESAVE_URL, ts: Date.now() }) }).catch(() => {});
+  };
+
   // text-scramble effect on mount
   useEffect(() => {
     let frame = 0;
@@ -275,12 +280,15 @@ export function Hero() {
           rel="noopener noreferrer"
           className={styles.btnPrimary}
           aria-label="Пресейв MAGNUM на Яндекс Музыке"
+          onClick={handlePresave}
+          data-testid="hero-presave"
+          data-presave-bonus="42"
         >
           <span className={styles.btnPulse} aria-hidden />
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z" />
           </svg>
-          Пресейв
+          Пресейв <span style={{ background: "rgba(255,255,255,0.22)", padding: "0.12rem 0.45rem", borderRadius: 999, fontSize: "0.72rem", fontWeight: 900 }}>+42 монеты</span>
         </a>
         <a href="#singles" className={styles.btnSecondary}>
           Слушать синглы

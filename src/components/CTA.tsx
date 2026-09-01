@@ -17,6 +17,11 @@ export function CTA() {
   const shimmerRef = useRef<HTMLSpanElement>(null);
   const proofRef = useRef<HTMLDivElement>(null);
 
+  const handlePresaveClick = () => {
+    try { localStorage.setItem("presave_done", "1"); } catch {}
+    fetch("/magnum/api/presave/click", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: PRESAVE_URL, ts: Date.now() }) }).catch(() => {});
+  };
+
   useEffect(() => {
     if (!sectionRef.current) return;
 
@@ -136,12 +141,13 @@ export function CTA() {
           Пресейв = ты первый услышишь.
         </p>
         <div className={styles.grid}>
-          <a href={PRESAVE_URL} target="_blank" rel="noopener noreferrer" className={`${styles.card} ${styles.primary}`} ref={(el) => { cardsRef.current[0] = el; }}>
+          <a href={PRESAVE_URL} target="_blank" rel="noopener noreferrer" className={`${styles.card} ${styles.primary}`} ref={(el) => { cardsRef.current[0] = el; }} onClick={handlePresaveClick} data-testid="cta-presave" data-presave-bonus="42">
             <span ref={shimmerRef} className={styles.shimmer} aria-hidden />
+            <span style={{ position: "absolute", top: 10, right: 10, fontSize: "0.68rem", fontWeight: 900, letterSpacing: "0.06em", background: "#fff", color: "#ff2d55", padding: "0.2rem 0.5rem", borderRadius: 999, lineHeight: 1 }} data-testid="bonus-badge">+42 монеты</span>
             <span className={styles.cardIcon}>★</span>
             <span className={styles.cardTitle}>Пресейв на Яндекс Музыке</span>
             <span className={styles.cardSub}>400K+ слушателей • уведомление в день релиза</span>
-            <span className={styles.cardCta}>Сохранить →</span>
+            <span className={styles.cardCta}>Сохранить → <span style={{ opacity: 0.9, fontSize: "0.78rem", marginLeft: 6, background: "rgba(255,255,255,0.22)", padding: "0.1rem 0.4rem", borderRadius: 999 }}>бонус +42</span></span>
           </a>
           <a href={SPOTIFY_URL} target="_blank" rel="noopener noreferrer" className={styles.card} ref={(el) => { cardsRef.current[1] = el; }}>
             <span className={styles.cardIcon}>♫</span>

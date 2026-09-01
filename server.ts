@@ -868,47 +868,25 @@ async function handleShopSubscriptions(req: Request): Promise<Response> {
     const sql = getSql();
     await ensureSubscriptionTable();
     const rows = await sql`SELECT tier FROM magnum_subscriptions WHERE user_id=${user.id} AND (ends_at IS NULL OR ends_at > now()) ORDER BY started_at DESC LIMIT 1`;
-    let tier: string | null = rows.length ? String((rows[0] as { tier: string }).tier) : null;
-    let deprecated = false;
-    let source: "subscriptions" | "cosmetics" = "subscriptions";
-    let derived: string | null = null;
-    if (!tier) {
-      // COALESCE fallback — старые VIP без записи в magnum_subscriptions (breaking change fix)
-      try {
-        const cRows = await sql`SELECT cosmetic_id FROM magnum_cosmetics WHERE user_id=${user.id}`;
-        const ids = (cRows as { cosmetic_id: string }[]).map(r => String(r.cosmetic_id));
-        // priority: title-god → pro, prism → vip+, title-vip → vip
-        if (ids.includes("title-god")) derived = "pro";
-        else if (ids.some(id => isPrismCosmetic(id))) derived = "vip+";
-        else if (ids.includes("title-vip")) derived = "vip";
-        if (derived) {
-          tier = derived;
-          deprecated = true;
-          source = "cosmetics";
-          // async backfill — не блокируем ответ, логируем ошибки
-          void (async () => {
-            try {
-              const s = getSql();
-              await ensureSubscriptionTable();
-              // idempotent backfill: insert только если всё ещё нет активной подписки
-              const still = await s`SELECT tier FROM magnum_subscriptions WHERE user_id=${user.id} AND (ends_at IS NULL OR ends_at > now()) LIMIT 1`;
-              if (still.length === 0) {
-                await s`INSERT INTO magnum_subscriptions (user_id, tier, started_at) VALUES (${user.id}, ${derived}, now())`;
-                console.log(`[subscriptions backfill] user ${user.id} ${derived} from cosmetics`);
-              }
-            } catch (e) { console.error("[subscriptions backfill] failed", e); }
-          })();
-        }
-      } catch (e) { console.error("[subscriptions derived] failed", e); }
-    }
-    if (deprecated) {
-      return Response.json({ tier, active: tier, subscription: tier, deprecated: true, source, derived, fallback: true });
-    }
+    const tier: string | null = rows.length ? String((rows[0] as { tier: string }).tier) : null;
     return Response.json({ tier, active: tier, subscription: tier });
   } catch (e) {
     console.error("[subscriptions] failed", e);
     return Response.json({ error: "db error" }, { status: 500 });
   }
+}
+
+async function handleLog(req: Request): Promise<Response> {
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`log:${ip}`, 20, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
+  let body: unknown = null;
+  try {
+    const text = await req.text();
+    const sliced = text.slice(0, 4000);
+    try { body = JSON.parse(sliced); } catch { body = sliced; }
+  } catch { body = null; }
+  console.error("[client log]", body);
+  return Response.json({ ok: true });
 }
 
 // ---- PRISM 42 — dust / dismantle / craft + /shop/prism & /shop/dust ----
@@ -2205,6 +2183,21 @@ async function handlePresaveClick(req: Request): Promise<Response> {
   try {
     const sql = getSql();
     await sql`INSERT INTO magnum_presave_clicks (user_id, url, ip, created_at) VALUES (${userId}, ${url}, ${ip}, now())`;
+    // bonus incentive +42 монеты за первый пресейв (P0 funnel)
+    if (userId) {
+      try {
+        const cntR = await sql`SELECT count(*)::int as c FROM magnum_presave_clicks WHERE user_id=${userId}`;
+        const cnt = Number((cntR[0] as { c: number }).c);
+        if (cnt === 1) {
+          await sql`INSERT INTO magnum_coins (user_id, balance) VALUES (${userId}, 1000) ON CONFLICT (user_id) DO NOTHING`;
+          const upd = await sql`UPDATE magnum_coins SET balance = balance + 42 WHERE user_id=${userId} RETURNING balance`;
+          const bal = upd.length ? Number((upd[0] as { balance: number }).balance) : 0;
+          await sql`INSERT INTO magnum_transactions (user_id, amount, reason, meta) VALUES (${userId}, 42, 'presave_bonus', '{"bonus":42}'::jsonb)`;
+          try { await ensureNotification(userId, "Пресейв MAGNUM", "+42 монеты за пресейв — спасибо! 🔥", "presave"); } catch {}
+          return Response.json({ ok: true, bonus: 42, balance: bal, firstPresave: true });
+        }
+      } catch (e) { console.error("[presave bonus] failed", e); }
+    }
     return Response.json({ ok: true });
   } catch (e) {
     console.error("[presave click] failed", e);
@@ -2302,18 +2295,38 @@ async function handleGameSubmit(req: Request): Promise<Response> {
   const score = Number(body.score);
   if (!Number.isInteger(score) || score < 0 || score > 999999) return Response.json({ error: "score must be integer 0..999999" }, { status: 400 });
   const meta = body.meta && typeof body.meta === "object" ? body.meta : {};
-  const coinsEarned = score < 10 ? 0 : Math.min(42, Math.floor(score / 200));
+  let coinsEarned = score < 10 ? 0 : Math.min(42, Math.floor(score / 200));
+  // P0 funnel активация: +10 бонус за первую игру (идемпотентно через флаг первой записи в magnum_game_scores)
+  let funnelBonus = 0;
+  try {
+    const sql = getSql();
+    const prev = await sql`SELECT count(*)::int as c FROM magnum_game_scores WHERE user_id=${user.id}`;
+    const isFirst = Number((prev[0] as { c: number }).c) === 0;
+    if (isFirst) funnelBonus = 10;
+  } catch { funnelBonus = 0; }
+  const totalCoins = coinsEarned + funnelBonus;
   try {
     const sql = getSql();
     await sql`INSERT INTO magnum_game_scores (user_id, game, score, coins_earned, meta) VALUES (${user.id}, ${game}, ${score}, ${coinsEarned}, ${JSON.stringify(meta)}::jsonb)`;
-    if (coinsEarned > 0) {
+    if (totalCoins > 0) {
       await sql`INSERT INTO magnum_coins (user_id, balance) VALUES (${user.id}, 1000) ON CONFLICT (user_id) DO NOTHING`;
-      const upd = await sql`UPDATE magnum_coins SET balance = balance + ${coinsEarned} WHERE user_id=${user.id} RETURNING balance`;
+      const upd = await sql`UPDATE magnum_coins SET balance = balance + ${totalCoins} WHERE user_id=${user.id} RETURNING balance`;
       const bal = Number((upd[0] as { balance: number }).balance);
       await sql`INSERT INTO magnum_transactions (user_id, amount, reason, meta) VALUES (${user.id}, ${coinsEarned}, 'game_reward', ${JSON.stringify({ game, score })}::jsonb)`;
-      return Response.json({ ok: true, game, score, coinsEarned, balance: bal });
+      if (funnelBonus > 0) {
+        await sql`INSERT INTO magnum_transactions (user_id, amount, reason, meta) VALUES (${user.id}, ${funnelBonus}, 'funnel_first_game', ${JSON.stringify({ game, score, funnel: 'funnel-activation-20260901-1807' })}::jsonb)`;
+      }
+      return Response.json({ ok: true, game, score, coinsEarned, funnelBonus, totalCoins, balance: bal });
     }
-    return Response.json({ ok: true, game, score, coinsEarned: 0 });
+    if (funnelBonus > 0) {
+      const sql2 = getSql();
+      await sql2`INSERT INTO magnum_coins (user_id, balance) VALUES (${user.id}, 1000) ON CONFLICT (user_id) DO NOTHING`;
+      const upd2 = await sql2`UPDATE magnum_coins SET balance = balance + ${funnelBonus} WHERE user_id=${user.id} RETURNING balance`;
+      const bal2 = Number((upd2[0] as { balance: number }).balance);
+      await sql2`INSERT INTO magnum_transactions (user_id, amount, reason, meta) VALUES (${user.id}, ${funnelBonus}, 'funnel_first_game', ${JSON.stringify({ game, score, funnel: 'funnel-activation-20260901-1807' })}::jsonb)`;
+      return Response.json({ ok: true, game, score, coinsEarned: 0, funnelBonus, totalCoins: funnelBonus, balance: bal2 });
+    }
+    return Response.json({ ok: true, game, score, coinsEarned: 0, funnelBonus: 0, totalCoins: 0 });
   } catch (e) { console.error("[game submit] failed", e); return Response.json({ error: "db error" }, { status: 500 }); }
 }
 async function handleGameTop(req: Request): Promise<Response> {
@@ -3841,6 +3854,8 @@ const server = Bun.serve<WSData>({
 
     // games unified scoring (Neon, coins reward, rate limit)
     if (url.pathname === "/magnum/api/games/submit" && req.method === "POST") return handleGameSubmit(req);
+    // P0 funnel alias: /magnum/api/game/score (singular) → same handler for checklist
+    if (url.pathname === "/magnum/api/game/score" && req.method === "POST") return handleGameSubmit(req);
     if (url.pathname === "/magnum/api/games/top" && req.method === "GET") return handleGameTop(req);
     if (url.pathname === "/magnum/api/games/my" && req.method === "GET") return handleGameMy(req);
     // referrals 42 (code = USERNAME+id36+42, reward 42 each)
@@ -3893,6 +3908,12 @@ const server = Bun.serve<WSData>({
       const name = url.pathname.replace("/magnum/api/profile/", "").split("/")[0] ?? ""; return handlePublicProfile(req, name);
     }
     if (url.pathname === "/magnum/api/search" && req.method === "GET") return handleSearch(req);
+    if (url.pathname === "/magnum/api/log" && req.method === "POST") return handleLog(req);
+
+    // SPEC-42: unknown /magnum/api/* → 404 JSON (не отдавать index.html — SPA fallback только для страниц)
+    if (url.pathname.startsWith("/magnum/api/")) {
+      return Response.json({ error: "not found" }, { status: 404 });
+    }
 
     if (url.pathname === "/magnum" || url.pathname.startsWith("/magnum/")) {
       const rel = url.pathname.replace(/^\/magnum\/?/, "");

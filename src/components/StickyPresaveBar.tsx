@@ -11,7 +11,10 @@ declare global {
 export function StickyPresaveBar() {
   const barRef = useRef<HTMLDivElement>(null);
   const ctaRef = useRef<HTMLAnchorElement>(null);
-  const [dismissed, setDismissed] = useState(() => Boolean(window.__stickyPresaveDismissed));
+  const [dismissed, setDismissed] = useState(() => {
+    try { if (localStorage.getItem("presave_done") === "1") return true; } catch {}
+    return Boolean(window.__stickyPresaveDismissed);
+  });
 
   useEffect(() => {
     if (dismissed || !barRef.current) return;
@@ -53,6 +56,7 @@ export function StickyPresaveBar() {
   }, []);
 
   const handleClick = useCallback(() => {
+    try { localStorage.setItem("presave_done", "1"); } catch {}
     // explicit beacon — presaveTracker also catches via delegated click on href, but double-safe
     fetch("/magnum/api/presave/click", {
       method: "POST",
@@ -113,7 +117,7 @@ export function StickyPresaveBar() {
         MAGNUM • пресейв
       </span>
       <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "rgba(240,240,240,0.85)", lineHeight: 1.2, flex: "0 1 auto", textAlign: "center" as const }}>
-        <span className="hide-mobile" style={{ opacity: 0.9 }}>🔥 Пресейв MAGNUM — </span>первым услышишь дроп
+        <span className="hide-mobile" style={{ opacity: 0.9 }}>🔥 Пресейв MAGNUM — </span>первым услышишь дроп <span style={{ background: "#ffcc00", color: "#111", padding: "0.1rem 0.4rem", borderRadius: 999, fontSize: "0.72rem", fontWeight: 900 }}>+42 монеты</span>
       </span>
       <a
         ref={ctaRef}
@@ -122,6 +126,7 @@ export function StickyPresaveBar() {
         rel="noopener noreferrer"
         onClick={handleClick}
         data-testid="sticky-presave-cta"
+        data-presave-bonus="42"
         aria-label="Пресейв MAGNUM на Яндекс Музыке"
         style={{
           display: "inline-flex",
