@@ -29,7 +29,7 @@ function AnimatedNumber({ target, suffix }: { target: number; suffix: string }) 
       gsap.to(obj, {
         val: target,
         duration: 2.6,
-        ease: "expo.out", // stats easing v2 — smoother deceleration
+        ease: "expo.out", // stats easing v3 — 2.6s expo with soft snap
         scrollTrigger: {
           trigger: ref.current,
           start: "top 80%",
@@ -69,9 +69,9 @@ export function Stats() {
         },
         y: 0,
         opacity: 1,
-        stagger: 0.15,
-        duration: 0.8,
-        ease: "power2.out",
+        stagger: 0.12,
+        duration: 0.75,
+        ease: "power3.out", // v3 tighter stagger
       });
 
       // shimmer sweep + glow pulse on "В чартах" badge
