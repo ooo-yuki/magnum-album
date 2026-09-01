@@ -133,12 +133,13 @@ export function RhythmGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [songIdx, setSongIdx] = useState(0);
   const [diff, setDiff] = useState<DiffKey>("normal");
-  const [state, setState] = useState<"menu" | "playing" | "win" | "fail">("menu");
+  const [state, setState] = useState<"menu" | "playing" | "paused" | "win" | "fail">("menu");
   const [score, setScore] = useState(0);
   const [combo, setCombo] = useState(0);
   const [maxCombo, setMaxCombo] = useState(0);
   const [judgement, setJudgement] = useState<Judgement>(null);
   const [accuracy, setAccuracy] = useState(100);
+  const [missStreak, setMissStreak] = useState(0);
 
   const statsRef = useRef({ score: 0, combo: 0, maxCombo: 0, perfect: 0, good: 0, miss: 0, total: 0 });
   const notesRef = useRef<Note[]>([]);
@@ -151,6 +152,9 @@ export function RhythmGame() {
   const keysDownRef = useRef<boolean[]>([false, false, false, false]);
   const startTimeRef = useRef(0);
   const pressedRef = useRef<boolean[]>([false, false, false, false]);
+  const pausedTimeRef = useRef(0);
+  const pauseStartRef = useRef(0);
+  const missStreakRef = useRef(0);
   const animRef = useRef(0);
   const canvasSizeRef = useRef({ w: 600, h: 560 });
 
@@ -185,6 +189,7 @@ export function RhythmGame() {
     const isPerfect = j === "perfect";
     effectsRef.current.push({ lane, text: isPerfect ? "PERFECT!" : "GOOD!", color: isPerfect ? "#ffcc00" : "#00ff88", life: 1, scale: 1 });
     flashesRef.current.push({ lane, alpha: 1 });
+    missStreakRef.current = 0; setMissStreak(0);
     // частицы + шейк
     if (isPerfect) {
       shakeRef.current = Math.min(10, 3 + s.combo * 0.4);
@@ -213,15 +218,21 @@ export function RhythmGame() {
     noteId = 0;
     notesRef.current = chart.map((c) => ({ id: noteId++, lane: c.lane, y: -200, hitTime: c.time, judged: false, judgement: null }));
     statsRef.current = { score: 0, combo: 0, maxCombo: 0, perfect: 0, good: 0, miss: 0, total: 0 };
-    setScore(0); setCombo(0); setMaxCombo(0); setAccuracy(100); setJudgement(null);
+    setScore(0); setCombo(0); setMaxCombo(0); setAccuracy(100); setJudgement(null); setMissStreak(0);
     effectsRef.current = []; flashesRef.current = []; particlesRef.current = []; shakeRef.current = 0; pulseRef.current = 0;
-    startTimeRef.current = performance.now();
+    startTimeRef.current = performance.now(); pausedTimeRef.current = 0; missStreakRef.current = 0;
     setSongIdx(idx);
     setState("playing");
   }, []);
 
+  const togglePause = useCallback(() => {
+    if (state === "playing") { pauseStartRef.current = performance.now(); setState("paused"); }
+    else if (state === "paused") { pausedTimeRef.current += performance.now() - pauseStartRef.current; setState("playing"); }
+  }, [state]);
+
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.code === "Space" || e.code === "KeyP" || e.code === "Escape") && (state === "playing" || state === "paused")) { e.preventDefault(); togglePause(); return; }
       const lane = LANE_KEYS.indexOf(e.code as typeof LANE_KEYS[number]);
       if (lane === -1) return;
       if (keysDownRef.current[lane]) return;
@@ -229,7 +240,7 @@ export function RhythmGame() {
       pressedRef.current[lane] = true;
       setTimeout(() => { pressedRef.current[lane] = false; }, 120);
       if (state === "playing") {
-        const now = performance.now() - startTimeRef.current;
+        const now = performance.now() - startTimeRef.current - pausedTimeRef.current;
         hitNote(lane, now);
       }
       e.preventDefault();
@@ -302,7 +313,7 @@ export function RhythmGame() {
       }
 
       if (state === "playing") {
-        const now = performance.now() - startTimeRef.current;
+        const now = performance.now() - startTimeRef.current - pausedTimeRef.current;
         const curD = DIFFICULTY[diff];
         for (const n of notesRef.current) {
           if (n.judged && n.y < -100) continue;
@@ -310,7 +321,7 @@ export function RhythmGame() {
           if (!n.judged && now - n.hitTime > curD.good) {
             n.judged = true; n.judgement = "miss";
             const s = statsRef.current; s.miss++; s.total++; s.combo = 0;
-            setCombo(0);
+            setCombo(0); missStreakRef.current++; setMissStreak(missStreakRef.current);
             setJudgement("miss"); setTimeout(() => setJudgement((p) => p === "miss" ? null : p), 280);
             setAccuracy(Math.round(((s.perfect * 1 + s.good * 0.6) / Math.max(1, s.total)) * 100));
             effectsRef.current.push({ lane: n.lane, text: "MISS", color: "#ff2d55", life: 1, scale: 1 });
@@ -460,7 +471,7 @@ export function RhythmGame() {
         </div>
       )}
 
-      {(state === "playing" || state === "win" || state === "fail") && (
+      {(state === "playing" || state === "paused" || state === "win" || state === "fail") && (
         <div className={styles.gameArea}>
           <div className={styles.hud}>
             <div className={styles.stat}><span>Очки</span><strong>{score}</strong></div>
@@ -479,7 +490,7 @@ export function RhythmGame() {
                 const rect = (e.target as HTMLCanvasElement).getBoundingClientRect();
                 const x = e.clientX - rect.left;
                 const lane = Math.min(LANE_COUNT - 1, Math.max(0, Math.floor((x / rect.width) * LANE_COUNT)));
-                const now = performance.now() - startTimeRef.current;
+                const now = performance.now() - startTimeRef.current - pausedTimeRef.current;
                 pressedRef.current[lane] = true; setTimeout(() => { pressedRef.current[lane] = false; }, 140);
                 hitNote(lane, now);
               }}
@@ -487,15 +498,18 @@ export function RhythmGame() {
           </div>
           <div className={styles.controls}>
             {LANE_LABELS.map((lb, i) => (
-              <button key={lb} className={styles.keyBtn} style={{ borderColor: LANE_COLORS[i], color: LANE_COLORS[i] }} onPointerDown={(e) => { e.preventDefault(); if (state !== "playing") return; const now = performance.now() - startTimeRef.current; pressedRef.current[i] = true; setTimeout(() => { pressedRef.current[i] = false; }, 140); hitNote(i, now); }}>
+              <button key={lb} className={styles.keyBtn} style={{ borderColor: LANE_COLORS[i], color: LANE_COLORS[i] }} onPointerDown={(e) => { e.preventDefault(); if (state !== "playing") return; const now = performance.now() - startTimeRef.current - pausedTimeRef.current; pressedRef.current[i] = true; setTimeout(() => { pressedRef.current[i] = false; }, 140); hitNote(i, now); }}>
                 {lb}
               </button>
             ))}
           </div>
+          {missStreak >= 3 && state === "playing" && <div style={{ fontSize: "0.82rem", color: "rgba(255,204,0,0.9)", background: "rgba(255,204,0,0.08)", border: "1px solid rgba(255,204,0,0.22)", borderRadius: 10, padding: "0.45rem 0.75rem", maxWidth: 520 }}>💡 Подсказка: бей чуть раньше — цель на линии! Попробуй сложность «Легко» (окна шире).</div>}
           <div className={styles.navRow}>
+            <button className={styles.restartBtn} onClick={togglePause} style={{ borderColor: state==="paused" ? "rgba(0,255,136,0.35)" : undefined }}>{state === "paused" ? "▶ Продолжить" : "⏸ Пауза (P/Space)"}</button>
             <button className={styles.restartBtn} onClick={() => startGame(songIdx)}>Заново</button>
             <Link to="/magnum/games" className={styles.backInline}>← К играм</Link>
           </div>
+          {state === "paused" && <div style={{ fontSize: "0.84rem", color: "rgba(240,240,240,0.62)", marginTop: 4 }}>⏸ Пауза — нажми P / Space / Продолжить • <a href="https://music.thefence.me/psmagnum" target="_blank" rel="noreferrer" style={{ color: "#ff2d55", textDecoration: "underline" }}>Пресейв MAGNUM →</a></div>}
         </div>
       )}
 
