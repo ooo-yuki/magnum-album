@@ -71,6 +71,9 @@ export function Layout() {
 
   return (
     <>
+      <a href="#main-content" className={styles.skipLink}>
+        Перейти к содержимому
+      </a>
       <TopProgress />
       <PageLoader />
       <Particles />
@@ -143,7 +146,7 @@ export function Layout() {
         </div>
       )}
 
-      <main className={styles.main}>
+      <main className={styles.main} id="main-content" tabIndex={-1}>
         <PageTransition key={location.pathname}>
           <Outlet />
         </PageTransition>

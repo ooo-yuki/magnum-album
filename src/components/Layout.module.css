@@ -1,3 +1,26 @@
+/* skip-to-content a11y link */
+.skipLink {
+  position: fixed;
+  top: -100%;
+  left: 1rem;
+  z-index: 9999;
+  padding: 0.65rem 1.2rem;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.88rem;
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 4px 20px rgba(255, 45, 85, 0.4);
+  transition: top 0.2s ease;
+  white-space: nowrap;
+}
+
+.skipLink:focus {
+  top: 0;
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
 .nav {
   position: fixed;
   top: 0;
