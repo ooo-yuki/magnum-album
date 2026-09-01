@@ -975,15 +975,8 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/auth/logout" && req.method === "POST") return handleLogout(req);
     if (url.pathname === "/magnum/api/coins" && req.method === "GET") return handleCoinsGet(req);
     if (url.pathname === "/magnum/api/coins/add" && req.method === "POST") return handleCoinsAdd(req);
-    if (url.pathname === "/magnum/api/presave/click" && req.method === "POST") {
-      try {
-        const sql = neon(process.env.DATABASE_URL!);
-        const user = await getUserByToken(req).catch(() => null);
-        const body = await req.json().catch(() => ({} as any));
-        await sql`INSERT INTO magnum_presave_clicks (user_id, url, created_at) VALUES (${user?.id ?? null}, ${String((body as any).url || "/magnum")}, now())`;
-      } catch {}
-      return Response.json({ ok: true });
-    }
+    if (url.pathname === "/magnum/api/presave/click" && req.method === "POST") return handlePresaveClick(req);
+    if (url.pathname === "/magnum/api/presave/stats" && req.method === "GET") return handlePresaveStats(req);
 
     // ideas
     if (url.pathname === "/magnum/api/ideas" && req.method === "GET") return handleIdeasGet();
@@ -1014,6 +1007,7 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/mining" && req.method === "GET") return handleMiningGet(req);
     if (url.pathname === "/magnum/api/mining/click" && req.method === "POST") return handleMiningClick(req);
     if (url.pathname === "/magnum/api/mining/upgrade" && req.method === "POST") return handleMiningUpgrade(req);
+    if (url.pathname === "/magnum/api/mining/collect" && req.method === "POST") return handleMiningCollect(req);
 
     if (url.pathname === "/magnum" || url.pathname.startsWith("/magnum/")) {
       const rel = url.pathname.replace(/^\/magnum\/?/, "");
