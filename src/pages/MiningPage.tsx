@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import styles from "./MiningPage.module.css";
+import { AuthStatus } from "../components/AuthStatus";
 gsap.registerPlugin(ScrollTrigger);
 const RGB_GLOW="0 12px 36px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,45,85,0.22), 0 0 28px rgba(255,45,85,0.22), 0 0 28px rgba(0,255,136,0.14), 0 0 32px rgba(255,204,0,0.10)";
 
@@ -92,6 +93,7 @@ export const MINING_FAQ_EXTRA: { q: string; a: string; src: string }[] = [
   { q: "Бур?", a: "+1/сек 420", src: "MiningPage.tsx:26" }, // FILE:LINE MiningPage.tsx:26
   { q: "БЕЛАЗ?", a: "+5/сек 1042", src: "MiningPage.tsx:27" }, // FILE:LINE MiningPage.tsx:27
   { q: "Шахта?", a: "+12/сек 2042", src: "MiningPage.tsx:28" }, // FILE:LINE MiningPage.tsx:28
+
   { q: "cost?", a: "base*1.42^count", src: "MiningPage.tsx:42" }, // FILE:LINE MiningPage.tsx:42
   { q: "perClick?", a: "reduce power+1", src: "MiningPage.tsx:69" }, // FILE:LINE MiningPage.tsx:69
   { q: "perSec?", a: "reduce auto", src: "MiningPage.tsx:70" }, // FILE:LINE MiningPage.tsx:70
@@ -174,6 +176,7 @@ export function MiningPage() {
   const [board] = useState<BoardEntry[]>(BOARD_MOCK);
   const [nick, setNick] = useState("Братуха_42");
   const [loading, setLoading] = useState(true);
+  const [me, setMe] = useState<{ id: number; username: string } | null>(null);
   // vault Neon
   const [vaultClaimed, setVaultClaimed] = useState<Set<string>>(new Set());
   const [vaultLoading, setVaultLoading] = useState(false);
@@ -194,6 +197,15 @@ export function MiningPage() {
   const perSec = upgrades.reduce((s, u) => s + u.auto * u.count, 0);
 
   // load from server: GET /magnum/api/mining
+  useEffect(() => {
+    fetch("/magnum/api/auth/me", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => setMe(j?.user ?? null))
+      .catch(() => setMe(null));
+    const onAuth = () => fetch("/magnum/api/auth/me", { credentials: "include" }).then((r) => (r.ok ? r.json() : null)).then((j) => setMe(j?.user ?? null)).catch(() => {});
+    window.addEventListener("magnum:auth" as unknown as string, onAuth as EventListener);
+    return () => window.removeEventListener("magnum:auth" as unknown as string, onAuth as EventListener);
+  }, []);
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -398,10 +410,15 @@ export function MiningPage() {
   };
 
   // ---- WS duel ----
-  const connectDuel = useCallback(() => {
+  const connectDuel = useCallback(async () => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) return;
+    if (!me) {
+      showToast("Войди, братуха — дуэль только для залогиненных");
+      window.dispatchEvent(new CustomEvent("magnum:need-auth"));
+      return;
+    }
     const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${proto}//${window.location.host}/magnum/api/ws?username=${encodeURIComponent(nick.trim() || "Братуха_42")}`;
+    const wsUrl = `${proto}//${window.location.host}/magnum/api/ws`;
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
     ws.onopen = () => setDuelConnected(true);
@@ -413,7 +430,7 @@ export function MiningPage() {
         if (msg.room) setDuelRoom(msg.room);
       } catch {}
     };
-  }, [nick]);
+  }, [me]);
 
   const disconnectDuel = useCallback(() => {
     wsRef.current?.close();
@@ -469,6 +486,13 @@ export function MiningPage() {
         </p>
       </header>
 
+      {!me && (
+        <div style={{ margin: "14px 0", padding: 14, border: "1px solid rgba(255,204,0,0.3)", borderRadius: 12, background: "rgba(255,204,0,0.08)", textAlign: "center" }}>
+          <div style={{ fontWeight: 800, marginBottom: 6 }}>Войди, братуха — майнинг закрыт без логина</div>
+          <div style={{ opacity: 0.8, fontSize: 13, marginBottom: 10 }}>Без авторизации копка не сохраняется. Никаких голых ошибок.</div>
+          <AuthStatus />
+        </div>
+      )}
       {toast && <div className={styles.toast} role="status">{toast}</div>}
 
       <div className={styles.statsRow}>

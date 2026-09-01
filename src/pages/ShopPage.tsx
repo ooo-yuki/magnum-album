@@ -354,6 +354,11 @@ export function ShopPage() {
   };
 
   const buy = async (skin: Skin) => {
+    if (!me) {
+      pushToast("err", "Войди, братуха — без логина магазин закрыт");
+      window.dispatchEvent(new CustomEvent("magnum:need-auth"));
+      return;
+    }
     const price = RARITY_META[skin.rarity].price;
     if (inventory.includes(skin.id)) return;
     if (coins < price) {
@@ -368,10 +373,17 @@ export function ShopPage() {
         body: JSON.stringify({ skinId: skin.id, id: skin.id, rarity: skin.rarity, price }),
       });
       if (!res.ok) {
+        if (res.status === 401) {
+          pushToast("err", "Войди, братуха — без логина магазин закрыт");
+          window.dispatchEvent(new CustomEvent("magnum:need-auth"));
+          return;
+        }
         const txt = await res.text().catch(() => "");
         // парсим json ошибку если есть
         let msg = txt;
         try { const j = JSON.parse(txt) as { error?: string }; if (j.error) msg = j.error; } catch {}
+        // прячем голую unauthorized
+        if (msg.toLowerCase().includes("unauthorized")) msg = "Войди, братуха — без логина магазин закрыт";
         pushToast("err", msg || "Покупка не прошла — попробуй ещё раз");
         return;
       }
@@ -388,6 +400,11 @@ export function ShopPage() {
   };
 
   const equip = async (skin: Skin) => {
+    if (!me) {
+      pushToast("err", "Войди, братуха — без логина магазин закрыт");
+      window.dispatchEvent(new CustomEvent("magnum:need-auth"));
+      return;
+    }
     try {
       const res = await fetch("/magnum/api/shop/equip", {
         method: "POST",
@@ -396,6 +413,11 @@ export function ShopPage() {
         body: JSON.stringify({ skinId: skin.id, id: skin.id }),
       });
       if (!res.ok) {
+        if (res.status === 401) {
+          pushToast("err", "Войди, братуха — без логина магазин закрыт");
+          window.dispatchEvent(new CustomEvent("magnum:need-auth"));
+          return;
+        }
         pushToast("err", "Не удалось надеть — попробуй ещё раз");
         return;
       }
@@ -475,6 +497,13 @@ export function ShopPage() {
         <p className={styles.subtitle}>
           12 аватаров в стиле 42. Фармим монеты в играх — качаем лук.
         </p>
+        {!me && (
+          <div style={{ margin: "14px 0", padding: 14, border: "1px solid rgba(255,204,0,0.3)", borderRadius: 12, background: "rgba(255,204,0,0.08)" }}>
+            <div style={{ fontWeight: 800, marginBottom: 6 }}>Войди, братуха — магазин закрыт без логина</div>
+            <div style={{ opacity: 0.8, fontSize: 13, marginBottom: 10 }}>Авторизация нужна для покупок, инвентаря и VIP-рамок. Без голых ошибок.</div>
+            <AuthStatus />
+          </div>
+        )}
         <div className={styles.coinsRow} aria-live="polite">
           <span className={styles.coinIcon}>🪙</span>
           <span className={styles.coinsValue} ref={coinsRef}>{coins}</span>
