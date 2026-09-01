@@ -1766,9 +1766,11 @@ async function handleHealth(): Promise<Response> {
       sql`SELECT count(*)::int as c FROM magnum_referrals`,
       sql`SELECT count(*)::int as c FROM magnum_duel_history`,
     ]);
-    let exchangesCount = 0; let commentsCount = 0;
+    let exchangesCount = 0; let commentsCount = 0; let reportsCount = 0; let modLogCount = 0;
     try { const r = await sql`SELECT count(*)::int as c FROM magnum_mining_exchanges`; exchangesCount = Number((r[0] as {c:number}).c); } catch {}
     try { const r = await sql`SELECT count(*)::int as c FROM magnum_idea_comments`; commentsCount = Number((r[0] as {c:number}).c); } catch {}
+    try { const r = await sql`SELECT count(*)::int as c FROM magnum_reports`; reportsCount = Number((r[0] as {c:number}).c); } catch {}
+    try { const r = await sql`SELECT count(*)::int as c FROM magnum_moderation_log`; modLogCount = Number((r[0] as {c:number}).c); } catch {}
     return Response.json({
       ok: true,
       ts: new Date().toISOString(),
@@ -1789,6 +1791,8 @@ async function handleHealth(): Promise<Response> {
         duels: Number((duels[0] as { c: number }).c),
         exchanges: exchangesCount,
         ideaComments: commentsCount,
+        reports: reportsCount,
+        moderationLog: modLogCount,
       },
       uptime: process.uptime(),
     });
@@ -2154,6 +2158,17 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/referral/redeem" && req.method === "POST") return handleReferralRedeem(req);
     // duel history (persisted from WS)
     if (url.pathname === "/magnum/api/duel/history" && req.method === "GET") return handleDuelHistory(req);
+    // reports + moderation + status workflow + public profile + search
+    if (url.pathname === "/magnum/api/reports" && req.method === "POST") return handleReportCreate(req);
+    if (url.pathname === "/magnum/api/reports" && req.method === "GET") return handleReportsGet(req);
+    if (url.pathname.startsWith("/magnum/api/ideas/") && url.pathname.endsWith("/status") && req.method === "POST") {
+      const parts = url.pathname.split("/"); const idStr = parts[4] ?? ""; return handleIdeaStatusPatch(req, idStr);
+    }
+    if (url.pathname === "/magnum/api/moderation/log" && req.method === "GET") return handleModerationLog(req);
+    if (url.pathname.startsWith("/magnum/api/profile/") && req.method === "GET") {
+      const name = url.pathname.replace("/magnum/api/profile/", "").split("/")[0] ?? ""; return handlePublicProfile(req, name);
+    }
+    if (url.pathname === "/magnum/api/search" && req.method === "GET") return handleSearch(req);
 
     if (url.pathname === "/magnum" || url.pathname.startsWith("/magnum/")) {
       const rel = url.pathname.replace(/^\/magnum\/?/, "");
