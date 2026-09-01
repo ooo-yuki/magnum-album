@@ -3599,6 +3599,98 @@ async function handlePetPrestige(req:Request):Promise<Response>{
   }
 }
 
+// ---- STUDIO 42 — нейро-визуализатор + клип-конструктор ----
+import { STUDIO_TRACKS, STUDIO_PRESETS, STUDIO_SCENE_DEFAULTS, STUDIO_BG_OPTIONS, STUDIO_FILTER_OPTIONS, isStudioTrackSlug, isStudioPresetId, getBpmForTrack, validateScenes } from "./src/lib/studio42.ts";
+async function ensureStudioTables(): Promise<void> {
+  const sql = getSql();
+  await sql`CREATE TABLE IF NOT EXISTS magnum_studio_saves (id serial PRIMARY KEY, user_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, track_slug text NOT NULL, preset text NOT NULL, scenes jsonb NOT NULL, created_at timestamp DEFAULT now() NOT NULL)`;
+  await sql`CREATE TABLE IF NOT EXISTS magnum_studio_likes (id serial PRIMARY KEY, save_id integer REFERENCES magnum_studio_saves(id) ON DELETE CASCADE NOT NULL, user_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, created_at timestamp DEFAULT now() NOT NULL, UNIQUE(save_id, user_id))`;
+  await sql`CREATE TABLE IF NOT EXISTS magnum_studio_shares (id serial PRIMARY KEY, user_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, day_id text NOT NULL, created_at timestamp DEFAULT now() NOT NULL, UNIQUE(user_id, day_id))`;
+}
+async function handleStudioList(_req: Request): Promise<Response> {
+  try {
+    await ensureStudioTables();
+    const sql = getSql();
+    const rows = await sql`SELECT s.id, s.user_id, s.track_slug, s.preset, s.scenes, s.created_at, u.username, COALESCE(l.cnt,0)::int as likes FROM magnum_studio_saves s LEFT JOIN magnum_users u ON u.id=s.user_id LEFT JOIN (SELECT save_id, count(*) as cnt FROM magnum_studio_likes GROUP BY save_id) l ON l.save_id=s.id ORDER BY s.created_at DESC LIMIT 50`;
+    const saves = rows.map((r: unknown) => {
+      const x = r as { id:number; user_id:number; track_slug:string; preset:string; scenes:unknown; created_at:string; username:string|null; likes:number };
+      return { id:Number(x.id), userId:Number(x.user_id), username:x.username?String(x.username):"Братуха", trackSlug:String(x.track_slug), track_slug:String(x.track_slug), preset:String(x.preset), scenes:x.scenes, likes:Number(x.likes), created_at:x.created_at };
+    });
+    return Response.json({ saves, count:saves.length });
+  } catch(e){ console.error("[studio list] failed",e); return Response.json({error:"db error"},{status:500}); }
+}
+async function handleStudioSave(req: Request): Promise<Response> {
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
+  const user=await getUserByToken(token); if(!user) return Response.json({error:"unauthorized"},{status:401});
+  const ip=getClientIp(req); if(!checkRateLimit(`studio:save:${user.id}:${ip}`,12,60_000)) return Response.json({error:"rate limited"},{status:429});
+  let body:{trackSlug?:string; track_slug?:string; preset?:string; scenes?:unknown};
+  try{ body=(await req.json()) as typeof body; }catch{ return Response.json({error:"Invalid JSON"},{status:400}); }
+  const slugRaw=String(body.trackSlug ?? body.track_slug ?? "").trim().toLowerCase();
+  if(!isStudioTrackSlug(slugRaw as never)) return Response.json({error:"trackSlug clay|vpn|nova|magnum"},{status:400});
+  const presetRaw=String(body.preset ?? "").trim().toLowerCase();
+  if(!isStudioPresetId(presetRaw as never)) return Response.json({error:"preset meduza-wave|neon-kuzbass|glitch-42"},{status:400});
+  const scenes=validateScenes(body.scenes); if(!scenes) return Response.json({error:"scenes must be 4 {bg,text,filter}"},{status:400});
+  try{
+    await ensureStudioTables();
+    const sql=getSql();
+    const rows=await sql`INSERT INTO magnum_studio_saves (user_id, track_slug, preset, scenes) VALUES (${user.id}, ${slugRaw}, ${presetRaw}, ${JSON.stringify(scenes)}::jsonb) RETURNING id, track_slug, preset, scenes, created_at`;
+    const r=rows[0] as {id:number; track_slug:string; preset:string; scenes:unknown; created_at:string};
+    return Response.json({ ok:true, save:{ id:Number(r.id), trackSlug:String(r.track_slug), preset:String(r.preset), scenes:r.scenes, created_at:r.created_at }},{status:201});
+  }catch(e){ console.error("[studio save] failed",e); return Response.json({error:"db error"},{status:500}); }
+}
+async function handleStudioLike(req: Request): Promise<Response> {
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
+  const user=await getUserByToken(token); if(!user) return Response.json({error:"unauthorized"},{status:401});
+  const ip=getClientIp(req); if(!checkRateLimit(`studio:like:${user.id}:${ip}`,20,60_000)) return Response.json({error:"rate limited"},{status:429});
+  let body:{saveId?:unknown; save_id?:unknown; id?:unknown};
+  try{ body=(await req.json()) as typeof body; }catch{ return Response.json({error:"Invalid JSON"},{status:400}); }
+  const raw=Number(body.saveId ?? body.save_id ?? body.id);
+  if(!Number.isInteger(raw)||raw<=0) return Response.json({error:"saveId required"},{status:400});
+  try{
+    await ensureStudioTables();
+    const sql=getSql();
+    const ex=await sql`SELECT id FROM magnum_studio_saves WHERE id=${raw} LIMIT 1`;
+    if(ex.length===0) return Response.json({error:"save not found"},{status:404});
+    const dup=await sql`SELECT id FROM magnum_studio_likes WHERE save_id=${raw} AND user_id=${user.id} LIMIT 1`;
+    if(dup.length>0) return Response.json({error:"already liked", saveId:raw},{status:409});
+    await sql`INSERT INTO magnum_studio_likes (save_id, user_id) VALUES (${raw}, ${user.id})`;
+    const cnt=await sql`SELECT count(*)::int as c FROM magnum_studio_likes WHERE save_id=${raw}`;
+    return Response.json({ ok:true, saveId:raw, likes:Number((cnt[0] as {c:number}).c) });
+  }catch(e){ console.error("[studio like] failed",e); return Response.json({error:"db error"},{status:500}); }
+}
+async function handleStudioLeaderboard(): Promise<Response> {
+  try{
+    await ensureStudioTables();
+    const sql=getSql();
+    const rows=await sql`SELECT s.id, s.user_id, s.track_slug, s.preset, s.scenes, s.created_at, u.username, COALESCE(l.cnt,0)::int as likes FROM magnum_studio_saves s LEFT JOIN magnum_users u ON u.id=s.user_id LEFT JOIN (SELECT save_id, count(*) as cnt FROM magnum_studio_likes WHERE created_at > now() - interval '7 days' GROUP BY save_id) l ON l.save_id=s.id WHERE s.created_at > now() - interval '7 days' ORDER BY likes DESC, s.created_at ASC LIMIT 20`;
+    const top=rows.map((r: unknown)=>{
+      const x=r as {id:number; user_id:number; track_slug:string; preset:string; scenes:unknown; created_at:string; username:string|null; likes:number};
+      let reward=0; // placeholder: 142/420/1420 for top3 could be claimed via share? leaderboard itself is read-only
+      return { id:Number(x.id), userId:Number(x.user_id), username:x.username?String(x.username):"Братуха", trackSlug:String(x.track_slug), preset:String(x.preset), scenes:x.scenes, likes:Number(x.likes), created_at:x.created_at };
+    });
+    // weekly rewards mapping for display: top1 1420 top2 420 top3 142
+    const rewards=[1420,420,142];
+    top.forEach((t,idx)=>{ (t as unknown as {reward:number}).reward = idx<3?rewards[idx]!:0; });
+    return Response.json({ leaderboard:top, top, count:top.length, weekRewards:rewards });
+  }catch(e){ console.error("[studio leaderboard] failed",e); return Response.json({error:"db error"},{status:500}); }
+}
+async function handleStudioShare(req: Request): Promise<Response> {
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
+  const user=await getUserByToken(token); if(!user) return Response.json({error:"unauthorized"},{status:401});
+  const dayId=new Date().toISOString().slice(0,10);
+  await ensureStudioTables();
+  const sql=getSql();
+  const dup=await sql`SELECT id FROM magnum_studio_shares WHERE user_id=${user.id} AND day_id=${dayId} LIMIT 1`;
+  if(dup.length>0) return Response.json({error:"already shared today", dayId, coins:0},{status:409});
+  await sql`INSERT INTO magnum_studio_shares (user_id, day_id) VALUES (${user.id}, ${dayId})`;
+  await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${user.id},1000) ON CONFLICT (user_id) DO NOTHING`;
+  await sql`UPDATE magnum_coins SET balance=balance+42 WHERE user_id=${user.id}`;
+  await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},42,'magnum-share-studio',${JSON.stringify({dayId})}::jsonb)`;
+  const upd=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+  return Response.json({ ok:true, coins:42, dayId, balance:Number((upd[0] as {balance:number}).balance) });
+}
+void ensureStudioTables().then(()=> console.log("[startup] magnum_studio_* ensured")).catch(e=> console.error("[startup] studio ensure failed",e));
+
 const wsReady=new Map<import("bun").ServerWebSocket<WSData>,boolean>();
 
 async function handleHealth(): Promise<Response> {
@@ -4302,6 +4394,12 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/pet/claim" && req.method === "POST") return handlePetClaim(req);
     if (url.pathname === "/magnum/api/pet/leaderboard" && req.method === "GET") return handlePetLeaderboard();
     if (url.pathname === "/magnum/api/pet/prestige" && req.method === "POST") return handlePetPrestige(req);
+    // studio 42
+    if (url.pathname === "/magnum/api/studio/list" && req.method === "GET") return handleStudioList(req);
+    if (url.pathname === "/magnum/api/studio/save" && req.method === "POST") return handleStudioSave(req);
+    if (url.pathname === "/magnum/api/studio/like" && req.method === "POST") return handleStudioLike(req);
+    if (url.pathname === "/magnum/api/studio/leaderboard" && req.method === "GET") return handleStudioLeaderboard();
+    if (url.pathname === "/magnum/api/studio/share" && req.method === "POST") return handleStudioShare(req);
     // chat 42 persisted (Neon, rate limit 12/min, 1..500 char, no <>)
     if (url.pathname === "/magnum/api/chat" && req.method === "GET") return handleChatHistory(req);
     if (url.pathname === "/magnum/api/chat" && req.method === "POST") return handleChatSend(req);
