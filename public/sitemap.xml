@@ -8,11 +8,27 @@
   <url><loc>https://5opka.ru/magnum/track/42</loc><priority>0.6</priority></url>
   <url><loc>https://5opka.ru/magnum/42</loc><priority>0.6</priority></url>
   <url><loc>https://5opka.ru/magnum/last-fit</loc><priority>0.6</priority></url>
+  <url><loc>https://5opka.ru/magnum/gallery</loc><priority>0.7</priority></url>
+  <url><loc>https://5opka.ru/magnum/ideas</loc><priority>0.7</priority></url>
+  <url><loc>https://5opka.ru/magnum/recaps</loc><priority>0.7</priority></url>
+  <url><loc>https://5opka.ru/magnum/shop</loc><priority>0.6</priority></url>
+  <url><loc>https://5opka.ru/magnum/eco</loc><priority>0.6</priority></url>
+  <url><loc>https://5opka.ru/magnum/mining</loc><priority>0.6</priority></url>
+  <url><loc>https://5opka.ru/magnum/presave-rating</loc><priority>0.6</priority></url>
   <url><loc>https://5opka.ru/magnum/games</loc><priority>0.5</priority></url>
   <url><loc>https://5opka.ru/magnum/games/runner</loc><priority>0.5</priority></url>
   <url><loc>https://5opka.ru/magnum/games/match3</loc><priority>0.5</priority></url>
   <url><loc>https://5opka.ru/magnum/games/knife</loc><priority>0.5</priority></url>
   <url><loc>https://5opka.ru/magnum/games/memory</loc><priority>0.5</priority></url>
   <url><loc>https://5opka.ru/magnum/games/clicker</loc><priority>0.5</priority></url>
+  <url><loc>https://5opka.ru/magnum/games/rhythm</loc><priority>0.5</priority></url>
+  <url><loc>https://5opka.ru/magnum/games/stack</loc><priority>0.5</priority></url>
+  <url><loc>https://5opka.ru/magnum/games/blackjack</loc><priority>0.5</priority></url>
+  <url><loc>https://5opka.ru/magnum/games/roulette</loc><priority>0.5</priority></url>
+  <url><loc>https://5opka.ru/magnum/games/2042</loc><priority>0.5</priority></url>
+  <url><loc>https://5opka.ru/magnum/games/flappy</loc><priority>0.5</priority></url>
+  <url><loc>https://5opka.ru/magnum/games/typing</loc><priority>0.5</priority></url>
+  <url><loc>https://5opka.ru/magnum/games/snake</loc><priority>0.5</priority></url>
+  <url><loc>https://5opka.ru/magnum/games/dodge</loc><priority>0.5</priority></url>
   <url><loc>https://5opka.ru/magnum/game</loc><priority>0.4</priority></url>
 </urlset>
