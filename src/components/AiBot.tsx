@@ -60,6 +60,27 @@ export function AiBot() {
       r.readAsDataURL(file);
     });
 
+  // сжатие скрина до max 1280px + JPEG — чтобы влезть в лимиты MiMo vision
+  const compressImage = (dataUrl: string): Promise<string> =>
+    new Promise((res) => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 1280;
+        const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return res(dataUrl);
+        ctx.drawImage(img, 0, 0, w, h);
+        res(canvas.toDataURL("image/jpeg", 0.82));
+      };
+      img.onerror = () => res(dataUrl);
+      img.src = dataUrl;
+    });
+
   const callAi = async (userText: string, imageDataUrl: string | null): Promise<string> => {
     const history = messages.slice(-8).map((m) => ({
       role: m.role === "bot" ? "assistant" : "user",
@@ -101,8 +122,9 @@ export function AiBot() {
       setMessages((m) => [...m, { role: "bot", text: "Это не картинка, братуха. Скрин — это PNG/JPG." }]);
       return;
     }
-    const dataUrl = await fileToDataUrl(file);
-    setPendingImage(dataUrl);
+    const raw = await fileToDataUrl(file);
+    const compressed = await compressImage(raw);
+    setPendingImage(compressed);
     e.target.value = "";
   };
 
