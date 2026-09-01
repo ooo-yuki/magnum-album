@@ -179,24 +179,30 @@ export function GalleryPage() {
     window.setTimeout(() => setToast(null), 2800);
   }, []);
 
-  // ── entrance анимация
+  // ── entrance анимация — spec: stagger 0.12, y 24→0, reduced-motion fallback, gsap.context cleanup
   useEffect(() => {
     if (!rootRef.current) return;
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const ctx = gsap.context(() => {
-      gsap.set(`.${styles.header} > *`, { y: 16, opacity: 0 });
+      if (prefersReduced) {
+        gsap.set(`.${styles.header} > *`, { y: 0, opacity: 1, clearProps: "transform" });
+        gsap.set(`.${styles.filterBar}`, { y: 0, opacity: 1, clearProps: "transform" });
+        return;
+      }
+      gsap.set(`.${styles.header} > *`, { y: 24, opacity: 0 });
       gsap.to(`.${styles.header} > *`, {
         y: 0,
         opacity: 1,
-        stagger: 0.07,
-        duration: 0.5,
+        stagger: 0.12,
+        duration: 0.55,
         ease: "power2.out",
         delay: 0.05,
       });
-      gsap.set(`.${styles.filterBar}`, { y: 10, opacity: 0 });
+      gsap.set(`.${styles.filterBar}`, { y: 24, opacity: 0 });
       gsap.to(`.${styles.filterBar}`, {
         y: 0,
         opacity: 1,
-        duration: 0.45,
+        duration: 0.5,
         ease: "power2.out",
         delay: 0.3,
       });
@@ -204,26 +210,66 @@ export function GalleryPage() {
     return () => ctx.revert();
   }, []);
 
-  // ── карточки при смене фильтра / генерации
+  // ── карточки при смене фильтра / генерации — stagger 0.12 y 24→0, context cleanup
   useEffect(() => {
     if (!gridRef.current) return;
     const cards = cardsRef.current.filter(Boolean) as HTMLDivElement[];
     if (!cards.length) return;
-    // убиваем предыдущую анимацию, делаем fresh stagger
-    gsap.fromTo(
-      cards,
-      { y: 20, opacity: 0, scale: 0.96 },
-      {
-        y: 0,
-        opacity: 1,
-        scale: 1,
-        duration: 0.45,
-        stagger: 0.06,
-        ease: "back.out(1.2)",
-        overwrite: true,
-      }
-    );
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReduced) {
+      gsap.set(cards, { y: 0, opacity: 1, scale: 1, clearProps: "transform" });
+      return;
+    }
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        cards,
+        { y: 24, opacity: 0, scale: 0.96 },
+        {
+          y: 0,
+          opacity: 1,
+          scale: 1,
+          duration: 0.5,
+          stagger: 0.12,
+          ease: "back.out(1.2)",
+          overwrite: true,
+        }
+      );
+    }, gridRef);
+    return () => ctx.revert();
   }, [filtered]);
+
+  // ── RGB glow hover helpers
+  const onCardEnter = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const el = e.currentTarget;
+    gsap.to(el, {
+      y: -4,
+      boxShadow: "0 12px 36px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,45,85,0.22), 0 0 28px rgba(255,45,85,0.22), 0 0 28px rgba(0,255,136,0.14), 0 0 32px rgba(255,204,0,0.10)",
+      borderColor: "rgba(255,45,85,0.45)",
+      duration: 0.3,
+      ease: "power2.out",
+      overwrite: true,
+    });
+    const glow = el.querySelector<HTMLElement>(`.${styles.cardGlow}`);
+    if (glow) gsap.to(glow, { opacity: 1, duration: 0.3, ease: "power2.out", overwrite: true });
+  }, []);
+  const onCardLeave = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      gsap.set(el, { clearProps: "boxShadow,borderColor" });
+      return;
+    }
+    gsap.to(el, {
+      y: 0,
+      boxShadow: "0 0 0 1px transparent, 0 0 0 transparent",
+      borderColor: "rgba(35,35,43,1)",
+      duration: 0.4,
+      ease: "power2.out",
+      overwrite: true,
+    });
+    const glow = el.querySelector<HTMLElement>(`.${styles.cardGlow}`);
+    if (glow) gsap.to(glow, { opacity: 0.95, duration: 0.4, ease: "power2.out", overwrite: true });
+  }, []);
 
   // ── лайтбокс GSAP scale + body lock
   const openLightbox = useCallback((art: Art42) => {
@@ -419,6 +465,8 @@ export function GalleryPage() {
               }}
               style={{ ["--accent42" as string]: styleColor[art.style] }}
               onClick={() => openLightbox(art)}
+              onMouseEnter={onCardEnter}
+              onMouseLeave={onCardLeave}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();

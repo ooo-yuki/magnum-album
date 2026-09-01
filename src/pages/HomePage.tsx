@@ -124,28 +124,48 @@ function PromoBanners() {
     if (!cards.length) return;
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const ctx = gsap.context(() => {
-      gsap.set(cards, { y: 36, opacity: 0, scale: 0.96 });
-      gsap.to(cards, { y: 0, opacity: 1, scale: 1, duration: 0.62, stagger: 0.12, ease: "back.out(1.5)", delay: 0.12 });
-      if (!prefersReduced) {
-        cards.forEach((c) => {
-          const glow = c.querySelector<HTMLElement>("[data-glow]");
-          if (!glow) return;
-          gsap.to(glow, { opacity: 0.9, duration: 1.8, repeat: -1, yoyo: true, ease: "sine.inOut", delay: Math.random() * 0.8 });
-        });
+      if (prefersReduced) {
+        gsap.set(cards, { y: 0, opacity: 1, scale: 1, clearProps: "transform" });
+        gsap.set(ref.current!.querySelectorAll<HTMLElement>("[data-glow]"), { opacity: 0.22 });
+        return;
       }
+      gsap.set(cards, { y: 24, opacity: 0, scale: 0.96 });
+      gsap.to(cards, { y: 0, opacity: 1, scale: 1, duration: 0.62, stagger: 0.12, ease: "back.out(1.5)", delay: 0.12 });
+      cards.forEach((c) => {
+        const glow = c.querySelector<HTMLElement>("[data-glow]");
+        if (!glow) return;
+        gsap.to(glow, { opacity: 0.9, duration: 1.8, repeat: -1, yoyo: true, ease: "sine.inOut", delay: Math.random() * 0.8 });
+      });
     }, ref);
     return () => ctx.revert();
   }, []);
 
   const onMove = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const card = e.currentTarget;
     const rect = card.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width - 0.5) * 10;
     const y = ((e.clientY - rect.top) / rect.height - 0.5) * -10;
-    gsap.to(card, { rotateY: x, rotateX: y, y: -6, duration: 0.35, ease: "power2.out" });
+    gsap.to(card, { rotateY: x, rotateX: y, y: -6, duration: 0.35, ease: "power2.out", overwrite: true });
+    // RGB glow on hover
+    gsap.to(card, {
+      boxShadow: "0 0 0 1px rgba(255,45,85,0.22), 0 12px 36px rgba(255,45,85,0.28), 0 0 28px rgba(0,255,136,0.18), 0 0 32px rgba(255,204,0,0.14)",
+      borderColor: "rgba(255,45,85,0.55)",
+      duration: 0.3,
+      ease: "power2.out",
+      overwrite: true,
+    });
   }, []);
   const onLeave = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
-    gsap.to(e.currentTarget, { rotateY: 0, rotateX: 0, y: 0, duration: 0.5, ease: "elastic.out(1,0.45)" });
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    gsap.to(e.currentTarget, { rotateY: 0, rotateX: 0, y: 0, duration: 0.5, ease: "elastic.out(1,0.45)", overwrite: true });
+    gsap.to(e.currentTarget, {
+      boxShadow: "0 0 0 1px rgba(255,255,255,0.06), 0 8px 32px rgba(0,0,0,0.35)",
+      borderColor: "rgba(255,255,255,0.08)",
+      duration: 0.4,
+      ease: "power2.out",
+      overwrite: true,
+    });
   }, []);
 
   return (
