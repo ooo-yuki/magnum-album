@@ -1,3 +1,4 @@
+/* MAGNUM Shop — GSAP polish 2: y24 stagger 0.12 header+cards, hover y:-4 tri-shadow, count-up, reduced-motion gate, cleanup */
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import gsap from "gsap";
