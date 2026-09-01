@@ -2,13 +2,15 @@
 
 > **5 треков — 5 пуль.** Последний совместный альбом 5opka и MellSher. Мультижанровый захват — от сада до фанаток Анны Асти.
 
-[![Live](https://img.shields.io/badge/Live-oooyuki.zomb.top%3A30645%2Fmagnum-ff2d55?style=for-the-badge)](https://oooyuki.zomb.top:30645/magnum/) [![Presave](https://img.shields.io/badge/Presave-Bandlink-00ff88?style=for-the-badge)](https://music.thefence.me/psmagnum) [![Bun](https://img.shields.io/badge/Bun-1.4-black?style=flat-square)](https://bun.sh) [![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square)](https://react.dev) [![Neon](https://img.shields.io/badge/Lakebase-Neon-00E699?style=flat-square)](https://neon.tech) [![Tests](https://img.shields.io/badge/Tests-2897%20passing-brightgreen?style=flat-square)](#тесты)
+[![Live](https://img.shields.io/badge/Live-oooyuki.zomb.top%3A30645%2Fmagnum-ff2d55?style=for-the-badge)](https://oooyuki.zomb.top:30645/magnum/) [![Presave](https://img.shields.io/badge/Presave-Bandlink-00ff88?style=for-the-badge)](https://music.thefence.me/psmagnum) [![Bun](https://img.shields.io/badge/Bun-1.4-black?style=flat-square)](https://bun.sh) [![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square)](https://react.dev) [![Neon](https://img.shields.io/badge/Lakebase-Neon-00E699?style=flat-square)](https://neon.tech) [![Tests](https://img.shields.io/badge/Tests-2915%20passing-brightgreen?style=flat-square)](#тесты) [![P1](https://img.shields.io/badge/P1-audit%20closed-8A2BE2?style=flat-square)](#что-это)
 
 **Демо:** https://oooyuki.zomb.top:30645/magnum/ · **HTTP (Obscura):** http://localhost:30646/magnum/ · **Пресейв:** https://music.thefence.me/psmagnum
 
 ---
 
 ## Что это
+
+> ✨ **P1 аудита закрыт** — `App 16/16 lazy`, `economy.ts 2520→80 строк` (дубли QUEST удалены), `drizzle 0005 magnum_presave_clicks`, `docs/games-spec.md` + `SPEC-42 §7.1/7.2` для Blackjack/Roulette открытки 4200, `sitemap 32 urls` валиден.
 
 Промо-сайт альбома **MAGNUM** уровня $5000 — не лендинг, а платформа 42-движения. 16 игровых роутов, AI-бот, магазин косметики, эко-рейтинг, майнинг, галерея 42-артов, рейтинг пресейва и генератор идей.
 
@@ -76,7 +78,7 @@ bunx drizzle-kit generate && bunx drizzle-kit push  # DATABASE_URL_UNPOOLED (dir
 
 ```bash
 bunx tsc --noEmit
-bunx vitest run  # 2897 тестов (16 файлов): smoke + content + e2e.health + flappy + 2042 + snake + gallery-real + api + massive42…
+bunx vitest run  # 2915 тестов (17 файлов): smoke + content + blackjack-roulette-spec + e2e.health + flappy + 2042 + snake + gallery-real + api + massive42…
 ```
 
 CI: `.github/workflows/deploy.yml` → `tsc → bun test → build → scp /srv/magnum`.

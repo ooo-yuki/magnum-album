@@ -5,6 +5,59 @@
 > Промо-сайт альбома **MAGNUM Пятерки** (5opka × 42 братухи). React + TypeScript + GSAP + Bun.
 > Формат: [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/). Версионирование — SemVer.
 
+## [0.3.2] — 2026-09-01 🚀 Donate + Ideas 2.0
+
+> **3 коммита** `0945cec` → `9b736ca` · **+599 / −49** · **14 файлов** · VIP-подписки + AiBot-магазин + Ideas 2.0 (34 шаблона)
+
+### ✨ Фичи — Donate / Магазин / Подписки
+- 💎 **VIP tiers + glow** — `9b736ca` `POST /magnum/api/shop/subscribe` (vip 420 / vip+ 1420 / pro 4200) списывает `coins` + продлевает `expires`, `GET /magnum/api/shop/subscriptions`, `drizzle/schema.ts` `magnumSubscriptions`, `ShopPage.tsx` +48/−28 блок тарифов с покупкой и отображением активного tier — `src/pages/ShopPage.tsx`, `src/pages/ShopPage.module.css` +16, `server.ts` +82/−2
+- ✨ **Сияющая обводка VIP** — `9b736ca` `conic-gradient` glow при активном tier — `src/components/AuthStatus.tsx` +19/−1, `src/components/AuthStatus.module.css` +5, `src/components/Layout.tsx` +2
+- 🎁 **PromoPopup спецоффер** — `9b736ca` при входе без `magnum-offer-seen` — попап 42/142/420 −10% 30 сек — `src/components/PromoPopup.tsx` +106, `src/pages/HomePage.tsx` +4
+
+### 🤖 Брат-бот
+- 🧠 **AiBot — магазин-подсказки** — `9b736ca` interceptor `что купить` → 3 скина под баланс (`RARITY_PRICE`/`SHOP_CATALOG`) — `src/components/AiBot.tsx` +62
+
+### 🎮 Игры
+- 🖱️ **Clicker tier-бонус** — `9b736ca` учёт VIP-множителя в кликах — `src/pages/games/ClickerGame.tsx` +16/−2
+
+### 📖 Дока — Ideas 2.0 + Data
+- 💡 **Ideas 2.0** — `0945cec` категории ×6 + 34 шаблона + поиск/фильтры/сортировка + валидаторы + `votedIds` + GSAP entrance — `src/pages/IdeasPage.tsx` +170/−18
+- 📊 **Data +5 фактов** — `a0f99bb` 5 фактов 2026-09-01: `research.md` +13, `src/pages/RecapsPage.tsx` +56, `reports/data-2026-09-01-1415.md` +28 — лента пересказов пополнена
+
+### 🧹 Хоз
+- 📝 `40b92a8` docs: changelog investor update — уже покрыт секцией [0.3.0] (22 коммита → `004e660`), дубль не создаём
+
+---
+
+## [0.3.1] — 2026-09-01 ✨ P1 аудит закрыт
+
+> **P1 closed** — 8 пунктов аудита 2026-09-01 → 0 · **+~600 / −2440** · **App 16/16 + economy −2440 + drizzle 0005 + спеки Blackjack/Roulette + sitemap 32**
+
+### 🔧 Fixed — P1 аудита
+
+- 🩹 **App vs README** — `src/App.tsx` `14→16 games code-split` (комменты + lazy 16), `README` P1 бейдж + `✨ P1 закрыт` блок — `App 16/16` синхронизирован
+- 🧹 **economy.ts дубли** — `src/lib/economy.ts` `2520→80 строк` (−2440): удалены `QUEST_1..69` заглушки, добавлен `RARITY_PRICE` + `SHOP_CATALOG 12` + `getItemPrice/isValidShopId` + единый `Quest` (синхрон с `ShopPage 42/142/420/1420`)
+
+### ✨ Added — Спеки Blackjack/Roulette открытка
+
+- 🃏 **Blackjack спека 4200** — `docs/SPEC-42.md §7.1` + `docs/games-spec.md`: `1000→4200 + postcard-4200.png + presave`, BJ 3:2, soft17, double, reshuffle<12, WebAudio `safeRamp`
+- 🎰 **Roulette спека 4200** — `§7.2` + `games-spec.md`: `10 пресетов`, `35:1/2:1/1:1`, `hot/cold`, `swipe/confetti/×2/↻/autoSpin`, `0-36 European`
+- 🧪 **Тесты 4200** — `tests/blackjack-roulette-spec.test.ts` +18: проверки `GOAL 4200`, LS, BJ логики, 10 пресетов, выплат, модалки открытки
+
+### 🗄️ DB — drizzle миграция
+
+- 💾 **magnum_presave_clicks** — `drizzle/migrations/0005_magnum_presave_clicks.sql` + `_journal.json idx5`, `schema.ts` уже имел таблицу — миграция идемпотентна `IF NOT EXISTS`
+
+### 📖 Docs — README/CHANGELOG с эмодзи
+
+- 📝 **README** — бейдж `P1 audit closed`, блок `✨ P1 закрыт`, тесты `2897→2915 (17 файлов)`, фичи Roulette пресеты hot/cold
+- 📖 **SPEC-42** — §9.2 переписан под новый economy (таблица 12 скинов), §7 дополнен 7.1/7.2
+- 🗺️ **Sitemap 32** — `build.ts ROUTES 32` + `public/sitemap.xml 32 urls` проверен (`grep -c <url>`), lastmod 2026-09-01
+
+### ⚡ Perf / CI
+
+- ✅ `tsc 0`, `bun test 2915 passed (17 файлов)`, `build → dist + sitemap sync`, `cp /srv/magnum`
+
 ## [0.3.0] — 2026-09-01
 
 > **22 коммита** с `8c241b3` (13:44 UTC) → `004e660` (14:11 UTC) · **+3541 / −350** · **26+ файлов** · инкремент 2042 MAGNUM + Rhythm v3 + API пресеты + lazy −51% + 2897 тестов, рейтинг 6/10

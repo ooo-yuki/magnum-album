@@ -454,9 +454,17 @@ Polling: `window.setInterval(fetchBalance, 2000)` только если `listene
 
 Расширение: `Transaction`, `DailyState`, `Achievement(7)`, `EconomySnapshot`, `COIN_BUDGET_1..50` (1042..3100), `validateTx1..50`, `createTx1..50`, `progressAchievement1..50`, `coinMetric1..50` — до 2500+ строк (см. файл).
 
-### 9.2 `src/lib/economy.ts`
+### 9.2 `src/lib/economy.ts` — единый каталог (P1 почищен)
 
-`SHOP_ITEMS(4): skin_common_01 100/common, skin_rare_01 420/rare, skin_epic_01 1420/epic, skin_legend_01 4200/legendary` + `Inventory`, `buyItem`, `equipItem` + 60+ `QUEST_1..60` с `progressQuestN/rewardQuestN/questMetricN`.
+| Экспорт | Значение |
+|---------|----------|
+| `RARITY_PRICE` | `common 42, rare 142, epic 420, legendary 1420` (синхрон с `ShopPage RARITY_META`) |
+| `SHOP_ITEMS 4` | `skin_common_01 42/common`, `skin_rare_01 142/rare`, `skin_epic_01 420/epic`, `skin_legend_01 1420/legendary` |
+| `SHOP_CATALOG 12` | `mops/rhino/monkey/frog 42` + `panda/fox/owl 142` + `shark/flamingo/wolf 420` + `tiger/dragon 1420` (синхрон с `ShopPage SKINS`) |
+| `getItemPrice/isValidShopId` | цена только из кода, LS хранит `id` |
+| `inventory/equipped` | `getInventory/getEquipped/buyItem/equipItem/unequipItem` (LS-совместимо, основной — сервер) |
+| `Quest` | единый `createQuest/progressQuest/questProgressPct` — без дублей 69× |
+| Удалено | `QUEST_1..69` заглушки (2500 строк) — `git log -- economy.ts`  |
 
 ### 9.3 `src/lib/presaveTracker.ts`
 

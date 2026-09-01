@@ -132,7 +132,8 @@ export function TrackPage() {
     const ctx = gsap.context(() => {
       if (reducedMotion) {
         // reduced-motion: instant visible, skip all entrance/parallax
-        gsap.set(`.${styles.hero} > *`, { y: 0, opacity: 1 });
+        ScrollTrigger.batch(document.querySelectorAll('.card'), { onEnter: (batch:any) => gsap.to(batch, { y: 0, opacity: 1, stagger: 0.12, duration: 0.55, ease: "power2.out" }), start: "top 92%", once: true });
+      gsap.set(`.${styles.hero} > *`, { y: 0, opacity: 1 });
         gsap.set(`.${styles.section}`, { y: 0, opacity: 1 });
         return;
       }

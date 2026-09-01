@@ -1,0 +1,6 @@
+{
+  "_note": "Extracted from src/lib/perf-analytics.ts:2522 mock footer — P2-3",
+  "source": "src/lib/perf-analytics.ts:2522",
+  "metrics": ["LCP","CLS","FID","TTFB"],
+  "endpoint": "/magnum/api/perf"
+}

@@ -1,0 +1,7 @@
+{
+  "_note": "Extracted from src/lib/economy.ts:2520 QUEST_ mocks — P2-3",
+  "source": "src/lib/economy.ts:2520",
+  "quests": 50,
+  "shopItems": 12,
+  "hint": "Single source now src/pages/ShopPage.tsx + server.ts"
+}

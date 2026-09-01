@@ -2,7 +2,26 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import styles from "./QuizGame.module.css";
+gsap.registerPlugin(ScrollTrigger);
+
+function prefersReducedMotion(): boolean {
+  return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+const RGB_GLOW = "0 12px 36px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,45,85,0.22), 0 0 28px rgba(255,45,85,0.22), 0 0 28px rgba(0,255,136,0.14), 0 0 32px rgba(255,204,0,0.10)";
+function hoverIn(el: HTMLElement) {
+  if (prefersReducedMotion()) return;
+  gsap.to(el, { y: -4, boxShadow: RGB_GLOW, borderColor: "rgba(255,45,85,0.45)", duration: 0.3, ease: "power2.out", overwrite: true });
+  const glow = el.querySelector<HTMLElement>("[data-glow]");
+  if (glow) gsap.to(glow, { opacity: 1, duration: 0.3, overwrite: true });
+}
+function hoverOut(el: HTMLElement) {
+  if (prefersReducedMotion()) { gsap.set(el, { clearProps: "boxShadow,borderColor" }); return; }
+  gsap.to(el, { y: 0, boxShadow: "0 0 0 1px transparent, 0 0 0 transparent", borderColor: "rgba(35,35,43,1)", duration: 0.4, ease: "power2.out", overwrite: true });
+  const glow = el.querySelector<HTMLElement>("[data-glow]");
+  if (glow) gsap.to(glow, { opacity: 0.95, duration: 0.4, overwrite: true });
+}
 
 const PRESAVE = "https://music.thefence.me/psmagnum";
 const WIN_SCORE = 4200;
@@ -202,7 +221,7 @@ export function QuizGame() {
   // intro stagger
   useEffect(() => {
     if (!containerRef.current) return;
-    gsap.from(`.${styles.hero} > *`, { y: 22, opacity: 0, stagger: 0.08, duration: 0.6, ease: "power2.out" });
+    gsap.from(`.${styles.hero} > *`, { y: 22, opacity: 0, stagger: 0.12, duration: 0.6, ease: "power2.out" });
   }, []);
 
   // question entrance + sound
@@ -214,7 +233,7 @@ export function QuizGame() {
     if (reduced) return;
     const btns = optionsRef.current.querySelectorAll(`.${styles.option}`);
     gsap.set(btns, { x: -14, opacity: 0 });
-    gsap.to(btns, { x: 0, opacity: 1, stagger: 0.05, duration: 0.32, ease: "power2.out", delay: 0.08 });
+    gsap.to(btns, { x: 0, opacity: 1, stagger: 0.12, duration: 0.32, ease: "power2.out", delay: 0.08 });
     if (cardRef.current) gsap.fromTo(cardRef.current, { scale: 0.98, opacity: 0.7 }, { scale: 1, opacity: 1, duration: 0.32, ease: "power2.out" });
   }, [current, finished]);
 
@@ -233,7 +252,36 @@ export function QuizGame() {
       gsap.set(ch, { y: 14, opacity: 0 });
       gsap.to(ch, { y: 0, opacity: 1, stagger: 0.09, duration: 0.44, ease: "power2.out", delay: 0.18 });
     }, resultRef);
+  
+  // GSAP spec: y24 stagger 0.12 ScrollTrigger batch + reduced-motion gate + gsap.context cleanup + hover y:-4 RGB glow
+  useEffect(() => {
+    const root: HTMLElement | null = document.querySelector<HTMLElement>("[data-gsap-root]") || (document.body as unknown as HTMLElement);
+    if (!root) return;
+    if (prefersReducedMotion()) {
+      const els = root.querySelectorAll<HTMLElement>(".card, [data-card]");
+      if (els.length) gsap.set(els, { y: 0, opacity: 1, clearProps: "transform" });
+      return;
+    }
+    const ctx = gsap.context(() => {
+      const cards = root.querySelectorAll<HTMLElement>(".card, [data-card], .tile, .cell");
+      if (cards.length) {
+        gsap.set(cards, { y: 24, opacity: 0 });
+        ScrollTrigger.batch(cards, {
+          onEnter: (batch) => gsap.to(batch, { y: 0, opacity: 1, stagger: 0.12, duration: 0.55, ease: "power2.out", overwrite: true }),
+          start: "top 92%",
+          once: true,
+        });
+      }
+      const heroEls = root.querySelectorAll<HTMLElement>(".hero > *, [data-hero] > *");
+      if (heroEls.length) {
+        gsap.set(heroEls, { y: 24, opacity: 0 });
+        gsap.to(heroEls, { y: 0, opacity: 1, stagger: 0.12, duration: 0.55, ease: "power2.out", delay: 0.05, overwrite: true });
+      }
+    }, root);
     return () => ctx.revert();
+  }, []);
+
+  return () => ctx.revert();
   }, [finished]);
 
   // timer 15s per question

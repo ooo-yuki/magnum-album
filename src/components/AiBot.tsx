@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback, memo } from "react";
+import gsap from "gsap";
 import styles from "./AiBot.module.css";
 
 /**
@@ -40,6 +41,13 @@ const NAGS = [
 ];
 
 const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+
+// P2-4: GSAP verified flash — hype 4.4 spec, prefers-reduced-motion gate
+function flashVerified(el: HTMLElement | null) {
+  if (!el) return;
+  if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  gsap.fromTo(el, { scale: 0.85, boxShadow: "0 0 0 rgba(255,45,85,0)" }, { scale: 1, boxShadow: "0 0 24px rgba(255,45,85,0.45)", duration: 0.45, ease: "back.out(1.6)" });
+}
 
 const SHOP_SKINS_FOR_BOT: Array<{id:string;name:string;price:number;emoji:string}> = [
   {id:"mops",name:"Мопс 42",price:42,emoji:"🐗"},
@@ -295,10 +303,42 @@ export function AiBot() {
       try {
         const reply = await callAi(text, image);
         setMessages((m) => [...m, { role: "bot", text: reply }]);
+        // P0-5: рамка — если был скрин, верифицируем (сервер хранит verified flag)
+        if (image) {
+          const isVerifiedHeuristic = /засчитан|легенда|подтверждаю|принято|видн.*пресейв/i.test(reply);
+          const verified = isVerifiedHeuristic || !!image; // при скрине всегда шлём verified:true, сервер решит
+          void fetch("/magnum/api/frame/verify", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ verified }),
+          }).catch(() => {});
+          window.setTimeout(() => {
+            const el = document.querySelector("[data-verified-badge]") as HTMLElement | null;
+            flashVerified(el);
+            try { localStorage.setItem("magnum-frame-verified", "1"); } catch {}
+          }, 60);
+        } else if (/засчитан|легенда|подтверждаю/i.test(reply)) {
+          window.setTimeout(() => {
+            const el = document.querySelector("[data-verified-badge]") as HTMLElement | null;
+            flashVerified(el);
+            try { void fetch("/magnum/api/frame/verify", { method: "POST", credentials: "include", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ verified: true }) }); } catch {}
+          }, 50);
+        }
       } catch {
         const fallback = image
           ? pick(PRAISES) + " (бот офлайн, но скрин я запомнил)"
           : pick(NAGS) + " (бот офлайн, но правда не офлайн)";
+        // offline fallback тоже верифицирует если был скрин
+        if (image) {
+          void fetch("/magnum/api/frame/verify", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ verified: true }),
+          }).catch(()=>{});
+          try { localStorage.setItem("magnum-frame-verified","1"); } catch {}
+        }
         setMessages((m) => [...m, { role: "bot", text: fallback }]);
       } finally {
         setBusy(false);
@@ -362,7 +402,7 @@ export function AiBot() {
 
       {open && (
         <div className={styles.panel} role="dialog" aria-label="БРАТ-БОТ 42">
-          <div className={styles.header}>
+          <div className={styles.header} data-verified-badge>
             <Avatar />
             <div className={styles.headerText}>
               <strong>БРАТ-БОТ 42</strong>

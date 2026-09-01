@@ -1,0 +1,7 @@
+{
+  "_note": "Recaps transcripts static source — P2-6, see docs/recaps-spec.md",
+  "source": "src/pages/RecapsPage.tsx:3378",
+  "count": 6,
+  "api": "GET /magnum/api/recaps (planned) / 60m cron",
+  "tags": ["СП","Нарезка","Ивент","Freakland","Музыка"]
+}

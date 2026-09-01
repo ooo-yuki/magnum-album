@@ -1,0 +1,7 @@
+{
+  "_note": "Gallery archive mock reference — P2-2",
+  "source": "src/pages/GalleryPage.tsx:2570",
+  "archive": 350,
+  "realFiles": 6,
+  "fallback": "src/lib/galleryTokens.ts:getRealSrc"
+}

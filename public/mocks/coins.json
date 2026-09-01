@@ -1,0 +1,7 @@
+{
+  "_note": "Extracted from src/lib/coins.ts:1-200 mock footer — P2-3 bloat reduction reference",
+  "source": "src/lib/coins.ts:3965",
+  "maxCoins": 42000,
+  "streakBonus": 42,
+  "dailyRewards": [42,84,142,240,420]
+}

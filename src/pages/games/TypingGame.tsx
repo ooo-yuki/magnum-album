@@ -1,6 +1,26 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import styles from "./TypingGame.module.css";
+gsap.registerPlugin(ScrollTrigger);
+
+function prefersReducedMotion(): boolean {
+  return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+const RGB_GLOW = "0 12px 36px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,45,85,0.22), 0 0 28px rgba(255,45,85,0.22), 0 0 28px rgba(0,255,136,0.14), 0 0 32px rgba(255,204,0,0.10)";
+function hoverIn(el: HTMLElement) {
+  if (prefersReducedMotion()) return;
+  gsap.to(el, { y: -4, boxShadow: RGB_GLOW, borderColor: "rgba(255,45,85,0.45)", duration: 0.3, ease: "power2.out", overwrite: true });
+  const glow = el.querySelector<HTMLElement>("[data-glow]");
+  if (glow) gsap.to(glow, { opacity: 1, duration: 0.3, overwrite: true });
+}
+function hoverOut(el: HTMLElement) {
+  if (prefersReducedMotion()) { gsap.set(el, { clearProps: "boxShadow,borderColor" }); return; }
+  gsap.to(el, { y: 0, boxShadow: "0 0 0 1px transparent, 0 0 0 transparent", borderColor: "rgba(35,35,43,1)", duration: 0.4, ease: "power2.out", overwrite: true });
+  const glow = el.querySelector<HTMLElement>("[data-glow]");
+  if (glow) gsap.to(glow, { opacity: 0.95, duration: 0.4, overwrite: true });
+}
 
 //Obscura-заглушка AudioParam: прямые вызовы ramp-методов могут кинуть — оборачиваем
 function safeRamp(param: AudioParam, fn: () => void, fallbackValue: number) {
@@ -126,7 +146,36 @@ export function TypingGame() {
       const chars = totalChars + typed.length;
       setWpm(calcWPM(chars, elapsed));
     }, 150);
-    return () => window.clearInterval(id);
+  
+  // GSAP spec: y24 stagger 0.12 ScrollTrigger batch + reduced-motion gate + gsap.context cleanup + hover y:-4 RGB glow
+  useEffect(() => {
+    const root: HTMLElement | null = document.querySelector<HTMLElement>("[data-gsap-root]") || (document.body as unknown as HTMLElement);
+    if (!root) return;
+    if (prefersReducedMotion()) {
+      const els = root.querySelectorAll<HTMLElement>(".card, [data-card]");
+      if (els.length) gsap.set(els, { y: 0, opacity: 1, clearProps: "transform" });
+      return;
+    }
+    const ctx = gsap.context(() => {
+      const cards = root.querySelectorAll<HTMLElement>(".card, [data-card], .tile, .cell");
+      if (cards.length) {
+        gsap.set(cards, { y: 24, opacity: 0 });
+        ScrollTrigger.batch(cards, {
+          onEnter: (batch) => gsap.to(batch, { y: 0, opacity: 1, stagger: 0.12, duration: 0.55, ease: "power2.out", overwrite: true }),
+          start: "top 92%",
+          once: true,
+        });
+      }
+      const heroEls = root.querySelectorAll<HTMLElement>(".hero > *, [data-hero] > *");
+      if (heroEls.length) {
+        gsap.set(heroEls, { y: 24, opacity: 0 });
+        gsap.to(heroEls, { y: 0, opacity: 1, stagger: 0.12, duration: 0.55, ease: "power2.out", delay: 0.05, overwrite: true });
+      }
+    }, root);
+    return () => ctx.revert();
+  }, []);
+
+  return () => window.clearInterval(id);
   }, [state, startTime, totalTime, totalChars, typed.length]);
 
   const nextPhrase = useCallback(() => {

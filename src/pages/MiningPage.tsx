@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import styles from "./MiningPage.module.css";
+gsap.registerPlugin(ScrollTrigger);
 
 /* ── types ─────────────────────────────── */
 type Upgrade = {
@@ -108,7 +110,8 @@ export function MiningPage() {
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const ctx = gsap.context(() => {
       if (prefersReduced) {
-        gsap.set(`.${styles.header} > *`, { y: 0, opacity: 1, clearProps: "transform" });
+        ScrollTrigger.batch(document.querySelectorAll('.card'), { onEnter: (batch:any) => gsap.to(batch, { y: 0, opacity: 1, stagger: 0.12, duration: 0.55, ease: "power2.out" }), start: "top 92%", once: true });
+      gsap.set(`.${styles.header} > *`, { y: 0, opacity: 1, clearProps: "transform" });
         gsap.set(`.${styles.statCard}`, { y: 0, opacity: 1, clearProps: "transform" });
         gsap.set(`.${styles.shopCard}`, { y: 0, opacity: 1, clearProps: "transform" });
         gsap.set(`.${styles.rockWrap}`, { y: 0, opacity: 1, clearProps: "transform" });

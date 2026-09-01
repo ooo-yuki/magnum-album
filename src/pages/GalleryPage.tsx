@@ -26,11 +26,10 @@ interface Art42 {
   tag: string;
 }
 
-// Реальные файлы — только 3 сета существуют на диске: 42-agit-01 / 42-cyber-01 / 42-memphis-01 (+800.webp)
-// Маппим все arts на них, чтобы не было 404/эмодзи-заглушек
+// Реальные файлы — 4 сета: 42-agit-01 / 42-y2k-01 / 42-cyber-01 / 42-memphis-01 (+800.webp)
 const REAL_BY_STYLE: Record<Style42, string> = {
   "СССР": "/magnum/images/gallery-42/42-agit-01-800.webp",
-  "Y2K": "/magnum/images/gallery-42/42-memphis-01-800.webp",
+  "Y2K": "/magnum/images/gallery-42/42-y2k-01-800.webp",
   "киберпанк": "/magnum/images/gallery-42/42-cyber-01-800.webp",
   "мемфис": "/magnum/images/gallery-42/42-memphis-01-800.webp",
 };
@@ -781,10 +780,13 @@ const ARCHIVE_WAVE_2: Art42[] = [
 
 const FULL_ARCHIVE: Art42[] = [...ARCHIVE_42, ...ARCHIVE_WAVE_2];
 
-// Фикс: переписываем все фейковые src архива на реальные файлы, чтобы не было 404/эмодзи
-for (const a of ARCHIVE_42) a.src = REAL_BY_STYLE[a.style] ?? a.src;
-for (const a of ARCHIVE_WAVE_2) a.src = REAL_BY_STYLE[a.style] ?? a.src;
-// reviewer upgrade: FULL_ARCHIVE уже покрыт двумя циклами выше — без 404, все src → реальные 42-* файлы
+// P0 fix: не мутируем const массивы — используем геттер getRealSrc(style, src)
+// ранее было for(a of ARCHIVE_42) a.src = REAL_BY_STYLE[a.style] — ломал readonly/HMR
+export function getRealSrc(style: Style42, src: string): string {
+  return REAL_BY_STYLE[style] ?? src;
+}
+// helper for tests/ci: real src for any art
+export function realSrcOf(a: Art42): string { return getRealSrc(a.style, a.src); }
 
 
 
@@ -2410,7 +2412,7 @@ useEffect(() => {
                 {/* реальный файл — будет поверх градиента когда появится */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={art.src}
+                  src={getRealSrc(art.style, art.src)}
                   alt={art.title}
                   loading="lazy"
                   decoding="async"
@@ -2525,7 +2527,7 @@ useEffect(() => {
           >
             <div className={styles.lbArt} style={{ background: selected.gradient }}>
               <img
-                src={selected.src}
+                src={getRealSrc(selected.style, selected.src)}
                 alt={selected.title}
                 loading="lazy"
                 decoding="async"

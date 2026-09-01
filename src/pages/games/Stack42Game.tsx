@@ -1,6 +1,13 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import styles from "./Stack42Game.module.css";
+gsap.registerPlugin(ScrollTrigger);
+function prefersReducedMotion():boolean{return typeof window!=="undefined"&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;}
+const RGB_GLOW="0 12px 36px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,45,85,0.22), 0 0 28px rgba(255,45,85,0.22), 0 0 28px rgba(0,255,136,0.14), 0 0 32px rgba(255,204,0,0.10)";
+function hoverIn(el:HTMLElement){ if(prefersReducedMotion()) return; gsap.to(el,{y: -4, boxShadow:RGB_GLOW, duration:0.3}); }
+function hoverOut(el:HTMLElement){ if(prefersReducedMotion()){gsap.set(el,{clearProps:"boxShadow"});return;} gsap.to(el,{y:0, duration:0.3}); }
 
 //Obscura-заглушка AudioParam: прямые вызовы ramp-методов могут кинуть — оборачиваем
 function safeRamp(param: AudioParam, fn: () => void, fallbackValue: number) {
@@ -357,6 +364,16 @@ export function Stack42Game() {
   const comboActive = perfectStreak >= COMBO_AT;
   const comboLabel = perfectStreak >= MEGA_AT ? `MEGA x2` : comboActive ? `COMBO x2` : `x1`;
   const progressPct = Math.min((pts / WIN_PTS) * 100, 100);
+
+
+  // GSAP spec batch
+  useEffect(() => {
+    const root: HTMLElement = document.querySelector<HTMLElement>("[data-gsap-root]") || (document.body as unknown as HTMLElement);
+    if (!root) return;
+    if (prefersReducedMotion()) { const els=root.querySelectorAll(".card"); if(els.length) gsap.set(els,{y:0,opacity:1,clearProps:"transform"}); return; }
+    const ctx=gsap.context(()=>{ const cards=root.querySelectorAll<HTMLElement>(".card,[data-card],.tile"); if(cards.length){ gsap.set(cards,{y:24,opacity:0}); ScrollTrigger.batch(cards,{onEnter:(batch:any)=>gsap.to(batch,{y:0,opacity:1,stagger: 0.12,duration:0.55,ease:"power2.out"}),start:"top 92%",once:true}); } const heroEls=root.querySelectorAll<HTMLElement>(".hero > *"); if(heroEls.length){ gsap.set(heroEls,{y:24,opacity:0}); gsap.to(heroEls,{y:0,opacity:1,stagger: 0.12,duration:0.55,ease:"power2.out",delay:0.05}); } }, root);
+    return ()=>ctx.revert();
+  }, []);
 
   return (
     <div className={styles.page}>
