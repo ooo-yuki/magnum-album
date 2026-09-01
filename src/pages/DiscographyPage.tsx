@@ -241,6 +241,12 @@ export function DiscographyPage() {
 
   useEffect(() => {
     if (!counterRef.current || !counterDurationRef.current || !counterScoreRef.current) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      if (counterRef.current) counterRef.current.textContent = String(stats.totalTracks);
+      if (counterDurationRef.current) counterDurationRef.current.textContent = String(stats.totalMin);
+      if (counterScoreRef.current) counterScoreRef.current.textContent = stats.avg;
+      return;
+    }
     const obj = { n: 0, d: 0, s: 0 };
     const targetN = stats.totalTracks;
     const targetD = stats.totalMin;
@@ -260,56 +266,93 @@ export function DiscographyPage() {
     return () => { tw.kill(); };
   }, [stats.totalTracks, stats.totalMin, stats.avg]);
 
+  // ── GSAP entrance: y24 stagger 0.12 • reduced-motion • context cleanup
   useEffect(() => {
     if (!containerRef.current) return;
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const ctx = gsap.context(() => {
-      gsap.set(`.${styles.header} > *`, { y: 18, opacity: 0 });
-      gsap.to(`.${styles.header} > *`, { y: 0, opacity: 1, stagger: 0.08, duration: 0.55, ease: "power2.out" });
+      if (prefersReduced) {
+        gsap.set(`.${styles.header} > *`, { y: 0, opacity: 1, clearProps: "transform" });
+        gsap.set(`.${styles.albumCard}`, { y: 0, opacity: 1, clearProps: "transform" });
+        gsap.set(`.${styles.otherCard}`, { y: 0, opacity: 1, clearProps: "transform" });
+        return;
+      }
+      gsap.set(`.${styles.header} > *`, { y: 24, opacity: 0 });
+      gsap.to(`.${styles.header} > *`, { y: 0, opacity: 1, stagger: 0.12, duration: 0.55, ease: "power2.out", delay: 0.05 });
 
-      gsap.set(`.${styles.albumCard}`, { y: 50, opacity: 0 });
-      gsap.to(`.${styles.albumCard}`, {
-        y: 0, opacity: 1, stagger: 0.14, duration: 0.7, ease: "power2.out",
-        scrollTrigger: { trigger: `.${styles.albums}`, start: "top 82%" },
+      gsap.set(`.${styles.albumCard}`, { y: 24, opacity: 0 });
+      gsap.to(`.${styles.albumCard}`, { y: 0, opacity: 1, stagger: 0.12, duration: 0.55, ease: "power2.out", delay: 0.28 });
+
+      gsap.set(`.${styles.otherCard}`, { y: 24, opacity: 0 });
+      gsap.to(`.${styles.otherCard}`, { y: 0, opacity: 1, stagger: 0.12, duration: 0.5, ease: "power2.out", delay: 0.4 });
+
+      // ambient glow gold/hot — gated by reducedMotion
+      gsap.to(`.${styles.gold}`, {
+        boxShadow: "0 0 22px rgba(255,204,0,0.55), 0 0 44px rgba(255,204,0,0.2)",
+        duration: 1.5, repeat: -1, yoyo: true, ease: "sine.inOut", delay: 0.5,
+        scrollTrigger: { trigger: `.${styles.albums}`, start: "top 80%", toggleActions: "play pause resume pause" },
       });
-
-      if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        gsap.to(`.${styles.gold}`, {
-          boxShadow: "0 0 22px rgba(255,204,0,0.55), 0 0 44px rgba(255,204,0,0.2)",
-          duration: 1.5, repeat: -1, yoyo: true, ease: "sine.inOut", delay: 0.5,
-          scrollTrigger: { trigger: `.${styles.albums}`, start: "top 80%", toggleActions: "play pause resume pause" },
-        });
-        gsap.to(`.${styles.hot}`, {
-          boxShadow: "0 0 22px rgba(255,45,85,0.55), 0 0 44px rgba(255,45,85,0.2)",
-          duration: 1.5, repeat: -1, yoyo: true, ease: "sine.inOut", delay: 0.8,
-          scrollTrigger: { trigger: `.${styles.albums}`, start: "top 80%", toggleActions: "play pause resume pause" },
-        });
-        const container = containerRef.current;
-        if (container) {
-          const shines = container.querySelectorAll(`.${styles.coverShine}`);
-          shines.forEach((shine) => {
-            const tl = gsap.timeline({
-              repeat: -1, delay: 2 + Math.random() * 2,
-              scrollTrigger: { trigger: shine as Element, start: "top 85%", toggleActions: "play pause resume pause" },
-            });
-            tl.fromTo(shine as Element, { backgroundPosition: "-200% 0" }, { backgroundPosition: "200% 0", duration: 1.4, ease: "power2.inOut" });
-            tl.to({}, { duration: 4 + Math.random() * 2 });
+      gsap.to(`.${styles.hot}`, {
+        boxShadow: "0 0 22px rgba(255,45,85,0.55), 0 0 44px rgba(255,45,85,0.2)",
+        duration: 1.5, repeat: -1, yoyo: true, ease: "sine.inOut", delay: 0.8,
+        scrollTrigger: { trigger: `.${styles.albums}`, start: "top 80%", toggleActions: "play pause resume pause" },
+      });
+      const container = containerRef.current;
+      if (container) {
+        const shines = container.querySelectorAll(`.${styles.coverShine}`);
+        shines.forEach((shine) => {
+          const tl = gsap.timeline({
+            repeat: -1, delay: 2 + Math.random() * 2,
+            scrollTrigger: { trigger: shine as Element, start: "top 85%", toggleActions: "play pause resume pause" },
           });
-        }
+          tl.fromTo(shine as Element, { backgroundPosition: "-200% 0" }, { backgroundPosition: "200% 0", duration: 1.4, ease: "power2.inOut" });
+          tl.to({}, { duration: 4 + Math.random() * 2 });
+        });
       }
     }, containerRef);
     return () => ctx.revert();
   }, []);
 
+  // re-stagger on filter/sort change — y24 stagger 0.12
   useEffect(() => {
-    if (!containerRef.current) return;
-    const cards = containerRef.current.querySelectorAll(`.${styles.albumCard}`);
+    if (!albumsRef.current) return;
+    const cards = albumsRef.current.querySelectorAll<HTMLElement>(`.${styles.albumCard}`);
     if (!cards.length) return;
-    gsap.fromTo(
-      cards,
-      { y: 16, opacity: 0 },
-      { y: 0, opacity: 1, duration: 0.45, stagger: 0.07, ease: "power2.out", overwrite: true }
-    );
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReduced) {
+      gsap.set(cards, { y: 0, opacity: 1, clearProps: "transform" });
+      return;
+    }
+    const ctx = gsap.context(() => {
+      gsap.set(cards, { y: 24, opacity: 0 });
+      gsap.to(cards, { y: 0, opacity: 1, stagger: 0.12, duration: 0.5, ease: "power2.out", overwrite: true });
+    }, albumsRef);
+    return () => ctx.revert();
   }, [filteredAndSorted]);
+
+  // hover RGB — chromatic lift
+  const onCardEnter = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    gsap.to(e.currentTarget, {
+      y: -4,
+      boxShadow: "0 12px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,45,85,0.20), 0 0 22px rgba(255,45,85,0.20), 0 0 22px rgba(0,255,136,0.12), 0 0 28px rgba(255,204,0,0.10)",
+      borderColor: "rgba(255,45,85,0.35)",
+      duration: 0.28,
+      ease: "power2.out",
+      overwrite: true,
+    });
+  }, []);
+  const onCardLeave = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    gsap.to(e.currentTarget, {
+      y: 0,
+      boxShadow: "0 0 0 transparent",
+      borderColor: "rgba(255,255,255,0.06)",
+      duration: 0.35,
+      ease: "power2.out",
+      overwrite: true,
+    });
+  }, []);
 
   const hasActiveFilter = yearFilter !== "\u0412\u0441\u0435" || albumFilter !== "\u0412\u0441\u0435 \u0430\u043B\u044C\u0431\u043E\u043C\u044B" || genreFilter !== "\u0412\u0441\u0435 \u0436\u0430\u043D\u0440\u044B" || q.trim() !== "" || sortKey !== "default";
 
@@ -436,7 +479,7 @@ export function DiscographyPage() {
         </div>
       </div>
 
-      <div className={styles.albums}>
+      <div className={styles.albums} ref={albumsRef}>
         {filteredAndSorted.length === 0 ? (
           <div className={styles.empty}>
             <p>\u041D\u0438\u0447\u0435\u0433\u043E \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u043E \u043F\u043E \u0437\u0430\u043F\u0440\u043E\u0441\u0443 \u00AB{q}\u00BB \u0441 \u0442\u0435\u043A\u0443\u0449\u0438\u043C\u0438 \u0444\u0438\u043B\u044C\u0442\u0440\u0430\u043C\u0438.</p>
@@ -448,7 +491,7 @@ export function DiscographyPage() {
             const matchesQuery = (t: TrackItem) =>
               !!qLower && (t.title.toLowerCase().includes(qLower) || (t.note && t.note.toLowerCase().includes(qLower)));
             return (
-              <div key={album.name} className={styles.albumCard}>
+              <div key={album.name} className={styles.albumCard} onMouseEnter={onCardEnter} onMouseLeave={onCardLeave}>
                 <div className={styles.albumCover}>
                   <img src={album.cover} alt={album.name} loading="lazy" decoding="async" width={400} height={400} />
                   <div className={`${styles.scoreBadge} ${styles[album.rzScoreKind]}`}>
@@ -532,7 +575,7 @@ export function DiscographyPage() {
         <p className={styles.otherSub}>\u0418\u0437 research.md \u2014 \u0431\u0435\u0437 \u0432\u044B\u0434\u0443\u043C\u043E\u043A, \u0443\u043A\u0430\u0437\u0430\u043D\u044B \u0442\u043E\u043B\u044C\u043A\u043E \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0451\u043D\u043D\u044B\u0435 \u0440\u0435\u043B\u0438\u0437\u044B</p>
         <div className={styles.otherGrid}>
           {OTHER_RELEASES.map((r) => (
-            <div key={r.name} className={styles.otherCard}>
+            <div key={r.name} className={styles.otherCard} onMouseEnter={onCardEnter} onMouseLeave={onCardLeave}>
               <strong>{r.name}</strong>
               <span>{r.year} \u2022 {r.genre}</span>
               <p>{r.detail}</p>
