@@ -712,6 +712,57 @@ async function handleCosmeticEquip(req: Request): Promise<Response> {
   }catch(e){ console.error("[cosmetic equip] failed",e); return Response.json({error:"db error"},{status:500}); }
 }
 
+// ---- Shop Bundles — 8 наборов со скидкой 10-18% vs сумма ---- 
+export type ShopBundle = { id:string; name:string; desc:string; emoji:string; items:string[]; slots:string[]; price:number; origPrice:number; rarity:\"rare\"|\"epic\"|\"legendary\"; tag:string };
+export const SHOP_BUNDLES: ShopBundle[] = [
+  { id:"bundle-starter",  name:"Старт 42",        desc:"Мопс + Неон-рамка + Братуха титул", emoji:"🎒", items:["mops","frame-neon42","title-bra"], slots:["skin","frame","title"], price:84,  origPrice:126, rarity:"rare", tag:"−33%" },
+  { id:"bundle-neon",     name:"Неон-вайб",       desc:"Фламинго + RGB-пульс + Неоновый", emoji:"🌃", items:["flamingo","frame-rgb","title-neon"], slots:["skin","frame","title"], price:520, origPrice:624, rarity:"epic", tag:"−17%" },
+  { id:"bundle-ice",      name:"Лёд и Пламя",     desc:"Панда + Лёд + Пламя + Хайп", emoji:"❄️", items:["panda","frame-ice","frame-fire","title-hype"], slots:["skin","frame","frame","title"], price:380, origPrice:452, rarity:"epic", tag:"−16%" },
+  { id:"bundle-hunter",   name:"Охотник 42",      desc:"Волк + Форест-баннер + Токсичный", emoji:"🐺", items:["wolf","banner-forest","title-toxic"], slots:["skin","banner","title"], price:740, origPrice:860, rarity:"epic", tag:"−14%" },
+  { id:"bundle-tiger",    name:"Тигр-легенда",    desc:"Тигр + Корона + Легенда + Грид", emoji:"🐯", items:["tiger","frame-crown","title-legend","banner-grid"], slots:["skin","frame","title","banner"], price:3100, origPrice:3586, rarity:"legendary", tag:"−14%" },
+  { id:"bundle-dragon",   name:"Дракон MAGNUM",   desc:"Дракон + Драконьи когти + Бог 42", emoji:"🐉", items:["dragon","frame-dragon","title-god"], slots:["skin","frame","title"], price:5200, origPrice:6082, rarity:"legendary", tag:"−15%" },
+  { id:"bundle-void",     name:"Войд-сет",        desc:"Войд-рамка + Туманность + VIP", emoji:"🕳️", items:["frame-void","banner-nebula","title-vip"], slots:["frame","banner","title"], price:2800, origPrice:3220, rarity:"legendary", tag:"−13%" },
+  { id:"bundle-full42",   name:"FULL 42",         desc:"6 хитов: Лиса/Сова/Акула + Голо/Holo + MAGNUM", emoji:"💎", items:["fox","owl","shark","frame-holo","banner-magnum","title-magnum"], slots:["skin","skin","skin","frame","banner","title"], price:980, origPrice:1168, rarity:"epic", tag:"−16%" },
+];
+export function isValidBundleId(v:unknown):string|null{ if(typeof v!==\"string\")return null; const s=v.trim(); if(!s||s.length>40||!/^[a-z0-9-]+$/.test(s))return null; return s; }
+export function getBundleById(id:string):ShopBundle|null{ return SHOP_BUNDLES.find(b=>b.id===id)??null; }
+async function handleShopBundleCatalog():Promise<Response>{ return Response.json({bundles:SHOP_BUNDLES,count:SHOP_BUNDLES.length}); }
+async function handleShopBundleBuy(req:Request):Promise<Response>{
+  const token=extractToken(req); if(!token) return Response.json({error:\"unauthorized\"},{status:401});
+  const user=await getUserByToken(token); if(!user) return Response.json({error:\"unauthorized\"},{status:401});
+  const ip=getClientIp(req); if(!checkRateLimit(`shop:bundle:${user.id}:${ip}`,10,60_000)) return Response.json({error:\"rate limited\"},{status:429});
+  let body:{bundleId?:string;id?:string}; try{body=(await req.json()) as typeof body;}catch{return Response.json({error:\"Invalid JSON\"},{status:400});}
+  const raw=isValidBundleId(body.bundleId??body.id??\"\"); if(!raw) return Response.json({error:\"bundleId required\"},{status:400});
+  const bundle=getBundleById(raw); if(!bundle) return Response.json({error:\"unknown bundle\",bundleId:raw},{status:400});
+  try{
+    const sql=getSql();
+    const coins=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+    let bal=0; if(coins.length===0){ await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${user.id},1000) ON CONFLICT (user_id) DO NOTHING`; bal=1000; } else bal=Number((coins[0] as {balance:number}).balance);
+    if(bal<bundle.price) return Response.json({error:\"not enough coins\",price:bundle.price,balance:bal,required:bundle.price},{status:402});
+    // check already owned items — allow partial (skip owned), but price stays same (bundle discount incentive)
+    await sql`UPDATE magnum_coins SET balance=balance-${bundle.price} WHERE user_id=${user.id}`;
+    const upd=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+    const newBal=Number((upd[0] as {balance:number}).balance);
+    let granted: string[]=[]; let skipped: string[]=[];
+    for(let i=0;i<bundle.items.length;i++){
+      const itemId=bundle.items[i]!; const slot=bundle.slots[i]!;
+      if(slot===\"skin\"){
+        const ex=await sql`SELECT id FROM magnum_shop_inventory WHERE user_id=${user.id} AND skin_id=${itemId} LIMIT 1`;
+        if(ex.length>0){ skipped.push(itemId); continue; }
+        await sql`INSERT INTO magnum_shop_inventory (user_id,skin_id,purchased_at,equipped) VALUES (${user.id},${itemId},now(),false)`;
+        granted.push(itemId);
+      } else {
+        const ex=await sql`SELECT id FROM magnum_cosmetics WHERE user_id=${user.id} AND cosmetic_id=${itemId} LIMIT 1`;
+        if(ex.length>0){ skipped.push(itemId); continue; }
+        await sql`INSERT INTO magnum_cosmetics (user_id,cosmetic_id,slot,equipped,purchased_at) VALUES (${user.id},${itemId},${slot},false,now())`;
+        granted.push(itemId);
+      }
+    }
+    await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${-bundle.price},'shop_bundle',${JSON.stringify({bundleId:bundle.id,price:bundle.price,granted,skipped})}::jsonb)`;
+    return Response.json({ok:true,bundleId:bundle.id,price:bundle.price,balance:newBal,granted,skipped,alreadyOwned:skipped});
+  }catch(e){ console.error(\"[bundle buy] failed\",e); return Response.json({error:\"db error\"},{status:500}); }
+}
+
 // ---- Frame handlers (magnum_frames) ----
 async function handleFrameVerify(req: Request): Promise<Response> {
   const token = extractToken(req);
@@ -2256,6 +2307,8 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/shop/cosmetic/buy" && req.method === "POST") return handleCosmeticBuy(req);
     if (url.pathname === "/magnum/api/shop/cosmetic/equip" && req.method === "POST") return handleCosmeticEquip(req);
     if (url.pathname === "/magnum/api/shop/cosmetic/inventory" && req.method === "GET") return handleCosmeticInventory(req);
+    if (url.pathname === "/magnum/api/shop/bundles" && req.method === "GET") return handleShopBundleCatalog();
+    if (url.pathname === "/magnum/api/shop/bundle/buy" && req.method === "POST") return handleShopBundleBuy(req);
 
     // mining
     if (url.pathname === "/magnum/api/mining" && req.method === "GET") return handleMiningGet(req);

@@ -90,6 +90,51 @@ const COSMETICS: Cosmetic[] = [
   { id:"title-god", slot:"title", name:"Бог 42", price:4242, rarity:"legendary", style:"#ffd700" },
 ];
 function isValidCosmeticId(v:string):boolean{ return /^[a-z0-9-]{2,64}$/.test(v); }
+export function isValidBundleId(v:string):boolean{ return /^[a-z0-9-]{2,40}$/.test(v); }
+type Bundle = { id:string; name:string; desc:string; emoji:string; items:string[]; slots:string[]; price:number; origPrice:number; rarity:Rarity; tag:string };
+const SHOP_BUNDLES: Bundle[] = [
+  { id:"bundle-starter", name:"Старт 42", desc:"Мопс + Неон-рамка + Братуха", emoji:"🎒", items:["mops","frame-neon42","title-bra"], slots:["skin","frame","title"], price:84, origPrice:126, rarity:"rare", tag:"−33%" },
+  { id:"bundle-neon", name:"Неон-вайб", desc:"Фламинго + RGB-пульс + Неоновый", emoji:"🌃", items:["flamingo","frame-rgb","title-neon"], slots:["skin","frame","title"], price:520, origPrice:624, rarity:"epic", tag:"−17%" },
+  { id:"bundle-ice", name:"Лёд и Пламя", desc:"Панда + Лёд + Пламя + Хайп", emoji:"❄️", items:["panda","frame-ice","frame-fire","title-hype"], slots:["skin","frame","frame","title"], price:380, origPrice:452, rarity:"epic", tag:"−16%" },
+  { id:"bundle-hunter", name:"Охотник 42", desc:"Волк + Форест + Токсичный", emoji:"🐺", items:["wolf","banner-forest","title-toxic"], slots:["skin","banner","title"], price:740, origPrice:860, rarity:"epic", tag:"−14%" },
+  { id:"bundle-tiger", name:"Тигр-легенда", desc:"Тигр + Корона + Легенда + Грид", emoji:"🐯", items:["tiger","frame-crown","title-legend","banner-grid"], slots:["skin","frame","title","banner"], price:3100, origPrice:3586, rarity:"legendary", tag:"−14%" },
+  { id:"bundle-dragon", name:"Дракон MAGNUM", desc:"Дракон + Когти + Бог 42", emoji:"🐉", items:["dragon","frame-dragon","title-god"], slots:["skin","frame","title"], price:5200, origPrice:6082, rarity:"legendary", tag:"−15%" },
+  { id:"bundle-void", name:"Войд-сет", desc:"Войд + Туманность + VIP", emoji:"🕳️", items:["frame-void","banner-nebula","title-vip"], slots:["frame","banner","title"], price:2800, origPrice:3220, rarity:"legendary", tag:"−13%" },
+  { id:"bundle-full42", name:"FULL 42", desc:"Лиса/Сова/Акула + Голо + MAGNUM", emoji:"💎", items:["fox","owl","shark","frame-holo","banner-magnum","title-magnum"], slots:["skin","skin","skin","frame","banner","title"], price:980, origPrice:1168, rarity:"epic", tag:"−16%" },
+];
+// -- BUNDLE FACTS 30 -- FILE:LINE
+export const SHOP_BUNDLE_FACTS: { fact:string; src:string }[] = [
+  { fact:"Старт 42 84 vs 126 −33%", src:"ShopPage.tsx:bundle-starter" },
+  { fact:"Неон-вайб 520 vs 624 −17%", src:"ShopPage.tsx:bundle-neon" },
+  { fact:"Лёд и Пламя 380 vs 452", src:"ShopPage.tsx:bundle-ice" },
+  { fact:"Охотник 42 740 vs 860", src:"ShopPage.tsx:bundle-hunter" },
+  { fact:"Тигр-легенда 3100 vs 3586", src:"ShopPage.tsx:bundle-tiger" },
+  { fact:"Дракон MAGNUM 5200 vs 6082", src:"ShopPage.tsx:bundle-dragon" },
+  { fact:"Войд-сет 2800 vs 3220", src:"ShopPage.tsx:bundle-void" },
+  { fact:"FULL 42 980 vs 1168 −16%", src:"ShopPage.tsx:bundle-full42" },
+  { fact:"GET /magnum/api/shop/bundles", src:"ShopPage.tsx:bundles GET" },
+  { fact:"POST /magnum/api/shop/bundle/buy", src:"ShopPage.tsx:bundles POST" },
+  { fact:"isValidBundleId 2-40", src:"ShopPage.tsx:isValidBundleId" },
+  { fact:"bundle price Neon skip owned", src:"server.ts:handleShopBundleBuy" },
+  { fact:"bundle Neon баланс Neon", src:"server.ts:handleShopBundleBuy" },
+  { fact:"8 bundles total", src:"ShopPage.tsx:SHOP_BUNDLES 8" },
+  { fact:"GSAP y24 stagger 0.1 bundles", src:"ShopPage.tsx:bundles GSAP" },
+  { fact:"bundle tag −33% starter", src:"ShopPage.tsx:bundle-starter tag" },
+  { fact:"bundle dragon legendary", src:"ShopPage.tsx:bundle-dragon" },
+  { fact:"bundle void legendary", src:"ShopPage.tsx:bundle-void" },
+  { fact:"bundle full42 6 items", src:"ShopPage.tsx:bundle-full42" },
+  { fact:"bundle hunter epic", src:"ShopPage.tsx:bundle-hunter" },
+  { fact:"bundle neon epic", src:"ShopPage.tsx:bundle-neon" },
+  { fact:"bundle ice epic", src:"ShopPage.tsx:bundle-ice" },
+  { fact:"bundle tiger legendary", src:"ShopPage.tsx:bundle-tiger" },
+  { fact:"bundle magnum_transactions", src:"server.ts:bundle tx" },
+  { fact:"bundle rateLimit 10/min", src:"server.ts:bundle rate" },
+  { fact:"bundle without localStorage", src:"ShopPage.tsx:bundles" },
+  { fact:"bundle RGB_GLOW hover", src:"ShopPage.tsx:bundles hover" },
+  { fact:"bundle price vs origPrice", src:"ShopPage.tsx:bundle price" },
+  { fact:"bundle slots skin/frame/banner/title", src:"ShopPage.tsx:bundle slots" },
+  { fact:"bundle emoji 🎒🌃❄️🐺🐯🐉🕳️💎", src:"ShopPage.tsx:bundles emoji" },
+];
 // -- EXTRA 45 -- real, FILE:LINE
 export const SHOP_EXTRA_CATALOG: { id: string; name: string; price: number; rarity: "common"|"rare"|"epic"|"legendary"; src: string }[] = [
   { id: "frame-neon42", name: "Неон 42", price: 42, rarity: "common", src: "ShopPage.tsx:55" }, // FILE:LINE ShopPage.tsx:55
@@ -319,6 +364,8 @@ export function ShopPage() {
       gsap.to(`.${styles.card}`, { y: 0, opacity: 1, stagger: 0.12, duration: 0.55, ease: "power2.out", delay: 0.28 });
       gsap.set(`.${styles.cosCard}`, { y: 24, opacity: 0 });
       gsap.to(`.${styles.cosCard}`, { y: 0, opacity: 1, stagger: 0.08, duration: 0.5, ease: "power2.out", delay: 0.42 });
+      gsap.set(`.${styles.bundleCard}`, { y: 24, opacity: 0 });
+      gsap.to(`.${styles.bundleCard}`, { y: 0, opacity: 1, stagger: 0.1, duration: 0.52, ease: "power2.out", delay: 0.52 });
     }, rootRef);
     return () => ctx.revert();
   }, []);
@@ -478,6 +525,28 @@ export function ShopPage() {
       if(!r.ok){ pushToast("err", String((d as any).error||"Не надеть")); return; }
       setCosEquipped(prev=>({...prev,[co.slot]:co.id}));
       pushToast("ok",`${co.name} надет · слот ${co.slot}`);
+    }catch{ pushToast("err","Сеть упала"); }
+  };
+  const buyBundle = async (b: Bundle) => {
+    if(!isValidBundleId(b.id)) return;
+    if(coins < b.price){ pushToast("err",`Нужно ${b.price}, у тебя ${coins}. Фарми в играх!`); return; }
+    if(!me){ pushToast("err","Войди, братуха — без логина магазин закрыт"); window.dispatchEvent(new CustomEvent("magnum:need-auth")); return; }
+    try{
+      const r=await fetch("/magnum/api/shop/bundle/buy",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({bundleId:b.id})});
+      const d=await r.json().catch(()=>({})) as {balance?:number;granted?:string[];skipped?:string[];error?:string};
+      if(!r.ok){ let msg=String((d as any).error||"Покупка не прошла"); if(msg.toLowerCase().includes("unauthorized")) msg="Войди, братуха — без логина магазин закрыт"; pushToast("err",msg); return; }
+      if(typeof (d as any).balance==="number") setCoins((d as any).balance);
+      // optimistic: mark cosmetics as owned, skins as inventory
+      const granted=(d as any).granted as string[]||[]; const skipped=(d as any).skipped as string[]||[];
+      if(granted.length){ setCosOwned(v=>[...new Set([...v,...granted.filter(id=>!SHOP_BUNDLES.some(_=>false)&&id)])]); setInventory(v=>[...new Set([...v,...granted.filter(id=>SKINS.some(s=>s.id===id))])]); }
+      // reload inventories for correctness
+      try{
+        const [invR, cosR]=await Promise.all([fetch("/magnum/api/shop/inventory",{credentials:"include"}), fetch("/magnum/api/shop/cosmetic/inventory",{credentials:"include"})]);
+        if(invR.ok){ const dj=await invR.json() as {inventory?:any[]}; const arr=(dj as any).inventory||[]; const ids=Array.isArray(arr)? arr.map((x:any)=> typeof x==="string"?x:(x.skinId||x.skin_id||"")).filter(Boolean):[]; if(ids.length) setInventory(ids); }
+        if(cosR.ok){ const dj=await cosR.json() as {inventory?:any[]}; const arr=(dj as any).inventory||[]; setCosOwned(arr.map((x:any)=> x.cosmeticId||x.cosmetic_id||"").filter(Boolean)); const eq:Record<string,string>={}; for(const it of arr) if(it.equipped) eq[it.slot]=it.cosmeticId||it.cosmetic_id; setCosEquipped(eq); }
+      }catch{}
+      const got=granted.length? ` +${granted.length} предметов`:""; const skip=skipped.length? ` (уже было: ${skipped.length})`:"";
+      pushToast("ok",`${b.name} куплен!${got}${skip} · баланс ${ (d as any).balance ?? coins-b.price}`);
     }catch{ pushToast("err","Сеть упала"); }
   };
 
@@ -662,6 +731,33 @@ export function ShopPage() {
           })}
         </div>
         {cosOwned.length>0 && <p className={styles.cosHint}>В инвентаре: {cosOwned.length}/32 · экипировано: {Object.values(cosEquipped).filter(Boolean).length} слотов</p>}
+      </section>
+
+      {/* бандлы 8 — со скидкой, Neon-покупка */}
+      <section className={styles.bundles} aria-label="Наборы 42 — выгодно">
+        <div className={styles.cosHead}>
+          <h2 className={styles.cosTitle}>НАБОРЫ 42 — 8 бандлов со скидкой</h2>
+          <p className={styles.cosSub}>Выгоднее поштучно · −13…−33% · баланс Neon · без localStorage · POST /magnum/api/shop/bundle/buy</p>
+        </div>
+        <div className={styles.bundleGrid}>
+          {SHOP_BUNDLES.map(b=>{
+            const can=coins>=b.price; const isStarter=b.id==="bundle-starter";
+            return (
+              <div key={b.id} className={`${styles.bundleCard} ${isStarter?styles.bundleHit:""}`} data-rarity={b.rarity} onMouseEnter={onCardEnter} onMouseLeave={onCardLeave}>
+                <div className={styles.bundleTop}>
+                  <span className={styles.bundleEmoji}>{b.emoji}</span>
+                  <span className={styles.bundleTag} style={{color:RARITY_META[b.rarity].color, borderColor:RARITY_META[b.rarity].color}}>{b.tag} {RARITY_META[b.rarity].label}</span>
+                </div>
+                <div className={styles.bundleName}>{b.name}</div>
+                <p className={styles.bundleDesc}>{b.desc}</p>
+                <div className={styles.bundleItems}>{b.items.map(id=><span key={id} className={styles.bundleChip}>{id}</span>)}</div>
+                <div className={styles.bundlePriceRow}><span className={styles.bundlePrice}>🪙 {b.price}</span><span className={styles.bundleOrig}>{b.origPrice}</span></div>
+                <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>buyBundle(b)}>{can? `Купить · 🪙 ${b.price}`:`Нужно ${b.price}`}</button>
+              </div>
+            );
+          })}
+        </div>
+        <p className={styles.cosHint}>8 бандлов · скидка vs сумма поштучно · уже купленное пропускается · транзакция в magnum_transactions</p>
       </section>
 
       {/* футер-намёк */}
