@@ -265,6 +265,8 @@ export function Game2042() {
   const [dailyMode, setDailyMode] = useState(false);
   const [shareMsg, setShareMsg] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [floats, setFloats] = useState<Array<{ id: number; val: number }>>([]);
+  const floatIdRef = useRef(0);
   // undo stack: last 6 states
   const historyRef = useRef<Array<{ grid: Grid; score: number; moves: number }>>([]);
   const touchRef = useRef<{ x: number; y: number } | null>(null);
@@ -315,15 +317,32 @@ export function Game2042() {
       setLastMergeVal(s);
       setMergeStreak((prev) => prev + 1);
       setTimeout(() => setLastMergeVal(null), 900);
-      // GSAP pop merged tiles
+      const fid = ++floatIdRef.current;
+      setFloats((prev) => [...prev, { id: fid, val: s }]);
+      setTimeout(() => setFloats((prev) => prev.filter((f) => f.id !== fid)), 820);
+      try { navigator.vibrate?.(s >= 64 ? [18, 30, 32] : 18); } catch {}
       if (boardRef.current) {
         const tiles = boardRef.current.querySelectorAll(`.${styles.filled}`);
         gsap.fromTo(tiles, { scale: 0.92 }, { scale: 1, duration: 0.18, ease: "back.out(1.8)", stagger: 0.01, overwrite: true });
       }
     } else {
       playSlide();
+      try { navigator.vibrate?.(8); } catch {}
       setMergeStreak(0);
     }
+    requestAnimationFrame(() => {
+      if (!boardRef.current) return;
+      const tiles = boardRef.current.querySelectorAll(`.${styles.tile}`);
+      let spawnIdx = -1;
+      outer: for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) if (ng[r]![c] === 0 && withNew[r]![c] !== 0) { spawnIdx = r * 4 + c; break outer; }
+      if (spawnIdx >= 0 && tiles[spawnIdx]) {
+        const el = tiles[spawnIdx] as HTMLElement;
+        if (!prefersReducedMotion()) gsap.fromTo(el, { scale: 0.45, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.26, ease: "back.out(1.7)", overwrite: true });
+      }
+      if (maxTile(withNew) >= 2048 && !prefersReducedMotion()) {
+        gsap.fromTo(boardRef.current!, { boxShadow: "0 0 0 0 rgba(255,45,85,0.0)" }, { boxShadow: "0 0 0 8px rgba(255,45,85,0.22), 0 0 32px rgba(255,45,85,0.35)", duration: 0.35, yoyo: true, repeat: 1, ease: "power2.inOut" });
+      }
+    });
     if (newScore > best) {
       setBest(newScore);
       try { localStorage.setItem("2042-best", String(newScore)); } catch {}
@@ -557,6 +576,13 @@ export function Game2042() {
           )}
         </div>
         {confetti.length > 0 && <canvas ref={confettiRef} style={{ position: "absolute", inset: 0, pointerEvents: "none", borderRadius: 14 }} width={380} height={380} />}
+        {floats.length > 0 && (
+          <div style={{ position: "absolute", top: 8, left: "50%", transform: "translateX(-50%)", pointerEvents: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, zIndex: 5 }}>
+            {floats.map((f) => (
+              <span key={f.id} style={{ fontWeight: 900, fontSize: "1.05rem", color: f.val >= 64 ? "#ffcc00" : "#00ff88", textShadow: "0 0 10px currentColor, 0 1px 6px rgba(0,0,0,0.6)", animation: "floatUp 0.82s ease-out forwards" }}>+{f.val}</span>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className={styles.controls}>
