@@ -796,6 +796,10 @@ async function ensureSubscriptionTable(): Promise<void> {
   const sql = getSql();
   await sql`CREATE TABLE IF NOT EXISTS magnum_subscriptions (id serial PRIMARY KEY, user_id integer NOT NULL REFERENCES magnum_users(id) ON DELETE CASCADE, tier text NOT NULL, started_at timestamp NOT NULL DEFAULT now(), ends_at timestamp, created_at timestamp NOT NULL DEFAULT now())`;
   await sql`CREATE INDEX IF NOT EXISTS idx_magnum_subscriptions_user ON magnum_subscriptions(user_id)`;
+  // P0 42703: existing DB had old 4-col schema (user_id PK, tier, expires_at, created_at) — backfill missing cols
+  await sql`ALTER TABLE magnum_subscriptions ADD COLUMN IF NOT EXISTS started_at timestamp DEFAULT now()`;
+  await sql`ALTER TABLE magnum_subscriptions ADD COLUMN IF NOT EXISTS ends_at timestamp`;
+  await sql`ALTER TABLE magnum_subscriptions ADD COLUMN IF NOT EXISTS id serial`;
 }
 function isGlacierEpicLegendary(id:string):boolean {
   const it = COSMETICS_CATALOG.find(c=>c.id===id);
