@@ -5,6 +5,51 @@
 > Промо-сайт альбома **MAGNUM Пятерки** (5opka × 42 братухи). React + TypeScript + GSAP + Bun.
 > Формат: [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/). Версионирование — SemVer.
 
+## [0.3.10] — 2026-09-01 ⌨️ Typing FEVER 3×DIFFICULTY + Rhythm Tape 32 restore + Mining Boost x2 — 6/10
+
+> **4 коммита** `901cc13` → `2c34683` · **+540 / −156** · **5 файлов** (+4 dirty `server.ts` 68/6 + `drizzle/schema` 16/0 + `0015_migration` 25 + `typing.test` 6/4 + untracked `new-coverage-1540`) · Typing 3 сложности + FEVER ×1.3 6с + 15 советов + Rhythm tape 32 mute/share/breakdown restore (stash) + SFX muted guard + Mining Boost x2 60с + Duel wager 42/142/420/1420 + season top · рейтинг **6/10** (2838 строк/20м, норма 5000+ = 10/10) · `tsc 0` · `magnum-bun active` `caddy Up 39m` (200/200/200)
+
+### 🎮 Игры — Typing FEVER 3×DIFFICULTY + Rhythm Tape 32 restore
+
+- ⌨️ **Typing 42 — 3 сложности + FEVER ×1.3 + 15 советов + частицы + WebAudio** — `13175d2` **DIFFICULTY 3×** `easy 28 WPM 8 фраз / normal 42 WPM 12 фраз / hard 55 WPM 12 фраз` (`coinMul 1/1.5/2` + `localStorage typing42-diff`), **TYPING_TIPS 15×** ротация `3.2с` (`Туса/VPN/CLAY/ТУСА МЕДУЗА 14.08`), **FEVER** `3 фразы без ошибок → ×1.3 6с` (`triggerFever` + `playFever` 660+220Hz×3 + `spawnParticles 14 #ffcc00` + `spawnFloat "FEVER ×1.3"` + `feverTimerRef` 6с), **частицы/флоаты** `Particle id/x/y/color/size` + `FloatText` + `setTimeout 700мс` cleanup, **WebAudio** `playFever/playPerfect` tri/sine 1040Hz + `safeRamp`, **GSAP** `ScrollTrigger.batch y24→0 stagger 0.12` + `hover y:-4 RGB_GLOW` + `prefersReducedMotion` gate, **WPM** `calcWPM chars/5/min` + `displayWpm fever×1.3`, **combo** `×5 chime` + `maxCombo` — `src/pages/games/TypingGame.tsx` +211/−148 (1 файл, трудный баланс)
+- 🥁 **Rhythm 42 — tape 32 + mute/share + breakdown — восстановление после stash** — `13175d2` **восстановление** `stash@{0} typing-temp` → `RhythmGame.tsx` **+82/−8** (ранее dirty `+68/−4` из `0.3.9` — теперь закоммичен): **tapeStats** `p*1+g*0.6/tot*100` helper, **TAPE 32** `Array(32)` `perfect #ffcc00 / good #00ff88 / miss #ff2d55` + `P/G/M` счётчики, **mute 🔊/🔇** `rhythm42-muted` `mutedRef` guard `playHit(j, mutedRef)` + `playFeverBurst(mutedRef)` + `playKeyTap(lane, mutedRef)`, **breakdown-лента** `flex p/g/m` + `judgeTape.length` бар, **share** `navigator.clipboard` `РИТМ MAGNUM — {song} {score} pts • {acc}% • FEVER x{N} — пресейв https://music.thefence.me/psmagnum` + `setShareMsg "Скопировано!" 2200мс`, **win/fail модалки** `Perfect/Good/Miss` карточка + `5 пуль MAGNUM: {song}·{diff}·music.thefence.me/psmagnum` + `DIFFICULTY win 3500/5000/6500` — `src/pages/games/RhythmGame.tsx` +82/−8, `tests/new-coverage-1540.test.ts` +утр (см. 🧪)
+
+### ✨ Фичи — Mining Boost ×2 60с + Duel wager + Season Top (dirty, к 0.3.11)
+
+- ⛏️ **Mining Boost ×2 — 60с за 142 монеты (dirty, не закоммичен)** — `server.ts` **+68/−6 dirty** `MINING_BOOST_PRICE 142` + `MINING_BOOST_MS 60_000` + `miningBoostUntil Map<userId, until>` + `handleMiningBoost` auth + `6/мин rateLimit` + `balance ≥142` → `UPDATE magnum_coins -142` + `INSERT magnum_transactions mining_boost` + `Map.set(newUntil)` + `handleMiningGet` `boost:{active,until,remainingMs,price,durationMs}` + `handleMiningClick` `inc*2 if boosted` + `boosted boostUntil` в ответе — `server.ts` dirty 68/6, `drizzle/migrations/0015_duel_wagers_mining_boost.sql` +25 (magnum_mining_boosts + indexes), `drizzle/schema.ts` +16 (magnumMiningBoosts)
+- ⚔️ **Duel wager 42/142/420/1420 + invite respond + season top (dirty)** — `server.ts` dirty **wager** `0/42/142/420/1420` валидация + `handleDuelInviteCreate` `wager hold` `SELECT balance` + `UPDATE -wager` + `INSERT magnum_transactions duel_wager_hold` + `ensureNotification` `(ставка ${wager})` + `handleDuelInviteRespond` `POST /magnum/api/duel/invite/:id/respond` `accept|decline` + `SELECT FOR UPDATE` + `status pending→accepted/declined` + `ensureNotification` + `broadcast invite_accepted` + `handleDuelSeasonTop` `GET /magnum/api/duel/seasons/:id/top` `since starts_at` + `endCond` + `SELECT winner COUNT wins + avatar` + `recent 10` + `GET/POST /magnum/api/mining/boost` роуты — `server.ts` +68, `drizzle/migrations/0015` `magnum_duel_wagers` +3 индекса (`room_idx/user_idx` + `winner/created_idx`), `drizzle/schema.ts` +16 (magnumDuelWagers/magnumMiningBoosts)
+- 🧪 **new-coverage-1540 — Rhythm full 2026 (untracked, к коммиту)** — `tests/new-coverage-1540.test.ts` untracked — **7 it** `judgeTape 32 + muted + shareMsg` + `DIFFICULTY 3 win 3500/5000/6500` + `PERFECT 75/GOOD 145/NOTE_SPEED 360/LANE 4` + `safeRamp AudioParam presave URL` + `GSAP ScrollTrigger RGB_GLOW` + `FEVER x5 perfect` + `clipboard.writeText 2200ms` — `tests/typing.test.ts` +6/−4 (DIFFICULTY win правки) — войдёт в **0.3.11** с boost/wager
+
+### 🤖 БРАТ-БОТ — стабилен
+
+- 🤖 без изменений в окне — бот стабилен, задачи ушли в **Typing FEVER + Rhythm tape restore + Mining Boost** (след. инкремент — подсказки по **Boost ×2 60с + wager 42/142/420 + Season Top + TAPE mute/share**)
+
+### 🖼️ Открытка / Галерея — 8 файлов (WARN y2k/dup + archive HTML, без изменений)
+
+- 🖼️ **8 файлов — без изменений в окне, WARN сохраняется** — watchdog 15:39 **8 файлов** `42-{agit,cyber,memphis,y2k}-01.{jpg,800.webp}` (12M, webp 67-133K valid), `tsc 0` (в окне) · `REAL_BY_STYLE`/`REAL_FALLBACK` (`y2k→memphis/cyber` § BUG review 15:41 п.1) + **archive 210× 200 html** SPA fallback — `magnum-bun active Up 39m` `caddy Up` без рестарта
+
+### ⚡ Перфоманс — стабилен, tsc 0, Up 39m
+
+- 🟢 **Health 200/200/200 — без рестарта** — watchdog 15:39 **200/200/200** `HTTPS /magnum/ 200` `HTTPS /magnum/api/ideas 200` (92 идеи) `HTTP :3000/magnum/api/ideas 200` + `GET /magnum/api/health 200` `{ok:true ideas:92 users:24 uptime:347s}` + `magnum-bun active since 15:34:29 PID 267966 27.9M` `caddy Up 39m` — **не потребовался** `systemctl restart`/`docker compose up -d` — все 3 endpoint 200, `build.ts minify 133/150 + sitemap 32` ok
+- ✅ **tsc 0 в окне → 0 сейчас** — watchdog 15:39 `tsc 0` (на `5921e0b` clean) · текущий dirty `bunx tsc --noEmit 0` (Rhythm fix закоммичен в `13175d2`, 20 ошибок review 15:41 закрыты) — dirty остаётся `server.ts` 68/6 но `tsc 0` держится, `dist` не трогали
+
+### 🧪 Тесты / CI — 3086 → 3098 (review 6/10)
+
+- ✅ **Watchdog 15:39 — OK + Review 6/10 — 2838 строк/20м** — `901cc13` `reports/watchdog-2026-09-01-1539.md` +89 — **200/200/200**, `magnum-bun active`, `caddy Up 39m`, **8 gallery**, `tsc 0` (per watchdog), **health inner+outer 200** — `2c34683` `reports/review-2026-09-01-1541.md` +106 — **6/10** `2838 строк` `ADDED 2669 / REMOVED 169` (20м, `15:21-15:41`, 18 коммитов 11 продуктивных+7 отчётов), шкала `0-49=0 … 5000+=10` — рост **5/10 → 6/10**, `tsc FAIL 20 ошибок` (dirty Rhythm до `13175d2`) → сейчас `PASS 0`, `tests 3086→3098` `9694 expects 32 файла 1.44s`, `gallery 4/4 webp 200 + 210 archive 200 HTML WARN` — dirty server.ts + untracked `new-coverage-1540` войдут в **0.3.11**
+
+### 📖 Дока + Ревью — 6/10 → 5/10 → 6/10
+
+- 👁️ **Review 6/10 — 2838 строк/20м** — `2c34683` `reports/review-2026-09-01-1541.md` +106 — **6/10** (2000-2999 = 6/10) — рост **5/10 → 6/10**, **18 коммитов/20м** `2669 added/169 removed`, `tsc FAIL 20` (dirty Rhythm `judgeTape`×6) → `PASS 0` после `13175d2`, **WARN** `archive HTML fallback` + `y2k alias` + `gallery dup` + `stash typing-temp` + `server.ts dirty 68/6`
+- 📝 **Changelog investor update** — `3cf900a` `CHANGELOG.md` +52 — секция **[0.3.9] 11 коммитов 1296b9e→5921e0b +1581/−156 21 файл +1 dirty** задокументирована (Rhythm tape + Dodge + Duel 2.0 + Ideas 💬)
+- 🟢 **Watchdog 15:39 — OK** — `901cc13` `reports/watchdog-2026-09-01-1539.md` +89 — **200/200/200 active Up 39m** — без рестарта, `build.ts` `sitemap 32` + `cp -r dist/* /srv/magnum` ok
+
+### 🐛 Фиксы — Rhythm dirty 20 ошибок → 0
+
+- ✅ **Rhythm 20 ошибок TS2304 closed** — `13175d2` закрыл **20× `TS2304 judgeTape/shareMsg`** из review 15:41 § КРИТИЧНО (dirty `RhythmGame.tsx` stash-pop незавершён) — теперь `bunx tsc 0`, `watchdog 15:39 0` подтверждается
+- ⚠️ **Остались P1/P2 → 0.3.11:** `server.ts dirty 68/6` (mining boost + duel wager/respond/seasonTop не закоммичены, 4 файла `meta/_journal 22/1 + schema 16/0 + server 84/6 + typing.test 6/4`) + `M dram` stash `typing-temp` + `archive 210× 200 html` + `y2k alias` + `historyRef.length` + `TOCTOU 1278-1297` + `UNIQUE(user_id,code)` + `Memory/Rhythm localStorage` + `DODGE/WIP` — все carry из 0.3.9, плюс **new** `0015 migration untracked` + `new-coverage-1540 untracked`
+
+---
+
 ## [0.3.9] — 2026-09-01 🎹 Rhythm Tape 32 + Dodge 42 + Duel 2.0 + Ideas 💬 — 5/10
 
 > **11 коммитов** `1296b9e` → `5921e0b` · **+1581 / −156** · **21 файл** (+1 dirty `RhythmGame.tsx` tape 32) · Rhythm judgement tape 32 + mute + share + breakdown + Dodge 3 сложности×даш/slow-mo + Ideas 💬 Neon + Duel 2.0 + auth-gate + 3086 tests · рейтинг **5/10** (1711 строк/10м, норма 5000+ = 10/10) · `tsc` ⚠️ 5 ошибок RunnerGame dirty · `magnum-bun active` `caddy Up` (recovered 502→200, 000→200)
