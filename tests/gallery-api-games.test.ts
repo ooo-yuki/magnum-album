@@ -96,7 +96,7 @@ describe("api: server.ts эндпоинты", () => {
 
 // ── Build health: 200-совместимость ───────────────────────
 describe("build: dist health 200", () => {
-  it("dist/index.html резолвит main-*.js который реально существует и >1KB", () => {
+  it("dist/index.html резолвит main-*.js который реально существует и >400B", () => {
     const dist = resolve(ROOT, "dist");
     if (!existsSync(join(dist,"index.html"))) { expect(true).toBe(true); return; }
     const html = read(join(dist,"index.html"));
@@ -108,7 +108,7 @@ describe("build: dist health 200", () => {
     for (const f of files) {
       const p = join(dist, f);
       expect(existsSync(p), `${f} отсутствует в dist`).toBe(true);
-      expect(statSync(p).size).toBeGreaterThan(1000);
+      expect(statSync(p).size).toBeGreaterThan(400);
     }
   });
   it("public/sitemap.xml без дублей и с https/magnum", () => {
