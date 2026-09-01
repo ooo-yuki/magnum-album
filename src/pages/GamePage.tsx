@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import gsap from "gsap";
 import styles from "./GamePage.module.css";
 
@@ -95,6 +95,9 @@ export function GamePage() {
   const [finished, setFinished] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+  const optionsRef = useRef<HTMLDivElement>(null);
+  const resultRef = useRef<HTMLDivElement>(null);
+  const resultCtxRef = useRef<gsap.Context | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -106,13 +109,104 @@ export function GamePage() {
     });
   }, []);
 
+  // staggered option reveal on each new question
+  useEffect(() => {
+    if (!optionsRef.current || finished) return;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reducedMotion) return;
+    const buttons = optionsRef.current.querySelectorAll(`.${styles.option}`);
+    gsap.set(buttons, { x: -16, opacity: 0 });
+    gsap.to(buttons, {
+      x: 0,
+      opacity: 1,
+      stagger: 0.06,
+      duration: 0.35,
+      ease: "power2.out",
+      delay: 0.08,
+    });
+  }, [current, finished]);
+
+  // result screen entrance animation
+  useEffect(() => {
+    if (!finished || !resultRef.current) return;
+    resultCtxRef.current?.revert();
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const ctx = gsap.context(() => {
+      const card = resultRef.current?.querySelector(`.${styles.resultCard}`);
+      if (!card) return;
+      gsap.set(card, { scale: 0.85, y: 30, opacity: 0 });
+      gsap.to(card, {
+        scale: 1,
+        y: 0,
+        opacity: 1,
+        duration: 0.6,
+        ease: "back.out(1.6)",
+      });
+      if (!reducedMotion) {
+        // breathing glow on result card
+        gsap.to(card, {
+          boxShadow: "0 0 32px rgba(255,45,85,0.3), 0 0 64px rgba(255,45,85,0.1)",
+          duration: 1.8,
+          repeat: -1,
+          yoyo: true,
+          ease: "sine.inOut",
+          delay: 0.7,
+        });
+      }
+      // stagger children: score, h2, text, actions
+      const children = card.children;
+      gsap.set(children, { y: 16, opacity: 0 });
+      gsap.to(children, {
+        y: 0,
+        opacity: 1,
+        stagger: 0.1,
+        duration: 0.5,
+        ease: "power2.out",
+        delay: 0.2,
+      });
+    }, resultRef);
+    resultCtxRef.current = ctx;
+    return () => ctx.revert();
+  }, [finished]);
+
   const handleSelect = (idx: number) => {
     if (selected !== null) return;
     setSelected(idx);
-    if (idx === QUESTIONS[current]!.correct) {
+    const isCorrect = idx === QUESTIONS[current]!.correct;
+    if (isCorrect) {
       setScore((s) => s + 1);
     }
     setShowFact(true);
+
+    // answer feedback animation
+    if (optionsRef.current) {
+      const buttons = optionsRef.current.querySelectorAll(`.${styles.option}`);
+      const btn = buttons[idx] as HTMLElement | undefined;
+      if (btn) {
+        gsap.to(btn, {
+          scale: 1.04,
+          duration: 0.15,
+          yoyo: true,
+          repeat: 1,
+          ease: "power2.out",
+        });
+        if (isCorrect) {
+          gsap.to(btn, {
+            boxShadow: "0 0 20px rgba(0,255,136,0.5), 0 0 40px rgba(0,255,136,0.2)",
+            duration: 0.4,
+            ease: "power2.out",
+          });
+        } else {
+          gsap.to(btn, {
+            x: -6,
+            duration: 0.08,
+            yoyo: true,
+            repeat: 3,
+            ease: "power2.inOut",
+          });
+        }
+      }
+    }
 
     // Animate card
     if (cardRef.current) {
@@ -170,7 +264,7 @@ export function GamePage() {
 
           <div className={styles.card} ref={cardRef}>
             <h2 className={styles.question}>{q.q}</h2>
-            <div className={styles.options}>
+            <div className={styles.options} ref={optionsRef}>
               {q.options.map((opt, idx) => (
                 <button
                   key={opt}
@@ -208,7 +302,7 @@ export function GamePage() {
           </div>
         </div>
       ) : (
-        <div className={styles.result}>
+        <div className={styles.result} ref={resultRef}>
           <div className={styles.resultCard}>
             <div className={styles.resultScore}>
               {score}/{QUESTIONS.length}
