@@ -37,4 +37,5 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # reports — локальные, не в git (fixer пишет сюда) — watchdog除外
 reports/
 !reports/watchdog-*.md
+!reports/auth-*.md
 
