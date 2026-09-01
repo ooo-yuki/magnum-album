@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, boolean, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, boolean, jsonb, primaryKey } from "drizzle-orm/pg-core";
 
 export const magnumUsers = pgTable("magnum_users", {
   id: serial("id").primaryKey(),
@@ -385,3 +385,13 @@ export const magnumBoardShares = pgTable("magnum_board_shares", {
   dayId: text("day_id").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+export const magnumPity = pgTable("magnum_pity", {
+  userId: integer("user_id").notNull().references(() => magnumUsers.id, { onDelete: "cascade" }),
+  bannerType: text("banner_type").notNull(),
+  pityCounter: integer("pity_counter").default(0).notNull(),
+  pity5star: integer("pity_5star").default(0).notNull(),
+  lost5050: boolean("lost_50_50").default(false).notNull(),
+  pulls: integer("pulls").default(0).notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => [primaryKey({ columns: [t.userId, t.bannerType] })]);
