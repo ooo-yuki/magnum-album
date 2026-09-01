@@ -608,7 +608,7 @@ export function Flappy42Game() {
             ))}
           </div>
           <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>{skin.emoji} {skin.name} — {skin.lore}</span>
-          <button className={styles.playBtn} onClick={flap} onMouseEnter={(e)=>hoverIn(e.currentTarget)} onMouseLeave={(e)=>hoverOut(e.currentTarget)}>Играть {diff.emoji}!<span data-glow style={{ display: "none" }} /></button>
+          <button className={styles.playBtn} onClick={flap} onMouseEnter={(e)=>hoverIn(e.currentTarget)} onMouseLeave={(e)=>hoverOut(e.currentTarget)}>Играть! {diff.emoji}<span data-glow style={{ display: "none" }} /></button>
           <Link to="/magnum/games" className={styles.back}>← К играм</Link>
         </div>
       )}

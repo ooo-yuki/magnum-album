@@ -91,6 +91,21 @@ const SONGS: Song[] = [
   { name: "42 ✌️", bpm: 135, duration: 44, patternSeed: 42 },
   { name: "MAGNUM — 5 пуль ●", bpm: 108, duration: 50, patternSeed: 99 },
 ];
+// MAGNUM 2026 — лор-цитаты 5 пуль (крутятся в меню + подсказки)
+const RHYTHM_TIPS: string[] = [
+  "5 треков — 5 пуль. MAGNUM = последний аккорд 5opka × MellSher перед соло-главой.",
+  "ТУСА МЕДУЗА 14.08 — 8K+ клипов TikTok, 200K просмотров. Первая пуля уже в чартах!",
+  "VPN — второй сингл MAGNUM, 2:23 дежавю-попа. Слышал на РЗТ?",
+  "CLAY: 5 треков, 81 рецензия РЗТ. Пасхалка Clowns Laugh At You спрятана в конце видео.",
+  "DRUMEDY + The Fence — продакшн и лейбл всей эры MAGNUM. 5 пуль заряжены!",
+  "923K на Twitch, пик 28K онлайна — тур MAGNUM скоро, следи в t.me/NE_5OPKA",
+  "Пресейв https://music.thefence.me/psmagnum — один клик и 5 пуль прилетят первыми!",
+  "42 — ответ. FEVER на 5 Perfect = 42-я пуля попадает всегда!",
+  "Хард — окна уже: Perfect 55 мс. Почувствуй себя на сцене MAGNUM тура!",
+  "Легко — окна шире (95 мс). Набей руку и забирай FEVER x2!",
+];
+const LS_BEST = "rhythm42-best";
+const LS_TUT = "rhythm42-tut-v1";
 // MAGNUM FEVER — 5 perfect подряд = 5 пуль заряжены, x2 очки 6с + золотая аура
 const FEVER_NEED = 5;
 const FEVER_MS = 6000;
@@ -130,6 +145,21 @@ function ensureAC() {
   if (ac.state === "suspended") void ac.resume();
   return ac;
 }
+// MAGNUM SFX — 5 пуль: финальный выстрел FEVER звучит ярче (квинта)
+function playFeverBurst() {
+  const ctx = ensureAC(); if (!ctx) return;
+  const now = ctx.currentTime;
+  [0, 0.08, 0.16].forEach((d, i) => {
+    const o = ctx.createOscillator(); const g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type = i === 2 ? "sine" : "triangle";
+    o.frequency.value = 660 + i * 220;
+    safeRamp(o.frequency, () => o.frequency.linearRampToValueAtTime(1320 + i * 120, now + d + 0.14), 1320);
+    g.gain.setValueAtTime(0.18, now + d);
+    safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, now + d + 0.28), 0.001);
+    o.start(now + d); o.stop(now + d + 0.30);
+  });
+}
 function playHit(j: Judgement) {
   const ctx = ensureAC(); if (!ctx) return;
   const o = ctx.createOscillator(); const g = ctx.createGain();
@@ -168,6 +198,9 @@ export function RhythmGame() {
   const [missStreak, setMissStreak] = useState(0);
   const [fever, setFever] = useState(false);
   const [feverCount, setFeverCount] = useState(0);
+  const [best, setBest] = useState(0);
+  const [tipIdx, setTipIdx] = useState(0);
+  const [showTut, setShowTut] = useState(false);
 
   const statsRef = useRef({ score: 0, combo: 0, maxCombo: 0, perfect: 0, good: 0, miss: 0, total: 0 });
   const notesRef = useRef<Note[]>([]);
@@ -222,6 +255,7 @@ export function RhythmGame() {
         setFeverCount((c) => c + 1);
         pulseRef.current = 1.5;
         shakeRef.current = 8;
+        playFeverBurst();
         for (let k = 0; k < 22; k++) particlesRef.current.push({ x: lane, y: 0, vx: (Math.random()-0.5)*10, vy: -Math.random()*7-2, life: 1, color: k%2===0 ? "#ffcc00" : "#ff2d55", size: 3+Math.random()*3 });
       }
       s.score += (100 + Math.min(s.combo * 5, 100)) * feverMult;
@@ -276,6 +310,29 @@ export function RhythmGame() {
     if (state === "playing") { pauseStartRef.current = performance.now(); setState("paused"); }
     else if (state === "paused") { pausedTimeRef.current += performance.now() - pauseStartRef.current; setState("playing"); }
   }, [state]);
+
+  // best + tut + tip rotation
+  useEffect(() => {
+    try {
+      const v = parseInt(localStorage.getItem(LS_BEST) || "0", 10);
+      if (!Number.isNaN(v)) setBest(v);
+      if (!localStorage.getItem(LS_TUT)) setShowTut(true);
+    } catch {}
+    const id = setInterval(() => setTipIdx((i) => (i + 1) % RHYTHM_TIPS.length), 3200);
+    return () => clearInterval(id);
+  }, []);
+  useEffect(() => {
+    if (state !== "win" && state !== "fail") return;
+    try {
+      if (statsRef.current.score > best) {
+        localStorage.setItem(LS_BEST, String(statsRef.current.score));
+        setBest(statsRef.current.score);
+      }
+    } catch {}
+    if (state === "win") {
+      fetch("/magnum/api/presave/click", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: PRESAVE, ts: Date.now(), src: "rhythm_win" }) }).catch(() => {});
+    }
+  }, [state, best]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -541,6 +598,19 @@ export function RhythmGame() {
 
       {state === "menu" && (
         <div className={styles.menu}>
+          {/* 5 пуль — прогресс подсказок MAGNUM 2026 */}
+          <div style={{ display: "flex", gap: 6, alignItems: "center", fontSize: "0.72rem", color: "rgba(240,240,240,0.42)" }}>
+            <span>● MAGNUM 5 пуль</span>
+            <span style={{ display: "flex", gap: 4 }}>{[0,1,2,3,4].map((i) => (<span key={i} style={{ width: 9, height: 9, borderRadius: 99, display: "inline-block", background: i < ((tipIdx % 5)+1) ? "linear-gradient(135deg,#ff2d55,#ffcc00)" : "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.10)" }} />))}</span>
+            {best > 0 && <span style={{ marginLeft: 6, color: "rgba(255,204,0,0.85)", fontWeight: 800 }}>★ Рекорд {best}</span>}
+          </div>
+          <div style={{ fontSize: "0.78rem", color: "rgba(255,204,0,0.88)", background: "rgba(255,204,0,0.07)", border: "1px solid rgba(255,204,0,0.16)", borderRadius: 10, padding: "0.45rem 0.75rem", maxWidth: 520, minHeight: 32, display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center" }}>{RHYTHM_TIPS[tipIdx % RHYTHM_TIPS.length]}</div>
+          {showTut && (
+            <div style={{ fontSize: "0.82rem", background: "rgba(0,255,136,0.08)", border: "1px solid rgba(0,255,136,0.18)", borderRadius: 12, padding: "0.65rem 0.85rem", maxWidth: 520, textAlign: "left", lineHeight: 1.45 }}>
+              <b>Как играть:</b> D F J K или тапай дорожки • жми в момент пересечения линии • 5 Perfect подряд = FEVER x2 на 6с (5 пуль!) • P/Space — пауза
+              <button onClick={() => { setShowTut(false); try { localStorage.setItem(LS_TUT, "1"); } catch {} }} style={{ marginLeft: 8, padding: "0.2rem 0.6rem", borderRadius: 999, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(240,240,240,0.7)", fontSize: "0.75rem", cursor: "pointer" }}>Понятно ✕</button>
+            </div>
+          )}
           <div className={styles.songs}>
             {SONGS.map((s, i) => (
               <button key={s.name} className={`${styles.songBtn} ${i === songIdx ? styles.active : ""}`} onClick={() => setSongIdx(i)}>
@@ -562,6 +632,16 @@ export function RhythmGame() {
 
       {(state === "playing" || state === "paused" || state === "win" || state === "fail") && (
         <div className={styles.gameArea}>
+          {/* 5 пуль — perfect-streak прогресс к FEVER */}
+          <div style={{ display: "flex", gap: 5, alignItems: "center", fontSize: "0.7rem", color: "rgba(240,240,240,0.5)" }}>
+            <span>5 пуль</span>
+            {[0,1,2,3,4].map((i) => {
+              const filled = i < Math.min(5, perfectStreakRef.current);
+              return <span key={i} style={{ width: 12, height: 12, borderRadius: 99, display: "inline-block", background: filled ? (fever ? "#ffcc00" : "linear-gradient(135deg,#ff2d55,#ffcc00)") : "rgba(255,255,255,0.10)", border: `1px solid ${filled ? "rgba(255,204,0,0.5)" : "rgba(255,255,255,0.12)"}`, boxShadow: filled && fever ? "0 0 8px rgba(255,204,0,0.7)" : "none", transition: "all 0.18s" }} />;
+            })}
+            <span style={{ color: fever ? "#ffcc00" : "rgba(240,240,240,0.35)", fontWeight: 800 }}>{perfectStreakRef.current}/5{fever ? " FEVER!" : ""}</span>
+            {best > 0 && <span style={{ marginLeft: 4, color: "rgba(255,204,0,0.7)" }}>★{best}</span>}
+          </div>
           <div className={styles.hud}>
             <div className={styles.stat}><span>Очки</span><strong>{score}{fever ? " x2" : ""}</strong></div>
             <div className={styles.stat}><span>Комбо</span><strong className={combo > 6 ? styles.comboHot : ""} style={fever ? { color: "#ffcc00", textShadow: "0 0 10px rgba(255,204,0,0.8)" } : undefined}>{combo} {fever ? "⚡" : combo > 3 ? "🔥" : ""}</strong></div>
@@ -610,6 +690,8 @@ export function RhythmGame() {
             <h2>🎉 Ритм-мастер!</h2>
             <p>{score} очков • макс комбо {maxCombo} • {accuracy}% точность{feverCount > 0 ? ` • FEVER x${feverCount}⚡` : ""}</p>
             <p className={styles.songDone}>{song.name} — пройден!{feverCount > 0 ? " · 5 пуль заряжены!" : ""}</p>
+            {best > 0 && score >= best && <p style={{ fontSize: "0.85rem", color: "#ffcc00", fontWeight: 800 }}>★ Новый рекорд! {score} — предыдущий {best}</p>}
+            <p style={{ fontSize: "0.78rem", color: "rgba(240,240,240,0.5)", maxWidth: 360, textAlign: "center" }}>{RHYTHM_TIPS[tipIdx % RHYTHM_TIPS.length]}</p>
             <a href={PRESAVE} target="_blank" rel="noreferrer" className={styles.presaveBtn}>Пресейв MAGNUM →</a>
             <button className={styles.restartBtn} onClick={() => startGame(songIdx)}>Ещё раз</button>
           </div>
@@ -621,7 +703,9 @@ export function RhythmGame() {
             <h2>Попробуй ещё! 🥁</h2>
             <p>{score} / {DIFFICULTY[diff].win} • комбо {maxCombo} • {accuracy}%</p>
             <p className={styles.failHint}>Нужно больше Perfect — бей точнее в такт!</p>
+            <p style={{ fontSize: "0.76rem", color: "rgba(240,240,240,0.42)", maxWidth: 340 }}>{RHYTHM_TIPS[tipIdx % RHYTHM_TIPS.length]}</p>
             <button className={styles.playBtn} onClick={() => startGame(songIdx)}>Ещё попытка</button>
+            <a href={PRESAVE} target="_blank" rel="noreferrer" style={{ display: "inline-block", marginTop: 8, color: "#ff2d55", fontSize: "0.82rem", textDecoration: "underline" }}>Пресейв MAGNUM — 5 пуль →</a>
             <Link to="/magnum/games" className={styles.backInline}>← К играм</Link>
           </div>
         </div>
