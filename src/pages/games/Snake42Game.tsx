@@ -99,6 +99,24 @@ function playDie() {
   safeRamp(g2.gain, () => g2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2), 0.001);
   o2.start(); o2.stop(ctx.currentTime + 0.22);
 }
+function playCombo(combo: number) {
+  const ctx = ensureAC(); if (!ctx) return;
+  const o = ctx.createOscillator(); const g = ctx.createGain();
+  o.connect(g); g.connect(ctx.destination);
+  o.type = "triangle"; o.frequency.value = 740 + Math.min(combo, 8) * 55;
+  safeRamp(o.frequency, () => o.frequency.linearRampToValueAtTime(980 + Math.min(combo, 8) * 40, ctx.currentTime + 0.08), 980);
+  g.gain.setValueAtTime(0.14, ctx.currentTime);
+  safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18), 0.001);
+  o.start(); o.stop(ctx.currentTime + 0.2);
+  if (combo >= 3) {
+    const o2 = ctx.createOscillator(); const g2 = ctx.createGain();
+    o2.connect(g2); g2.connect(ctx.destination);
+    o2.type = "sine"; o2.frequency.value = 1200 + combo * 30;
+    g2.gain.setValueAtTime(0.09, ctx.currentTime + 0.04);
+    safeRamp(g2.gain, () => g2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25), 0.001);
+    o2.start(ctx.currentTime + 0.04); o2.stop(ctx.currentTime + 0.27);
+  }
+}
 function playWin() {
   const ctx = ensureAC(); if (!ctx) return;
   const now = ctx.currentTime;
@@ -143,6 +161,8 @@ export function Snake42Game() {
   const [score, setScore] = useState(0);
   const [best, setBest] = useState(() => { try { return Number(localStorage.getItem("snake42-best")) || 0; } catch { return 0; } });
   const [shake, setShake] = useState(0);
+  const [combo, setCombo] = useState(0);
+  const [comboFlash, setComboFlash] = useState(false);
 
   const snakeRef = useRef<Pt[]>([{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }]);
   const dirRef = useRef<Dir>("right");
@@ -156,6 +176,11 @@ export function Snake42Game() {
   const shakeRef = useRef(0);
   const moveCountRef = useRef(0);
   const pulseRef = useRef(0);
+  const comboRef = useRef(0);
+  const lastEatRef = useRef(0);
+  const maxComboRef = useRef(0);
+  const bonusAccRef = useRef(0);
+  const comboElRef = useRef<HTMLDivElement>(null);
 
   const triggerShake = useCallback((intensity: number) => {
     shakeRef.current = intensity;
@@ -171,6 +196,18 @@ export function Snake42Game() {
     requestAnimationFrame(decay);
   }, []);
 
+  // combo GSAP burst
+  useEffect(() => {
+    if (combo < 2) return;
+    if (prefersReducedMotion()) return;
+    if (comboElRef.current) {
+      gsap.fromTo(comboElRef.current, { scale: 0.7, rotation: -3, opacity: 0 }, { scale: 1, rotation: 0, opacity: 1, duration: 0.4, ease: "back.out(1.7)", overwrite: true });
+    }
+    setComboFlash(true);
+    const t = window.setTimeout(() => setComboFlash(false), 420);
+    return () => window.clearTimeout(t);
+  }, [combo]);
+
   const reset = useCallback(() => {
     snakeRef.current = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
     dirRef.current = "right"; nextDirRef.current = "right";
@@ -179,6 +216,8 @@ export function Snake42Game() {
     particlesRef.current = []; floatsRef.current = [];
     moveCountRef.current = 0; pulseRef.current = 0;
     shakeRef.current = 0; setShake(0);
+    comboRef.current = 0; lastEatRef.current = 0; maxComboRef.current = 0; bonusAccRef.current = 0;
+    setCombo(0); setComboFlash(false);
     setScore(0);
   }, []);
 
@@ -278,9 +317,20 @@ export function Snake42Game() {
 
           const ate = newHead.x === foodRef.current.x && newHead.y === foodRef.current.y;
           if (ate) {
-            playEat(); triggerShake(4.5);
+            const now = performance.now();
+            const dt = now - lastEatRef.current;
+            if (lastEatRef.current !== 0 && dt < 1800) comboRef.current = Math.min(comboRef.current + 1, 12);
+            else comboRef.current = 1;
+            lastEatRef.current = now;
+            maxComboRef.current = Math.max(maxComboRef.current, comboRef.current);
+            setCombo(comboRef.current);
+            const bonus = comboRef.current > 1 ? (comboRef.current - 1) * 25 : 0;
+            const isCombo = comboRef.current >= 2;
+            playEat(); if (isCombo) playCombo(comboRef.current); triggerShake(isCombo ? 6 + comboRef.current * 0.9 : 4.5);
             foodRef.current = spawnFood(snake);
-            const newScore = snake.length * SCORE_PER_FOOD;
+            bonusAccRef.current += bonus;
+            const baseScore = snake.length * SCORE_PER_FOOD;
+            const newScore = baseScore + bonusAccRef.current;
             setScore(newScore);
             const nb = Math.max(best, newScore); setBest(nb);
             try { localStorage.setItem("snake42-best", String(nb)); } catch {}
@@ -299,7 +349,7 @@ export function Snake42Game() {
             // floating +100
             floatsRef.current.push({
               x: newHead.x * cellW + cellW / 2, y: newHead.y * cellW + cellW / 2 - 6,
-              vy: -1.2, life: 1, text: `+${SCORE_PER_FOOD}`,
+              vy: -1.25, life: 1, text: isCombo ? `+${SCORE_PER_FOOD}+${bonus} COMBO x${comboRef.current}!` : `+${SCORE_PER_FOOD}`,
             });
             // extra sparkles
             for (let i = 0; i < 4; i++) particlesRef.current.push({
@@ -524,9 +574,11 @@ export function Snake42Game() {
             <div className={styles.stat}><span>Очки</span><strong>{score}</strong></div>
             <div className={styles.stat}><span>Длина</span><strong>{Math.floor(score / SCORE_PER_FOOD)} / {WIN_LENGTH}</strong></div>
             <div className={styles.stat}><span>Рекорд</span><strong>{best}</strong></div>
+            <div className={styles.stat}><span>Комбо</span><strong style={{ color: combo >= 5 ? "#ffcc00" : combo >= 2 ? "#00ff88" : undefined }}>{combo >= 2 ? `×${combo} 🔥` : "—"}</strong></div>
             <div className={styles.stat}><span>Скорость</span><strong style={{ fontSize: "0.95rem" }}>{speedLabel}</strong></div>
           </div>
           <div className={styles.progress} aria-label="прогресс к 4200"><div className={styles.fill} style={{ width: `${progress}%` }} /></div>
+          {combo >= 2 && <div ref={comboElRef} className={`${styles.comboBar} ${comboFlash ? styles.comboHot : ""}`} style={{ marginTop: 6, background: combo >= 5 ? "linear-gradient(90deg,#ff2d55,#ffcc00)" : "rgba(0,255,136,0.12)", color: combo >=5 ? "#fff" : "#00ff88", border: combo >=5 ? "1px solid rgba(255,204,0,0.5)" : "1px solid rgba(0,255,136,0.3)", padding: "4px 10px", borderRadius: 999, fontWeight: 900, fontSize: "0.8rem", display: "inline-block" }}>КОМБО ×{combo} {combo >=5 ? "— ОГОНЬ!" : combo >=3 ? "— ЖАРА!" : ""} +{ (combo-1)*25 } бонус</div>}
           <div className={styles.canvasWrap} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
             <canvas ref={canvasRef} className={styles.canvas} />
           </div>

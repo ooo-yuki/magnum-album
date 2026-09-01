@@ -24,3 +24,7 @@
 .modalCard h2 { font-size: 1.6rem; margin-bottom: 0.5rem; }
 .modalCard p { color: rgba(240,240,240,0.6); margin-bottom: 1.2rem; }
 .presaveBtn { display: inline-block; padding: 0.8rem 1.5rem; border-radius: 100px; background: var(--accent); color: #fff; font-weight: 600; box-shadow: 0 0 20px rgba(255,45,85,0.4); margin-bottom: 0.8rem; }
+
+.comboBar { display:inline-block; animation: comboPop 0.4s ease; }
+.comboHot { box-shadow: 0 0 16px rgba(255,204,0,0.5); transform: scale(1.04); }
+@keyframes comboPop { 0%{ transform:scale(0.7)} 60%{ transform:scale(1.08)} 100%{ transform:scale(1)} }
