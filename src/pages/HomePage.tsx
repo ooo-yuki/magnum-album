@@ -6,6 +6,7 @@ import { Stats } from "../components/Stats";
 import { Singles } from "../components/Singles";
 import { About } from "../components/About";
 import { NavGrid } from "../components/NavGrid";
+import { Timeline } from "../components/Timeline";
 import { CTA } from "../components/CTA";
 
 const TARGET = 42;
@@ -181,6 +182,7 @@ export function HomePage() {
       <Stats />
       <NavGrid />
       <About />
+      <Timeline />
       <Singles />
       <CTA />
 
