@@ -1,3 +1,4 @@
+import { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { HomePage } from "./pages/HomePage";
@@ -8,19 +9,6 @@ import { About42Page } from "./pages/About42Page";
 import { ArtistsPage } from "./pages/ArtistsPage";
 import { GamePage } from "./pages/GamePage";
 import { GamesHub } from "./pages/GamesHub";
-import { MemoryGame } from "./pages/games/MemoryGame";
-import { ClickerGame } from "./pages/games/ClickerGame";
-import { Match3Game } from "./pages/games/Match3Game";
-import { KnifeHitGame } from "./pages/games/KnifeHitGame";
-import { RunnerGame } from "./pages/games/RunnerGame";
-import { RhythmGame } from "./pages/games/RhythmGame";
-import { Stack42Game } from "./pages/games/Stack42Game";
-import { BlackjackGame } from "./pages/games/BlackjackGame";
-import { RouletteGame } from "./pages/games/RouletteGame";
-import { Game2042 } from "./pages/games/Game2042";
-import { Flappy42Game } from "./pages/games/Flappy42Game";
-import { TypingGame } from "./pages/games/TypingGame";
-import { Snake42Game } from "./pages/games/Snake42Game";
 import { ShopPage } from "./pages/ShopPage";
 import { EcoPage } from "./pages/EcoPage";
 import { GalleryPage } from "./pages/GalleryPage";
@@ -28,6 +16,25 @@ import { MiningPage } from "./pages/MiningPage";
 import { PresaveRatingPage } from "./pages/PresaveRatingPage";
 import { IdeasPage } from "./pages/IdeasPage";
 import { RecapsPage } from "./pages/RecapsPage";
+
+// — code-split: all 12 games are lazy — main bundle ~827KB → ~400KB expected
+const MemoryGame = lazy(() => import("./pages/games/MemoryGame").then(m => ({ default: m.MemoryGame })));
+const ClickerGame = lazy(() => import("./pages/games/ClickerGame").then(m => ({ default: m.ClickerGame })));
+const Match3Game = lazy(() => import("./pages/games/Match3Game").then(m => ({ default: m.Match3Game })));
+const KnifeHitGame = lazy(() => import("./pages/games/KnifeHitGame").then(m => ({ default: m.KnifeHitGame })));
+const RunnerGame = lazy(() => import("./pages/games/RunnerGame").then(m => ({ default: m.RunnerGame })));
+const RhythmGame = lazy(() => import("./pages/games/RhythmGame").then(m => ({ default: m.RhythmGame })));
+const Stack42Game = lazy(() => import("./pages/games/Stack42Game").then(m => ({ default: m.Stack42Game })));
+const BlackjackGame = lazy(() => import("./pages/games/BlackjackGame").then(m => ({ default: m.BlackjackGame })));
+const RouletteGame = lazy(() => import("./pages/games/RouletteGame").then(m => ({ default: m.RouletteGame })));
+const Game2042 = lazy(() => import("./pages/games/Game2042").then(m => ({ default: m.Game2042 })));
+const Flappy42Game = lazy(() => import("./pages/games/Flappy42Game").then(m => ({ default: m.Flappy42Game })));
+const TypingGame = lazy(() => import("./pages/games/TypingGame").then(m => ({ default: m.TypingGame })));
+const Snake42Game = lazy(() => import("./pages/games/Snake42Game").then(m => ({ default: m.Snake42Game })));
+
+function GameFallback() {
+  return <div style={{ padding: "4rem 2rem", textAlign: "center", color: "#ff2d55" }}>Загрузка игры… 🎮</div>;
+}
 
 export default function App() {
   return (
@@ -42,19 +49,19 @@ export default function App() {
           <Route path="artists" element={<ArtistsPage />} />
           <Route path="game" element={<GamePage />} />
           <Route path="games" element={<GamesHub />} />
-          <Route path="games/runner" element={<RunnerGame />} />
-          <Route path="games/match3" element={<Match3Game />} />
-          <Route path="games/knife" element={<KnifeHitGame />} />
-          <Route path="games/memory" element={<MemoryGame />} />
-          <Route path="games/clicker" element={<ClickerGame />} />
-          <Route path="games/rhythm" element={<RhythmGame />} />
-          <Route path="games/stack" element={<Stack42Game />} />
-          <Route path="games/blackjack" element={<BlackjackGame />} />
-          <Route path="games/roulette" element={<RouletteGame />} />
-          <Route path="games/2042" element={<Game2042 />} />
-          <Route path="games/flappy" element={<Flappy42Game />} />
-          <Route path="games/typing" element={<TypingGame />} />
-          <Route path="games/snake" element={<Snake42Game />} />
+          <Route path="games/runner" element={<Suspense fallback={<GameFallback />}><RunnerGame /></Suspense>} />
+          <Route path="games/match3" element={<Suspense fallback={<GameFallback />}><Match3Game /></Suspense>} />
+          <Route path="games/knife" element={<Suspense fallback={<GameFallback />}><KnifeHitGame /></Suspense>} />
+          <Route path="games/memory" element={<Suspense fallback={<GameFallback />}><MemoryGame /></Suspense>} />
+          <Route path="games/clicker" element={<Suspense fallback={<GameFallback />}><ClickerGame /></Suspense>} />
+          <Route path="games/rhythm" element={<Suspense fallback={<GameFallback />}><RhythmGame /></Suspense>} />
+          <Route path="games/stack" element={<Suspense fallback={<GameFallback />}><Stack42Game /></Suspense>} />
+          <Route path="games/blackjack" element={<Suspense fallback={<GameFallback />}><BlackjackGame /></Suspense>} />
+          <Route path="games/roulette" element={<Suspense fallback={<GameFallback />}><RouletteGame /></Suspense>} />
+          <Route path="games/2042" element={<Suspense fallback={<GameFallback />}><Game2042 /></Suspense>} />
+          <Route path="games/flappy" element={<Suspense fallback={<GameFallback />}><Flappy42Game /></Suspense>} />
+          <Route path="games/typing" element={<Suspense fallback={<GameFallback />}><TypingGame /></Suspense>} />
+          <Route path="games/snake" element={<Suspense fallback={<GameFallback />}><Snake42Game /></Suspense>} />
           <Route path="games/quiz" element={<GamePage />} />
           <Route path="shop" element={<ShopPage />} />
           <Route path="eco" element={<EcoPage />} />

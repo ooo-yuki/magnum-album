@@ -86,14 +86,14 @@ const BASE_ARTS: Art42[] = [
   },
 ];
 
-// пул для мок-генерации
+// пул для мок-генерации — 42-agit-01 оптимизирован до 800px webp (3.4MB → 119KB)
 const MOCK_POOL: Omit<Art42, "id">[] = [
   {
     title: "Ковёр 42",
     style: "СССР",
     emoji: "🧶",
     gradient: "linear-gradient(135deg,#8b1a2b,#d44d2a 40%,#1a1a1a 100%)",
-    src: "/magnum/images/gallery-42/42-agit-01.jpg",
+    src: "/magnum/images/gallery-42/42-agit-01-800.webp",
     desc: "Ковёр на стене и братухи — уют по-магнумовски.",
     tag: "быт",
   },
@@ -602,6 +602,8 @@ export function GalleryPage() {
               <img
                 src={selected.src}
                 alt={selected.title}
+                loading="lazy"
+                decoding="async"
                 className={`${styles.lbImg} ${imgError[selected.id] ? styles.artImgHidden : ""}`}
                 onError={() =>
                   setImgError((p) => ({
