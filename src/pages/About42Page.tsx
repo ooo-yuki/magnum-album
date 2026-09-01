@@ -10,6 +10,7 @@ export function About42Page() {
 
   useEffect(() => {
     if (!containerRef.current) return;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const ctx = gsap.context(() => {
       gsap.set(`.${styles.hero} > *`, { y: 30, opacity: 0 });
       gsap.to(`.${styles.hero} > *`, {
@@ -39,6 +40,31 @@ export function About42Page() {
           start: "top 80%",
         },
       });
+
+      // staggered scroll-reveal on grid cards (skip if reduced motion)
+      if (!reducedMotion) {
+        const cardReveals: Array<{ selector: string; trigger: string }> = [
+          { selector: `.${styles.styleCard}`, trigger: `.${styles.styleGrid}` },
+          { selector: `.${styles.squadCard}`, trigger: `.${styles.squadsGrid}` },
+          { selector: `.${styles.personCard}`, trigger: `.${styles.peopleGrid}` },
+          { selector: `.${styles.memeCard}`, trigger: `.${styles.memeGrid}` },
+        ];
+        for (const { selector, trigger } of cardReveals) {
+          gsap.set(selector, { y: 28, opacity: 0, scale: 0.96 });
+          gsap.to(selector, {
+            y: 0,
+            opacity: 1,
+            scale: 1,
+            stagger: 0.06,
+            duration: 0.5,
+            ease: "back.out(1.4)",
+            scrollTrigger: {
+              trigger,
+              start: "top 88%",
+            },
+          });
+        }
+      }
     }, containerRef);
     return () => ctx.revert();
   }, []);
