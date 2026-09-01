@@ -5,6 +5,55 @@
 > Промо-сайт альбома **MAGNUM Пятерки** (5opka × 42 братухи). React + TypeScript + GSAP + Bun.
 > Формат: [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/). Версионирование — SemVer.
 
+## [0.3.3] — 2026-09-01 🎰 Vault 42 + Quiz/Stack MAGNUM + GSAP 0.12 — 10/10
+
+> **21 коммит** `fea3f6e` → `5c9f8ff` · **+2739 / −2705** · **43 файла** · Vault лимиток + Quiz 24Q + Stack лор 5 пуль + GSAP 0.12 + P2 10k · рейтинг 10/10
+
+### 🎮 Игры — Quiz 42 + Stack42 MAGNUM
+
+- ❓ **Quiz 42 — 24 вопроса + стрик xN** — `d52faab` пул **24Q**, стрик `×N`, **50/50** подсказка, **speed-бонус**, haptics, `keyboard 1-4/H` + `свайп`, `localStorage` рекорд — `src/pages/games/QuizGame.tsx` +159/−21, `tests/gallery-gsap-build-1421.test.ts` +174, GSAP на 5 страницах (`Eco/Gallery/Mining/Recaps/Shop` +34…+50)
+- 🧱 **Stack42 MAGNUM 2026 — 5 пуль лора** — `5317cce` **5 пуль** лора MAGNUM, `pause P/R`, `coins` начисление, `canvas labels` пуль — `src/pages/games/Stack42Game.tsx` (в батче `6c78b31` +87/−29, `drizzle/migrations/0006_daily_transactions_votes.sql` +37, `src/pages/GalleryPage.tsx` +6)
+
+### ✨ Фичи — Vault + 10k норма
+
+- ⛏️ **Mining Vault 42 — 5 лимиток** — `456d42b` **5 лимиток** Vault 42 + `Neon magnum_mining_vault` + `GET/POST /magnum/api/mining/vault` + GSAP entrance — `drizzle/schema.ts` +7, `server.ts` +40, `src/pages/MiningPage.tsx` +115
+- 📦 **P2 + 10k norm — massive data** — `5896ec4` **massive data** P2-норма 10k — `reports/content-2026-09-01-1425.md` +50, `src/pages/MiningPage.tsx`/`EcoPage`/`ShopPage` подготовка
+
+### ⚡ Перфоманс — GSAP 0.12 ripple ×3
+
+- ✨ **GSAP ripple 0.12 + reduced-motion everywhere** — `2fbc507` + `6c78b31` + `fea3f6e` **×3 коммита** — `y 24→0 stagger 0.12`, `hover y:-4`, `gsap.context` revert, `prefers-reduced-motion` gate на **5 pages** (`Eco/Gallery/Mining/Recaps/Shop` +241) и **16 games** — `src/lib/economy.ts` `2520→80` (−2440 дубли, `SHOP_CATALOG 12`, `RARITY_PRICE`), `server.ts` +141/−2, `docs/SPEC-42.md` +34
+
+### 🐛 Фиксы — вход на мобиле + Auth + Gallery
+
+- 📱 **Вход виден на мобиле** — `370b2e1` `mobileAuth` + пункт **в бургер-меню** — `src/components/Layout.tsx` +6, `src/components/Layout.module.css` +3
+- 🔐 **Auth modal survive overwrite** — `67e8b22` восстановлена модалка **Вход/Регистрация** + **VIP glow** `conic-gradient` (survives subagent overwrite) — `src/components/AuthStatus.tsx` +87/−11, `src/components/AuthStatus.module.css` +23/−7
+- 🖼️ **Gallery 404 закрыт** — `6c78b31` `tests/gallery-404.test.ts` +32, `tests/flappy42.test.ts` +22/−84 фикс, soft-404 галереи → реальные файлы (watchdog `8gallery`)
+
+### 🖼️ Галерея
+
+- 🖼️ **8 файлов галереи OK** — `dc1e440` watchdog **8gallery** + `24ed601`/`dc1e440` — `reports/watchdog-2026-09-01-1427.md` +57, `reports/watchdog-2026-09-01-1421.md` +50 — галерея без 404
+
+### 🤖 Брат-бот
+
+- 🤖 без изменений в окне — бот стабилен, задачи ушли в Vault/Quiz/GSAP (след. инкремент — подсказки по Vault)
+
+### 📖 Дока — спеки + hype + P1
+
+- 📝 **Eco/Mining спеки** — `c969f43` `docs/eco-spec.md` +17, `docs/mining-spec.md` +17 — спеки синхронизированы с `EcoPage`/`MiningPage`
+- 💡 **Hype queue +5 → +3** — `fcf6980` + `095c473` **+3 идеи +5 queue** (shop vault 12 / frame verified gold / duel royale → vault/frame/royale/eco/rotation) — `docs/hype-queue.md` +7/−1, `reports/hype-2026-09-01-1421.md` +53, `reports/fix-P0-1421.md` +86
+- ✅ **P1 audit closed** — `90a3108` `README.md` +1 — **P1 0/8**, бейдж `P1 closed` держится
+
+### 🧪 Тесты / CI — 2962 passed
+
+- ✅ **2962 passed (SPA fallback + 16 routes + About42 GSAP, +19)** — `6694480` `reports/test-2026-09-01-1430.md` +122, `tests/new-coverage-1442.test.ts` +147
+- ✅ **2943 passed ×2** — `f2d255f`/`c969f43` `reports/test-2026-09-01-1424.md` +123 — стабильно 2943→2962 (+19)
+- 🟢 **Health 200/200/200** — `85bf61f` `reports/health-2026-09-01-1423.md` +60 (**4/4 routes 200, 8446B, ext via resolve 200, obscura active idle**)
+- 🔐 **Auth check OK** — `7480bad` `reports/auth-2026-09-01-1425.md` +158 + правки `About.tsx` +38/−11, `PromoPopup` +32/−3, 5 страниц по +34 (GSAP батч)
+- 👀 **Review 10/10 ×2** — `3e40e6e`/`5c9f8ff` `reports/review-2026-09-01-1422.md` +62, `reports/review-2026-09-01-1431.md` +79 — рейтинг **10/10**
+- 🐶 **Watchdog OK** — `24ed601` + `dc1e440` **200/200/200 active/Up 8gallery 2bugs** (vault-race + gallery-dup) — без рестарта
+
+---
+
 ## [0.3.2] — 2026-09-01 🚀 Donate + Ideas 2.0
 
 > **3 коммита** `0945cec` → `9b736ca` · **+599 / −49** · **14 файлов** · VIP-подписки + AiBot-магазин + Ideas 2.0 (34 шаблона)
