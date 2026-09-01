@@ -50,7 +50,7 @@ export function RouletteGame(){
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wheelRef = useRef({ rotation: 0 });
   const ballRef = useRef({ angle: 0 });
-  const [balance, setBalance] = useState(()=>{ try{ const v=Number(localStorage.getItem(LS_BALANCE)); return isFinite(v)&&v>=0?v:START_BALANCE;}catch{return START_BALANCE;}});
+  const [balance, setBalance] = useState(()=>{ try{ const raw=localStorage.getItem(LS_BALANCE); if(raw===null) return START_BALANCE; const v=Number(raw); return isFinite(v)&&v>=0?v:START_BALANCE;}catch{return START_BALANCE;}});
   const [chip, setChip] = useState<number>(5);
   const [bets, setBets] = useState<Bet[]>([]);
   const [history, setHistory] = useState<SpinRecord[]>(()=>{ try{ return JSON.parse(localStorage.getItem(LS_HISTORY)||"[]"); }catch{ return []; }});
