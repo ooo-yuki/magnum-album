@@ -7,6 +7,7 @@ import { PageLoader } from "./PageLoader";
 import { PageTransition } from "./PageTransition";
 import { TopProgress } from "./TopProgress";
 import { ScrollToTop } from "./ScrollToTop";
+import { AiBot } from "./AiBot";
 import styles from "./Layout.module.css";
 
 const NAV_ITEMS = [
@@ -156,6 +157,7 @@ export function Layout() {
       </main>
       <ScrollToTop />
       <Footer />
+      <AiBot />
     </>
   );
 }
