@@ -118,6 +118,7 @@ function spawnBigConfetti() {
 
 /* ── Promo banners над Singles ── */
 const PROMOS = [
+  { to: "/magnum/games/duel-magma", icon: "🌋", title: "DUEL MAGMA 42", subtitle: "NEW • WS 2-4", desc: "магма x10 • lava-spike • ставка 42/142/420", gradient: "linear-gradient(135deg,#ff4500 0%,#ff0000 50%,#ffcc00 100%)", shadow: "rgba(255,69,0,0.5)", border: "#ff4500" },
   { to: "/magnum/shop", icon: "🛒", title: "Магазин", subtitle: "12 скинов", desc: "COMMON → LEGENDARY за magnum-coins", gradient: "linear-gradient(135deg,#ff2d55 0%,#ff6b35 35%,#ffcc00 70%,#ff2d55 100%)", shadow: "rgba(255,45,85,0.45)", border: "#ff2d55" },
   { to: "/magnum/eco", icon: "🌿", title: "Эко-рейтинг", subtitle: "пройди тест", desc: "8 вопросов • стань ЭкоЛегендой", gradient: "linear-gradient(135deg,#00ff88 0%,#00d4ff 50%,#00ff88 100%)", shadow: "rgba(0,255,136,0.4)", border: "#00ff88" },
   { to: "/magnum/games/roulette", icon: "⚔️", title: "Арена", subtitle: "дуэль", desc: "PvP братух • собери 4200 монет", gradient: "linear-gradient(135deg,#5865f2 0%,#9147ff 50%,#5865f2 100%)", shadow: "rgba(88,101,242,0.5)", border: "#5865f2" },

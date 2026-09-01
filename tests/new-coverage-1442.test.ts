@@ -35,7 +35,7 @@ describe("new1442: App.tsx маршруты", () => {
     // includes GamesHub list + route paths, but routes have 16 entries
     // более точно: количество Route с games/ — 16
     const routeGamePaths = (src.match(/path=\"games\/[a-z0-9-]+\"/g) || []);
-    expect(routeGamePaths.length).toBe(16);
+    expect(routeGamePaths.length).toBe(17);
   });
   it("существуют роуты shop, eco, gallery, mining, presave-rating", () => {
     for (const p of ["shop", "eco", "gallery", "mining", "presave"]) {

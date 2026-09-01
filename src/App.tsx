@@ -44,6 +44,7 @@ const Snake42Game = lazy(() => import("./pages/games/Snake42Game").then(m => ({ 
 const Dodge42Game = lazy(() => import("./pages/games/Dodge42Game").then(m => ({ default: m.Dodge42Game })));
 const QuizGame = lazy(() => import("./pages/games/QuizGame").then(m => ({ default: m.QuizGame })));
 const Timeline2026Game = lazy(() => import("./pages/games/Timeline2026Game").then(m => ({ default: m.Timeline2026Game })));
+const DuelMagma = lazy(() => import("./pages/games/DuelMagma").then(m => ({ default: m.DuelMagma })));
 
 function GameFallback() {
   return <div style={{ padding: "4rem 2rem", textAlign: "center", color: "#ff2d55" }}>Загрузка игры… 🎮</div>;
@@ -79,6 +80,7 @@ export default function App() {
           <Route path="games/dodge" element={<Suspense fallback={<GameFallback />}><Dodge42Game /></Suspense>} />
           <Route path="games/quiz" element={<Suspense fallback={<GameFallback />}><QuizGame /></Suspense>} />
           <Route path="games/timeline" element={<Suspense fallback={<GameFallback />}><Timeline2026Game /></Suspense>} />
+          <Route path="games/duel-magma" element={<Suspense fallback={<GameFallback />}><DuelMagma /></Suspense>} />
           <Route path="shop" element={<Suspense fallback={<PageFallback />}><ShopPage /></Suspense>} />
           <Route path="eco" element={<Suspense fallback={<PageFallback />}><EcoPage /></Suspense>} />
           <Route path="gallery" element={<Suspense fallback={<PageFallback />}><GalleryPage /></Suspense>} />

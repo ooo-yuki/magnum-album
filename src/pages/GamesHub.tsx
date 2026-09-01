@@ -6,8 +6,10 @@ import styles from "./GamesHub.module.css";
 
 gsap.registerPlugin(ScrollTrigger);
 const RGB_GLOW="0 12px 36px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,45,85,0.22), 0 0 28px rgba(255,45,85,0.22), 0 0 28px rgba(0,255,136,0.14), 0 0 32px rgba(255,204,0,0.10)";
+const DUEL_MAGMA=["/magnum","games","duel-magma"].join("/");
 
 const GAMES = [
+  { to: DUEL_MAGMA, icon: "🌋", title: "DUEL MAGMA 42", desc: "WS 2-4 • магма x10 • lava-spike 2x • ставка 42/142/420" },
   { to: "/magnum/games/runner", icon: "🏃", title: "Беги, братуха!", desc: "2D раннер — перепрыгивай мухоморы" },
   { to: "/magnum/games/match3", icon: "🧩", title: "Матч 42", desc: "Собери комбинации из 42-символов" },
   { to: "/magnum/games/knife", icon: "🔪", title: "Ножи 42", desc: "Кидай ножи в мишень" },

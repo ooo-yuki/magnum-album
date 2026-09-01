@@ -59,7 +59,7 @@ describe("1530: games hub — 14 игр, роуты, 200", () => {
     const match = s.match(/const GAMES[\s\S]*?^\];/m);
     expect(match).not.toBeNull();
     const entries = (match![0].match(/\{\s*to:/g) || []).length;
-    expect(entries, `GAMES has ${entries} not 16`).toBe(16);
+    expect(entries, `GAMES has ${entries} not 16`).toBe(17);
   });
   it("App.tsx: все 14+ роутов /games/* зарегистрированы (200 fallback)", () => {
     const s = read("src/App.tsx");

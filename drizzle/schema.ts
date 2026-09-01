@@ -294,3 +294,16 @@ export const magnumAiUsage = pgTable("magnum_ai_usage", {
   tokensRequested: integer("tokens_requested").default(400).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+export const magnumSubscriptions = pgTable("magnum_subscriptions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => magnumUsers.id, { onDelete: "cascade" }),
+  tier: text("tier").notNull(),
+  startedAt: timestamp("started_at").defaultNow().notNull(),
+  endsAt: timestamp("ends_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+export const magnumDust = pgTable("magnum_dust", {
+  userId: integer("user_id").primaryKey().references(() => magnumUsers.id, { onDelete: "cascade" }),
+  balance: integer("balance").default(0).notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});

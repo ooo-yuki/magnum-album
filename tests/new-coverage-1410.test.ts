@@ -53,8 +53,8 @@ describe("new: GamesHub 16 игр и структура", () => {
   it("каждая игра имеет icon, title, desc", () => {
     const blocks = src.match(/\{[^}]*to:[^}]*title:[^}]*desc:[^}]*\}/g) || [];
     // fallback: считаем строки с title:
-    expect(src.match(/title:\s*"/g)!.length).toBe(16);
-    expect(src.match(/desc:\s*"/g)!.length).toBe(16);
+    expect(src.match(/title:\s*"/g)!.length).toBe(17);
+    expect(src.match(/desc:\s*"/g)!.length).toBe(17);
   });
   it("подзаголовок упоминает 16 игр", () => {
     expect(src).toContain("16 игр");

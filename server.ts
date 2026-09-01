@@ -671,10 +671,26 @@ export const COSMETICS_CATALOG: CosmeticItem[] = [
   { id: "title-prism-hype", slot: "title", name: "Призм Хайп", price: 142, rarity: "rare", style: "#ff44cc" },
   { id: "title-prism-aurora", slot: "title", name: "Аврора", price: 420, rarity: "epic", style: "#9147ff" },
   { id: "title-prism-legend", slot: "title", name: "Призм Легенда", price: 2042, rarity: "legendary", style: "conic-gradient(from 0deg,#ffcc00,#ff44cc,#00ffcc,#ffcc00)" },
+  // ── GLACIER VAULT 42 ── 12 glacier-скинов (common 42 / uncommon 142 / rare 420 / epic 1420) + frost ──
+  { id: "frame-glacier-matte", slot: "frame", name: "Гляйшер Матт", price: 42, rarity: "common", style: "2px solid #e0faff" },
+  { id: "banner-snow-dust", slot: "banner", name: "Снежная Пыль", price: 42, rarity: "common", style: "linear-gradient(90deg,#ffffff,#e0faff)" },
+  { id: "title-ice-fence", slot: "title", name: "Ледяной Забор", price: 42, rarity: "common", style: "#b8e6fe" },
+  { id: "frame-siberia-frost", slot: "frame", name: "Сибирь Фрост", price: 142, rarity: "rare", style: "3px solid #a5f3fc" },
+  { id: "banner-tom-glacier", slot: "banner", name: "Том Гляйшер", price: 142, rarity: "rare", style: "linear-gradient(90deg,#06b6d4,#0891b2)" },
+  { id: "title-kuzbass-ice", slot: "title", name: "Кузбасс Лёд", price: 142, rarity: "rare", style: "#0e7490" },
+  { id: "frame-meduza-glacier", slot: "frame", name: "Медуза Гляйшер", price: 420, rarity: "epic", style: "conic-gradient(from 0deg,#a5f3fc,#06b6d4,#e0faff,#a5f3fc)" },
+  { id: "banner-vpn-frost", slot: "banner", name: "ВПН Фрост", price: 420, rarity: "epic", style: "linear-gradient(90deg,#e0faff,#06b6d4)" },
+  { id: "title-nova-tundra", slot: "title", name: "Нова Тундра", price: 420, rarity: "epic", style: "#7c3aed" },
+  { id: "frame-gold-glacier-spin", slot: "frame", name: "Голд Гляйшер Спин", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#e0faff,#06b6d4,#ffd700,#e0faff)" },
+  { id: "banner-diamond-frost", slot: "banner", name: "Даймонд Фрост", price: 1420, rarity: "legendary", style: "linear-gradient(90deg,#e0faff,#ffffff)" },
+  { id: "title-rgb-glacier", slot: "title", name: "РГБ Гляйшер", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#e0faff,#ff44cc,#00ffcc,#e0faff)" },
 ];
 export const PRISM_IDS = new Set(COSMETICS_CATALOG.filter(c=>c.id.includes("prism")).map(c=>c.id));
 export function isPrismCosmetic(id:string):boolean{ return PRISM_IDS.has(id); }
 export const PRISM_CATALOG = COSMETICS_CATALOG.filter(c=>c.id.includes("prism"));
+export const GLACIER_IDS = new Set(COSMETICS_CATALOG.filter(c=>c.id.includes("glacier")||c.id.includes("snow-dust")||c.id.includes("ice-fence")||c.id.includes("siberia")||c.id.includes("nova-tundra")||c.id.includes("vpn-frost")||c.id.includes("diamond-frost")).map(c=>c.id));
+export function isGlacierCosmetic(id:string):boolean{ return GLACIER_IDS.has(id); }
+export const GLACIER_CATALOG = COSMETICS_CATALOG.filter(c=>GLACIER_IDS.has(c.id));
 function getCosmeticPrice(id: string): number | null { return COSMETICS_CATALOG.find(c=>c.id===id)?.price ?? null; }
 function getCosmeticSlot(id: string): CosmeticSlot | null { return COSMETICS_CATALOG.find(c=>c.id===id)?.slot ?? null; }
 function validateCosmeticId(id: unknown): string | null { if(typeof id!=="string") return null; const sv=id.trim(); if(!sv||sv.length<2||sv.length>64||!/^[a-z0-9-]{2,64}$/.test(sv)) return null; if(sv.startsWith("-")||sv.endsWith("-")||sv.includes("--")) return null; return sv; }
@@ -698,12 +714,27 @@ async function handleCosmeticBuy(req: Request): Promise<Response> {
     if(ex.length>0) return Response.json({error:"already owned",cosmeticId:raw},{status:409});
     const coins=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
     let bal=0; if(coins.length===0){ await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${user.id},1000) ON CONFLICT (user_id) DO NOTHING`; bal=1000; } else bal=Number((coins[0] as {balance:number}).balance);
-    if(bal<price) return Response.json({error:"not enough coins",price,balance:bal,required:price},{status:402});
-    await sql`UPDATE magnum_coins SET balance=balance-${price} WHERE user_id=${user.id}`;
+    // verified -42/week discount for glacier & any cosmetic if verified
+    let finalPrice = price;
+    let discountApplied = 0;
+    try {
+      const vrows = await sql`SELECT verified FROM magnum_frames WHERE user_id=${user.id} ORDER BY created_at DESC LIMIT 1`;
+      const isVerified = vrows.length>0 && Boolean((vrows[0] as {verified:boolean}).verified);
+      if (isVerified) {
+        const lastDisc = await sql`SELECT created_at FROM magnum_transactions WHERE user_id=${user.id} AND reason='cosmetic_discount' ORDER BY created_at DESC LIMIT 1`;
+        const canDiscount = lastDisc.length===0 || (Date.now() - new Date((lastDisc[0] as {created_at:string}).created_at).getTime() > 7*24*60*60*1000);
+        if (canDiscount && finalPrice >= 42) { finalPrice = price - 42; discountApplied = 42; }
+      }
+    } catch {}
+    if(bal<finalPrice) return Response.json({error:"not enough coins",price:finalPrice,originalPrice:price,discount:discountApplied,balance:bal,required:finalPrice},{status:402});
+    await sql`UPDATE magnum_coins SET balance=balance-${finalPrice} WHERE user_id=${user.id}`;
     const upd=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
     const newBal=Number((upd[0] as {balance:number}).balance);
     await sql`INSERT INTO magnum_cosmetics (user_id,cosmetic_id,slot,equipped,purchased_at) VALUES (${user.id},${raw},${slot},false,now())`;
-    return Response.json({ok:true,cosmeticId:raw,slot,price,balance:newBal});
+    if (discountApplied>0) {
+      await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${-discountApplied},'cosmetic_discount',${JSON.stringify({cosmeticId:raw, discount:discountApplied, originalPrice:price})}::jsonb)`;
+    }
+    return Response.json({ok:true,cosmeticId:raw,slot,price:finalPrice,originalPrice:price,discount:discountApplied,balance:newBal});
   }catch(e){ console.error("[cosmetic buy] failed",e); return Response.json({error:"db error"},{status:500}); }
 }
 async function handleCosmeticEquip(req: Request): Promise<Response> {
@@ -730,13 +761,11 @@ async function handleShopSubscriptions(req: Request): Promise<Response> {
   if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
   try {
     const sql = getSql();
-    const rows = await sql`SELECT cosmetic_id FROM magnum_cosmetics WHERE user_id=${user.id}`;
-    const ids = new Set((rows as unknown as { cosmetic_id: string }[]).map(r => String(r.cosmetic_id)));
+    await ensureSubscriptionTable();
+    const rows = await sql`SELECT tier FROM magnum_subscriptions WHERE user_id=${user.id} AND (ends_at IS NULL OR ends_at > now()) ORDER BY started_at DESC LIMIT 1`;
     let tier: string | null = null;
-    if (ids.has("title-god") || ids.has("frame-crown")) tier = "pro";
-    else if ((ids.has("title-vip") || ids.has("frame-void")) && [...ids].some(id => id.includes("prism"))) tier = "vip+";
-    else if (ids.has("title-vip") || ids.has("title-prism-legend") || ids.has("frame-void") || ids.has("frame-prism-void")) tier = "vip";
-    return Response.json({ tier, active: tier, subscription: tier, owned: [...ids] });
+    if (rows.length > 0) tier = String((rows[0] as { tier: string }).tier);
+    return Response.json({ tier, active: tier, subscription: tier });
   } catch (e) {
     console.error("[subscriptions] failed", e);
     return Response.json({ error: "db error" }, { status: 500 });
@@ -753,6 +782,24 @@ function prismDismantleReward(rarity:CosmeticItem["rarity"]):number{
   if(rarity==="epic") return 142;
   if(rarity==="rare") return 42;
   return 14;
+}
+function glacierDismantleReward(item: CosmeticItem): number {
+  if (isGlacierCosmetic(item.id)) {
+    if (item.rarity==="legendary") return 420;
+    if (item.rarity==="epic") return 100;
+    if (item.rarity==="rare") return 42;
+    return 14;
+  }
+  return prismDismantleReward(item.rarity);
+}
+async function ensureSubscriptionTable(): Promise<void> {
+  const sql = getSql();
+  await sql`CREATE TABLE IF NOT EXISTS magnum_subscriptions (id serial PRIMARY KEY, user_id integer NOT NULL REFERENCES magnum_users(id) ON DELETE CASCADE, tier text NOT NULL, started_at timestamp NOT NULL DEFAULT now(), ends_at timestamp, created_at timestamp NOT NULL DEFAULT now())`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_magnum_subscriptions_user ON magnum_subscriptions(user_id)`;
+}
+function isGlacierEpicLegendary(id:string):boolean {
+  const it = COSMETICS_CATALOG.find(c=>c.id===id);
+  return !!it && isGlacierCosmetic(id) && (it.rarity==="legendary" || it.rarity==="epic");
 }
 async function handlePrismCatalog():Promise<Response>{ return Response.json({ catalog: PRISM_CATALOG, count: PRISM_CATALOG.length, dustCosts: { common:42, rare:142, epic:420, legendary:1420 } }); }
 async function handleDustGet(req:Request):Promise<Response>{
@@ -775,7 +822,7 @@ async function handleDismantle(req:Request):Promise<Response>{
   const sql=getSql();
   const owned=await sql`SELECT id FROM magnum_cosmetics WHERE user_id=${user.id} AND cosmetic_id=${raw} LIMIT 1`;
   if(owned.length===0) return Response.json({error:"not owned",cosmeticId:raw},{status:404});
-  const reward=prismDismantleReward(item.rarity);
+  const reward=glacierDismantleReward(item);
   await sql`DELETE FROM magnum_cosmetics WHERE user_id=${user.id} AND cosmetic_id=${raw}`;
   await sql`INSERT INTO magnum_dust (user_id,balance) VALUES (${user.id},${reward}) ON CONFLICT (user_id) DO UPDATE SET balance=magnum_dust.balance+${reward}, updated_at=now()`;
   await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${reward},'dismantle',${JSON.stringify({cosmeticId:raw,reward})}::jsonb)`;
@@ -804,6 +851,45 @@ async function handlePrismCraft(req:Request):Promise<Response>{
   const nr=await sql`SELECT balance FROM magnum_dust WHERE user_id=${user.id} LIMIT 1`;
   return Response.json({ ok:true, crafted:raw, slot:item.slot, cost, dust:Number((nr[0] as {balance:number}).balance) });
 }
+
+async function handleGlacierCatalog(): Promise<Response> {
+  return Response.json({ catalog: GLACIER_CATALOG, count: GLACIER_CATALOG.length, dustCosts: { common:42, rare:142, epic:420, legendary:1420 } });
+}
+
+async function handleGlacierCraft(req: Request): Promise<Response> {
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
+  const user=await getUserByToken(token); if(!user) return Response.json({error:"unauthorized"},{status:401});
+  const ip=getClientIp(req); if(!checkRateLimit(`shop:glacier-craft:${user.id}:${ip}`,12,60_000)) return Response.json({error:"rate limited"},{status:429});
+  let body:{ targetId?:string; cosmeticId?:string; id?:string }; try{ body=(await req.json()) as typeof body;}catch{ return Response.json({error:"Invalid JSON"},{status:400});}
+  const raw=validateCosmeticId(body.targetId??body.cosmeticId??body.id??""); if(!raw) return Response.json({error:"targetId required"},{status:400});
+  const target=COSMETICS_CATALOG.find(c=>c.id===raw); if(!target) return Response.json({error:"unknown cosmetic",cosmeticId:raw},{status:400});
+  if(!isGlacierCosmetic(raw)) return Response.json({error:"only glacier craft allowed",cosmeticId:raw},{status:400});
+  // only uncommon (rare) targets craftable via 3x common
+  if(target.rarity!=="rare") return Response.json({error:"only uncommon (142) craftable via 3x common",cosmeticId:raw},{status:400});
+  await ensureDustTable();
+  const sql=getSql();
+  const ex=await sql`SELECT id FROM magnum_cosmetics WHERE user_id=${user.id} AND cosmetic_id=${raw} LIMIT 1`;
+  if(ex.length>0) return Response.json({error:"already owned",cosmeticId:raw},{status:409});
+  const allRows = await sql`SELECT cosmetic_id FROM magnum_cosmetics WHERE user_id=${user.id}`;
+  const ownedIds = new Set((allRows as {cosmetic_id:string}[]).map(r=>r.cosmetic_id));
+  const commonGlacierIds = GLACIER_CATALOG.filter(c=>c.rarity==="common").map(c=>c.id);
+  const ownedCommons = commonGlacierIds.filter(id=>ownedIds.has(id));
+  if(ownedCommons.length < 3) return Response.json({error:"need 3 common glacier skins",owned:ownedCommons.length,required:3},{status:402});
+  // fee 42 coins
+  const coins=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+  let bal=coins.length? Number((coins[0] as {balance:number}).balance):0;
+  if(bal < 42) return Response.json({error:"not enough coins",required:42,balance:bal},{status:402});
+  await sql`UPDATE magnum_coins SET balance=balance-42 WHERE user_id=${user.id}`;
+  // consume 3 common glacier skins (delete them)
+  for(let i=0;i<3;i++){ const cid=ownedCommons[i]!; await sql`DELETE FROM magnum_cosmetics WHERE user_id=${user.id} AND cosmetic_id=${cid}`; }
+  await sql`INSERT INTO magnum_cosmetics (user_id,cosmetic_id,slot,equipped,purchased_at) VALUES (${user.id},${raw},${target.slot},false,now())`;
+  await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${-42},'glacier_craft',${JSON.stringify({target:raw, consumed:ownedCommons.slice(0,3)})}::jsonb)`;
+  const upd=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+  const newBal=Number((upd[0] as {balance:number}).balance);
+  const inv=await sql`SELECT cosmetic_id FROM magnum_cosmetics WHERE user_id=${user.id} ORDER BY purchased_at ASC`;
+  return Response.json({ ok:true, crafted:raw, slot:target.slot, cost:42, balance:newBal, consumed:ownedCommons.slice(0,3), inventory:(inv as {cosmetic_id:string}[]).map(r=>r.cosmetic_id) });
+}
+
 
 // ---- Shop Bundles — 8 наборов со скидкой 10-18% vs сумма ---- 
 export type ShopBundle = { id:string; name:string; desc:string; emoji:string; items:string[]; slots:string[]; price:number; origPrice:number; rarity:"rare"|"epic"|"legendary"; tag:string };
@@ -2699,10 +2785,13 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/shop/bundles" && req.method === "GET") return handleShopBundleCatalog();
     if (url.pathname === "/magnum/api/shop/bundle/buy" && req.method === "POST") return handleShopBundleBuy(req);
     if (url.pathname === "/magnum/api/shop/prism" && req.method === "GET") return handlePrismCatalog();
+    if (url.pathname === "/magnum/api/shop/glacier" && req.method === "GET") return handleGlacierCatalog();
     if (url.pathname === "/magnum/api/shop/dust" && req.method === "GET") return handleDustGet(req);
     if (url.pathname === "/magnum/api/shop/dismantle" && req.method === "POST") return handleDismantle(req);
     if (url.pathname === "/magnum/api/shop/craft" && req.method === "POST") return handlePrismCraft(req);
     if (url.pathname === "/magnum/api/shop/prism/craft" && req.method === "POST") return handlePrismCraft(req);
+    if (url.pathname === "/magnum/api/shop/glacier/craft" && req.method === "POST") return handleGlacierCraft(req);
+    if (url.pathname === "/magnum/api/shop/forge" && req.method === "POST") return handleGlacierCraft(req);
 
     // mining
     if (url.pathname === "/magnum/api/mining" && req.method === "GET") return handleMiningGet(req);
