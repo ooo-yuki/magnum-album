@@ -1,3 +1,4 @@
+// QuizGame polish 2 — WebAudio (question/correct/wrong/win) + particles + shake + 15s timer + 4200 win → presave
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import gsap from "gsap";
