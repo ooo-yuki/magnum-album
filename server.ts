@@ -254,6 +254,62 @@ async function handleIdeasVote(req: Request, idStr: string): Promise<Response> {
   }
 }
 
+// ---- Frame handlers (magnum_frames) ----
+async function handleFrameStatus(): Promise<Response> {
+  try {
+    const sql = getSql();
+    const rows = await sql`SELECT f.id, COALESCE(u.username, f.user_id) as username, f.verified, f.created_at, f.user_id as raw_user_id FROM magnum_frames f LEFT JOIN magnum_users u ON u.id::text = f.user_id ORDER BY f.created_at DESC LIMIT 50`;
+    const total = rows.length;
+    const verified = rows.filter((r: unknown) => (r as { verified: boolean }).verified === true).length;
+    const frames = rows.map((r: unknown) => {
+      const x = r as { id: number; username: string; verified: boolean | null; created_at: string; raw_user_id: string };
+      return { id: Number(x.id), username: String(x.username || "Братуха"), verified: Boolean(x.verified), status: x.verified ? "verified" : "pending", created_at: x.created_at };
+    });
+    return Response.json({ frames, total, verified, pending: total - verified });
+  } catch (e) {
+    console.error("[frame status] failed", e);
+    return Response.json({ error: "db error" }, { status: 500 });
+  }
+}
+
+// ---- Eco handlers (magnum_eco_results) ----
+async function handleEcoLeaderboard(): Promise<Response> {
+  try {
+    const sql = getSql();
+    const rows = await sql`SELECT player, score, rank, created_at FROM magnum_eco_results ORDER BY score DESC, created_at ASC LIMIT 50`;
+    const leaderboard = rows.map((r: unknown) => {
+      const x = r as { player: string; score: number; rank: string; created_at: string };
+      return { player: String(x.player), username: String(x.player), score: Number(x.score), rank: String(x.rank), status: String(x.rank || "pending"), created_at: x.created_at };
+    });
+    return Response.json({ leaderboard, entries: leaderboard });
+  } catch (e) {
+    console.error("[eco leaderboard] failed", e);
+    return Response.json({ error: "db error" }, { status: 500 });
+  }
+}
+
+async function handleEcoSubmit(req: Request): Promise<Response> {
+  let body: { player?: string; name?: string; username?: string; score?: number; rank?: string };
+  try {
+    body = (await req.json()) as typeof body;
+  } catch {
+    return Response.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+  const player = typeof body.player === "string" ? body.player.trim().slice(0, 32) : typeof body.name === "string" ? body.name.trim().slice(0, 32) : typeof body.username === "string" ? body.username.trim().slice(0, 32) : "";
+  const score = Number(body.score);
+  const rank = typeof body.rank === "string" ? body.rank.trim().slice(0, 32) : "pending";
+  if (!player || player.length < 2) return Response.json({ error: "player required" }, { status: 400 });
+  if (!Number.isFinite(score)) return Response.json({ error: "score required" }, { status: 400 });
+  try {
+    const sql = getSql();
+    const rows = await sql`INSERT INTO magnum_eco_results (player, score, rank) VALUES (${player}, ${Math.round(score)}, ${rank}) RETURNING *`;
+    return Response.json({ ok: true, entry: rows[0] }, { status: 201 });
+  } catch (e) {
+    console.error("[eco submit] failed", e);
+    return Response.json({ error: "db error" }, { status: 500 });
+  }
+}
+
 // ---- Mining handlers ----
 const UPGRADES_DEF: Record<string, { baseCost: number; power: number; auto: number }> = {
   shovel: { baseCost: 42, power: 1, auto: 0 },
@@ -588,6 +644,12 @@ const server = Bun.serve<WSData>({
       const idStr = parts[4] ?? "";
       return handleIdeasVote(req, idStr);
     }
+
+    // frame status (rating)
+    if (url.pathname === "/magnum/api/frame/status" && req.method === "GET") return handleFrameStatus();
+    // eco leaderboard
+    if (url.pathname === "/magnum/api/eco/leaderboard" && req.method === "GET") return handleEcoLeaderboard();
+    if (url.pathname === "/magnum/api/eco/submit" && req.method === "POST") return handleEcoSubmit(req);
 
     // mining
     if (url.pathname === "/magnum/api/mining" && req.method === "GET") return handleMiningGet(req);
