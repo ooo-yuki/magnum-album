@@ -1,0 +1,75 @@
+.marquee {
+  width: 100%;
+  overflow: hidden;
+  padding: 1.1rem 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.012);
+  position: relative;
+  user-select: none;
+}
+
+/* fade edges */
+.marquee::before,
+.marquee::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 60px;
+  z-index: 2;
+  pointer-events: none;
+}
+.marquee::before {
+  left: 0;
+  background: linear-gradient(90deg, var(--bg), transparent);
+}
+.marquee::after {
+  right: 0;
+  background: linear-gradient(-90deg, var(--bg), transparent);
+}
+
+.track {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  white-space: nowrap;
+  will-change: transform;
+}
+
+.word {
+  font-size: clamp(0.82rem, 1.4vw, 1rem);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(240, 240, 240, 0.55);
+  padding: 0 0.6rem;
+  transition: color 0.22s;
+}
+
+.word:hover {
+  color: var(--accent);
+}
+
+.dot {
+  display: inline-block;
+  font-size: 0.55rem;
+  color: var(--accent);
+  opacity: 0.5;
+  margin: 0 0.6rem;
+  vertical-align: middle;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track {
+    animation: none !important;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.3rem 0.8rem;
+    padding: 0 1rem;
+  }
+  .marquee::before,
+  .marquee::after {
+    display: none;
+  }
+}

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import gsap from "gsap";
 import { Hero } from "../components/Hero";
+import { Marquee } from "../components/Marquee";
 import { Stats } from "../components/Stats";
 import { Singles } from "../components/Singles";
 import { About } from "../components/About";
@@ -172,6 +173,7 @@ export function HomePage() {
   return (
     <>
       <Hero />
+      <Marquee />
       <Stats />
       <NavGrid />
       <About />
