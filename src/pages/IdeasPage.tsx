@@ -23,12 +23,7 @@ export function IdeasPage() {
       const data = (await r.json()) as { ideas: Idea[] };
       setIdeas(data.ideas || []);
     } catch {
-      // fallback demo if API not yet deployed
-      setIdeas([
-        { id: 1, title: "Мультиплеер арена", description: "Hot-seat дуэль + WS", votes: 42, status: "approved", created_at: new Date().toISOString() },
-        { id: 2, title: "Эко-челлендж", description: "8 вопросов Кемерово", votes: 27, status: "approved", created_at: new Date().toISOString() },
-        { id: 3, title: "Магазин скинов", description: "12 скинов 42/142/420/1420", votes: 15, status: "pending", created_at: new Date().toISOString() },
-      ]);
+      setIdeas([]);
     } finally { setLoading(false); }
   };
 
@@ -130,7 +125,9 @@ export function IdeasPage() {
         {msg && <span className={styles.msg}>{msg}</span>}
       </div>
 
-      {loading ? <p className={styles.loading}>Гружу идеи из Neon…</p> : (
+      {loading ? <p className={styles.loading}>Гружу идеи из Neon…</p> : ideas.length === 0 ? (
+        <p className={styles.loading}>Пока нет идей — зарегистрируйся и стань первым, братуха. Только реальные игроки.</p>
+      ) : (
         <div className={styles.grid} ref={gridRef}>
           {ideas.sort((a,b)=>b.votes-a.votes).map((it) => (
             <div key={it.id} className={styles.card} data-status={it.status} onMouseEnter={onCardEnter} onMouseLeave={onCardLeave}>
