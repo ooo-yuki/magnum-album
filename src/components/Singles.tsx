@@ -88,6 +88,28 @@ export function Singles() {
           });
         });
       }
+
+      // breathing glow pulse on play buttons (idle animation)
+      if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        cardsRef.current.forEach((card, i) => {
+          if (!card) return;
+          const playBtn = card.querySelector(`.${styles.play}`) as HTMLElement | null;
+          if (!playBtn) return;
+          gsap.to(playBtn, {
+            boxShadow: "0 0 24px rgba(255,45,85,0.6), 0 0 48px rgba(255,45,85,0.2)",
+            duration: 1.3,
+            repeat: -1,
+            yoyo: true,
+            ease: "sine.inOut",
+            delay: 0.9 + i * 0.35,
+            scrollTrigger: {
+              trigger: sectionRef.current,
+              start: "top 70%",
+              toggleActions: "play pause resume pause",
+            },
+          });
+        });
+      }
     }, sectionRef);
 
     return () => ctx.revert();
