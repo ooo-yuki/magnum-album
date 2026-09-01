@@ -2,7 +2,7 @@
 
 > **5 треков — 5 пуль.** Последний совместный альбом 5opka и MellSher. Мультижанровый захват — от сада до фанаток Анны Асти.
 
-[![Live](https://img.shields.io/badge/Live-oooyuki.zomb.top%3A30645%2Fmagnum-ff2d55?style=for-the-badge)](https://oooyuki.zomb.top:30645/magnum/) [![Presave](https://img.shields.io/badge/Presave-Bandlink-00ff88?style=for-the-badge)](https://music.thefence.me/psmagnum) [![Bun](https://img.shields.io/badge/Bun-1.4-black?style=flat-square)](https://bun.sh) [![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square)](https://react.dev) [![Neon](https://img.shields.io/badge/Lakebase-Neon-00E699?style=flat-square)](https://neon.tech) [![Tests](https://img.shields.io/badge/Tests-2997%20passing-brightgreen?style=flat-square)](#тесты) [![P1](https://img.shields.io/badge/P1-audit%20closed-8A2BE2?style=flat-square)](#что-это)
+[![Live](https://img.shields.io/badge/Live-oooyuki.zomb.top%3A30645%2Fmagnum-ff2d55?style=for-the-badge)](https://oooyuki.zomb.top:30645/magnum/) [![Presave](https://img.shields.io/badge/Presave-Bandlink-00ff88?style=for-the-badge)](https://music.thefence.me/psmagnum) [![Bun](https://img.shields.io/badge/Bun-1.4-black?style=flat-square)](https://bun.sh) [![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square)](https://react.dev) [![Neon](https://img.shields.io/badge/Lakebase-Neon-00E699?style=flat-square)](https://neon.tech) [![Tests](https://img.shields.io/badge/Tests-3051%20passing-brightgreen?style=flat-square)](#тесты) [![P1](https://img.shields.io/badge/P1-audit%20closed-8A2BE2?style=flat-square)](#что-это)
 
 **Демо:** https://oooyuki.zomb.top:30645/magnum/ · **HTTP (Obscura):** http://localhost:30646/magnum/ · **Пресейв:** https://music.thefence.me/psmagnum
 
@@ -18,18 +18,19 @@
 
 | Блок | Что внутри |
 |---|---|
-| 🎮 **Игры 42** | Runner / Match-3 / Knife Hit / Memory / Clicker / Quiz (24 вопроса, стрик xN, 50/50, speed-бонус) / Blackjack 42 — казино-апгрейд (стрик x10 Легенда, конфетти-канвас, GSAP раздача, хинт-стратегия, 12 ачивок) / Roulette 42 ×10 пресетов + hot/cold + ×2/↻ / Rhythm (пауза P/Space) / Stack 2026 — 5 пуль lore + pause + canvas labels / Flappy 42 / 2042 (undo+H/CtrlZ, hint, WASD, GSAP merge/confetti, TILE_LORE×12) / Typing / Snake 42 (комбо x12, цепочка 1.8с, WebAudio pitch, шейк) / Dodge 42 / Timeline 2026 — победа → пресейв (16 роутов: `/magnum/games/*`) |
+| 🎮 **Игры 42** | Runner / Match-3 / Knife Hit / Memory 42 — 4 темы×12 карт + 3 сложности + FEVER x5 + хинты 3× + свайп↔/↑ + WebAudio / Clicker / Quiz (24 вопроса, стрик xN, 50/50, speed-бонус) / Blackjack 42 — казино-апгрейд (стрик x10 Легенда, конфетти-канвас, GSAP раздача, хинт-стратегия, 12 ачивок) / Roulette 42 ×10 пресетов + hot/cold + ×2/↻ / Rhythm — FEVER 5 пуль + 5 треков (пауза P/Space) / Stack 2026 — 5 пуль lore + pause + canvas labels / Flappy 42 / 2042 — DAILY CHALLENGE (mulberry32 seededBoard, dailySeed, share, efficiency) + float +X pop + haptics (undo+H/CtrlZ, hint, WASD, GSAP merge/confetti, TILE_LORE×12) / Typing / Snake 42 (комбо x12, цепочка 1.8с, WebAudio pitch, шейк) / Dodge 42 / Timeline 2026 — победа → пресейв + unified scoring (16 роутов: `/magnum/games/*`, `/games/{submit,top,my}`) |
 | 🤖 **БРАТ-БОТ 42** | AI-бот с проверкой скрина пресейва через прокси (ключ не в бандле), кидаешь скрин — хвалит, нет — уговаривает, сжатие до 1280 JPEG |
 | 🛒 **Магазин** | 12 скинов (CSS-градиенты+эмодзи) редкости 42/142/420/1420, единый `magnum-coins` (миграция из blackjack/roulette) |
 | 🌿 **Эко-рейтинг** | 8 вопросов Кемерово/Кузбасса, ранги Нормис→Легенда, `magnum-eco-leaderboard` |
-| ⛏️ **Майнинг** | Кликер + апгрейды лопата 42 → шахта 2042, авто-майнинг, `/magnum/api/mining/*` (collect/top/upgrade/click) |
+| ⛏️ **Майнинг** | Кликер + апгрейды лопата 42 → шахта 2042, авто-майнинг + обмен 10:1 монет → клики vault, `/magnum/api/mining/*` (collect/top/upgrade/click/exchange) + `/mining/exchange` |
 | 💎 **Vault 42** | 5 лимиток + Neon `magnum_mining_vault` + `/mining/vault` + `/mining/vault/claim` + GSAP |
 | 🏅 **Ачивки + Профиль** | 10 ачивок Neon (`first_presave`/`miner_100`..`duel`) + `/achievements/catalog` + `/achievements` + `/achievements/claim` + `/profile` агрегат (coins/mining/daily/tx/presave/shop/cos/vault/ach/frame) |
 | 🎁 **Промокоды** | 5 кодов Neon MAGNUM42/5OPKA/BRATUKHI/KUZYA/VIP42 + `/promo/catalog` + `/promo/redeem` + `/promo/my` + rate limit + уведомления |
-| 🖼️ **Галерея 42** | СССР/Y2K/киберпанк/мемфис, лайтбокс GSAP, фильтр — 6 реальных `archive-*.jpg` |
+| 🖼️ **Галерея 42** | СССР/Y2K/киберпанк/мемфис — 8 файлов 4 темы×2 (jpg+800.webp), лайтбокс GSAP, фильтр — `public/images/gallery-42/42-{agit,cyber,y2k,memphis}-01.*` |
 | 🏆 **Рейтинг пресейва** | Топ-20 братух (8K клипов / 200K просмотров мок), проверка через бота, `/magnum/api/presave/*` |
-| 💡 **Идеи 42** | `magnum_ideas` в Neon, голосование `▲` + закладки + `/magnum/api/ideas/*` + `/bookmarks` |
+| 💡 **Идеи 42** | `magnum_ideas` в Neon, голосование `▲` + закладки + комментарии + `/magnum/api/ideas/*` + `/bookmarks` + `/idea_comments` |
 | 📰 **Recaps** | Пересказы нарезок Freakland/СП с YouTube-транскриптов (крон 60м) |
+| 🔗 **Рефералы + Дуэль** | Код приглашения + `/referral/{code,redeem}` + `magnum_referrals` + дуэль-стрик `/duel/history` + `magnum_duel_history` + WS чат `/magnum/api/ws` |
 | 🎵 **Дискография** | Треки альбома MAGNUM с GSAP-анимацией, hover RGB, reduced-motion |
 | 🎤 **Артисты** | Профили артистов 5opka / MellSher, stagger-entrance |
 | ℹ️ **О 42** | Движение 42 — история, философия, манифест (`/magnum/42`) |
@@ -40,7 +41,7 @@
 
 **Frontend:** React 19 + TS strict + GSAP ScrollTrigger + CSS Modules + React Router 7  
 **Build/Runtime:** `Bun.build` (code-split: `main ~510KB` + 20+ `chunk-*.js` lazy, 16 игр + 9 heavy pages via `React.lazy` + `modulepreload`), `Bun.serve` (SPA `try_files` + `/magnum/api/*` + `/magnum/api/ws` WebSocket)  
-**Backend:** Postgres (`drizzle-orm` + `neon.ts` infra-as-code), `@neondatabase/serverless` — 20 таблиц  
+**Backend:** Postgres (`drizzle-orm` + `neon.ts` infra-as-code), `@neondatabase/serverless` — 26 таблиц  
 **Infra:** `magnum-caddy` (Caddy `omniroute-caddy:latest` + Cloudflare DNS) `:30645` TLS, `bun:30646` HTTP для Obscura (30MB, порт 9222), GitHub Actions SSH deploy
 
 ## Быстрый старт
@@ -61,9 +62,9 @@ src/
   pages/games/ Runner, Match3, KnifeHit, Memory, Clicker, Blackjack, Roulette, Rhythm, Stack, Flappy42, Game2042, Typing, Snake42, Dodge42, Quiz, Timeline2026 (+16 роутов, все lazy в App.tsx)
   lib/ coins.ts (→ /magnum/api/coins), economy.ts, perf-analytics.ts, presaveTracker.ts
   App.tsx  # BrowserRouter + /magnum layout: index + last-fit + track/:slug + discography + 42 + artists + game + games + games/*×16 + shop + eco + gallery + mining + presave-rating + ideas + recaps
-drizzle/ schema.ts (magnum_users, magnum_sessions, magnum_coins, magnum_mining, magnum_ideas, magnum_leaderboard, magnum_shop_inventory, magnum_eco_results, magnum_frames, magnum_cosmetics, magnum_presave_clicks, magnum_daily_claims, magnum_transactions, magnum_idea_votes, magnum_idea_bookmarks, magnum_user_achievements, magnum_mining_vault, magnum_notifications, magnum_promo_codes, magnum_promo_redemptions)
+drizzle/ schema.ts (magnum_users, magnum_sessions, magnum_coins, magnum_mining, magnum_ideas, magnum_leaderboard, magnum_shop_inventory, magnum_eco_results, magnum_frames, magnum_cosmetics, magnum_presave_clicks, magnum_daily_claims, magnum_transactions, magnum_idea_votes, magnum_idea_bookmarks, magnum_user_achievements, magnum_mining_vault, magnum_notifications, magnum_promo_codes, magnum_promo_redemptions, magnum_game_scores, magnum_referrals, magnum_duel_history, magnum_eco_ratings, magnum_mining_exchanges, magnum_idea_comments)
 neon.ts  # infra-as-code
-server.ts  # Bun.serve: /magnum/api/ai, /auth/*, /health, /coins/*, /presave/*, /ideas/*, /frame/*, /eco/*, /shop/*, /mining/*, /daily/*, /achievements/*, /profile, /promo/*, /notifications/*, /transactions, /ws
+server.ts  # Bun.serve: /magnum/api/ai, /auth/*, /health, /coins/*, /presave/*, /ideas/* + /idea_comments, /frame/*, /eco/*, /shop/*, /mining/* + /mining/exchange, /daily/*, /achievements/*, /profile, /promo/*, /notifications/*, /transactions, /games/{submit,top,my}, /referral/*, /duel/history, /ws
 public/images/ postcard-4200.png (242KB), ai-bot-avatar.png (92KB), gallery-42/*
 ```
 
@@ -75,13 +76,13 @@ neon env pull  # → .env.local (DATABASE_URL, DATABASE_URL_UNPOOLED)
 bunx drizzle-kit generate && bunx drizzle-kit push  # DATABASE_URL_UNPOOLED (direct)
 ```
 
-Таблицы: `magnum_users`, `magnum_sessions`, `magnum_coins`, `magnum_mining`, `magnum_ideas`, `magnum_leaderboard`, `magnum_shop_inventory`, `magnum_eco_results`, `magnum_frames`, `magnum_cosmetics`, `magnum_presave_clicks`, `magnum_daily_claims`, `magnum_transactions`, `magnum_idea_votes`, `magnum_idea_bookmarks`, `magnum_user_achievements`, `magnum_mining_vault`, `magnum_notifications`, `magnum_promo_codes`, `magnum_promo_redemptions`.
+Таблицы: `magnum_users`, `magnum_sessions`, `magnum_coins`, `magnum_mining`, `magnum_ideas`, `magnum_leaderboard`, `magnum_shop_inventory`, `magnum_eco_results`, `magnum_frames`, `magnum_cosmetics`, `magnum_presave_clicks`, `magnum_daily_claims`, `magnum_transactions`, `magnum_idea_votes`, `magnum_idea_bookmarks`, `magnum_user_achievements`, `magnum_mining_vault`, `magnum_notifications`, `magnum_promo_codes`, `magnum_promo_redemptions`, `magnum_game_scores`, `magnum_referrals`, `magnum_duel_history`, `magnum_eco_ratings`, `magnum_mining_exchanges`, `magnum_idea_comments`.
 
 ## Тесты
 
 ```bash
 bunx tsc --noEmit
-bunx vitest run  # 2997 тестов (23 файла): smoke + content + blackjack-roulette-spec + e2e.health + flappy + 2042 + snake + gallery-real + api + massive42…
+bunx vitest run  # 3051 тестов (30 файлов): smoke + content + blackjack-roulette-spec + e2e.health + flappy + 2042 + snake + gallery-real + api + massive42…
 ```
 
 CI: `.github/workflows/deploy.yml` → `tsc → bun test → build → scp /srv/magnum`.
