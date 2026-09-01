@@ -48,7 +48,6 @@ function playJumpSound(doubleJump = false) {
     g.gain.setValueAtTime(0.18, audioCtx.currentTime);
     const at = audioCtx.currentTime;
     safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, at + 0.22), 0.001);
-    const at = audioCtx.currentTime;
     safeRamp(o.frequency, () => o.frequency.exponentialRampToValueAtTime(doubleJump ? 440 : 330, at + 0.12), 440);
     o.start(); o.stop(audioCtx.currentTime + 0.22);
     // click transient
@@ -57,8 +56,8 @@ function playJumpSound(doubleJump = false) {
     o2.frequency.value = doubleJump ? 1200 : 900;
     o2.connect(g2); g2.connect(audioCtx.destination);
     g2.gain.setValueAtTime(0.08, audioCtx.currentTime);
-    const at = audioCtx.currentTime;
-    safeRamp(g2.gain, () => g2.gain.exponentialRampToValueAtTime(0.001, at + 0.08), 0.001);
+    const at2 = audioCtx.currentTime;
+    safeRamp(g2.gain, () => g2.gain.exponentialRampToValueAtTime(0.001, at2 + 0.08), 0.001);
     o2.start(); o2.stop(audioCtx.currentTime + 0.08);
   } catch { /* ignore */ }
 }
@@ -70,11 +69,11 @@ function playCollectSound() {
     o.type = "sine"; o.frequency.value = 880;
     o.connect(g); g.connect(audioCtx.destination);
     g.gain.setValueAtTime(0.12, audioCtx.currentTime);
-    const at = audioCtx.currentTime;
-    safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, at + 0.35), 0.001);
+    const at4 = audioCtx.currentTime;
+    safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, at4 + 0.35), 0.001);
     o.frequency.setValueAtTime(880, audioCtx.currentTime);
-    const at = audioCtx.currentTime;
-    safeRamp(o.frequency, () => o.frequency.linearRampToValueAtTime(1320, at + 0.12), 1320);
+    const at5 = audioCtx.currentTime;
+    safeRamp(o.frequency, () => o.frequency.linearRampToValueAtTime(1320, at5 + 0.12), 1320);
     o.start(); o.stop(audioCtx.currentTime + 0.35);
   } catch { /* ignore */ }
 }
@@ -317,7 +316,8 @@ export function RunnerGame() {
       if (gameState === "playing") {
         s.frame++; s.spriteFrame++;
         s.distance += s.speed * dt;
-        s.speed = 4 + s.distance * 0.00055;
+        // баланс: старт 4, плавный рост до капа 9.5 (~4200 очков за ~2 мин)
+        s.speed = Math.min(9.5, 4 + s.distance * 0.00038);
         s.score = Math.floor(s.distance / 10);
         setScore(s.score);
         if (s.score >= WIN_SCORE) {
