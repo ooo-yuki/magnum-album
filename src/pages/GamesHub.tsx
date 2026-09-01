@@ -16,6 +16,7 @@ const GAMES = [
   { to: "/magnum/games/roulette", icon: "🎰", title: "РУЛЕТКА 42", desc: "Европейская 0-36 · собери 4200 монет" },
   { to: "/magnum/games/2042", icon: "🧩", title: "ПАЗЛ 2042", desc: "2048-головоломка — собери 42!" },
   { to: "/magnum/games/flappy", icon: "🐦", title: "FLAPPY 42", desc: "Пролети 42 трубы — тапай и лети!" },
+  { to: "/magnum/games/typing", icon: "⌨️", title: "Скоропечатание", desc: "Печатай фразы MAGNUM — набери 42 WPM" },
 ];
 
 export function GamesHub() {
@@ -55,8 +56,8 @@ export function GamesHub() {
     const y = e.clientY - rect.top;
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
-    const rotateX = ((y - centerY) / centerY) * -8; // tilt up/down
-    const rotateY = ((x - centerX) / centerX) * 8;  // tilt left/right
+    const rotateX = ((y - centerY) / centerY) * -8;
+    const rotateY = ((x - centerX) / centerX) * 8;
 
     gsap.to(card, {
       rotateX,
@@ -89,7 +90,7 @@ export function GamesHub() {
       <div className={styles.header}>
         <div className={styles.badge} ref={badgeRef}>Мини-игры</div>
         <h1>Играй и выигрывай</h1>
-        <p className={styles.subtitle}>Победи в любой игре — получи пресейв MAGNUM</p>
+        <p className={styles.subtitle}>13 игр — победи в любой и получи пресейв MAGNUM</p>
       </div>
       <div className={styles.grid}>
         {GAMES.map((g) => (
@@ -108,37 +109,6 @@ export function GamesHub() {
           </div>
         ))}
       </div>
-      {/* Хайп-фичи — магазин и будущие модули */}
-      <section className={styles.hypeSection} aria-label="Хайп-фичи">
-        <h2 className={styles.hypeTitle}>Хайп-фичи</h2>
-        <p className={styles.hypeSubtitle}>Фарми монеты в играх — трать в магазине. Скоро — эко-рейтинг, фреймы и арена.</p>
-        <div className={styles.hypeGrid}>
-          <Link to="/magnum/shop" className={`${styles.card} ${styles.hypeCard}`}>
-            <span className={styles.icon}>🛒</span>
-            <strong>Магазин скинов</strong>
-            <p>12 скинов 42 — COMMON → LEGENDARY за magnum-coins</p>
-            <span className={styles.hypeCta}>В магазин →</span>
-          </Link>
-          <Link to="/magnum/eco" className={`${styles.card} ${styles.hypeCard}`}>
-            <span className={styles.icon}>🌿</span>
-            <strong>Эко-рейтинг</strong>
-            <p>8 вопросов — проверь, насколько ты ЭкоЛегенда 42</p>
-            <span className={styles.hypeCta}>Пройти →</span>
-          </Link>
-          <div className={`${styles.card} ${styles.hypeCard} ${styles.hypeCardSoon}`} aria-disabled="true">
-            <span className={styles.icon}>🖼️</span>
-            <strong>Фреймы</strong>
-            <p>Скоро — рамки для аватара</p>
-            <span className={styles.hypeBadge}>soon</span>
-          </div>
-          <div className={`${styles.card} ${styles.hypeCard} ${styles.hypeCardSoon}`} aria-disabled="true">
-            <span className={styles.icon}>⚔️</span>
-            <strong>Арена</strong>
-            <p>Скоро — PvP братух</p>
-            <span className={styles.hypeBadge}>soon</span>
-          </div>
-        </div>
-      </section>
 
       <Link to="/magnum" className={styles.back}>← На главную</Link>
     </div>

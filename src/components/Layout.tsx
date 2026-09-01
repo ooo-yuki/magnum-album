@@ -13,12 +13,18 @@ import styles from "./Layout.module.css";
 
 const NAV_ITEMS = [
   { to: "/magnum", label: "Главная" },
-  { to: "/magnum/artists", label: "Артисты" },
+  { to: "/magnum/shop", label: "Магазин" },
+  { to: "/magnum/eco", label: "Эко-рейтинг" },
+  { to: "/magnum/games/roulette", label: "Арена" },
+  { to: "/magnum/shop", label: "Рамка" },
+  { to: "/magnum/42", label: "Галерея 42" },
+  { to: "/magnum/games/clicker", label: "Майнинг" },
+  { to: "/magnum/artists", label: "Рейтинг пресейва" },
+  { to: "/magnum/track/tusa-meduza", label: "Нарезки" },
+  { to: "/magnum/track/vpn", label: "Пересказы" },
   { to: "/magnum/discography", label: "Дискография" },
   { to: "/magnum/42", label: "42 братухи" },
-  { to: "/magnum/last-fit", label: "Последний фит" },
   { to: "/magnum/games", label: "Игры" },
-  { to: "/magnum/game", label: "Квиз" },
 ];
 
 export function Layout() {
@@ -26,6 +32,8 @@ export function Layout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
+
+  const openAiBot = () => window.dispatchEvent(new CustomEvent("open-aibot"));
 
   // close on route change + nav-indicator-gsap pulse
   useEffect(() => {
@@ -88,7 +96,7 @@ export function Layout() {
         <div className={styles.links} aria-hidden={menuOpen ? "true" : undefined}>
           {NAV_ITEMS.map((item) => (
             <Link
-              key={item.to}
+              key={`${item.label}-${item.to}`}
               to={item.to}
               className={location.pathname === item.to ? styles.active : ""}
               aria-current={location.pathname === item.to ? "page" : undefined}
@@ -96,6 +104,14 @@ export function Layout() {
               {item.label}
             </Link>
           ))}
+          <button
+            type="button"
+            onClick={openAiBot}
+            className={styles.botBtn}
+            aria-label="Открыть БРАТ-БОТА"
+          >
+            БРАТ-БОТ
+          </button>
         </div>
 
         <button
@@ -130,7 +146,7 @@ export function Layout() {
             <div className={styles.drawerLinks}>
               {NAV_ITEMS.map((item) => (
                 <Link
-                  key={item.to}
+                  key={`m-${item.label}-${item.to}`}
                   to={item.to}
                   className={`${styles.drawerLink} ${location.pathname === item.to ? styles.drawerActive : ""}`}
                   onClick={closeWithAnimation}
@@ -138,6 +154,13 @@ export function Layout() {
                   {item.label}
                 </Link>
               ))}
+              <button
+                type="button"
+                className={`${styles.drawerLink} ${styles.drawerBotBtn}`}
+                onClick={() => { closeWithAnimation(); setTimeout(openAiBot, 320); }}
+              >
+                🤖 БРАТ-БОТ
+              </button>
             </div>
             <a
               href="https://music.yandex.ru/artist/7544304"

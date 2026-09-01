@@ -52,6 +52,13 @@ export function AiBot() {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, busy]);
 
+  // open via global nav event: window.dispatchEvent(new CustomEvent("open-aibot"))
+  useEffect(() => {
+    const onOpen = () => setOpen(true);
+    window.addEventListener("open-aibot", onOpen as EventListener);
+    return () => window.removeEventListener("open-aibot", onOpen as EventListener);
+  }, []);
+
   const fileToDataUrl = (file: File): Promise<string> =>
     new Promise((res, rej) => {
       const r = new FileReader();

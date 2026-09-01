@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { Link } from "react-router-dom";
 import gsap from "gsap";
 import { Hero } from "../components/Hero";
 import { Marquee } from "../components/Marquee";
@@ -25,7 +26,6 @@ function spawnBigConfetti() {
   } as unknown as CSSStyleDeclaration);
   document.body.appendChild(container);
 
-  // center burst origin
   const cx = window.innerWidth / 2;
   const cy = window.innerHeight * 0.28;
 
@@ -72,7 +72,6 @@ function spawnBigConfetti() {
       delay: duration - 0.3,
       ease: "power1.in",
     });
-    // gravity-ish fall after burst
     gsap.to(el, {
       y: `+=${220 + Math.random() * 380}`,
       duration: 1.2 + Math.random(),
@@ -81,7 +80,6 @@ function spawnBigConfetti() {
     });
   });
 
-  // big text flash
   const flash = document.createElement("div");
   flash.textContent = "42 × BRATUKHI!";
   Object.assign(flash.style, {
@@ -110,6 +108,203 @@ function spawnBigConfetti() {
   setTimeout(() => { container.remove(); flash.remove(); }, 3400);
 }
 
+/* ── Promo banners над Singles ── */
+const PROMOS = [
+  { to: "/magnum/shop", icon: "🛒", title: "Магазин", subtitle: "12 скинов", desc: "COMMON → LEGENDARY за magnum-coins", gradient: "linear-gradient(135deg,#ff2d55 0%,#ff6b35 35%,#ffcc00 70%,#ff2d55 100%)", shadow: "rgba(255,45,85,0.45)", border: "#ff2d55" },
+  { to: "/magnum/eco", icon: "🌿", title: "Эко-рейтинг", subtitle: "пройди тест", desc: "8 вопросов • стань ЭкоЛегендой", gradient: "linear-gradient(135deg,#00ff88 0%,#00d4ff 50%,#00ff88 100%)", shadow: "rgba(0,255,136,0.4)", border: "#00ff88" },
+  { to: "/magnum/games/roulette", icon: "⚔️", title: "Арена", subtitle: "дуэль", desc: "PvP братух • собери 4200 монет", gradient: "linear-gradient(135deg,#5865f2 0%,#9147ff 50%,#5865f2 100%)", shadow: "rgba(88,101,242,0.5)", border: "#5865f2" },
+  { to: "/magnum/42", icon: "🖼️", title: "Галерея 42", subtitle: "42 арты", desc: "Движение, сквады, стиль — смотри", gradient: "linear-gradient(135deg,#ffcc00 0%,#ff9d1e 40%,#ff2d55 100%)", shadow: "rgba(255,204,0,0.45)", border: "#ffcc00" },
+];
+
+function PromoBanners() {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!ref.current) return;
+    const cards = ref.current.querySelectorAll<HTMLElement>("[data-promo]");
+    if (!cards.length) return;
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const ctx = gsap.context(() => {
+      gsap.set(cards, { y: 36, opacity: 0, scale: 0.96 });
+      gsap.to(cards, { y: 0, opacity: 1, scale: 1, duration: 0.62, stagger: 0.12, ease: "back.out(1.5)", delay: 0.12 });
+      if (!prefersReduced) {
+        cards.forEach((c) => {
+          const glow = c.querySelector<HTMLElement>("[data-glow]");
+          if (!glow) return;
+          gsap.to(glow, { opacity: 0.9, duration: 1.8, repeat: -1, yoyo: true, ease: "sine.inOut", delay: Math.random() * 0.8 });
+        });
+      }
+    }, ref);
+    return () => ctx.revert();
+  }, []);
+
+  const onMove = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
+    const card = e.currentTarget;
+    const rect = card.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width - 0.5) * 10;
+    const y = ((e.clientY - rect.top) / rect.height - 0.5) * -10;
+    gsap.to(card, { rotateY: x, rotateX: y, y: -6, duration: 0.35, ease: "power2.out" });
+  }, []);
+  const onLeave = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
+    gsap.to(e.currentTarget, { rotateY: 0, rotateX: 0, y: 0, duration: 0.5, ease: "elastic.out(1,0.45)" });
+  }, []);
+
+  return (
+    <section
+      ref={ref}
+      aria-label="Промо-баннеры"
+      style={{ maxWidth: 1120, margin: "0 auto", padding: "1.2rem 1rem 0.6rem", perspective: 900 }}
+    >
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "0.9rem" }}>
+        {PROMOS.map((p) => (
+          <Link
+            key={p.to + p.title}
+            to={p.to}
+            data-promo=""
+            onMouseMove={onMove}
+            onMouseLeave={onLeave}
+            style={{
+              position: "relative",
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.35rem",
+              padding: "1.15rem 1.1rem 1rem",
+              borderRadius: 20,
+              background: "rgba(18,18,20,0.92)",
+              border: `1px solid ${p.border}55`,
+              boxShadow: `0 0 0 1px ${p.border}22, 0 8px 32px ${p.shadow}, 0 0 28px ${p.shadow}`,
+              textDecoration: "none",
+              overflow: "hidden",
+              transformStyle: "preserve-3d" as never,
+              isolation: "isolate" as never,
+            }}
+          >
+            <div
+              data-glow=""
+              aria-hidden
+              style={{
+                position: "absolute",
+                inset: -1,
+                borderRadius: 20,
+                background: p.gradient,
+                opacity: 0.18,
+                filter: "blur(14px)",
+                zIndex: -1,
+                pointerEvents: "none",
+              }}
+            />
+            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: p.gradient, opacity: 0.95 }} />
+            <span style={{ fontSize: "1.9rem", lineHeight: 1, filter: "drop-shadow(0 4px 16px rgba(0,0,0,0.4))" }}>{p.icon}</span>
+            <strong style={{ fontSize: "1.05rem", fontWeight: 900, letterSpacing: "-0.02em", color: "#fff", lineHeight: 1.1 }}>{p.title}</strong>
+            <span style={{ fontSize: "0.78rem", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase" as const, color: p.border }}>{p.subtitle}</span>
+            <span style={{ fontSize: "0.82rem", color: "rgba(240,240,240,0.62)", lineHeight: 1.35, marginTop: 2 }}>{p.desc}</span>
+            <span style={{ marginTop: "0.6rem", fontSize: "0.8rem", fontWeight: 700, color: "#fff", display: "inline-flex", alignItems: "center", gap: 6 }}>
+              Перейти <span aria-hidden>→</span>
+            </span>
+            <span
+              aria-hidden
+              style={{
+                position: "absolute",
+                right: -18,
+                bottom: -18,
+                fontSize: "5.2rem",
+                opacity: 0.06,
+                pointerEvents: "none",
+                userSelect: "none",
+              }}
+            >
+              {p.icon}
+            </span>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function PopupBanner() {
+  const [visible, setVisible] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    try {
+      if (localStorage.getItem("magnum-banner-closed") === "1") return;
+    } catch {}
+    const t = window.setTimeout(() => setVisible(true), 3000);
+    return () => window.clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    if (!visible || !cardRef.current) return;
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReduced) return;
+    gsap.fromTo(cardRef.current, { y: 40, opacity: 0, scale: 0.96 }, { y: 0, opacity: 1, scale: 1, duration: 0.55, ease: "back.out(1.6)" });
+  }, [visible]);
+
+  const close = useCallback(() => {
+    const el = cardRef.current;
+    const doClose = () => {
+      setVisible(false);
+      try { localStorage.setItem("magnum-banner-closed", "1"); } catch {}
+    };
+    if (!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) { doClose(); return; }
+    gsap.to(el, { y: 24, opacity: 0, scale: 0.96, duration: 0.3, ease: "power2.in", onComplete: doClose });
+  }, []);
+
+  if (!visible) return null;
+
+  return (
+    <div
+      role="dialog"
+      aria-label="Промо MAGNUM"
+      aria-modal="false"
+      style={{
+        position: "fixed",
+        right: "1rem",
+        bottom: "1rem",
+        zIndex: 90,
+        width: "min(360px, calc(100vw - 1.2rem))",
+        pointerEvents: "auto",
+      }}
+    >
+      <div
+        ref={cardRef}
+        style={{
+          position: "relative",
+          borderRadius: 18,
+          background: "rgba(16,16,18,0.96)",
+          border: "1px solid rgba(255,255,255,0.1)",
+          boxShadow: "0 0 0 1px rgba(255,45,85,0.12), 0 16px 48px rgba(0,0,0,0.55), 0 0 32px rgba(255,45,85,0.18)",
+          overflow: "hidden",
+          backdropFilter: "blur(14px)",
+        }}
+      >
+        <div style={{ height: 3, background: "linear-gradient(90deg,#ff2d55,#ffcc00,#00ff88,#5865f2,#ff2d55)", backgroundSize: "200% 100%" }} />
+        <button
+          onClick={close}
+          aria-label="Закрыть баннер"
+          style={{
+            position: "absolute", top: 8, right: 8, width: 32, height: 32, borderRadius: 10,
+            background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.08)",
+            color: "#fff", fontSize: "1.15rem", lineHeight: 1, cursor: "pointer", display: "grid", placeItems: "center",
+          }}
+        >
+          ×
+        </button>
+        <div style={{ padding: "1rem 1.1rem 0.95rem", display: "flex", flexDirection: "column", gap: "0.55rem" }}>
+          <span style={{ fontSize: "0.68rem", fontWeight: 800, letterSpacing: "0.1em", color: "#ff2d55", textTransform: "uppercase" as const }}>MAGNUM • не пропусти</span>
+          <strong style={{ fontSize: "1.02rem", fontWeight: 900, color: "#fff", lineHeight: 1.25 }}>🔥 Магазин, Эко и Арена — уже на сайте</strong>
+          <span style={{ fontSize: "0.82rem", color: "rgba(240,240,240,0.6)", lineHeight: 1.4 }}>12 скинов, эко-тест на 8 вопросов и дуэли братух. Всё — прямо из главного меню.</span>
+          <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.35rem", flexWrap: "wrap" }}>
+            <Link to="/magnum/shop" onClick={close} style={{ flex: 1, textAlign: "center" as const, padding: "0.62rem 0.8rem", borderRadius: 100, background: "#ff2d55", color: "#fff", fontWeight: 800, fontSize: "0.82rem", textDecoration: "none", boxShadow: "0 8px 20px rgba(255,45,85,0.32)" }}>Магазин →</Link>
+            <Link to="/magnum/eco" onClick={close} style={{ flex: 1, textAlign: "center" as const, padding: "0.62rem 0.8rem", borderRadius: 100, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", fontWeight: 700, fontSize: "0.82rem", textDecoration: "none" }}>Эко-тест</Link>
+          </div>
+          <Link to="/magnum/games/roulette" onClick={close} style={{ fontSize: "0.76rem", fontWeight: 600, color: "rgba(240,240,240,0.55)", textDecoration: "none", textAlign: "center" as const, paddingTop: 2 }}>Арена дуэлей →</Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function HomePage() {
   const clicksRef = useRef(0);
   const lastClickRef = useRef(0);
@@ -119,7 +314,6 @@ export function HomePage() {
 
   const onLogoClick = useCallback((e: MouseEvent) => {
     const target = e.target as HTMLElement;
-    // catch clicks on Layout logo (aria-label) or Hero title
     const logo = target.closest('[aria-label="MAGNUM на главную"]') as HTMLElement | null;
     const heroTitle = target.closest("h1") as HTMLElement | null;
     const isHeroMagnum = heroTitle?.textContent?.trim() === "MAGNUM";
@@ -127,20 +321,16 @@ export function HomePage() {
     if (!hit) return;
 
     const now = Date.now();
-    // reset if idle > 6s
     if (now - lastClickRef.current > 6000) clicksRef.current = 0;
     lastClickRef.current = now;
 
-    // tiny gsap punch on the clicked element
     gsap.fromTo(hit, { scale: 1 }, { scale: 1.08, duration: 0.12, yoyo: true, repeat: 1, ease: "power2.out" });
-    // chromatic micro-shift
     gsap.fromTo(hit, { filter: "drop-shadow(1px 0 0 #ff2d55) drop-shadow(-1px 0 0 #00ff88)" }, { filter: "none", duration: 0.18, ease: "power1.out" });
 
     clicksRef.current += 1;
     const c = clicksRef.current;
     setProgress(c);
     if (hintTimerRef.current) window.clearTimeout(hintTimerRef.current);
-    // auto-hide progress if idle
     hintTimerRef.current = window.setTimeout(() => setProgress(0), 2500);
 
     if (c >= TARGET && !unlocked) {
@@ -150,10 +340,8 @@ export function HomePage() {
       if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
         spawnBigConfetti();
       }
-      // allow re-trigger after 4s
       setTimeout(() => setUnlocked(false), 4000);
     } else if (c >= TARGET) {
-      // already unlocked — still celebrate but less spam
       clicksRef.current = 0;
       setProgress(0);
       if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
@@ -161,7 +349,6 @@ export function HomePage() {
       }
     }
 
-    // subtle hint at 10, 20, 30
     if (c === 10 || c === 20 || c === 30) {
       try { navigator.vibrate?.(30); } catch {}
     }
@@ -187,10 +374,11 @@ export function HomePage() {
       <Timeline />
       <PressWall />
       <News2026 />
+      <PromoBanners />
       <Singles />
       <CTA />
+      <PopupBanner />
 
-      {/* 42-click progress — only visible while clicking */}
       {pct > 0 && pct < TARGET && (
         <div
           style={{
