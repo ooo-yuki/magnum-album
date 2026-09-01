@@ -112,6 +112,13 @@ export const magnumIdeaVotes = pgTable("magnum_idea_votes", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const magnumUserAchievements = pgTable("magnum_user_achievements", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => magnumUsers.id).notNull(),
+  achievementId: text("achievement_id").notNull(),
+  unlockedAt: timestamp("unlocked_at").defaultNow().notNull(),
+});
+
 export const magnumMiningVault = pgTable("magnum_mining_vault", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => magnumUsers.id).notNull(),

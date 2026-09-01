@@ -958,6 +958,186 @@ async function handleMiningVaultClaim(req: Request): Promise<Response> {
   } catch(e){ console.error("[vault claim] failed",e); return Response.json({ error:"db error" },{status:500}); }
 }
 
+// ---- Achievements + Profile (Neon magnum_user_achievements) ----
+// 10 ачивок, прогресс считается live по Neon, без localStorage
+type AchDef = { id: string; title: string; desc: string; reward: number; icon: string; rarity: "common"|"rare"|"epic"|"legendary" };
+const ACHIEVEMENTS_CATALOG: AchDef[] = [
+  { id: "first_presave",  title: "Первый пресейв",  desc: "Нажми пресейв MAGNUM",                reward: 42,  icon: "🔥", rarity: "common" },
+  { id: "miner_100",      title: "Шахтёр 100",      desc: "Накопай 100 руды в майнинге",         reward: 42,  icon: "⛏️", rarity: "common" },
+  { id: "miner_1000",     title: "Шахтёр 1000",     desc: "Накопай 1000 руды",                   reward: 142, icon: "🏗️", rarity: "rare" },
+  { id: "shop_first",     title: "Первый скин",     desc: "Купи любой скин в магазине",          reward: 42,  icon: "🛒", rarity: "common" },
+  { id: "daily_3",        title: "3 дня подряд",    desc: "Достигни стрика 3 в daily",           reward: 84,  icon: "📅", rarity: "rare" },
+  { id: "idea_vote",      title: "Голос 42",        desc: "Проголосуй за идею",                  reward: 22,  icon: "💡", rarity: "common" },
+  { id: "coins_5k",       title: "Богач 5K",        desc: "Накопи 5000 монет",                   reward: 142, icon: "💰", rarity: "epic" },
+  { id: "cosmetic_first", title: "Стиль 42",        desc: "Купи косметику (рамка/баннер/титул)", reward: 42,  icon: "🎨", rarity: "common" },
+  { id: "vault_first",    title: "Вскрытие",        desc: "Открой любой Vault-ящик",             reward: 84,  icon: "📦", rarity: "rare" },
+  { id: "duel_play",      title: "Дуэлянт",         desc: "Сыграй дуэль WS (любой счёт)",        reward: 42,  icon: "⚔️", rarity: "common" },
+];
+
+function validateAchId(v: string): string | null {
+  const s = v.trim().toLowerCase();
+  if (!s || s.length > 32) return null;
+  if (!/^[a-z0-9_]+$/.test(s)) return null;
+  return ACHIEVEMENTS_CATALOG.some(x => x.id === s) ? s : null;
+}
+
+async function checkAchievement(userId: number, achId: string): Promise<{ ok: boolean; reason?: string }> {
+  const sql = getSql();
+  try {
+    if (achId === "first_presave") {
+      const r = await sql`SELECT count(*)::int as c FROM magnum_presave_clicks WHERE user_id=${userId}`;
+      const c = Number((r[0] as { c: number }).c);
+      return { ok: c >= 1, reason: c >= 1 ? undefined : "нужен пресейв" };
+    }
+    if (achId === "miner_100" || achId === "miner_1000") {
+      const r = await sql`SELECT balance FROM magnum_mining WHERE user_id=${userId} LIMIT 1`;
+      const bal = r.length ? Number((r[0] as { balance: number }).balance) : 0;
+      const need = achId === "miner_100" ? 100 : 1000;
+      return { ok: bal >= need, reason: bal >= need ? undefined : `нужно ${need} руды, сейчас ${bal}` };
+    }
+    if (achId === "shop_first") {
+      const r = await sql`SELECT count(*)::int as c FROM magnum_shop_inventory WHERE user_id=${userId}`;
+      const c = Number((r[0] as { c: number }).c);
+      return { ok: c >= 1, reason: c >= 1 ? undefined : "нужна покупка скина" };
+    }
+    if (achId === "daily_3") {
+      const r = await sql`SELECT max(streak)::int as m FROM magnum_daily_claims WHERE user_id=${userId}`;
+      const m = r[0] ? (r[0] as { m: number | null }).m : 0;
+      const v = Number(m || 0);
+      return { ok: v >= 3, reason: v >= 3 ? undefined : `нужен стрик 3, сейчас ${v}` };
+    }
+    if (achId === "idea_vote") {
+      const r = await sql`SELECT count(*)::int as c FROM magnum_idea_votes WHERE user_id=${userId}`;
+      const c = Number((r[0] as { c: number }).c);
+      return { ok: c >= 1, reason: c >= 1 ? undefined : "нужен голос за идею" };
+    }
+    if (achId === "coins_5k") {
+      const r = await sql`SELECT balance FROM magnum_coins WHERE user_id=${userId} LIMIT 1`;
+      const b = r.length ? Number((r[0] as { balance: number }).balance) : 0;
+      return { ok: b >= 5000, reason: b >= 5000 ? undefined : `нужно 5000 монет, сейчас ${b}` };
+    }
+    if (achId === "cosmetic_first") {
+      const r = await sql`SELECT count(*)::int as c FROM magnum_cosmetics WHERE user_id=${userId}`;
+      const c = Number((r[0] as { c: number }).c);
+      return { ok: c >= 1, reason: c >= 1 ? undefined : "нужна косметика" };
+    }
+    if (achId === "vault_first") {
+      const r = await sql`SELECT count(*)::int as c FROM magnum_mining_vault WHERE user_id=${userId}`;
+      const c = Number((r[0] as { c: number }).c);
+      return { ok: c >= 1, reason: c >= 1 ? undefined : "нужен открытый vault" };
+    }
+    if (achId === "duel_play") {
+      const r = await sql`SELECT count(*)::int as c FROM magnum_leaderboard WHERE player IN (SELECT username FROM magnum_users WHERE id=${userId}) AND game='duel'`;
+      const c = Number((r[0] as { c: number }).c);
+      return { ok: c >= 1, reason: c >= 1 ? undefined : "сыграй дуэль" };
+    }
+  } catch (e) {
+    console.error("[ach check] failed", e);
+    return { ok: false, reason: "db error" };
+  }
+  return { ok: false, reason: "unknown" };
+}
+
+async function handleAchCatalog(): Promise<Response> {
+  return Response.json({ catalog: ACHIEVEMENTS_CATALOG, count: ACHIEVEMENTS_CATALOG.length });
+}
+
+async function handleAchGet(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  try {
+    const sql = getSql();
+    const rows = await sql`SELECT achievement_id, unlocked_at FROM magnum_user_achievements WHERE user_id=${user.id}`;
+    const unlocked = new Set(rows.map((r: unknown) => (r as { achievement_id: string }).achievement_id));
+    const catalog = await Promise.all(ACHIEVEMENTS_CATALOG.map(async a => {
+      if (unlocked.has(a.id)) return { ...a, unlocked: true, achievable: true, hint: null as string | null };
+      const chk = await checkAchievement(user.id, a.id);
+      return { ...a, unlocked: false, achievable: chk.ok, hint: chk.reason || null };
+    }));
+    return Response.json({ catalog, unlocked: [...unlocked], total: ACHIEVEMENTS_CATALOG.length, unlockedCount: unlocked.size });
+  } catch (e) {
+    console.error("[ach get] failed", e);
+    return Response.json({ error: "db error" }, { status: 500 });
+  }
+}
+
+async function handleAchClaim(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`ach:claim:${user.id}:${ip}`, 10, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
+  let body: { achievementId?: string; id?: string };
+  try { body = (await req.json()) as typeof body; } catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
+  const raw = validateAchId(String(body.achievementId ?? body.id ?? ""));
+  if (!raw) return Response.json({ error: "unknown achievement" }, { status: 400 });
+  try {
+    const sql = getSql();
+    const ex = await sql`SELECT id FROM magnum_user_achievements WHERE user_id=${user.id} AND achievement_id=${raw} LIMIT 1`;
+    if (ex.length > 0) return Response.json({ error: "already claimed", achievementId: raw }, { status: 409 });
+    const chk = await checkAchievement(user.id, raw);
+    if (!chk.ok) return Response.json({ error: "not achievable yet", achievementId: raw, reason: chk.reason }, { status: 400 });
+    const def = ACHIEVEMENTS_CATALOG.find(x => x.id === raw)!;
+    await sql`INSERT INTO magnum_user_achievements (user_id, achievement_id, unlocked_at) VALUES (${user.id}, ${raw}, now())`;
+    await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${user.id},1000) ON CONFLICT (user_id) DO NOTHING`;
+    const upd = await sql`UPDATE magnum_coins SET balance=balance+${def.reward} WHERE user_id=${user.id} RETURNING balance`;
+    const bal = Number((upd[0] as { balance: number }).balance);
+    await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${def.reward},'achievement',${JSON.stringify({ achievementId: raw })}::jsonb)`;
+    return Response.json({ ok: true, achievementId: raw, reward: def.reward, balance: bal });
+  } catch (e) {
+    console.error("[ach claim] failed", e);
+    return Response.json({ error: "db error" }, { status: 500 });
+  }
+}
+
+async function handleProfile(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  try {
+    const sql = getSql();
+    const [coinsR, miningR, dailyR, txR, presaveR, shopR, cosR, vaultR, achR, frameR] = await Promise.all([
+      sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`,
+      sql`SELECT balance,upgrades FROM magnum_mining WHERE user_id=${user.id} LIMIT 1`,
+      sql`SELECT streak,reward,claimed_at FROM magnum_daily_claims WHERE user_id=${user.id} ORDER BY claimed_at DESC LIMIT 1`,
+      sql`SELECT count(*)::int as c FROM magnum_transactions WHERE user_id=${user.id}`,
+      sql`SELECT count(*)::int as c FROM magnum_presave_clicks WHERE user_id=${user.id}`,
+      sql`SELECT count(*)::int as c FROM magnum_shop_inventory WHERE user_id=${user.id}`,
+      sql`SELECT count(*)::int as c FROM magnum_cosmetics WHERE user_id=${user.id}`,
+      sql`SELECT count(*)::int as c FROM magnum_mining_vault WHERE user_id=${user.id}`,
+      sql`SELECT count(*)::int as c FROM magnum_user_achievements WHERE user_id=${user.id}`,
+      sql`SELECT verified FROM magnum_frames WHERE user_id=${user.id} ORDER BY created_at DESC LIMIT 1`,
+    ]);
+    const coins = coinsR.length ? Number((coinsR[0] as { balance: number }).balance) : 1000;
+    const mining = miningR.length ? { balance: Number((miningR[0] as { balance: number }).balance), upgrades: (miningR[0] as { upgrades: unknown }).upgrades } : null;
+    const daily = dailyR.length ? dailyR[0] : null;
+    const frameVerified = frameR.length ? Boolean((frameR[0] as { verified: boolean }).verified) : false;
+    return Response.json({
+      user,
+      coins,
+      balance: coins,
+      mining,
+      daily,
+      frameVerified,
+      counts: {
+        transactions: Number((txR[0] as { c: number }).c),
+        presaves: Number((presaveR[0] as { c: number }).c),
+        shop: Number((shopR[0] as { c: number }).c),
+        cosmetics: Number((cosR[0] as { c: number }).c),
+        vaults: Number((vaultR[0] as { c: number }).c),
+        achievements: Number((achR[0] as { c: number }).c),
+      },
+    });
+  } catch (e) {
+    console.error("[profile] failed", e);
+    return Response.json({ error: "db error" }, { status: 500 });
+  }
+}
+
 // ---- Presave handlers (rate limit + validation, stats) ----
 async function handlePresaveClick(req: Request): Promise<Response> {
   const ip = getClientIp(req);
@@ -1022,7 +1202,7 @@ async function handleMiningTop(): Promise<Response> {
 async function handleHealth(): Promise<Response> {
   try {
     const sql = getSql();
-    const [users, coins, mining, presave, ideas, daily, tx, votes] = await Promise.all([
+    const [users, coins, mining, presave, ideas, daily, tx, votes, ach] = await Promise.all([
       sql`SELECT count(*)::int as c FROM magnum_users`,
       sql`SELECT count(*)::int as c FROM magnum_coins`,
       sql`SELECT count(*)::int as c FROM magnum_mining`,
@@ -1031,6 +1211,7 @@ async function handleHealth(): Promise<Response> {
       sql`SELECT count(*)::int as c FROM magnum_daily_claims`,
       sql`SELECT count(*)::int as c FROM magnum_transactions`,
       sql`SELECT count(*)::int as c FROM magnum_idea_votes`,
+      sql`SELECT count(*)::int as c FROM magnum_user_achievements`,
     ]);
     return Response.json({
       ok: true,
@@ -1044,6 +1225,7 @@ async function handleHealth(): Promise<Response> {
         daily: Number((daily[0] as { c: number }).c),
         transactions: Number((tx[0] as { c: number }).c),
         ideaVotes: Number((votes[0] as { c: number }).c),
+        achievements: Number((ach[0] as { c: number }).c),
       },
       uptime: process.uptime(),
     });
@@ -1346,6 +1528,12 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/mining/top" && req.method === "GET") return handleMiningTop();
     if (url.pathname === "/magnum/api/mining/vault" && req.method === "GET") return handleMiningVaultGet(req);
     if (url.pathname === "/magnum/api/mining/vault/claim" && req.method === "POST") return handleMiningVaultClaim(req);
+
+    // achievements + profile
+    if (url.pathname === "/magnum/api/achievements/catalog" && req.method === "GET") return handleAchCatalog();
+    if (url.pathname === "/magnum/api/achievements" && req.method === "GET") return handleAchGet(req);
+    if (url.pathname === "/magnum/api/achievements/claim" && req.method === "POST") return handleAchClaim(req);
+    if (url.pathname === "/magnum/api/profile" && req.method === "GET") return handleProfile(req);
 
     if (url.pathname === "/magnum" || url.pathname.startsWith("/magnum/")) {
       const rel = url.pathname.replace(/^\/magnum\/?/, "");
