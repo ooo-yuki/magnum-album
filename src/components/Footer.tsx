@@ -73,7 +73,25 @@ export function Footer() {
   const bufferRef = useRef<string[]>([]);
   const overlayRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+  const e42Ref = useRef<HTMLSpanElement>(null);
   const navigate = useNavigate();
+
+  // GSAP glow pulse on the "42" text
+  useEffect(() => {
+    if (!e42Ref.current) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const ctx = gsap.context(() => {
+      gsap.to(e42Ref.current, {
+        textShadow: "0 0 12px rgba(255,45,85,0.7), 0 0 28px rgba(255,45,85,0.35), 0 0 48px rgba(255,45,85,0.15)",
+        duration: 1.6,
+        repeat: -1,
+        yoyo: true,
+        ease: "sine.inOut",
+      });
+    });
+    return () => ctx.revert();
+  }, []);
 
   const trigger = useCallback(() => {
     setShow(true);
@@ -128,7 +146,7 @@ export function Footer() {
   return (
     <>
       <footer className={styles.footer}>
-        <p>© 2026 Пятерка × <span className={styles.e42}>42</span> братухи • MAGNUM</p>
+        <p>© 2026 Пятерка × <span className={styles.e42} ref={e42Ref}>42</span> братухи • MAGNUM</p>
       </footer>
       {show && (
         <div

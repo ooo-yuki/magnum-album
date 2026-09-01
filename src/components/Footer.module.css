@@ -124,4 +124,9 @@
   display: inline-block;
   font-weight: 900;
   color: var(--accent);
+  will-change: text-shadow;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .e42 { will-change: auto; }
 }
