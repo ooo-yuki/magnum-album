@@ -34,6 +34,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .DS_Store
 .neon
 
-# reports — локальные, не в git (fixer пишет сюда)
+# reports — локальные, не в git (fixer пишет сюда) — watchdog除外
 reports/
+!reports/watchdog-*.md
 
