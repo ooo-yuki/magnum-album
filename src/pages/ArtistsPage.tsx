@@ -7,9 +7,12 @@ gsap.registerPlugin(ScrollTrigger);
 
 export function ArtistsPage() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const timelineRef = useRef<HTMLDivElement>(null);
+  const mediaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const ctx = gsap.context(() => {
       gsap.set(`.${styles.artistCard}`, { y: 60, opacity: 0 });
       gsap.to(`.${styles.artistCard}`, {
@@ -28,6 +31,43 @@ export function ArtistsPage() {
           scrub: 1,
         },
       });
+
+      // staggered reveal for timeline items
+      if (!reducedMotion && timelineRef.current) {
+        const items = timelineRef.current.querySelectorAll(`.${styles.timelineMiniItem}`);
+        gsap.set(items, { y: 24, opacity: 0, scale: 0.95 });
+        gsap.to(items, {
+          scrollTrigger: {
+            trigger: timelineRef.current,
+            start: "top 85%",
+            toggleActions: "play none none none",
+          },
+          y: 0,
+          opacity: 1,
+          scale: 1,
+          stagger: 0.1,
+          duration: 0.5,
+          ease: "back.out(1.4)",
+        });
+      }
+
+      // staggered reveal for media cards
+      if (!reducedMotion && mediaRef.current) {
+        const cards = mediaRef.current.querySelectorAll(`.${styles.mediaCard}`);
+        gsap.set(cards, { y: 20, opacity: 0 });
+        gsap.to(cards, {
+          scrollTrigger: {
+            trigger: mediaRef.current,
+            start: "top 85%",
+            toggleActions: "play none none none",
+          },
+          y: 0,
+          opacity: 1,
+          stagger: 0.08,
+          duration: 0.45,
+          ease: "power2.out",
+        });
+      }
     }, containerRef);
     return () => ctx.revert();
   }, []);
@@ -147,7 +187,7 @@ export function ArtistsPage() {
           5opka и MellSher — друзья-ровесники (оба — апрель 1996, Ростов). Вместе взорвали РЗТ поп-экспериментами, а MAGNUM — их последний совместный альбом. 
           Дальше — сольные пути: Кирилл как хип-хоп (CLAY, 73), Игорь как серьёзный поп-артист. Все старые фиты останутся на площадках, новые подпишутся как <strong>MlSh</strong>.
         </p>
-        <div className={styles.timelineMini}>
+        <div className={styles.timelineMini} ref={timelineRef}>
           <div className={styles.timelineMiniItem}><span>20.09.2024</span><strong>SUPERNOVA</strong><small>Мерси — главный хит</small></div>
           <div className={styles.timelineMiniItem}><span>25.07.2025</span><strong>SUPER PUPER NOVA</strong><small>80 • альбом месяца • XXL 86</small></div>
           <div className={styles.timelineMiniItem}><span>03.04.2026</span><strong>CLAY (соло 5opka)</strong><small>73 • 81 рецензия</small></div>
@@ -162,7 +202,7 @@ export function ArtistsPage() {
         </div>
       </div>
 
-      <div className={styles.media}>
+      <div className={styles.media} ref={mediaRef}>
         <h2>Где слушать и смотреть</h2>
         <div className={styles.mediaGrid}>
           <a href="https://music.yandex.ru/artist/7544304" target="_blank" rel="noreferrer" className={styles.mediaCard}><strong>Яндекс Музыка</strong><span>400K+ слушателей • 5opka</span></a>
