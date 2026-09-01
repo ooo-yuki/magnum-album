@@ -7,6 +7,7 @@
 
 import { neon, Pool, neonConfig } from "@neondatabase/serverless";
 import ws from "ws";
+import { STUDIO_TRACKS, STUDIO_PRESETS, STUDIO_SCENE_DEFAULTS, STUDIO_BG_OPTIONS, STUDIO_FILTER_OPTIONS, isStudioTrackSlug, isStudioPresetId, getBpmForTrack, validateScenes } from "./src/lib/studio42.ts";
 try { (neonConfig as unknown as { webSocketConstructor?: unknown }).webSocketConstructor = ws; } catch {}
 
 const MIMO_BASE = process.env.MIMO_BASE_URL || "https://token-plan-sgp.xiaomimimo.com/v1";
@@ -3600,7 +3601,6 @@ async function handlePetPrestige(req:Request):Promise<Response>{
 }
 
 // ---- STUDIO 42 — нейро-визуализатор + клип-конструктор ----
-import { STUDIO_TRACKS, STUDIO_PRESETS, STUDIO_SCENE_DEFAULTS, STUDIO_BG_OPTIONS, STUDIO_FILTER_OPTIONS, isStudioTrackSlug, isStudioPresetId, getBpmForTrack, validateScenes } from "./src/lib/studio42.ts";
 async function ensureStudioTables(): Promise<void> {
   const sql = getSql();
   await sql`CREATE TABLE IF NOT EXISTS magnum_studio_saves (id serial PRIMARY KEY, user_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, track_slug text NOT NULL, preset text NOT NULL, scenes jsonb NOT NULL, created_at timestamp DEFAULT now() NOT NULL)`;
