@@ -4,7 +4,6 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import styles from "./CTA.module.css";
 
 gsap.registerPlugin(ScrollTrigger);
-
 const PRESAVE_URL =
   "https://music.yandex.ru/artist/7544304?utm_medium=copy_link&ref_id=41b45b35-e5b0-4286-9a53-2c1163828366";
 const SPOTIFY_URL = "https://open.spotify.com/artist/5opka";
@@ -21,8 +20,6 @@ export function CTA() {
   useEffect(() => {
     if (!sectionRef.current) return;
 
-    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
     const ctx = gsap.context(() => {
       const entranceEls = [
         headingRef.current,
@@ -31,8 +28,8 @@ export function CTA() {
         proofRef.current,
       ].filter(Boolean) as Element[];
 
-      // reduced-motion: show instantly, skip all GSAP timelines
-      if (prefersReduced) {
+      // reduced-motion gate: instant show, skip timelines/magnet
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
         gsap.set(entranceEls, { y: 0, opacity: 1, scale: 1, clearProps: "transform" });
         gsap.set(cardsRef.current.filter(Boolean), { y: 0, opacity: 1, scale: 1 });
         return;
@@ -53,7 +50,7 @@ export function CTA() {
         .to(cardsRef.current.filter(Boolean), { y: 0, opacity: 1, scale: 1, duration: 0.6, stagger: 0.12 }, "-=0.2")
         .to(proofRef.current, { y: 0, opacity: 1, duration: 0.5 }, "-=0.25");
 
-      // shimmer loop (respects reduced-motion already gated above)
+      // shimmer loop
       if (shimmerRef.current) {
         const shimmerTl = gsap.timeline({
           repeat: -1,
@@ -64,70 +61,66 @@ export function CTA() {
         shimmerTl.to({}, { duration: 3.2 });
       }
 
-      // hover RGB + magnet for cards — GSAP RGB split
+      // magnet + RGB hover on CTA buttons — all cards, reduced-motion gated, cleanup via ctx.revert
       const cleanups: Array<() => void> = [];
-      cardsRef.current.forEach((card) => {
+      cardsRef.current.forEach((card, idx) => {
         if (!card) return;
+        const strength = idx === 0 ? 14 : 10;
         const onEnter = () => {
+          if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
           gsap.to(card, {
             y: -4,
             scale: 1.015,
             duration: 0.25,
             ease: "power2.out",
-            // RGB shadow split
             boxShadow: "0 14px 40px rgba(0,0,0,0.34), 0 0 22px rgba(255,45,85,0.22), 0 0 30px rgba(88,101,242,0.18)",
             overwrite: "auto",
           });
           gsap.to(card, {
             duration: 0.22,
             ease: "power2.out",
-            // RGB text/border tint via filter hue for subtle shift
             filter: "drop-shadow(1px 0 0 rgba(255,0,80,0.35)) drop-shadow(-1px 0 0 rgba(0,255,255,0.35))",
             overwrite: "auto",
           });
         };
         const onLeave = () => {
+          if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+            gsap.set(card, { x: 0, y: 0, scale: 1, clearProps: "filter" });
+            return;
+          }
           gsap.to(card, {
+            x: 0,
             y: 0,
             scale: 1,
-            duration: 0.35,
-            ease: "power3.out",
+            duration: 0.55,
+            ease: "elastic.out(1,0.42)",
             boxShadow: "0 0 0 transparent",
             filter: "none",
             overwrite: "auto",
           });
         };
         const onMove = (e: MouseEvent) => {
-          if (card !== cardsRef.current[0]) return;
+          if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
           const r = card.getBoundingClientRect();
-          const dx = ((e.clientX - (r.left + r.width / 2)) / r.width) * 10;
-          const dy = ((e.clientY - (r.top + r.height / 2)) / r.height) * 7;
+          const dx = ((e.clientX - (r.left + r.width / 2)) / r.width) * strength;
+          const dy = ((e.clientY - (r.top + r.height / 2)) / r.height) * (strength * 0.55);
           gsap.to(card, { x: dx, y: dy, duration: 0.4, ease: "power3.out", overwrite: "auto" });
         };
-        const onMoveLeave = () => {
-          if (card === cardsRef.current[0]) gsap.to(card, { x: 0, y: 0, duration: 0.6, ease: "elastic.out(1,0.4)" });
-        };
         card.addEventListener("mouseenter", onEnter);
-        card.addEventListener("mouseleave", () => {
-          onLeave();
-          onMoveLeave();
-        });
-        if (card === cardsRef.current[0]) {
-          card.addEventListener("mousemove", onMove);
-        }
+        card.addEventListener("mouseleave", onLeave);
+        card.addEventListener("mousemove", onMove);
         cleanups.push(() => {
           card.removeEventListener("mouseenter", onEnter);
           card.removeEventListener("mouseleave", onLeave);
           card.removeEventListener("mousemove", onMove);
         });
       });
-      (sectionRef.current as unknown as { _ctaHoverCleanup?: () => void })._ctaHoverCleanup = () =>
+      (sectionRef.current as unknown as { _ctaCleanups?: () => void })._ctaCleanups = () =>
         cleanups.forEach((fn) => fn());
     }, sectionRef);
 
     return () => {
-      (sectionRef.current as unknown as { _ctaHoverCleanup?: () => void })?._ctaHoverCleanup?.();
-      // legacy _cleanup from primary magnet (defensive)
+      (sectionRef.current as unknown as { _ctaCleanups?: () => void })?._ctaCleanups?.();
       (cardsRef.current[0] as unknown as { _cleanup?: () => void })?._cleanup?.();
       ctx.revert();
     };
