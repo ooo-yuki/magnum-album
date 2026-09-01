@@ -26,6 +26,7 @@ import { GalleryPage } from "./pages/GalleryPage";
 import { MiningPage } from "./pages/MiningPage";
 import { PresaveRatingPage } from "./pages/PresaveRatingPage";
 import { IdeasPage } from "./pages/IdeasPage";
+import { RecapsPage } from "./pages/RecapsPage";
 
 export default function App() {
   return (
@@ -59,6 +60,7 @@ export default function App() {
           <Route path="mining" element={<MiningPage />} />
           <Route path="presave-rating" element={<PresaveRatingPage />} />
           <Route path="ideas" element={<IdeasPage />} />
+          <Route path="recaps" element={<RecapsPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

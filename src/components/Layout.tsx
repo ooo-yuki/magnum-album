@@ -13,6 +13,7 @@ import styles from "./Layout.module.css";
 
 const NAV_ITEMS = [
   { to: "/magnum", label: "Главная" },
+  { to: "/magnum/recaps", label: "Пересказы" },
   { to: "/magnum/shop", label: "Магазин" },
   { to: "/magnum/eco", label: "Эко-рейтинг" },
   { to: "/magnum/gallery", label: "Галерея 42" },

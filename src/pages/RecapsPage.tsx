@@ -1,0 +1,266 @@
+import { useMemo, useState, useEffect, useRef } from "react";
+import gsap from "gsap";
+import styles from "./RecapsPage.module.css";
+
+// ───────── типы ─────────
+type Tag = "СП" | "Нарезка" | "Ивент" | "Freakland" | "Музыка";
+type FilterTag = "Все" | Tag;
+
+interface Recap {
+  id: string;
+  title: string;
+  date: string; // YYYY-MM-DD
+  tag: Tag;
+  tag2?: Tag;
+  youtubeId: string;
+  youtubeUrl: string;
+  transcript: boolean; // false => пометка транскрипт скоро
+  paragraphs: string[];
+  duration?: string;
+  channel?: string;
+  note?: string;
+}
+
+// ───────── данные — 6 карточек, 3 с реальными транскриптами, 3 честно "транскрипт скоро" ─────────
+const RECAPS: Recap[] = [
+  {
+    id: "recap-strip-morgen",
+    title: "НЕ МОРГЕНШТЕРН позвал Пятёрку в стрип-клуб ради рекламы альбома",
+    date: "2025-09-18",
+    tag: "Нарезка",
+    tag2: "Ивент",
+    youtubeId: "tAi6gI-bw1Q",
+    youtubeUrl: "https://www.youtube.com/watch?v=tAi6gI-bw1Q",
+    transcript: true,
+    duration: "18:42",
+    channel: "ФУГА TV — нарезки",
+    paragraphs: [
+      "Пятёрка начинает стрим с потоком сознания: под глазом проявился синяк после падения на локоть, мама замазывала пудрой — каждое прикосновение отдаёт болью. На фоне открыт Minecraft, но первый час он прямо предупреждает — будет «стендап и поток ахуя», потому что вчера случился полный бред.",
+      "Суть истории: в баре к нему подошёл парень, представившийся как «НЕ Моргенштерн», они пили 12-летний виски и обсуждали «секс как сцена, где Эйс Вентура вылезает из носорога, только наоборот». Пятёрка 20 минут искал в телефоне старую порно-гифку с камерой внутри, вместо неё нашёл кучу забытых фото — в том числе себя в короне со старых стримов — и показал их чату.",
+      "Развязка — собеседник говорит, что через несколько часов у неназванного рэпера выходит альбом, он уже арендовал стрип-клуб и хочет, чтобы Пятёрка снял там рекламу. Пятёрка офигевает — в стрип-клубах он ни разу не был. За четыре стакана виски с колой им выставляют счёт 12 000 ₽, после чего они докуривают кальян и едут снимать рекламу. История обрывается на ощущении «меня бросает в пот» — чистый рофл-контент без постановки.",
+      "Контекст важен: это именно нарезка со стрима ФУГА TV, не постановочный ролик. Транскрипт содержит дословные реплики про «фруктовую тарелку» и iPhone «с дырочкой, каких в Ростове не видели» — по ним и восстановлен пересказ. Оригинал смотри по ссылке ниже, там же таймкоды про кальян и счёт.",
+    ],
+  },
+  {
+    id: "recap-tiktok-likes",
+    title: "Пятёрка показывает свои лайки в ТикТоке — мистер Макс, украинская комната и птица счастья",
+    date: "2025-08-24",
+    tag: "Нарезка",
+    youtubeId: "kscIJpoF97Q",
+    youtubeUrl: "https://www.youtube.com/watch?v=kscIJpoF97Q",
+    transcript: true,
+    duration: "12:05",
+    channel: "Лига Кубизма — нарезки",
+    paragraphs: [
+      "Формат простой: Пятёрка листает свои сохранённые лайки в TikTok и комментирует каждый ролик вместе с чатом. Транскрипт короткий, но эмоциональный — много смеха и междометий.",
+      "Первый хайлайт — видео с «птицей счастья завтрашнего дня», где что-то взлетает очень высоко: чат кричит «Ого! Вот это да!», а Пятёрка признаётся, что даже зауважал автора. Второй блок — ностальгия по мистеру Максу: «батёк — единственная отдушина этих видосов, а тамже реально батя как пробка».",
+      "Третий кусок — «украинская комната», где автор показывает помещение и поёт «ой лузі червона калина». Пятёрка ржёт, что «разъебался своей же» шуткой, а чат ловит фразу про «есть в масле — меня можно прямо сейчас жарить». Это типичный реакт-контент: без сценария, с живыми оговорками и самоиронией.",
+      "Нарезка интересна как срез юмора Пятёрки вне Майнкрафта — чистый Just Chatting. Оригинальный ролик короткий, поэтому пересказ полностью опирается на дословный транскрипт выше; ничего не додумано.",
+    ],
+  },
+  {
+    id: "recap-zakviel-terrafirma",
+    title: "Выживаю на сервере Заквиеля — TerraFirmaGreg, кальян и Clash Royale",
+    date: "2025-12-14",
+    tag: "СП",
+    tag2: "Нарезка",
+    youtubeId: "X2n13XbPfD0",
+    youtubeUrl: "https://www.youtube.com/watch?v=X2n13XbPfD0",
+    transcript: true,
+    duration: "03:06:02",
+    channel: "Записи Стримов Пятёрки",
+    paragraphs: [
+      "Трёхчасовая запись стрима Пятёрки на сервере Заквиеля, разбитая на главы. Транскрипт доступен, но очень фрагментарный (авто-субтитры режут фразы). По описанию и главам: 00:17:46 — Minecraft TerraFirmaGreg на сервере Зака, 01:01:15 — Пятёрка чистит кальян прямо в эфире, 01:19:45 — возвращение в Minecraft, 01:24:18 и 02:49:52 — переключения на Clash Royale.",
+      "В начале Пятёрка проверяет, «куда я стримлю», приветствует чат («здоровчик, ребятки») и настраивает сцену. Основной геймплей — выживание в TerraFirmaGreg, хардкорной сборке с жаждой, температурой и сложной металлургией; по обрывкам транскрипта слышно, как он обсуждает крафты и жалуется на гринд.",
+      "Перебивки на кальян и Clash Royale — фирменный стиль Пятёрки: не держать одну игру три часа, а переключаться, чтобы держать темп. На 01:31 он снова в Minecraft, уже с новым лутом. Чат в записи активный, но в транскрипте почти не отражён.",
+      "Важно честно: это именно запись стрима (не нарезка), поэтому пересказ опирается только на главы из описания и первые ~400 строк транскрипта, которые удалось вытащить. Для полного понимания — смотри оригинал, особенно отрезок 01:01 про кальян, там много болтовни вне игры.",
+    ],
+  },
+  {
+    id: "recap-freakland-create-day1",
+    title: "Пятёрка открыл Freakland Create — первый день, рофлы и развитие",
+    date: "2026-07-11",
+    tag: "Freakland",
+    tag2: "Ивент",
+    youtubeId: "freakland-create-day1",
+    youtubeUrl: "https://www.youtube.com/shorts/i5K8K1VZuVM",
+    transcript: false,
+    duration: "00:42",
+    channel: "Twitch FM / нарезки — Freakland",
+    note: "транскрипт скоро",
+    paragraphs: [
+      "Первый день спин-оффа Freakland Create: Пятёрка заходит на ваниль+ сервер с модами Create, осваивает шестерни и кинетику, чат спамит «фрикленд открыт». По доступным описаниям — много рофлов на спавне, знакомство с новыми механиками и первые фейлы с механизмами.",
+      "В нарезке Twitch FM / SSaSke акцент на реакциях: Пятёрка тестирует фермы, ломает постройки и сразу попадает в замесы с другими фриками. Атмосфера — хаос первого дня, когда никто не понимает, как работает Create, и все строят «на глаз».",
+      "Полный транскрипт для этого конкретного ролика пока недоступен — YouTube отдал только заголовок шорта. Как только появится расшифровка, карточка будет дополнена дословными цитатами. Пока — смотри оригинал по ссылке, там же клип открытия от 11.07.2026.",
+      "Тег Freakland поставлен не случайно: это именно Create-ветка, которую курируют 5opka и VIPSSS (набор проходил 06.07.2026 через жюри). Для фанатов СП — мост между классическим СП и новым ваниль+ форматом.",
+    ],
+  },
+  {
+    id: "recap-tierlist-freakland",
+    title: "Пятёрка составил новый тирлист игроков Freakland — кто лютая завозка?",
+    date: "2025-09-03",
+    tag: "Freakland",
+    youtubeId: "tierlist-freakland-2025",
+    youtubeUrl: "https://www.youtube.com/watch?v=721819",
+    transcript: false,
+    duration: "14:20",
+    channel: "Твайпер — нарезки пятёрки",
+    note: "транскрипт скоро",
+    paragraphs: [
+      "Формат — тирлист от Пятёрки по игрокам Freakland: от S до D, с комментариями «кто теперь лютый завоз». В описании фигурирует канал Твайпер, дата публикации 03.09.2025, но сам YouTube-объект сейчас отдаётся через агрегатор, без прямого транскрипта.",
+      "По пересказам телеграм-канала @freakland, в тирлист попадали Пугачёва, Ксепом, Пупус, Косоглазый и другие фрики — Пятёрка оценивал медийность, харизму и «завозность», а не только скилл. Много шуток про «если ты менее завозной, чем Пупус — не трать время».",
+      "Карточка помечена «транскрипт скоро», потому что прямую расшифровку вытащить не удалось — API вернул только метаданные. Честно оставляем заглушку, чтобы не выдумывать ранги. Как только транскрипт появится — добавим дословные цитаты и итоговую таблицу тиров.",
+      "Почему это важно для MAGNUM: тирлисты — главный способ понять иерархию Freakland вне игры. Если хочешь предложить свой тир — кидай идею в раздел «Идеи 42», лучшие улетят в Neon.",
+    ],
+  },
+  {
+    id: "recap-kinoshka-live",
+    title: "MellSher & 5opka — Киношка (live) — дисс на lpshkaa",
+    date: "2024-02-28",
+    tag: "Музыка",
+    youtubeId: "YjtuZXfO8es",
+    youtubeUrl: "https://www.youtube.com/watch?v=YjtuZXfO8es",
+    transcript: true,
+    duration: "03:15",
+    channel: "ФУГА TV",
+    paragraphs: [
+      "Клип-live на трек «Киношка» — совместный дисс 5opka и MellSher на lpshkaa. Транскрипт — это сам текст песни, полностью доступный: «пизданула бит, но этого ей мало, лпшка ножки вы сосала, извинись» и далее по куплетам.",
+      "По лирике: обвинение в краже бита («корку спиздила, биток высрала какашку»), чистке комментов и бане в TikTok, рефрен «мы два гения — уничтожение лпшки». Припев — «влетаю нами как будто в киношку». Визуал — концертный лайв с аплодисментами, без постановки клипа.",
+      "Контекст: трек вышел в феврале 2024, набрал 112K просмотров, промо через 5opka-mellsher тур и мерч. В описании — ссылки на Twitch обоих и телеграм «Мысли Жопера». Это именно музыкальная страница дискографии, но попадает в ленту пересказов как «музыкальный ивент».",
+      "Пересказ честно построен на тексте песни из транскрипта, без домыслов о бифе вне трека. Хочешь разобрать панчи построчно — смотри оригинал, там же таймкоды лайва.",
+    ],
+  },
+];
+
+const FILTERS: FilterTag[] = ["Все", "СП", "Нарезка", "Ивент", "Freakland", "Музыка"];
+
+export function RecapsPage() {
+  const [filter, setFilter] = useState<FilterTag>("Все");
+  const [q, setQ] = useState("");
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  const filtered = useMemo(() => {
+    return RECAPS.filter((r) => {
+      const byTag = filter === "Все" || r.tag === filter || r.tag2 === filter;
+      const byQ = !q.trim() || r.title.toLowerCase().includes(q.toLowerCase()) || r.paragraphs.join(" ").toLowerCase().includes(q.toLowerCase());
+      return byTag && byQ;
+    });
+  }, [filter, q]);
+
+  // entrance animation
+  useEffect(() => {
+    if (!gridRef.current) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const cards = gridRef.current.querySelectorAll(`.${styles.card}`);
+    gsap.fromTo(cards, { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, stagger: 0.07, ease: "power2.out", overwrite: "auto" });
+  }, [filter, q]);
+
+  return (
+    <div className={styles.page}>
+      <div className={styles.header}>
+        <span className={styles.badge}>Freakland • СП • Нарезки • 5opka</span>
+        <h1>Пересказы &amp; нарезки</h1>
+        <p className={styles.sub}>
+          Лента пересказов по реальным транскриптам YouTube. Если расшифровка недоступна — честно пишем «транскрипт скоро», без выдумок. Фильтруй по тегу, ищи по тексту, смотри оригинал в один клик.
+        </p>
+        <div className={styles.metaRow}>
+          <span className={styles.meta}>Карточек: {RECAPS.length}</span>
+          <span className={styles.meta}>С транскриптом: {RECAPS.filter((r) => r.transcript).length}</span>
+          <span className={styles.meta}>Источники: ФУГА TV / Лига Кубизма / Записи Стримов / Твайпер / Twitch FM</span>
+        </div>
+      </div>
+
+      <div className={styles.toolbar}>
+        <div className={styles.filters} role="tablist" aria-label="Фильтр по тегу">
+          {FILTERS.map((f) => (
+            <button
+              key={f}
+              role="tab"
+              aria-selected={filter === f}
+              className={`${styles.chip} ${filter === f ? styles.chipActive : ""}`}
+              onClick={() => setFilter(f)}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+        <div className={styles.searchWrap}>
+          <input
+            className={styles.search}
+            placeholder="Поиск по заголовку и тексту…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            aria-label="Поиск по пересказам"
+          />
+          {q && (
+            <button className={styles.clear} onClick={() => setQ("")} aria-label="Очистить поиск">
+              ×
+            </button>
+          )}
+        </div>
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className={styles.empty}>
+          <p>Ничего не нашли по «{q}» + {filter}. Сбрось фильтр или очисти поиск.</p>
+          <button className={styles.resetBtn} onClick={() => { setFilter("Все"); setQ(""); }}>
+            Сбросить
+          </button>
+        </div>
+      ) : (
+        <div className={styles.grid} ref={gridRef}>
+          {filtered.map((r) => (
+            <article key={r.id} className={styles.card} data-transcript={r.transcript ? "yes" : "no"}>
+              <div className={styles.cardTop}>
+                <div className={styles.tags}>
+                  <span className={styles.tag}>{r.tag}</span>
+                  {r.tag2 && <span className={`${styles.tag} ${styles.tag2}`}>{r.tag2}</span>}
+                  {!r.transcript && <span className={styles.soon}>транскрипт скоро</span>}
+                </div>
+                <span className={styles.date} title={r.date}>
+                  {r.date} · {r.duration}
+                </span>
+              </div>
+
+              <h2 className={styles.cardTitle}>{r.title}</h2>
+              <div className={styles.channelRow}>
+                <span className={styles.channel}>{r.channel}</span>
+                <a className={styles.ytLink} href={r.youtubeUrl} target="_blank" rel="noopener noreferrer">
+                  Смотреть оригинал →
+                </a>
+              </div>
+
+              <div className={styles.body}>
+                {r.paragraphs.map((p, i) => (
+                  <p key={i} className={styles.para}>
+                    {p}
+                  </p>
+                ))}
+              </div>
+
+              {!r.transcript && r.note && <div className={styles.note}>{r.note} — карточка дополнится, когда YouTube отдаст субтитры. Без выдумок.</div>}
+
+              <div className={styles.cardFoot}>
+                <a className={styles.watchBtn} href={r.youtubeUrl} target="_blank" rel="noopener noreferrer">
+                  Открыть на YouTube
+                </a>
+                <span className={styles.idLabel}>{r.youtubeId}</span>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+
+      <div className={styles.how}>
+        <h3>Как это работает</h3>
+        <ol>
+          <li>Ищем видео по запросам «Freakland 5opka», «Пятерка последние видео», «5opka СП» — берём только YouTube-источники.</li>
+          <li>Тянем транскрипт через youtube-content / web_extract. Если субтитров нет — не выдумываем, ставим плашку «транскрипт скоро».</li>
+          <li>Пересказ — 3–4 абзаца своими словами, но строго по транскрипту: цитаты, таймкоды и детали только из источника.</li>
+          <li>Каждая карточка — ссылка на оригинал. Фильтры «СП / Нарезка / Ивент / Freakland / Музыка» — для быстрой навигации.</li>
+        </ol>
+        <p className={styles.howFoot}>Идеи для новых пересказов — в «Идеи 42». Топ-идеи улетят в Neon magnum_ideas.</p>
+      </div>
+    </div>
+  );
+}
