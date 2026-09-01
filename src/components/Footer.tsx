@@ -70,6 +70,7 @@ function spawnKonamiConfetti() {
 
 export function Footer() {
   const [show, setShow] = useState(false);
+  const [konamiCount, setKonamiCount] = useState(0);
   const bufferRef = useRef<string[]>([]);
   const overlayRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -94,6 +95,7 @@ export function Footer() {
   }, []);
 
   const trigger = useCallback(() => {
+    setKonamiCount((c) => c + 1);
     setShow(true);
     if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       spawnKonamiConfetti();
@@ -160,7 +162,7 @@ export function Footer() {
           aria-label="Пасхалка 42"
         >
           <div ref={cardRef} className={styles.konamiCard} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.konamiBadge}>KONAMI CODE • 42</div>
+            <div className={styles.konamiBadge}>KONAMI CODE • 42 {konamiCount > 1 ? `×${konamiCount}` : ""}</div>
             <div className={styles.konamiTitle}>BRATUKHI UNLOCKED</div>
             <p className={styles.konamiSub}>
               Ты ввёл секретный код. <b>42 братухи</b> одобряют твою настойчивость. Загляни в раздел «42 братухи» — там целый мир MAGNUM.
