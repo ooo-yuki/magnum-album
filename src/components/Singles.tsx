@@ -5,6 +5,8 @@ import styles from "./Singles.module.css";
 
 gsap.registerPlugin(ScrollTrigger);
 
+const EQ_COUNT = 5;
+
 interface Single {
   name: string;
   artists: string;
@@ -34,6 +36,7 @@ export function Singles() {
   const sectionRef = useRef<HTMLElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const cardsRef = useRef<(HTMLAnchorElement | null)[]>([]);
+  const eqRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!sectionRef.current) return;
@@ -65,6 +68,26 @@ export function Singles() {
         duration: 0.8,
         ease: "power2.out",
       });
+
+      // equalizer bars — staggered bounce loop
+      if (eqRef.current && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        const bars = eqRef.current.querySelectorAll(`.${styles.eqBar}`);
+        bars.forEach((bar, i) => {
+          gsap.to(bar, {
+            scaleY: 0.3 + Math.random() * 0.7,
+            duration: 0.35 + Math.random() * 0.25,
+            repeat: -1,
+            yoyo: true,
+            ease: "sine.inOut",
+            delay: i * 0.08,
+            scrollTrigger: {
+              trigger: sectionRef.current,
+              start: "top 80%",
+              toggleActions: "play pause resume pause",
+            },
+          });
+        });
+      }
     }, sectionRef);
 
     return () => ctx.revert();
@@ -74,6 +97,11 @@ export function Singles() {
     <section className={styles.singles} id="singles" ref={sectionRef}>
       <h2 className={styles.title} ref={titleRef}>
         Синглы из альбома
+        <span className={styles.eq} ref={eqRef} aria-hidden>
+          {Array.from({ length: EQ_COUNT }, (_, i) => (
+            <span key={i} className={styles.eqBar} />
+          ))}
+        </span>
       </h2>
       {SINGLES.map((single, i) => (
         <a

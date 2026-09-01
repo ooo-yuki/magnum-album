@@ -11,6 +11,38 @@
   color: var(--accent);
   text-align: center;
   margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+}
+
+/* equalizer bars */
+.eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 14px;
+}
+
+.eqBar {
+  display: block;
+  width: 3px;
+  height: 100%;
+  border-radius: 1.5px;
+  background: var(--accent);
+  transform-origin: bottom center;
+  will-change: transform;
+}
+
+.eqBar:nth-child(1) { height: 60%; }
+.eqBar:nth-child(2) { height: 100%; }
+.eqBar:nth-child(3) { height: 45%; }
+.eqBar:nth-child(4) { height: 85%; }
+.eqBar:nth-child(5) { height: 55%; }
+
+@media (prefers-reduced-motion: reduce) {
+  .eq { display: none; }
 }
 
 .card {
