@@ -87,3 +87,27 @@ export const magnumPresaveClicks = pgTable("magnum_presave_clicks", {
   ip: text("ip"),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+export const magnumDailyClaims = pgTable("magnum_daily_claims", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => magnumUsers.id).notNull(),
+  claimedAt: timestamp("claimed_at").defaultNow().notNull(),
+  streak: integer("streak").default(1).notNull(),
+  reward: integer("reward").default(42).notNull(),
+});
+
+export const magnumTransactions = pgTable("magnum_transactions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => magnumUsers.id).notNull(),
+  amount: integer("amount").notNull(),
+  reason: text("reason").notNull(),
+  meta: jsonb("meta").default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const magnumIdeaVotes = pgTable("magnum_idea_votes", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => magnumUsers.id).notNull(),
+  ideaId: integer("idea_id").references(() => magnumIdeas.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});

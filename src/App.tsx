@@ -1,4 +1,4 @@
-// MAGNUM App — perf: 14 games code-split via React.lazy + Suspense
+// MAGNUM App — perf: 16 games code-split via React.lazy + Suspense
 // Fallback: GameFallback; vendor chunk split in build.ts
 import { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -10,7 +10,7 @@ import { About42Page } from "./pages/About42Page";
 import { GamePage } from "./pages/GamePage";
 import { GamesHub } from "./pages/GamesHub";
 
-// perf 14:26 — heavy pages lazy to cut main ~1.06MB (Gallery 441KB + Recaps 277KB + Discography 36KB + Shop 29KB + Eco/Mining/etc)
+// perf 16:26 — heavy pages lazy to cut main ~1.06MB (Gallery 441KB + Recaps 277KB + Discography 36KB + Shop 29KB + Eco/Mining/etc)
 const DiscographyPage = lazy(() => import("./pages/DiscographyPage").then(m => ({ default: m.DiscographyPage })));
 const ArtistsPage = lazy(() => import("./pages/ArtistsPage").then(m => ({ default: m.ArtistsPage })));
 const ShopPage = lazy(() => import("./pages/ShopPage").then(m => ({ default: m.ShopPage })));

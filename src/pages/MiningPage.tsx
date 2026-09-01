@@ -3,6 +3,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import styles from "./MiningPage.module.css";
 gsap.registerPlugin(ScrollTrigger);
+const RGB_GLOW="0 12px 36px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,45,85,0.22), 0 0 28px rgba(255,45,85,0.22), 0 0 28px rgba(0,255,136,0.14), 0 0 32px rgba(255,204,0,0.10)";
 
 /* ── types ─────────────────────────────── */
 type Upgrade = {
@@ -42,51 +43,6 @@ const BOARD_MOCK: BoardEntry[] = [
 ];
 
 function costOf(u: Upgrade): number {
-
-// ── EXTRA 40 — факты майнинга, без фейка, FILE:LINE ──
-export const MINING_EXTRA_FACTS: { fact: string; src: string }[] = [
-  { fact: "Лопата 42 +1/клик cost 42", src: "MiningPage.tsx:24" }, // FILE:LINE MiningPage.tsx:24
-  { fact: "Кирка 142 +3/клик", src: "MiningPage.tsx:25" }, // FILE:LINE MiningPage.tsx:25
-  { fact: "Бур 420 +1/сек", src: "MiningPage.tsx:26" }, // FILE:LINE MiningPage.tsx:26
-  { fact: "БЕЛАЗ 1042 +5/сек", src: "MiningPage.tsx:27" }, // FILE:LINE MiningPage.tsx:27
-  { fact: "Шахта 2042 +12/сек +5/клик", src: "MiningPage.tsx:28" }, // FILE:LINE MiningPage.tsx:28
-  { fact: "costOf base*1.42^count", src: "MiningPage.tsx:42" }, // FILE:LINE MiningPage.tsx:42
-  { fact: "perClick reduce power*count +1", src: "MiningPage.tsx:69" }, // FILE:LINE MiningPage.tsx:69
-  { fact: "perSec reduce auto*count", src: "MiningPage.tsx:70" }, // FILE:LINE MiningPage.tsx:70
-  { fact: "GET /magnum/api/mining", src: "MiningPage.tsx:77" }, // FILE:LINE MiningPage.tsx:77
-  { fact: "POST /mining/click", src: "MiningPage.tsx:181" }, // FILE:LINE MiningPage.tsx:181
-  { fact: "POST /mining/upgrade {id}", src: "MiningPage.tsx:204" }, // FILE:LINE MiningPage.tsx:204
-  { fact: "WS duel 2-4 братухи realtime", src: "MiningPage.tsx:369" }, // FILE:LINE MiningPage.tsx:369
-  { fact: "Board mock Шахтёр_42 42042", src: "MiningPage.tsx:32" }, // FILE:LINE MiningPage.tsx:32
-  { fact: "Board Томь_братуха 28420", src: "MiningPage.tsx:33" }, // FILE:LINE MiningPage.tsx:33
-  { fact: "Кликер без крипты и скама", src: "MiningPage.tsx:292" }, // FILE:LINE MiningPage.tsx:292
-  { fact: "Авто-майнинг tick perSec", src: "MiningPage.tsx:98" }, // FILE:LINE MiningPage.tsx:98
-  { fact: "GSAP y24 stagger 0.12 entrance", src: "MiningPage.tsx:118" }, // FILE:LINE MiningPage.tsx:118
-  { fact: "Rock float y-4 1.6s", src: "MiningPage.tsx:127" }, // FILE:LINE MiningPage.tsx:127
-  { fact: "Spawn float +value 42", src: "MiningPage.tsx:144" }, // FILE:LINE MiningPage.tsx:144
-  { fact: "Частицы 5 при клике", src: "MiningPage.tsx:161" }, // FILE:LINE MiningPage.tsx:161
-  { fact: "Магаз братухи апгрейды", src: "MiningPage.tsx:342" }, // FILE:LINE MiningPage.tsx:342
-  { fact: "Дуэль 10 сек broadcast", src: "MiningPage.tsx:368" }, // FILE:LINE MiningPage.tsx:368
-  { fact: "Лидерборд топ шахтёров", src: "MiningPage.tsx:388" }, // FILE:LINE MiningPage.tsx:388
-  { fact: "Токен в cookie сохраняется", src: "MiningPage.tsx:294" }, // FILE:LINE MiningPage.tsx:294
-  { fact: "Кузбасс edition ироничный майнинг", src: "MiningPage.tsx:290" }, // FILE:LINE MiningPage.tsx:290
-  { fact: "Шахтёрский старт лопата", src: "MiningPage.tsx:24" }, // FILE:LINE MiningPage.tsx:24
-  { fact: "Кузбасская закалка кирка", src: "MiningPage.tsx:25" }, // FILE:LINE MiningPage.tsx:25
-  { fact: "Гудит как Томь бур", src: "MiningPage.tsx:26" }, // FILE:LINE MiningPage.tsx:26
-  { fact: "Везёт весь Кузбасс БЕЛАЗ", src: "MiningPage.tsx:27" }, // FILE:LINE MiningPage.tsx:27
-  { fact: "Бездна 42 шахта", src: "MiningPage.tsx:28" }, // FILE:LINE MiningPage.tsx:28
-  { fact: "Мок 8 топ шахтёров", src: "MiningPage.tsx:31" }, // FILE:LINE MiningPage.tsx:31
-  { fact: "Баланс 42-коин", src: "MiningPage.tsx:303" }, // FILE:LINE MiningPage.tsx:303
-  { fact: "Копай как шахтёр hero", src: "MiningPage.tsx:291" }, // FILE:LINE MiningPage.tsx:291
-  { fact: "GSAP countUp баланса", src: "MiningPage.tsx:177" }, // FILE:LINE MiningPage.tsx:177
-  { fact: "Duel lobby heartbeat 25с", src: "docs/hype-queue.md:6" }, // FILE:LINE docs/hype-queue.md:6
-  { fact: "Neon table magnum_mining", src: "drizzle/schema.ts:23" }, // FILE:LINE drizzle/schema.ts:23
-  { fact: "RateLimit mining 20/60s", src: "server.ts:234" }, // FILE:LINE server.ts:234
-  { fact: "41 — пресейв MAGNUM", src: "AiBot.tsx:20" }, // FILE:LINE AiBot.tsx:20
-  { fact: "42-коины топ health", src: "server.ts:213" }, // FILE:LINE server.ts:213
-  { fact: "Кнопка КОПАТЬ +perClick", src: "MiningPage.tsx:328" }, // FILE:LINE MiningPage.tsx:328
-];
-
   return Math.floor(u.baseCost * Math.pow(1.42, u.count));
 }
 

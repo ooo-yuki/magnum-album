@@ -291,20 +291,135 @@ async function handleIdeasPost(req: Request): Promise<Response> {
   }
 }
 
+// ---- Ideas vote with dedup (magnum_idea_votes) + anon fallback ----
 async function handleIdeasVote(req: Request, idStr: string): Promise<Response> {
   const id = Number(idStr);
   if (!Number.isInteger(id) || id <= 0) return Response.json({ error: "invalid id" }, { status: 400 });
   const ip = getClientIp(req);
   if (!checkRateLimit(`ideas:vote:${ip}:${id}`, 12, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
+  const token = extractToken(req);
+  let authed: { id: number; username: string } | null = null;
+  if (token) { try { authed = await getUserByToken(token); } catch {} }
   try {
     const sql = getSql();
+    // authed: dedup via magnum_idea_votes
+    if (authed) {
+      const ex = await sql`SELECT id FROM magnum_idea_votes WHERE user_id=${authed.id} AND idea_id=${id} LIMIT 1`;
+      if (ex.length > 0) return Response.json({ error: "already voted", ideaId: id }, { status: 409 });
+      const voted = await sql`INSERT INTO magnum_idea_votes (user_id, idea_id) VALUES (${authed.id}, ${id}) ON CONFLICT (user_id, idea_id) DO NOTHING RETURNING id`;
+      if (voted.length === 0) return Response.json({ error: "already voted", ideaId: id }, { status: 409 });
+      const rows = await sql`UPDATE magnum_ideas SET votes = COALESCE(votes,0) + 1 WHERE id = ${id} RETURNING *`;
+      if (rows.length === 0) return Response.json({ error: "not found" }, { status: 404 });
+      // ledger: +1 coin for vote?
+      return Response.json({ idea: rows[0], voted: true });
+    }
+    // anon: allow vote but rate limited by IP, no dedup persistence
     const rows = await sql`UPDATE magnum_ideas SET votes = COALESCE(votes,0) + 1 WHERE id = ${id} RETURNING *`;
     if (rows.length === 0) return Response.json({ error: "not found" }, { status: 404 });
-    return Response.json({ idea: rows[0] });
+    return Response.json({ idea: rows[0], anon: true });
   } catch (e) {
     console.error("[ideas vote] failed", e);
     return Response.json({ error: "db error" }, { status: 500 });
   }
+}
+
+// ---- Daily claim (streak 1-7, reward 42*streak) + ledger ----
+async function handleDailyStatus(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  try {
+    const sql = getSql();
+    const rows = await sql`SELECT streak, claimed_at, reward FROM magnum_daily_claims WHERE user_id=${user.id} ORDER BY claimed_at DESC LIMIT 1`;
+    if (rows.length === 0) return Response.json({ canClaim: true, streak: 0, nextReward: 42, lastClaim: null });
+    const last = rows[0] as { streak: number; claimed_at: string; reward: number };
+    const lastMs = new Date(last.claimed_at).getTime();
+    const diffH = (Date.now() - lastMs) / 3600000;
+    if (diffH < 20) {
+      const waitMs = Math.ceil((20 * 3600000 - (Date.now() - lastMs)) / 1000) * 1000;
+      return Response.json({ canClaim: false, streak: Number(last.streak), lastClaim: last.claimed_at, waitMs, nextReward: Math.min(7, Number(last.streak) + 1) * 42 });
+    }
+    const streakBroken = diffH > 44;
+    const nextStreak = streakBroken ? 1 : Math.min(7, Number(last.streak) + 1);
+    return Response.json({ canClaim: true, streak: Number(last.streak), lastClaim: last.claimed_at, nextStreak, nextReward: nextStreak * 42, streakBroken });
+  } catch (e) { console.error("[daily status] failed", e); return Response.json({ error: "db error" }, { status: 500 }); }
+}
+
+async function handleDailyClaim(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`daily:claim:${user.id}:${ip}`, 3, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
+  try {
+    const sql = getSql();
+    const rows = await sql`SELECT streak, claimed_at FROM magnum_daily_claims WHERE user_id=${user.id} ORDER BY claimed_at DESC LIMIT 1`;
+    let nextStreak = 1;
+    if (rows.length > 0) {
+      const last = rows[0] as { streak: number; claimed_at: string };
+      const diffH = (Date.now() - new Date(last.claimed_at).getTime()) / 3600000;
+      if (diffH < 20) return Response.json({ error: "already claimed", waitH: (20 - diffH).toFixed(1) }, { status: 429 });
+      nextStreak = diffH > 44 ? 1 : Math.min(7, Number(last.streak) + 1);
+    }
+    const reward = nextStreak * 42;
+    await sql`INSERT INTO magnum_daily_claims (user_id, streak, reward) VALUES (${user.id}, ${nextStreak}, ${reward})`;
+    await sql`INSERT INTO magnum_coins (user_id, balance) VALUES (${user.id}, 1000) ON CONFLICT (user_id) DO NOTHING`;
+    const upd = await sql`UPDATE magnum_coins SET balance = balance + ${reward} WHERE user_id=${user.id} RETURNING balance`;
+    const bal = Number((upd[0] as { balance: number }).balance);
+    await sql`INSERT INTO magnum_transactions (user_id, amount, reason, meta) VALUES (${user.id}, ${reward}, 'daily', ${JSON.stringify({ streak: nextStreak })}::jsonb)`;
+    return Response.json({ ok: true, streak: nextStreak, reward, balance: bal });
+  } catch (e) { console.error("[daily claim] failed", e); return Response.json({ error: "db error" }, { status: 500 }); }
+}
+
+// ---- Transactions ledger ----
+async function handleTransactions(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  try {
+    const sql = getSql();
+    const url = new URL(req.url);
+    const limit = Math.min(50, Math.max(1, Number(url.searchParams.get("limit") || 20)));
+    const rows = await sql`SELECT amount, reason, meta, created_at FROM magnum_transactions WHERE user_id=${user.id} ORDER BY created_at DESC LIMIT ${limit}`;
+    return Response.json({ transactions: rows.map((r: unknown) => { const x=r as {amount:number;reason:string;meta:unknown;created_at:string}; return { amount:Number(x.amount), reason:String(x.reason), meta:x.meta, created_at:x.created_at }; }), count: rows.length });
+  } catch (e) { console.error("[transactions] failed", e); return Response.json({ error: "db error" }, { status: 500 }); }
+}
+
+// ---- Coins transfer (user -> user, min 1, fee 0) ----
+async function handleCoinsTransfer(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`coins:transfer:${user.id}:${ip}`, 10, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
+  let body: { to?: string; username?: string; amount?: number };
+  try { body = (await req.json()) as typeof body; } catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
+  const toName = typeof body.to === "string" ? body.to.trim() : typeof body.username === "string" ? body.username.trim() : "";
+  const amount = Number(body.amount);
+  if (!toName || toName.length < 2) return Response.json({ error: "to username required" }, { status: 400 });
+  if (!Number.isInteger(amount) || amount <= 0) return Response.json({ error: "amount must be positive integer" }, { status: 400 });
+  if (amount > 5000) return Response.json({ error: "amount too large (max 5000)" }, { status: 400 });
+  if (toName === user.username) return Response.json({ error: "cannot transfer to self" }, { status: 400 });
+  try {
+    const sql = getSql();
+    const target = await sql`SELECT id FROM magnum_users WHERE username=${toName} LIMIT 1`;
+    if (target.length === 0) return Response.json({ error: "recipient not found" }, { status: 404 });
+    const toId = Number((target[0] as { id: number }).id);
+    const coins = await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+    let bal = coins.length ? Number((coins[0] as { balance: number }).balance) : 1000;
+    if (coins.length === 0) await sql`INSERT INTO magnum_coins (user_id, balance) VALUES (${user.id}, 1000) ON CONFLICT (user_id) DO NOTHING`;
+    if (bal < amount) return Response.json({ error: "not enough coins", balance: bal, required: amount }, { status: 402 });
+    await sql`UPDATE magnum_coins SET balance = balance - ${amount} WHERE user_id=${user.id}`;
+    await sql`INSERT INTO magnum_coins (user_id, balance) VALUES (${toId}, 1000) ON CONFLICT (user_id) DO UPDATE SET balance = magnum_coins.balance + ${amount}`;
+    await sql`INSERT INTO magnum_transactions (user_id, amount, reason, meta) VALUES (${user.id}, ${-amount}, 'transfer_out', ${JSON.stringify({ to: toName })}::jsonb)`;
+    await sql`INSERT INTO magnum_transactions (user_id, amount, reason, meta) VALUES (${toId}, ${amount}, 'transfer_in', ${JSON.stringify({ from: user.username })}::jsonb)`;
+    const upd = await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+    return Response.json({ ok: true, balance: Number((upd[0] as { balance: number }).balance), sent: amount, to: toName });
+  } catch (e) { console.error("[transfer] failed", e); return Response.json({ error: "db error" }, { status: 500 }); }
 }
 
 // ---- Shop handlers (magnum_shop_inventory) ----
@@ -869,12 +984,15 @@ async function handleMiningTop(): Promise<Response> {
 async function handleHealth(): Promise<Response> {
   try {
     const sql = getSql();
-    const [users, coins, mining, presave, ideas] = await Promise.all([
+    const [users, coins, mining, presave, ideas, daily, tx, votes] = await Promise.all([
       sql`SELECT count(*)::int as c FROM magnum_users`,
       sql`SELECT count(*)::int as c FROM magnum_coins`,
       sql`SELECT count(*)::int as c FROM magnum_mining`,
       sql`SELECT count(*)::int as c FROM magnum_presave_clicks`,
       sql`SELECT count(*)::int as c FROM magnum_ideas`,
+      sql`SELECT count(*)::int as c FROM magnum_daily_claims`,
+      sql`SELECT count(*)::int as c FROM magnum_transactions`,
+      sql`SELECT count(*)::int as c FROM magnum_idea_votes`,
     ]);
     return Response.json({
       ok: true,
@@ -885,6 +1003,9 @@ async function handleHealth(): Promise<Response> {
         mining: Number((mining[0] as { c: number }).c),
         presave: Number((presave[0] as { c: number }).c),
         ideas: Number((ideas[0] as { c: number }).c),
+        daily: Number((daily[0] as { c: number }).c),
+        transactions: Number((tx[0] as { c: number }).c),
+        ideaVotes: Number((votes[0] as { c: number }).c),
       },
       uptime: process.uptime(),
     });
@@ -997,6 +1118,18 @@ async function handleAi(req: Request): Promise<Response> {
     console.error("[ai-proxy] fetch failed:", e);
     return Response.json({ error: "Upstream unreachable" }, { status: 502 });
   }
+}
+
+// ---- WS duel helpers: anti-cheat click throttle per socket ----
+const wsClickTimes = new Map<string, number[]>();
+function wsRateOk(wsId: string): boolean {
+  const now = Date.now();
+  const arr = wsClickTimes.get(wsId) ?? [];
+  const fresh = arr.filter(t => now - t < 1000);
+  if (fresh.length >= 30) return false; // 30 clicks/sec max
+  fresh.push(now);
+  wsClickTimes.set(wsId, fresh);
+  return true;
 }
 
 // ---- WebSocket duel (2-4 игрока) ----
@@ -1131,6 +1264,10 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/coins/top" && req.method === "GET") return handleCoinsTop();
     if (url.pathname === "/magnum/api/coins/add" && req.method === "POST") return handleCoinsAdd(req);
     if (url.pathname === "/magnum/api/coins/set" && req.method === "POST") return handleCoinsSet(req);
+    if (url.pathname === "/magnum/api/coins/transfer" && req.method === "POST") return handleCoinsTransfer(req);
+    if (url.pathname === "/magnum/api/transactions" && req.method === "GET") return handleTransactions(req);
+    if (url.pathname === "/magnum/api/daily/status" && req.method === "GET") return handleDailyStatus(req);
+    if (url.pathname === "/magnum/api/daily/claim" && req.method === "POST") return handleDailyClaim(req);
     if (url.pathname === "/magnum/api/presave/click" && req.method === "POST") return handlePresaveClick(req);
     if (url.pathname === "/magnum/api/presave/stats" && req.method === "GET") return handlePresaveStats(req);
 
@@ -1216,6 +1353,7 @@ const server = Bun.serve<WSData>({
       const msg = parsed as { type?: string; username?: string };
       if (msg.type === "click") {
         if (room.state !== "playing") return;
+        if (!wsRateOk(ws.data.id)) return; // anti-cheat throttle
         const cur = room.scores.get(ws) ?? 0;
         room.scores.set(ws, cur + 1);
         broadcast(room, { type: "scores", room: roomPublic(room) });
@@ -1242,6 +1380,7 @@ const server = Bun.serve<WSData>({
       room.players.delete(ws);
       room.scores.delete(ws);
       room.names.delete(ws);
+      wsClickTimes.delete(ws.data.id);
       try { ws.unsubscribe(roomId); } catch {}
       if (room.players.size === 0) {
         if (room.timer) clearTimeout(room.timer);

@@ -404,6 +404,40 @@ function animateEntrance(...), animateCards(...), animateHoverEnter(...)
 - `presaveTracker.ts` — делегат `click` на `a[href*="music.thefence.me/psmagnum"]` → `POST /magnum/api/presave/click`.
 - `Blackjack/Roulette` — открытка `postcard-4200.png` при 4200 монет; баланс мигрирован в `magnum-coins`.
 
+### 7.1 Blackjack 42 — спека открытки 4200 🃏
+
+| Параметр | Значение |
+|----------|----------|
+| Файл | `src/pages/games/BlackjackGame.tsx` |
+| `START_BALANCE` | 1000 |
+| `GOAL` | 4200 |
+| `LS_BALANCE` | `blackjack42-balance` (локально), сервер `magnum-coins` |
+| `BET` chips | 10/25/50/100/250, `MIN_BET 10`, кнопки `½/MAX` |
+| Правила | BJ 3:2, дилер стоит на soft 17, дабл только на 2 картах, `needReshuffle <12`, перебор = проигрыш |
+| Звуки | WebAudio: `playDeal/playHit/playBust/playBlackjack/playWin/playLose/playPush` с `safeRamp` |
+| Победа | `balance >= 4200` → `setShowWin(true)` + модалка + `postcard-4200.png` + `PRESAVE https://music.thefence.me/psmagnum` + `localStorage blackjack42-best` |
+| Сброс | `balance<=0` → автопополнение 200, `resetAll` → 1000, `balance<GOAL` сбрасывает `winCheckedRef` |
+| Инвариант | Нет `addCoins` — баланс локальный LS (мигрирует через `presaveTracker` CTA), `postcard-4200.png 242KB` lazy `loading=eager` в модалке |
+
+### 7.2 Roulette 42 — спека открытки 4200 🎰
+
+| Параметр | Значение |
+|----------|----------|
+| Файл | `src/pages/games/RouletteGame.tsx` |
+| `START_BALANCE` | 1000 |
+| `WIN_BALANCE` | 4200 |
+| `LS_BALANCE` | `roulette42-balance`, `LS_HISTORY roulette42-history` (20 последних) |
+| Колесо | European 0-36, `WHEEL_ORDER 37`, `RED_NUMS 18`, `getColor→green/red/black`, `WHEEL_COLORS` |
+| Фишки | `CHIPS 1/5/25/100`, ставка `totalBet` |
+| Пресеты 10 | Красные/Чёрные/Чёт/Нечёт/1-12/13-24/25-36/Осирис(7,17,27+red)/42(4,2,0,32)/Соседи 0(5 чисел) |
+| Выплаты | straight 35:1, dozen 2:1, outside 1:1, zero забирает outside |
+| GSAP | `gsap.context` entrance `y30 stagger 0.08`, `burstConfetti 32`, `shake x:4×5` при проигрыше |
+| Победа | `balance>=4200` → `burstConfetti 36 + playBigWin` + модалка `postcard-4200.png` + `PRESAVE` |
+| Управление | `onTouchStart/onTouchEnd swipe>50px→spin`, `×2 doubleBets`, `↻ repeatLast`, `autoSpin` чекбокс |
+| История | `hotNumbers` top4, `coldNumbers` 4, счётчики red/black/green |
+| Звуки | `playTick/playChipStack/playSpinRumble/playWinSound/playBigWin/playLoseSound` |
+| Инвариант | Свайп по колесу = spin, `lastBets` повтор, `autoSpin` репит через 700ms |
+
 ---
 
 ## 8. Страницы / Компоненты

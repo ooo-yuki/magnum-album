@@ -19,7 +19,6 @@ const WIN_HEIGHT = 15;
 const WIN_PTS = 4200;
 const BLOCK_H = 22;
 const BASE_W = 220;
-// — баланс сложности v3: SPEED_START 1.8 → капа 6.5, плавная кривая
 const SPEED_START = 1.8;
 const SPEED_BASE = SPEED_START;
 const SPEED_INC = 0.11;
@@ -27,6 +26,22 @@ const SPEED_MAX = 6.5;
 const PERFECT_TOL = 7;
 const COMBO_AT = 3;
 const MEGA_AT = 5;
+
+// MAGNUM 2026 — 5 пуль на каждом 5-м этаже
+const MAGNUM_PULS: Array<{ label: string; color: string }> = [
+  { label: "ТУСА МЕДУЗА 🪼 14.08", color: "#00ff88" },
+  { label: "VPN 🔒", color: "#5865f2" },
+  { label: "CLAY 🧱 03.04", color: "#ffcc00" },
+  { label: "42 ✌️", color: "#ff2d55" },
+  { label: "MAGNUM ● 5 ПУЛЬ", color: "#a855f7" },
+];
+function blockLore(idx: number): string {
+  if (idx === 0) return "ФУНДАМЕНТ 42";
+  if (idx % 5 === 0) return MAGNUM_PULS[(Math.floor(idx / 5) - 1) % 5]!.label;
+  if (idx === WIN_HEIGHT) return "42 ЭТАЖ — ПРЕСЕЙВ!";
+  if (idx > 30) return `Пульс ${idx} — MAGNUM`;
+  return "";
+}
 
 interface Block { x: number; y: number; w: number; color: string; }
 interface Particle { x: number; y: number; vx: number; vy: number; life: number; color: string; size: number; }
@@ -52,9 +67,7 @@ function playDrop(ok: boolean, perfect: boolean, streak = 0) {
   const o = ctx.createOscillator(); const g = ctx.createGain();
   o.connect(g); g.connect(ctx.destination);
   if (!ok) {
-    // WebAudio звук падения — промах: низкий square + падение частоты + шум
     o.type = "square"; o.frequency.value = 130; g.gain.setValueAtTime(0.26, ctx.currentTime); safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45), 0.001); safeRamp(o.frequency, () => o.frequency.linearRampToValueAtTime(45, ctx.currentTime + 0.28), 45);
-    // второй осциллятор для баса падения
     const o2 = ctx.createOscillator(); const g2 = ctx.createGain(); o2.connect(g2); g2.connect(ctx.destination);
     o2.type = "triangle"; o2.frequency.value = 90; g2.gain.setValueAtTime(0.18, ctx.currentTime); safeRamp(g2.gain, () => g2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35), 0.001); safeRamp(o2.frequency, () => o2.frequency.linearRampToValueAtTime(30, ctx.currentTime + 0.3), 30); o2.start(); o2.stop(ctx.currentTime + 0.36);
   }
@@ -83,15 +96,24 @@ function playWin() {
     o.type = "sine"; o.frequency.value = 440 + i * 110; g.gain.setValueAtTime(0.15, ctx.currentTime + d); safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + d + 0.45), 0.001); o.start(ctx.currentTime + d); o.stop(ctx.currentTime + d + 0.45);
   });
 }
+function playPause(on: boolean) {
+  const ctx = ensureAC(); if (!ctx) return;
+  const o = ctx.createOscillator(); const g = ctx.createGain(); o.connect(g); g.connect(ctx.destination);
+  o.type = "sine"; o.frequency.value = on ? 520 : 380; g.gain.setValueAtTime(0.12, ctx.currentTime); safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22), 0.001); o.start(); o.stop(ctx.currentTime + 0.22);
+}
 
 export function Stack42Game() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+  void hoverIn; void hoverOut;
   const [state, setState] = useState<"menu" | "playing" | "win" | "over">("menu");
+  const [paused, setPaused] = useState(false);
   const [score, setScore] = useState(0);
   const [pts, setPts] = useState(0);
   const [best, setBest] = useState(() => { try { return Number(localStorage.getItem("stack42-best")) || 0; } catch { return 0; } });
   const [bestPts, setBestPts] = useState(() => { try { return Number(localStorage.getItem("stack42-bestPts")) || 0; } catch { return 0; } });
   const [perfectStreak, setPerfectStreak] = useState(0);
+  const [coinsEarned, setCoinsEarned] = useState(0);
 
   const blocksRef = useRef<Block[]>([]);
   const movingRef = useRef<{ x: number; w: number; dir: number; speed: number }>({ x: 0, w: BASE_W, dir: 1, speed: SPEED_START });
@@ -113,13 +135,31 @@ export function Stack42Game() {
     particlesRef.current = []; floatsRef.current = [];
     camYRef.current = 0; targetCamYRef.current = 0; shakeRef.current = 0; pulseRef.current = 0; bgPhaseRef.current = 0;
     ptsRef.current = 0;
-    setScore(0); setPts(0); setPerfectStreak(0);
+    setScore(0); setPts(0); setPerfectStreak(0); setPaused(false); setCoinsEarned(0);
   }, []);
 
   const start = useCallback(() => { reset(); setState("playing"); }, [reset]);
 
-  const drop = useCallback(() => {
+  // GSAP modal entrance
+  useEffect(() => {
+    if ((state === "win" || state === "over") && modalRef.current) {
+      gsap.fromTo(modalRef.current, { scale: 0.92, opacity: 0, y: 18 }, { scale: 1, opacity: 1, y: 0, duration: 0.42, ease: "back.out(1.6)", overwrite: true });
+    }
+  }, [state]);
+
+  const rewardCoins = useCallback(async (amount: number) => {
+    if (amount <= 0) return;
+    setCoinsEarned(amount);
+    try { await fetch("/magnum/api/coins/add", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ amount, source: "stack42" }) }); } catch {}
+  }, []);
+
+  const togglePause = useCallback(() => {
     if (state !== "playing") return;
+    setPaused((p) => { const next = !p; playPause(next); return next; });
+  }, [state]);
+
+  const drop = useCallback(() => {
+    if (state !== "playing" || paused) return;
     const blocks = blocksRef.current;
     const top = blocks[blocks.length - 1]!;
     const m = movingRef.current;
@@ -132,7 +172,6 @@ export function Stack42Game() {
       for (let i = 0; i < 18; i++) {
         particlesRef.current.push({ x: m.x + m.w / 2, y: blocks.length * BLOCK_H, vx: (Math.random() - 0.5) * 8, vy: -Math.random() * 6 - 1, life: 1, color: blockColor(blocks.length), size: 3 + Math.random() * 4 });
       }
-      // шейк при промахе — усиленный
       shakeRef.current = 18;
       playDrop(false, false);
       setState("over");
@@ -140,6 +179,7 @@ export function Stack42Game() {
       const nb = Math.max(best, h); setBest(nb);
       const npts = Math.max(bestPts, ptsRef.current); setBestPts(npts);
       try { localStorage.setItem("stack42-best", String(nb)); localStorage.setItem("stack42-bestPts", String(npts)); } catch {}
+      void rewardCoins(Math.floor(ptsRef.current / 50) + h * 2);
       return;
     }
 
@@ -174,7 +214,6 @@ export function Stack42Game() {
       }
       blocks.push(nb);
       setPerfectStreak(0);
-      // лёгкий шейк при срезе (не perfect)
       shakeRef.current = Math.max(shakeRef.current, 4);
       addPts = overlap < top.w * 0.55 ? 40 : 70;
       floatsRef.current.push({ id: floatIdRef.current++, text: overlap < top.w * 0.6 ? "Аккуратно!" : "OK", x: 0, y: nb.y, life: 1 });
@@ -187,30 +226,33 @@ export function Stack42Game() {
     setScore(h);
     const nextW = blocks[blocks.length - 1]!.w;
     const fromLeft = blocks.length % 2 === 0;
-    // баланс скорости: SPEED_START 1.8 → капа 6.5
     const rawSpeed = SPEED_START + h * SPEED_INC + (h > 10 ? (h - 10) * 0.06 : 0);
     const spd = Math.min(SPEED_MAX, rawSpeed);
     movingRef.current = { x: fromLeft ? -nextW - 40 : 40, w: nextW, dir: fromLeft ? 1 : -1, speed: spd };
     targetCamYRef.current = Math.max(0, h * BLOCK_H - 220);
-    // победа 4200 pts → presave модалка (также оставляем WIN_HEIGHT как фолбэк)
     if (ptsRef.current >= WIN_PTS || h >= 42) {
       playWin();
       for (let i = 0; i < 40; i++) particlesRef.current.push({ x: (Math.random() - 0.5) * 190, y: h * BLOCK_H, vx: (Math.random() - 0.5) * 8, vy: -Math.random() * 8 - 2, life: 1, color: ["#ff2d55", "#ffcc00", "#00ff88", "#5865f2"][i % 4]!, size: 3 + Math.random() * 4.5 });
       const nb = Math.max(best, h); setBest(nb);
       const npts = Math.max(bestPts, ptsRef.current); setBestPts(npts);
       try { localStorage.setItem("stack42-best", String(nb)); localStorage.setItem("stack42-bestPts", String(npts)); } catch {}
+      void rewardCoins(420 + Math.floor(ptsRef.current / 10));
       setState("win");
     } else if (h >= WIN_HEIGHT && ptsRef.current < WIN_PTS) {
-      // промежуточный прогресс — не победа, просто камера/частицы
       void 0;
     }
-  }, [state, best, bestPts, perfectStreak]);
+  }, [state, paused, best, bestPts, perfectStreak, rewardCoins]);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.code === "Space") { e.preventDefault(); drop(); } };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code === "Space") { e.preventDefault(); drop(); }
+      if (e.code === "KeyP") { e.preventDefault(); togglePause(); }
+      if (e.code === "KeyR") { e.preventDefault(); start(); }
+      if (e.code === "Escape" && paused) { e.preventDefault(); setPaused(false); playPause(false); }
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [drop]);
+  }, [drop, togglePause, start, paused]);
 
   useEffect(() => {
     const canvas = canvasRef.current; if (!canvas) return;
@@ -230,7 +272,7 @@ export function Stack42Game() {
       const h = 560;
       const centerX = w / 2;
       const isComboActive = perfectStreak >= COMBO_AT;
-      if (state === "playing") {
+      if (state === "playing" && !paused) {
         const m = movingRef.current;
         m.x += m.dir * m.speed;
         if (m.x <= -m.w * 0.3) { m.x = -m.w * 0.3; m.dir = 1; }
@@ -239,7 +281,7 @@ export function Stack42Game() {
       camYRef.current += (targetCamYRef.current - camYRef.current) * 0.08;
       if (shakeRef.current > 0) shakeRef.current *= 0.88;
       if (pulseRef.current > 0) pulseRef.current *= 0.92;
-      bgPhaseRef.current += 0.006;
+      bgPhaseRef.current += paused ? 0 : 0.006;
 
       ctx.clearRect(0, 0, w, h);
       const g = ctx.createLinearGradient(0, 0, 0, h);
@@ -278,7 +320,13 @@ export function Stack42Game() {
         ctx.lineTo(b.x + b.w, y + BLOCK_H); ctx.lineTo(b.x, y + BLOCK_H); ctx.lineTo(b.x, y + r); ctx.quadraticCurveTo(b.x, y, b.x + r, y); ctx.closePath(); ctx.fill();
         ctx.fillStyle = "rgba(255,255,255,0.18)"; ctx.fillRect(b.x + 6, y + 3, Math.max(0, b.w - 12), 4);
         ctx.strokeStyle = "rgba(255,255,255,0.10)"; ctx.lineWidth = 1; ctx.strokeRect(b.x, y, b.w, BLOCK_H);
-        if (i > 0 && i % 3 === 0) {
+        const lore = blockLore(i);
+        if (lore) {
+          ctx.fillStyle = i % 5 === 0 && i > 0 ? MAGNUM_PULS[(Math.floor(i / 5) - 1) % 5]!.color : "rgba(255,255,255,0.88)";
+          ctx.font = `700 ${lore.length > 14 ? 7 : 8}px Inter, sans-serif`; ctx.textAlign = "center";
+          if (b.w > 70) { ctx.fillStyle = "rgba(0,0,0,0.38)"; ctx.fillRect(b.x + b.w / 2 - lore.length * 2.6, y + 5, lore.length * 5.2, 10); ctx.fillStyle = i % 5 === 0 && i > 0 ? MAGNUM_PULS[(Math.floor(i / 5) - 1) % 5]!.color : "rgba(255,255,255,0.92)"; }
+          ctx.fillText(lore.length > 18 && b.w < 120 ? lore.slice(0, 14) + "…" : lore, b.x + b.w / 2, y + BLOCK_H / 2 + 3);
+        } else if (i > 0 && i % 3 === 0) {
           ctx.fillStyle = "rgba(255,255,255,0.9)"; ctx.font = "700 9px Inter, sans-serif"; ctx.textAlign = "center";
           ctx.fillText(String(i), b.x + b.w / 2, y + BLOCK_H / 2 + 3);
         }
@@ -345,12 +393,19 @@ export function Stack42Game() {
       if (isComboActive && pulseRef.current > 0.05) {
         ctx.strokeStyle = `rgba(255,204,0,${pulseRef.current * 0.5})`; ctx.lineWidth = 2 + pulseRef.current * 4; ctx.strokeRect(1, 1, w - 2, h - 2);
       }
+      if (paused) {
+        ctx.fillStyle = "rgba(0,0,0,0.55)"; ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = "rgba(255,255,255,0.92)"; ctx.font = "900 22px Inter, sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("⏸ ПАУЗА", w / 2, h / 2 - 8);
+        ctx.fillStyle = "rgba(255,255,255,0.62)"; ctx.font = "600 11px Inter, sans-serif";
+        ctx.fillText("P — продолжить  •  R — заново", w / 2, h / 2 + 14);
+      }
 
       animRef.current = requestAnimationFrame(draw);
     };
     animRef.current = requestAnimationFrame(draw);
     return () => { cancelAnimationFrame(animRef.current); window.removeEventListener("resize", resize); };
-  }, [state, perfectStreak]);
+  }, [state, perfectStreak, paused]);
 
   function adjustColor(hex: string, amt: number): string {
     if (!hex.startsWith("#")) return hex;
@@ -365,8 +420,7 @@ export function Stack42Game() {
   const comboLabel = perfectStreak >= MEGA_AT ? `MEGA x2` : comboActive ? `COMBO x2` : `x1`;
   const progressPct = Math.min((pts / WIN_PTS) * 100, 100);
 
-
-  // GSAP spec batch
+  // GSAP spec batch (keep original ripple)
   useEffect(() => {
     const root: HTMLElement = document.querySelector<HTMLElement>("[data-gsap-root]") || (document.body as unknown as HTMLElement);
     if (!root) return;
@@ -389,10 +443,12 @@ export function Stack42Game() {
             <p>🔥 3 Perfect подряд = <b>COMBO x2</b> — очки ×2, частицы, звук!</p>
             <p>💎 5 Perfect = MEGA — +хил ширины + большой бах</p>
             <p>💥 Промах = башня падает + шейк + звук падения</p>
-            <p>🏆 {WIN_PTS} очков = победа + пресейв</p>
+            <p>🏆 {WIN_PTS} очков = победа + пресейв MAGNUM</p>
+            <p>🪼 Каждый 5-й этаж — пульс MAGNUM (ТУСА МЕДУЗА / VPN / CLAY)</p>
+            <p>⏸ <b>P</b> — пауза, <b>R</b> — рестарт, <b>Пробел/ТАП</b> — дроп</p>
           </div>
           <button className={styles.playBtn} onClick={start}>Начать!</button>
-          <p className={styles.hint}>Пробел тоже ставит блок • Рекорд: {best} этажей • {bestPts} pts</p>
+          <p className={styles.hint}>Пробел тоже ставит блок • Рекорд: {best} этажей • {bestPts} pts • P пауза</p>
           <Link to="/magnum/games" className={styles.back}>← К играм</Link>
         </div>
       )}
@@ -409,11 +465,12 @@ export function Stack42Game() {
           {comboActive && <div className={styles.streak}>⭐ {perfectStreak >= MEGA_AT ? "MEGA" : "COMBO"} x2 — Perfect x{perfectStreak}! Очки ×2</div>}
           {!comboActive && perfectStreak > 0 && perfectStreak < COMBO_AT && <div className={styles.streak} style={{ color: "rgba(255,255,255,0.7)" }}>Perfect x{perfectStreak} — ещё {COMBO_AT - perfectStreak} до x2!</div>}
           <div className={styles.canvasWrap} style={comboActive ? { boxShadow: "0 0 28px rgba(255,204,0,0.35), 0 10px 40px rgba(0,0,0,0.45)" } : undefined}>
-            <canvas ref={canvasRef} className={styles.canvas} onPointerDown={(e) => { e.preventDefault(); drop(); }} />
-            <button className={styles.tapBtn} onPointerDown={(e) => { e.preventDefault(); drop(); }}>ТАП!</button>
+            <canvas ref={canvasRef} className={styles.canvas} onPointerDown={(e) => { e.preventDefault(); if (paused) { setPaused(false); playPause(false); } else drop(); }} />
+            <button className={styles.tapBtn} onPointerDown={(e) => { e.preventDefault(); if (paused) { setPaused(false); playPause(false); } else drop(); }}>ТАП!</button>
           </div>
           <div className={styles.navRow}>
             <button className={styles.restartBtn} onClick={start}>Заново</button>
+            <button className={styles.restartBtn} onClick={togglePause} style={{ borderColor: paused ? "#ffcc00" : undefined, color: paused ? "#ffcc00" : undefined }}>{paused ? "▶ Продолжить" : "⏸ Пауза (P)"}</button>
             <Link to="/magnum/games" className={styles.backInline}>← К играм</Link>
           </div>
         </div>
@@ -421,21 +478,22 @@ export function Stack42Game() {
 
       {state === "win" && (
         <div className={styles.modal}>
-          <div className={styles.modalCard}>
+          <div className={styles.modalCard} ref={modalRef}>
             <h2>🏆 Башня 42 готова!</h2>
             <p>{score} этажей • {pts} pts • ширина {blocksRef.current[blocksRef.current.length - 1]?.w.toFixed(0)}px</p>
-            <p className={styles.winSub}>Ты — архитектор 42! {WIN_PTS} очков — победа!</p>
-            <a href={PRESAVE} target="_blank" rel="noreferrer" className={styles.presaveBtn}>Пресейв MAGNUM →</a>
+            <p className={styles.winSub}>Ты — архитектор 42! {WIN_PTS} очков — победа! +{coinsEarned || 420} монет</p>
+            <a href={PRESAVE} target="_blank" rel="noreferrer" className={styles.presaveBtn}>Пресейв MAGNUM — 5 пуль →</a>
             <button className={styles.restartBtn} onClick={start}>Ещё башню</button>
           </div>
         </div>
       )}
       {state === "over" && (
         <div className={styles.modal}>
-          <div className={styles.modalCard}>
+          <div className={styles.modalCard} ref={modalRef}>
             <h2>💥 Башня рухнула!</h2>
             <p>{score} / {WIN_HEIGHT} этажей • {pts} / {WIN_PTS} pts • Рекорд {best} / {bestPts} pts</p>
-            <button className={styles.playBtn} onClick={start}>Ещё попытка</button>
+            {coinsEarned > 0 && <p style={{ color: "#ffcc00", fontWeight: 700, fontSize: "0.88rem" }}>+{coinsEarned} монет за старания</p>}
+            <button className={styles.playBtn} onClick={start}>Ещё попытка (R)</button>
             <Link to="/magnum/games" className={styles.backInline}>← К играм</Link>
           </div>
         </div>

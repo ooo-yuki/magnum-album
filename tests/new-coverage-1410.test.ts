@@ -91,14 +91,14 @@ describe("new: dist build артефакты", () => {
 
 // 4. gallery-42: 6 файлов, webp + jpg пары, размеры
 describe("new: gallery-42 файлы парами", () => {
-  it("3 webp + 3 jpg = 6 файлов >5KB каждый", () => {
+  it("4 webp + 4 jpg = 8 файлов >5KB каждый", () => {
     const dir = resolve(ROOT, "public/images/gallery-42");
     const files = readdirSync(dir);
-    expect(files.length).toBeGreaterThanOrEqual(6);
+    expect(files.length).toBeGreaterThanOrEqual(8);
     const webp = files.filter(f => f.endsWith(".webp"));
     const jpg = files.filter(f => f.endsWith(".jpg"));
-    expect(webp.length).toBe(3);
-    expect(jpg.length).toBe(3);
+    expect(webp.length).toBe(4);
+    expect(jpg.length).toBe(4);
     for (const f of files) {
       const sz = statSync(join(dir, f)).size;
       expect(sz).toBeGreaterThan(5 * 1024);
@@ -108,7 +108,7 @@ describe("new: gallery-42 файлы парами", () => {
     const dir = resolve(ROOT, "public/images/gallery-42");
     const files = readdirSync(dir);
     const bases = new Set(files.map(f => f.replace(/-800\.webp$|\.webp$|\.jpg$/, "")));
-    expect(bases.size).toBe(3);
+    expect(bases.size).toBe(4);
     for (const b of bases) {
       expect(files.some(f => f === `${b}.jpg`)).toBe(true);
     }
