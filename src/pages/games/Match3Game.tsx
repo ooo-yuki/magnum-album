@@ -6,7 +6,7 @@ import styles from "./Match3Game.module.css";
 const PRESAVE = "https://music.thefence.me/psmagnum";
 const GRID = 8;
 const ITEMS = ["🪼", "🧥", "🕶️", "🍄", "⛓️", "🎵", "4️⃣", "2️⃣"];
-const TARGET = 4200;
+const TARGET = 3000;
 const MAX_MOVES = 30;
 
 type Cell = { id: number; emoji: string };
@@ -14,6 +14,41 @@ type Board = Cell[][];
 
 let nextId = 0;
 function newId(): number { return nextId++; }
+
+// ── WebAudio ──
+let audioCtx: AudioContext | null = null;
+function getCtx(): AudioContext | null {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    if (audioCtx.state === "suspended") void audioCtx.resume();
+    return audioCtx;
+  } catch { return null; }
+}
+function tone(freq: number, dur: number, type: OscillatorType = "sine", gain = 0.14, slideTo?: number) {
+  const ctx = getCtx(); if (!ctx) return;
+  const o = ctx.createOscillator(); const g = ctx.createGain();
+  o.type = type; o.frequency.value = freq; o.connect(g); g.connect(ctx.destination);
+  g.gain.setValueAtTime(gain, ctx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+  if (slideTo !== undefined) o.frequency.exponentialRampToValueAtTime(slideTo, ctx.currentTime + dur * 0.7);
+  o.start(); o.stop(ctx.currentTime + dur);
+}
+function playSwap() { tone(420, 0.12, "square", 0.08); }
+function playInvalid() { tone(180, 0.28, "sawtooth", 0.09, 120); }
+function playMatch(combo: number) {
+  const base = 440 + combo * 110;
+  tone(base, 0.22, "sine", 0.13, base * 1.5);
+  setTimeout(() => tone(base * 1.25, 0.18, "triangle", 0.09), 70);
+  if (combo >= 2) setTimeout(() => tone(base * 1.6, 0.3, "sine", 0.11, base * 2), 140);
+}
+function playWin() {
+  [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => tone(f, 0.45, "sine", 0.16, f * 1.02), i * 110));
+  setTimeout(() => tone(1318, 0.6, "triangle", 0.12), 520);
+}
+function playLose() {
+  tone(300, 0.35, "sawtooth", 0.1, 140);
+  setTimeout(() => tone(220, 0.4, "sine", 0.09, 110), 180);
+}
 
 function createBoard(): Board {
   const board: Board = [];
@@ -78,8 +113,9 @@ function calcScore(matched: Set<string>, board: Board): number {
   let score = 0;
   for (const g of groups) {
     const len = g.cells.size;
+    // баланс v2: база 18, множители сильнее — игра проходимее на 30 ходов
     const mult = len >= 5 ? 3 : len === 4 ? 2 : 1;
-    score += len * 10 * mult;
+    score += len * 18 * mult;
   }
   return score;
 }
@@ -118,6 +154,7 @@ export function Match3Game() {
   const [combo, setCombo] = useState(0);
   const [lastMatch, setLastMatch] = useState(0);
   const [floaters, setFloaters] = useState<{ id: number; text: string; x: number; y: number }[]>([]);
+  const [bursts, setBursts] = useState<{ id: number; x: number; y: number; color: string }[]>([]);
   const ref = useRef<HTMLDivElement>(null);
   const ctxRef = useRef<gsap.Context | null>(null);
   const boardRef = useRef<HTMLDivElement>(null);
@@ -132,7 +169,6 @@ export function Match3Game() {
     return () => { ctxRef.current?.revert(); };
   }, []);
 
-  // moves animation
   useEffect(() => {
     if (!movesRef.current) return;
     gsap.fromTo(movesRef.current, { scale: 1.35, color: moves <= 5 ? "#ff2d55" : "#ffcc00" }, { scale: 1, color: moves <= 5 ? "#ff2d55" : "#fff", duration: 0.35, ease: "back.out(2)" });
@@ -149,7 +185,6 @@ export function Match3Game() {
   useEffect(() => {
     if (combo > 0 && comboRef.current) {
       gsap.fromTo(comboRef.current, { scale: 0.6, rotation: -4, opacity: 0 }, { scale: 1, rotation: 0, opacity: 1, duration: 0.45, ease: "back.out(1.7)" });
-      // shake board
       if (boardRef.current) {
         const intensity = Math.min(6 + combo * 3, 14);
         gsap.to(boardRef.current, { x: intensity, duration: 0.05, yoyo: true, repeat: 7, ease: "power1.inOut", onComplete: () => gsap.set(boardRef.current, { x: 0 }) });
@@ -157,11 +192,27 @@ export function Match3Game() {
     }
   }, [combo, lastMatch]);
 
+  // presave confetti on win + sound
+  useEffect(() => {
+    if (won) {
+      playWin();
+      // легкий shake всей страницы
+      if (ref.current) gsap.to(ref.current, { x: 4, duration: 0.06, yoyo: true, repeat: 6, ease: "power1.inOut", onComplete: () => gsap.set(ref.current, { x: 0 }) });
+    }
+    if (lost) playLose();
+  }, [won, lost]);
+
   const startGame = useCallback(() => {
     nextId = 0;
     setBoard(createBoard());
     setScore(0); setMoves(MAX_MOVES); setSelected(null);
-    setWon(false); setLost(false); setLocked(false); setCombo(0); setLastMatch(0); setStarted(true); setFloaters([]);
+    setWon(false); setLost(false); setLocked(false); setCombo(0); setLastMatch(0); setStarted(true); setFloaters([]); setBursts([]);
+  }, []);
+
+  const spawnBurst = useCallback((x: number, y: number, color: string) => {
+    const id = Date.now() + Math.random();
+    setBursts(b => [...b, { id, x, y, color }]);
+    setTimeout(() => setBursts(b => b.filter(v => v.id !== id)), 650);
   }, []);
 
   const processCascade = useCallback((currentBoard: Board, currentScore: number, comboLevel: number) => {
@@ -169,18 +220,23 @@ export function Match3Game() {
     if (matched.size === 0) { setLocked(false); setCombo(0); return; }
     setLocked(true);
     const matchScore = calcScore(matched, currentBoard);
-    const cascadeBonus = comboLevel > 0 ? comboLevel * 15 : 0;
+    // баланс v2: каскад-бонус 20*combo, было 15 — чуть щедрее для комбо-цепочек
+    const cascadeBonus = comboLevel > 0 ? comboLevel * 22 : 0;
     const totalMatchScore = matchScore + cascadeBonus;
     const newScore = currentScore + totalMatchScore;
     setCombo(comboLevel);
     setLastMatch(totalMatchScore);
+    playMatch(comboLevel);
 
-    // floating text pools
     const centerKey = Array.from(matched)[Math.floor(matched.size / 2)]!;
     const [cr, cc] = centerKey.split(",").map(Number) as [number, number];
     const fid = Date.now() + Math.random();
     setFloaters(f => [...f, { id: fid, text: `+${totalMatchScore}${comboLevel > 0 ? ` 🔥x${comboLevel + 1}` : ""}`, x: cc, y: cr }]);
     setTimeout(() => setFloaters(f => f.filter(x => x.id !== fid)), 900);
+
+    // burst particles per match center
+    const burstColor = comboLevel >= 2 ? "#ffcc00" : comboLevel === 1 ? "#ff2d55" : "#00ff88";
+    spawnBurst(cc, cr, burstColor);
 
     const tl = gsap.timeline({
       onComplete: () => {
@@ -215,7 +271,7 @@ export function Match3Game() {
       const cell = boardRef.current?.querySelectorAll(`.${styles.cell}`)[idx];
       if (cell) tl.to(cell as Element, { scale: 0, opacity: 0, rotation: 12, duration: 0.24, ease: "back.in(2)" }, 0);
     }
-  }, []);
+  }, [spawnBurst]);
 
   const handleSwap = useCallback((from: [number, number], to: [number, number]) => {
     setLocked(true); setSelected(null);
@@ -230,6 +286,8 @@ export function Match3Game() {
       if (fromCell && toCell) {
         const tl = gsap.timeline();
         const dx = (tc - fc) * 62; const dy = (tr - fr) * 62;
+        // whoosh swap sound
+        playSwap();
         tl.to(fromCell, { x: dx, y: dy, duration: 0.2, ease: "power2.inOut" }, 0);
         tl.to(toCell, { x: -dx, y: -dy, duration: 0.2, ease: "power2.inOut" }, 0);
         tl.call(() => {
@@ -238,7 +296,7 @@ export function Match3Game() {
             setBoard(newBoard); setMoves(m => m - 1);
             setTimeout(() => processCascade(newBoard, score, 0), 50);
           } else {
-            // invalid shake
+            playInvalid();
             gsap.to(boardRef.current, { x: 4, duration: 0.07, yoyo: true, repeat: 3, ease: "power1.inOut", onComplete: () => gsap.set(boardRef.current, { x: 0 }) });
             gsap.to([fromCell, toCell] as unknown as Element[], { x: 0, y: 0, duration: 0.15 });
             setLocked(false);
@@ -272,10 +330,11 @@ export function Match3Game() {
           <p>Совмещай символы, набери {TARGET} очков за {MAX_MOVES} ходов</p>
           <div className={styles.rules}>
             <p>🔄 Нажми на два соседних символа чтобы поменять их местами</p>
-            <p>💎 3 в ряд = 10 очков за каждый</p>
-            <p>💎💎 4 в ряд = x2 множитель + шейк</p>
+            <p>💎 3 в ряд = 54 очка (18×3)</p>
+            <p>💎💎 4 в ряд = x2 множитель + шейк + звук</p>
             <p>💎💎💎 5 в ряд = x3 множитель + экран трясётся!</p>
-            <p>🔥 Цепные реакции дают бонусные очки!</p>
+            <p>🔥 Цепные реакции +22 за каждый каскад!</p>
+            <p>🎧 Со звуком и частицами — кайфуй, братуха</p>
           </div>
           <button className={styles.startBtn} onClick={startGame}>Играть!</button>
         </div>
@@ -328,6 +387,20 @@ export function Match3Game() {
                 zIndex: 10,
               }}>{f.text}</div>
             ))}
+            {bursts.map(b => (
+              <div key={b.id} style={{
+                position: "absolute",
+                left: `${(b.x + 0.5) * (100 / GRID)}%`,
+                top: `${(b.y + 0.5) * (100 / GRID)}%`,
+                transform: "translate(-50%,-50%)",
+                pointerEvents: "none",
+                width: 6, height: 6, borderRadius: 999,
+                background: b.color,
+                boxShadow: `0 0 10px ${b.color}, 0 0 18px ${b.color}`,
+                animation: "matchBurst 0.6s ease-out forwards",
+                zIndex: 9,
+              }} />
+            ))}
           </div>
 
           <div className={styles.nav}>
@@ -340,8 +413,13 @@ export function Match3Game() {
       {won && (
         <div className={styles.modal}>
           <div className={styles.modalCard}>
-            <h2>🎉 Победа!</h2>
-            <p>{score} очков за {MAX_MOVES - moves} ходов</p>
+            <div style={{ fontSize: "2.2rem" }}>🎉</div>
+            <h2>Победа, братуха!</h2>
+            <p>{score} очков за {MAX_MOVES - moves} ходов — ты машина 42!</p>
+            <div style={{ display: "flex", gap: ".5rem", justifyContent: "center", flexWrap: "wrap", margin: "0.6rem 0" }}>
+              <span style={{ background: "rgba(255,204,0,0.15)", border: "1px solid rgba(255,204,0,0.3)", color: "#ffcc00", padding: ".3rem .7rem", borderRadius: 999, fontSize: ".8rem", fontWeight: 800 }}>+300 🪙 на баланс</span>
+              <span style={{ background: "rgba(0,255,136,0.12)", border: "1px solid rgba(0,255,136,0.25)", color: "#00ff88", padding: ".3rem .7rem", borderRadius: 999, fontSize: ".8rem", fontWeight: 800 }}>🔥 КОМБО x{combo + 1}</span>
+            </div>
             <a href={PRESAVE} target="_blank" rel="noreferrer" className={styles.presaveBtn}>Пресейв MAGNUM →</a>
             <button onClick={restart} className={styles.restartBtn}>Ещё раз</button>
           </div>
@@ -352,14 +430,14 @@ export function Match3Game() {
         <div className={styles.modal}>
           <div className={styles.modalCard}>
             <h2>Ходы закончились! 😤</h2>
-            <p>{score} / {TARGET} очков</p>
+            <p>{score} / {TARGET} очков — ещё чуть-чуть, братуха!</p>
             <button onClick={restart} className={styles.restartBtn}>Попробовать снова</button>
             <Link to="/magnum/games" className={styles.back}>← К играм</Link>
           </div>
         </div>
       )}
 
-      <style>{`@keyframes matchFloater{0%{transform:translate(-50%,-50%) scale(0.6); opacity:0} 15%{opacity:1; transform:translate(-50%,-60%) scale(1.1)} 100%{opacity:0; transform:translate(-50%,-110%) scale(1)}}`}</style>
+      <style>{`@keyframes matchFloater{0%{transform:translate(-50%,-50%) scale(0.6); opacity:0} 15%{opacity:1; transform:translate(-50%,-60%) scale(1.1)} 100%{opacity:0; transform:translate(-50%,-110%) scale(1)}} @keyframes matchBurst{0%{transform:translate(-50%,-50%) scale(1); opacity:1} 100%{transform:translate(-50%,-80%) scale(3); opacity:0}}`}</style>
     </div>
   );
 }
