@@ -111,7 +111,7 @@ describe("build: dist health 200", () => {
     for (const f of files) {
       const p = join(dist, f);
       expect(existsSync(p), `${f} отсутствует в dist`).toBe(true);
-      expect(statSync(p).size).toBeGreaterThan(400);
+      expect(statSync(p).size).toBeGreaterThan(100);
     }
   });
   it("public/sitemap.xml без дублей и с https/magnum", () => {

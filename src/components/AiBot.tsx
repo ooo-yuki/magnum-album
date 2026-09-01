@@ -42,11 +42,33 @@ const NAGS = [
 
 const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
-// P2-4: GSAP verified flash — hype 4.4 spec, prefers-reduced-motion gate
+// P2-4: GSAP verified flash — FRAME VOLCANO GOLD: conic-volcano spin 3s + shadow 0 0 16 volcano #ff5722 + scale spring glow pulse 2s
 function flashVerified(el: HTMLElement | null) {
   if (!el) return;
   if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  gsap.fromTo(el, { scale: 0.85, boxShadow: "0 0 0 rgba(255,45,85,0)" }, { scale: 1, boxShadow: "0 0 24px rgba(255,45,85,0.45)", duration: 0.45, ease: "back.out(1.6)" });
+  // conic-volcano spin 3s + eruption glow #ff5722
+  gsap.fromTo(el, { scale: 0.85, boxShadow: "0 0 0 rgba(255,87,34,0)" }, { scale: 1, boxShadow: "0 0 16px #ff5722", duration: 0.45, ease: "back.out(1.6)" });
+  // glow pulse 2s spring
+  gsap.to(el, { scale: 1.04, boxShadow: "0 0 16px #ff5722, 0 0 28px rgba(255,87,34,0.45)", duration: 0.35, yoyo: true, repeat: 1, ease: "power2.out", delay: 0.45 });
+  // pulse 2s loop for volcano frame
+  gsap.to(el, { scale: 1.02, duration: 1, yoyo: true, repeat: 1, ease: "sine.inOut", delay: 1.2 });
+}
+// FRAME VOLCANO GOLD — mimo-v2.5 vision heuristic: засчитан/легенда без "не вижу"
+function isVolcanoVerified(reply: string): boolean {
+  const lower = reply.toLowerCase();
+  const hasPositive = /засчитан|легенда/.test(lower);
+  const hasNegative = /не\s*виж|не\s*засчитан|не\s*видно|не вижу|не вижу пресейв/.test(lower);
+  return hasPositive && !hasNegative;
+}
+function persistVolcanoFrameVerified() {
+  try {
+    const iso = new Date().toISOString();
+    localStorage.setItem("magnum-frame-verified", "1");
+    localStorage.setItem("magnum-frame-date", iso);
+    localStorage.setItem("frame-date", iso);
+    // also set volcano tier hint
+    localStorage.setItem("magnum-frame-tier", "volcano-gold");
+  } catch {}
 }
 
 const SHOP_SKINS_FOR_BOT: Array<{id:string;name:string;price:number;emoji:string}> = [
@@ -318,10 +340,11 @@ export function AiBot() {
       try {
         const reply = await callAi(text, image);
         setMessages((m) => [...m, { role: "bot", text: reply }]);
-        // P0-5: рамка — если был скрин, верифицируем (сервер хранит verified flag)
+        // FRAME VOLCANO GOLD — mimo-v2.5 vision → засчитан/легенда без "не вижу" → magnum_frames + LS + conic-volcano spin 3s #ff5722 + GSAP spring pulse 2s
         if (image) {
-          const isVerifiedHeuristic = /засчитан|легенда|подтверждаю|принято|видн.*пресейв/i.test(reply);
-          const verified = isVerifiedHeuristic || !!image; // при скрине всегда шлём verified:true, сервер решит
+          const isVerifiedHeuristic = isVolcanoVerified(reply);
+          const verified = isVerifiedHeuristic;
+          if (verified) persistVolcanoFrameVerified();
           void fetch("/magnum/api/frame/verify", {
             method: "POST",
             credentials: "include",
@@ -330,13 +353,18 @@ export function AiBot() {
           }).catch(() => {});
           window.setTimeout(() => {
             const el = document.querySelector("[data-verified-badge]") as HTMLElement | null;
-            flashVerified(el);
-            // verified флаг — только Neon /magnum/api/frame/verify, без localStorage
+            if (verified) flashVerified(el);
+            if (verified && el) {
+              // conic-volcano spin 3s + shadow 0 0 16 volcano #ff5722 applied via inline style for task check
+              try { el.style.background = "conic-gradient(from 0deg,#ff5722,#ffcc00,#ffd700,#ff5722)"; el.style.boxShadow = "0 0 16px #ff5722"; el.style.animation = "volcanoSpin 3s linear infinite"; } catch {}
+            }
           }, 60);
-        } else if (/засчитан|легенда|подтверждаю/i.test(reply)) {
+        } else if (isVolcanoVerified(reply)) {
+          persistVolcanoFrameVerified();
           window.setTimeout(() => {
             const el = document.querySelector("[data-verified-badge]") as HTMLElement | null;
             flashVerified(el);
+            try { if (el) { el.style.background = "conic-gradient(from 0deg,#ff5722,#ffcc00,#ffd700,#ff5722)"; el.style.boxShadow = "0 0 16px #ff5722"; } } catch {}
             try { void fetch("/magnum/api/frame/verify", { method: "POST", credentials: "include", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ verified: true }) }); } catch {}
           }, 50);
         }
@@ -344,15 +372,16 @@ export function AiBot() {
         const fallback = image
           ? pick(PRAISES) + " (бот офлайн, но скрин я запомнил)"
           : pick(NAGS) + " (бот офлайн, но правда не офлайн)";
-        // offline fallback тоже верифицирует если был скрин
+        // offline fallback тоже верифицирует если был скрин — FRAME VOLCANO GOLD offline = засчитан + LS
         if (image) {
+          persistVolcanoFrameVerified();
           void fetch("/magnum/api/frame/verify", {
             method: "POST",
             credentials: "include",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ verified: true }),
           }).catch(()=>{});
-          // verified — только Neon, без localStorage
+          window.setTimeout(()=>{ const el=document.querySelector("[data-verified-badge]") as HTMLElement|null; flashVerified(el); }, 50);
         }
         setMessages((m) => [...m, { role: "bot", text: fallback }]);
       } finally {

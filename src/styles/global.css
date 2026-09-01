@@ -111,5 +111,10 @@ section {
   }
 }
 
+/* FRAME VOLCANO GOLD — conic-volcano spin 3s + eruption glow #ff5722 */
+@keyframes volcanoSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.conic-volcano { background: conic-gradient(from 0deg,#ff5722,#ffcc00,#ffd700,#ff5722); animation: volcanoSpin 3s linear infinite; box-shadow: 0 0 16px #ff5722; }
+@keyframes volcanoGlowPulse { 0%,100% { box-shadow: 0 0 16px #ff5722; } 50% { box-shadow: 0 0 16px #ff5722, 0 0 28px rgba(255,87,34,0.45); } }
+.volcano-glow-pulse { animation: volcanoGlowPulse 2s ease-in-out infinite; }
 /* perf 2026-09-01 15:23 — content-visibility for below-fold sections (LCP: Hero eager, rest auto) */
 #singles, #about, #discography, #press, #news { content-visibility: auto; contain-intrinsic-size: 0 600px; }

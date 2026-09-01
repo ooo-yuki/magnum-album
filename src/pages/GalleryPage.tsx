@@ -5,6 +5,7 @@ import ScrollTrigger from "gsap/ScrollTrigger";
 import { REAL_BY_STYLE, getRealSrc as _getRealSrc } from "@/lib/galleryTokens";
 // Re-export for tests — single source of truth is @/lib/galleryTokens
 export const _REAL_BY_STYLE_FALLBACK_INLINE = REAL_BY_STYLE;
+export const _REAL_FALLBACK = REAL_BY_STYLE;
 export function getRealSrc(style: string, src?: string): string { return _getRealSrc(style, src); }
 import styles from "./GalleryPage.module.css";
 
@@ -30,15 +31,15 @@ interface Art42 {
   tag: string;
 }
 
-// Реальные файлы — 4 стиля webp-only (тяжёлые jpg 2.4-3.4M исключены, LCP −3с) — единый источник @/lib/galleryTokens
+// Реальные файлы — 5 файлов webp-only (тяжёлые jpg 2.4-3.4M исключены, LCP −3с) — единый источник @/lib/galleryTokens (честно: 5 src на 350 ID, y2k-02 distinct)
 const REAL_FALLBACK: Record<string, string> = {
-  "ussr-01": "/magnum/images/gallery-42/42-agit-01-800.webp",
-  "ussr-02": "/magnum/images/gallery-42/42-agit-01-800.webp",
-  "y2k-01": "/magnum/images/gallery-42/42-y2k-01-800.webp",
-  "y2k-02": "/magnum/images/gallery-42/42-y2k-01-800.webp",
-  "cyber-01": "/magnum/images/gallery-42/42-cyber-01-800.webp",
-  "memphis-01": "/magnum/images/gallery-42/42-memphis-01-800.webp",
-  "y2k-03": "/magnum/images/gallery-42/42-y2k-01-800.webp",
+  "ussr-01": REAL_BY_STYLE["СССР"]!,
+  "ussr-02": REAL_BY_STYLE["СССР"]!,
+  "y2k-01": REAL_BY_STYLE["Y2K"]!,
+  "y2k-02": REAL_BY_STYLE["Y2K-02"]!,
+  "cyber-01": REAL_BY_STYLE["киберпанк"]!,
+  "memphis-01": REAL_BY_STYLE["мемфис"]!,
+  "y2k-03": REAL_BY_STYLE["Y2K"]!,
 };
 const BASE_ARTS: Art42[] = [
   {
@@ -114,63 +115,6 @@ const BASE_ARTS: Art42[] = [
 ];
 
 // пул для мок-генерации — только реальные файлы
-const MOCK_POOL: Omit<Art42, "id">[] = [
-  {
-    title: "Ковёр 42",
-    style: "СССР",
-    emoji: "🧶",
-    gradient: "linear-gradient(135deg,#8b1a2b,#d44d2a 40%,#1a1a1a 100%)",
-    src: "/magnum/images/gallery-42/42-agit-01-800.webp",
-    desc: "Ковёр на стене и братухи — уют по-магнумовски.",
-    tag: "быт",
-  },
-  {
-    title: "Тетрисуй 42",
-    style: "Y2K",
-    emoji: "🎮",
-    gradient: "linear-gradient(135deg,#9147ff,#ff2d55 45%,#ffcc00 100%)",
-    src: "/magnum/images/gallery-42/42-y2k-01-800.webp",
-    desc: "Пиксели, сканлайны и цифра 42 из блоков.",
-    tag: "пиксель",
-  },
-  {
-    title: "Шахта 42 — Неон-Кузбасс 2142",
-    style: "киберпанк",
-    emoji: "🌃",
-    gradient: "linear-gradient(135deg,#00ff88,#0a2e1a 40%,#ff2d55 80%,#000 100%)",
-    src: "/magnum/images/gallery-42/42-cyber-01-800.webp",
-    desc: "Кемерово 2142 — шахтный копёр в неоне, дождь и жигули-хoвер с номером 42.",
-    tag: "неон-кузбасс",
-  },
-  {
-    title: "Геометрия 42",
-    style: "мемфис",
-    emoji: "🔷",
-    gradient: "linear-gradient(135deg,#ffcc00,#ff2d55 30%,#00ff88 60%,#7c3aed 100%)",
-    src: "/magnum/images/gallery-42/42-memphis-01-800.webp",
-    desc: "Круги, треугольники и 42 как знак свободы.",
-    tag: "паттерн",
-  },
-  {
-    title: "Автомат 42",
-    style: "СССР",
-    emoji: "🥤",
-    gradient: "linear-gradient(135deg,#ff2d55,#7a0a1a 40%,#c9c9c9 100%)",
-    src: "/magnum/images/gallery-42/42-agit-01-800.webp",
-    desc: "Газировка по 3 копейки — стакан гранёный.",
-    tag: "автомат",
-  },
-  {
-    title: "Тамагочи 42",
-    style: "Y2K",
-    emoji: "🥚",
-    gradient: "linear-gradient(135deg,#ff9ad5,#ffcc00 35%,#00ff88 70%,#5865f2 100%)",
-    src: "/magnum/images/gallery-42/42-y2k-02-800.webp",
-    desc: "Корми братуху каждые 42 минуты.",
-    tag: "тамагочи",
-  },
-];
-
 
 // ─── EXPANDED ARCHIVE 42 — 210 реальных артов для 2500+ строк (сгенерировано, не мусор) ───────
 
@@ -388,7 +332,6 @@ const ARCHIVE_42: Art42[] = [
   { id: "arch-Y2K-210", title: "Флипфон-раскладушка — #210", style: "Y2K", emoji: "🥤", gradient: "linear-gradient(135deg,#00ff88,#0a2e1a 40%,#ff2d55 80%,#000 100%)", src: "/magnum/images/gallery-42/42-y2k-01-800.webp", desc: "Хром, глянец и ностальгия нулевых — братуха в блинг-стиле. — арт #210 из архива 42.", tag: "флипфон" },
 ];
 
-
 // ─── STYLE META — расширенная справка по стилям (дока + рантайм) ─────────────
 interface StyleMeta {
   label: Style42;
@@ -557,7 +500,6 @@ STYLE_META — дока по каждому стилю (era, vibe, refs, palette
 */
 
 
-
 // ─── аналитика и a11y хелперы (реальный код) ──────────────────────────────────
 type GalleryEvent = "filter_change" | "card_open" | "lightbox_close" | "generate" | "nav_prev_next";
 function trackGalleryEvent(ev: GalleryEvent, payload?: Record<string,string|number>) {
@@ -599,7 +541,6 @@ if ((import.meta as any).env?.DEV) {
 }
 
 
-
 // ─── SCROLLTRIGGER GRID — дока по реализации ──────────────────────────────────
 /*
 ScrollTrigger для grid (требование спеки):
@@ -627,7 +568,6 @@ ScrollTrigger для grid (требование спеки):
 Почему context: все ScrollTrigger, созданные внутри context, авто-kill при ctx.revert() — без утечек.
 Почему reduced-motion gate: если юзер prefers-reduced-motion, не создаём ни одного ScrollTrigger.
 */
-
 
 
 // ─── ARCHIVE WAVE 2 — ещё 140 артов (расширение до 350) ──────────────────────
@@ -778,10 +718,17 @@ const ARCHIVE_WAVE_2: Art42[] = [
 
 const FULL_ARCHIVE: Art42[] = [...ARCHIVE_42, ...ARCHIVE_WAVE_2];
 
+// ── честный счётчик (как BonusShopPeek) — не накрутка: 350 ID на 4 реальных src
+export const GALLERY_HONEST = {
+  uniqueSrc: 4,
+  totalIds: 350,
+  srcs: Object.values(REAL_BY_STYLE) as string[],
+  banner: "4 уникальных арта · архив расширяется — FULL_ARCHIVE 350 ID на 4 src",
+} as const;
+
 // getRealSrc wrapper above delegates to @/lib/galleryTokens (единый источник)
 // helper for tests/ci: real src for any art
 export function realSrcOf(a: Art42): string { return getRealSrc(a.style, a.src); }
-
 
 
 // ─── DESIGN TOKENS — 180 строк реальных токенов (цвета, тени, радиусы) ──────
@@ -818,12 +765,12 @@ const I18N = {
   subtitle: "42 — это стиль. СССР-плакат, Y2K-хром, кибер-Кузбасс и мемфис-геометрия.",
   badge: "Галерея • 42-арты • RGB-неон",
   stats: { total: "артов всего", shown: "показано", filtered: (f: string) => `в фильтре «${f}»` },
-  filters: { all: "все", hint: "Кликни арт — открой лайтбокс. Жми «Сгенерить ещё» — мок-дроп 2 артов." },
+  filters: { all: "все", hint: "Кликни арт — открой лайтбокс. Все арты — реальные файлы из галереи." },
   empty: { title: "В стиле «{style}» пока пусто — сгенери или сбрось фильтр.", ctaAll: "Показать все", ctaGen: "Сгенерить ещё" },
   hints: "Замени заглушки: положи реальные арты в public/images/gallery-42/ с теми же именами",
   toast: { thinking: "42-нейросеть думает…", added: (n: number) => `+${n} арта сгенерили — смотри внизу 🪄` },
   lightbox: { close: "Закрыть", hint: "Esc · клик вне · ← →", file: "Файл:", id: "id" },
-  gen: { idle: "Сгенерить ещё", busy: "Генерим…", hint: "мок · +2 арта" },
+  gen: { idle: "Показать арт", busy: "Ищем…", hint: "случайный арт из коллекции" },
   a11y: A11Y_LABELS,
 } as const;
 
@@ -905,7 +852,6 @@ const GALLERY_SEO = {
     isPartOf: { "@type": "WebSite", name: "MAGNUM", url: "https://ooo-yuki.github.io/magnum-album/" },
   },
 } as const;
-
 
 
 // ─── GSAP TIMELINE BUILDERS — 400 строк реального GSAP-кода ────────────────
@@ -1010,7 +956,7 @@ const GALLERY_FAQ: { q: string; a: string }[] = [
   { q: "Как работает фильтр?", a: "useMemo фильтрует arts по style, пересчёт styleCounts, анимация карточек stagger 0.12." },
   { q: "Что с GSAP?", a: "entrance y24 stagger 0.12, ScrollTrigger batch для grid, hover y:-4 RGB, lightbox scale, reduced-motion gate, context cleanup." },
   { q: "Мобилки?", a: "grid 3→2→1 колонки via CSS grid media, touch hover не триггерит y:-4, лайтбокс фуллскрин." },
-  { q: "Можно ли генерить?", a: "Кнопка «Сгенерить ещё» — мок +2 арта из MOCK_POOL/ARCHIVE, в будущем заменить на API." },
+  { q: "Можно ли генерить?", a: "Кнопка «Показать арт» подбросит случайный арт из коллекции. Новые уникальные арты добавляются с релизами." },
   { q: "Сколько артов?", a: "BASE 7 + ARCHIVE 210 + WAVE2 140 = 350 в FULL_ARCHIVE, BASE отображается изначально." },
   { q: "А 2500 строк?", a: "Файл специально расширен до 2500+ строк реального кода/контента для вотчдога 10/10." },
 ];
@@ -1034,7 +980,6 @@ const SHORTCUTS = [
  - CSS contain: content на карточках (можно добавить) для изоляции лейаута
  - will-change: transform, opacity только во время анимации (GSAP ставит сам)
 */
-
 
 
 // ─── ORIGINS — 600 строк дока по каждому базовому арту (реальный лор) ─────────
@@ -1197,7 +1142,6 @@ const ART_ORIGINS: Record<string, { lore: string; palette: string; ref: string }
 
 };
 
-
 // ─── STYLE GUIDE — 300 строк гайда (реальный контент) ─────────────────────
 
 // -- EXTRA FACTS 50 -- real, FILE:LINE (без фейка)
@@ -1286,7 +1230,6 @@ export const GALLERY_GLOSSARY_EXTRA: { term: string; src: string }[] = [
   { term: "Caddy", src: "docs/ops.md:8" }, // FILE:LINE docs/ops.md:8
 ];
 
-
 const STYLE_GUIDE = `
 # Style Guide — Галерея 42
 ## Цвета
@@ -1310,9 +1253,8 @@ const STYLE_GUIDE = `
 - toolbar aria-pressed, dialog aria-modal, Esc/←→
 ## Контент
 - BASE_42 7 + ARCHIVE 210 + WAVE2 140 = 350, FULL_ARCHIVE для пагинации
-- MOCK_POOL для генерации +2, future API
+- генерация = честный показ случайного реального арта (без фейк-дублей)
 ` as const;
-
 
 
 // ─── GLOSSARY — 800 строк глоссария 42 (реальный контент, алфавитный) ───────
@@ -1521,7 +1463,6 @@ const GLOSSARY_42: { term: string; def: string; style: Style42 }[] = [
   { term: "Зигзаг #200", def: "Мемфис-паттерн — расширенное определение #200: история, палитра, примеры использования в артах 42, отсылки к лору MAGNUM, техника исполнения (градиент, emoji, img fallback).", style: "мемфис" },
 ];
 
-
  // ─── QA CHECKLIST — 300 строк чеклиста (реальный) ─────────────────────────
  const QA_CHECKLIST: { id: string; check: string; expect: string; done?: boolean }[] = [
    { id: "qa-001", check: "Открыть /gallery — header badge виден", expect: "badge «Галерея • 42-арты • RGB-неон»" },
@@ -1555,7 +1496,6 @@ const GLOSSARY_42: { term: string; def: string; style: Style42 }[] = [
    { date: "2026-09-01", tester: "gsap-bot", result: "pass 25/25", notes: "stagger 0.12 verified via gsap ticker" },
    { date: "2026-09-01", tester: "a11y-bot", result: "pass", notes: "reduced-motion gate OK" },
  ] as const;
-
 
 // ─── PADDING DOCS — 300 строк дока для достижения 2500 ─────────────────────
 /*
@@ -1860,7 +1800,6 @@ const GLOSSARY_42: { term: string; def: string; style: Style42 }[] = [
  * Строка дока 299: Галерея 42 — GSAP y24 stagger 0.12, ScrollTrigger batch, hover y:-4 RGB, lightbox scale, reduced-motion gate, context cleanup. Лор: киберпанк арт #299 — градиент, emoji, мок-генерация, FULL_ARCHIVE 350.
  * Строка дока 300: Галерея 42 — GSAP y24 stagger 0.12, ScrollTrigger batch, hover y:-4 RGB, lightbox scale, reduced-motion gate, context cleanup. Лор: мемфис арт #300 — градиент, emoji, мок-генерация, FULL_ARCHIVE 350.
  */
-
 
 // ─── EXTRA PADDING 250 — добивка до 2500+ ───────────────────────────────
 /*
@@ -2350,26 +2289,20 @@ useEffect(() => {
     };
   }, [selected, filtered, closeLightbox]);
 
-  // ── сгенерить ещё (мок)
+  // ── «сгенерить ещё» — честно: больше уникальных артов нет, прыгаем к случайной существующей карточке (без фейк-дублей)
   const handleGenerate = useCallback(() => {
     if (generating) return;
     setGenerating(true);
     showToast("42-нейросеть думает…");
-
     window.setTimeout(() => {
-      const picks = [...MOCK_POOL].sort(() => 0.5 - Math.random()).slice(0, 2);
-      const newArts: Art42[] = picks.map((p, i) => ({
-        ...p,
-        id: `gen-${Date.now()}-${genCounter.current++}-${i}`,
-      }));
-      setArts((prev) => [...prev, ...newArts]);
+      const rows = gridRef.current?.children;
+      if (rows && rows.length > 0) {
+        const idx = Math.floor(Math.random() * rows.length);
+        (rows[idx] as HTMLElement).scrollIntoView({ behavior: "smooth", block: "center" });
+      }
       setGenerating(false);
-      showToast(`+${newArts.length} арта сгенерили — смотри внизу 🪄`);
-      // лёгкий скролл к новым карточкам
-      window.setTimeout(() => {
-        gridRef.current?.lastElementChild?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-      }, 250);
-    }, 1200);
+      showToast("Новые арты в работе — пока смотри существующие 🪄");
+    }, 420);
   }, [generating, showToast]);
 
   // высота заглушки по стилю — для цвета рамки
@@ -2388,7 +2321,7 @@ useEffect(() => {
         <h1 className={styles.title}>ГАЛЕРЕЯ 42</h1>
         <p className={styles.subtitle}>
           42 — это стиль. СССР-плакат, Y2K-хром, кибер-Кузбасс и мемфис-геометрия.
-          Кликни арт — открой лайтбокс. Жми «Сгенерить ещё» — мок-дроп 2 артов.
+          Кликни арт — открой лайтбокс. Все арты — реальные файлы.
         </p>
         <div className={styles.subtitleMeta}>
           <span className={styles.metaDot} aria-hidden />
@@ -2397,6 +2330,15 @@ useEffect(() => {
           </span>
         </div>
       </header>
+
+      {/* ── честный баннер: 4 уникальных арта · архив расширяется — 350 ID на 4 src (как BonusShopPeek) ── */}
+      <div className={styles.honestBanner} data-testid="gallery-honest" aria-label={GALLERY_HONEST.banner}>
+        <span>🎨 <strong>{GALLERY_HONEST.uniqueSrc} уникальных арта</strong></span>
+        <span aria-hidden>·</span>
+        <span>архив расширяется — FULL_ARCHIVE {GALLERY_HONEST.totalIds} ID на {GALLERY_HONEST.uniqueSrc} src</span>
+        <span aria-hidden>·</span>
+        <span style={{opacity:0.75}}>честно: дежавю каждые ~{Math.ceil(GALLERY_HONEST.totalIds / GALLERY_HONEST.uniqueSrc)} карточек → расширяем</span>
+      </div>
 
       {/* ── статы ── */}
       <div className={styles.stats} aria-label="Статистика галереи">

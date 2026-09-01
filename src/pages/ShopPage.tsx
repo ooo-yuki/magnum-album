@@ -6,6 +6,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import styles from "./ShopPage.module.css";
 import { getCoins, subscribe } from "../lib/coins";
 import { AuthStatus } from "../components/AuthStatus";
+import { GLACIER_CATALOG, GLACIER, GLACIER_IDS_SET, GLACIER_IDS, PRISM_CATALOG, PRISM_IDS_SET, PRISM_IDS, CRYSTAL_CATALOG, CRYSTAL_IDS_SET, CRYSTAL_IDS, VOLCANO_CATALOG, VOLCANO_IDS_SET, VOLCANO_IDS, COSMETICS_CATALOG } from "../lib/cosmetics";
 gsap.registerPlugin(ScrollTrigger);
 const RGB_GLOW="0 12px 36px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,45,85,0.22), 0 0 28px rgba(255,45,85,0.22), 0 0 28px rgba(0,255,136,0.14), 0 0 32px rgba(255,204,0,0.10)";
 
@@ -63,7 +64,7 @@ const COSMETICS: Cosmetic[] = [
   { id:"frame-ice", slot:"frame", name:"Лёд MAGNUM", price:84, rarity:"common", style:"2px solid #7dd8ff" },
   { id:"frame-fire", slot:"frame", name:"Пламя", price:184, rarity:"rare", style:"3px solid #ff6a00" },
   { id:"frame-toxic", slot:"frame", name:"Токсик", price:390, rarity:"epic", style:"3px solid #7cff00" },
-  { id:"frame-void", slot:"frame", name:"Войд", price:1240, rarity:"legendary", style:"4px solid #7a1ecb" },
+  { id:"frame-void", slot:"frame", name:"Войд", price:1420, rarity:"legendary", style:"4px solid #7a1ecb" },
   { id:"frame-paper", slot:"frame", name:"Бумажный", price:42, rarity:"common", style:"2px dashed #aaa" },
   { id:"frame-pixel", slot:"frame", name:"Пиксель 42", price:142, rarity:"rare", style:"3px solid #5865f2" },
   { id:"frame-holo", slot:"frame", name:"Голо-рамка", price:520, rarity:"epic", style:"3px solid #9147ff" },
@@ -75,7 +76,7 @@ const COSMETICS: Cosmetic[] = [
   { id:"banner-ocean", slot:"banner", name:"Океан", price:84, rarity:"common", style:"linear-gradient(90deg,#0c2e57,#2b7fd4)" },
   { id:"banner-sunset", slot:"banner", name:"Закат", price:184, rarity:"rare", style:"linear-gradient(90deg,#ff7b00,#ff44cc)" },
   { id:"banner-forest", slot:"banner", name:"Лес 42", price:390, rarity:"epic", style:"linear-gradient(90deg,#14401a,#8fe06a)" },
-  { id:"banner-nebula", slot:"banner", name:"Туманность", price:1240, rarity:"legendary", style:"linear-gradient(90deg,#1b0a3a,#ff2d55)" },
+  { id:"banner-nebula", slot:"banner", name:"Туманность", price:1420, rarity:"legendary", style:"linear-gradient(90deg,#1b0a3a,#ff2d55)" },
   { id:"banner-grid", slot:"banner", name:"Сетка", price:62, rarity:"common", style:"linear-gradient(90deg,#2e3238,#b8bcc4)" },
   { id:"banner-tiger", slot:"banner", name:"Тигр", price:520, rarity:"epic", style:"linear-gradient(90deg,#8a3c00,#ffd76a)" },
   { id:"title-bra", slot:"title", name:"Братуха", price:42, rarity:"common", style:"#9aa4b2" },
@@ -85,7 +86,7 @@ const COSMETICS: Cosmetic[] = [
   { id:"title-neon", slot:"title", name:"Неоновый", price:84, rarity:"common", style:"#00ffcc" },
   { id:"title-hype", slot:"title", name:"Хайп", price:184, rarity:"rare", style:"#9147ff" },
   { id:"title-toxic", slot:"title", name:"Токсичный", price:390, rarity:"epic", style:"#7cff00" },
-  { id:"title-vip", slot:"title", name:"VIP 42", price:1240, rarity:"legendary", style:"#ff2d55" },
+  { id:"title-vip", slot:"title", name:"VIP 42", price:1420, rarity:"legendary", style:"#ff2d55" },
   { id:"title-noob", slot:"title", name:"Новичок", price:22, rarity:"common", style:"#aaa" },
   { id:"title-god", slot:"title", name:"Бог 42", price:4242, rarity:"legendary", style:"#ffd700" },
   { id:"frame-prism-rose", slot:"frame", name:"Призма Роза", price:42, rarity:"common", style:"conic-gradient(from 0deg,#ff44cc,#ffcc00,#00ffcc,#5865f2,#ff44cc)" },
@@ -95,7 +96,7 @@ const COSMETICS: Cosmetic[] = [
   { id:"banner-prism-aurora", slot:"banner", name:"Аврора Призм", price:84, rarity:"common", style:"linear-gradient(90deg,#00ffcc,#5865f2 35%,#ff44cc 70%,#ffcc00)" },
   { id:"banner-prism-neon", slot:"banner", name:"Неон Призм", price:184, rarity:"rare", style:"linear-gradient(90deg,#ff44cc,#9147ff 40%,#00ffcc)" },
   { id:"banner-prism-sunset", slot:"banner", name:"Призм Закат", price:390, rarity:"epic", style:"linear-gradient(90deg,#ff7b00,#ff44cc 40%,#7a1ecb)" },
-  { id:"banner-prism-abyss", slot:"banner", name:"Призм Бездна", price:1240, rarity:"legendary", style:"linear-gradient(90deg,#0a0a0a,#7a1ecb 30%,#ffcc00 70%,#ff44cc)" },
+  { id:"banner-prism-abyss", slot:"banner", name:"Призм Бездна", price:1420, rarity:"legendary", style:"linear-gradient(90deg,#0a0a0a,#7a1ecb 30%,#ffcc00 70%,#ff44cc)" },
   { id:"title-prism-novice", slot:"title", name:"Призм Новичок", price:22, rarity:"common", style:"#7dd8ff" },
   { id:"title-prism-hype", slot:"title", name:"Призм Хайп", price:142, rarity:"rare", style:"#ff44cc" },
   { id:"title-prism-aurora", slot:"title", name:"Аврора", price:420, rarity:"epic", style:"#9147ff" },
@@ -112,11 +113,21 @@ const COSMETICS: Cosmetic[] = [
   { id:"frame-gold-glacier-spin", slot:"frame", name:"Голд Гляйшер Спин", price:1420, rarity:"legendary", style:"conic-gradient(from 0deg,#e0faff,#06b6d4,#ffd700,#e0faff)" },
   { id:"banner-diamond-frost", slot:"banner", name:"Даймонд Фрост", price:1420, rarity:"legendary", style:"linear-gradient(90deg,#e0faff,#ffffff)" },
   { id:"title-rgb-glacier", slot:"title", name:"РГБ Гляйшер", price:1420, rarity:"legendary", style:"conic-gradient(from 0deg,#e0faff,#ff44cc,#00ffcc,#e0faff)" },
+  { id:"frame-crystal-matte", slot:"frame", name:"Кристалл Матт", price:42, rarity:"common", style:"2px solid #e8f8ff" },
+  { id:"banner-snow-quartz", slot:"banner", name:"Снежный Кварц", price:42, rarity:"common", style:"linear-gradient(90deg,#ffffff,#e8f0ff)" },
+  { id:"title-crystal-fence", slot:"title", name:"Кристалл Забор", price:42, rarity:"common", style:"2px solid #b8e0ff" },
+  { id:"frame-siberia-crystal", slot:"frame", name:"Сибирь Кристалл", price:142, rarity:"rare", style:"3px solid #a8e8ff" },
+  { id:"banner-tom-quartz", slot:"banner", name:"Том Кварц", price:142, rarity:"rare", style:"linear-gradient(90deg,#38bdf8,#0ea5e9)" },
+  { id:"title-taiga-crystal", slot:"title", name:"Тайга Кристалл", price:142, rarity:"rare", style:"#0e7490" },
+  { id:"frame-meduza-crystal", slot:"frame", name:"Медуза Кристалл", price:420, rarity:"epic", style:"conic-gradient(from 0deg,#a8e8ff,#38bdf8,#e8f8ff,#a8e8ff)" },
+  { id:"banner-vpn-quartz", slot:"banner", name:"ВПН Кварц", price:420, rarity:"epic", style:"linear-gradient(90deg,#e8f8ff,#38bdf8)" },
+  { id:"title-nova-crystal", slot:"title", name:"Нова Кристалл", price:420, rarity:"epic", style:"conic-gradient(from 90deg,#7c3aed,#38bdf8)" },
+  { id:"frame-gold-crystal-spin", slot:"frame", name:"Голд Кристалл Спин", price:1420, rarity:"legendary", style:"conic-gradient(from 0deg,#e8f8ff,#38bdf8,#ffd700,#e8f8ff)" },
+  { id:"banner-diamond-quartz", slot:"banner", name:"Даймонд Кварц", price:1420, rarity:"legendary", style:"linear-gradient(90deg,#e8f8ff,#ffffff)" },
+  { id:"title-rgb-crystal", slot:"title", name:"РГБ Кристалл", price:1420, rarity:"legendary", style:"conic-gradient(from 0deg,#a8e8ff,#ff44cc,#00ffcc,#a8e8ff)" },
 ];
-export const PRISM_IDS_SET=new Set(COSMETICS.filter(c=>c.id.includes("prism")).map(c=>c.id));
-export const PRISM_CATALOG=COSMETICS.filter(c=>c.id.includes("prism"));
-export const GLACIER_IDS_SET=new Set(COSMETICS.filter(c=>c.id.includes("glacier")||c.id.includes("snow-dust")||c.id.includes("ice-fence")||c.id.includes("siberia")||c.id.includes("nova-tundra")||c.id.includes("vpn-frost")||c.id.includes("diamond-frost")).map(c=>c.id));
-export const GLACIER_CATALOG=COSMETICS.filter(c=>GLACIER_IDS_SET.has(c.id));
+// GLACIER/PRISM/CRYSTAL — единый источник ../lib/cosmetics (12/12/12) — drift fixed, local COSMETICS kept 68 for backwards compat
+export { GLACIER_CATALOG, GLACIER, GLACIER_IDS_SET, GLACIER_IDS, PRISM_CATALOG, PRISM_IDS_SET, CRYSTAL_CATALOG, CRYSTAL_IDS_SET };
 export const PRISM_FAQ: {q:string;a:string;src:string}[]=[
   {q:"Призм сколько?",a:"12",src:"ShopPage.tsx:PRISM_CATALOG 12"},
   {q:"Пыль за разбор?",a:"14/42/142/420",src:"server.ts:prismDismantleReward"},
@@ -179,7 +190,7 @@ export const SHOP_EXTRA_CATALOG: { id: string; name: string; price: number; rari
   { id: "frame-ice", name: "Лёд MAGNUM", price: 84, rarity: "common", src: "ShopPage.tsx:59" }, // FILE:LINE ShopPage.tsx:59
   { id: "frame-fire", name: "Пламя", price: 184, rarity: "rare", src: "ShopPage.tsx:60" }, // FILE:LINE ShopPage.tsx:60
   { id: "frame-toxic", name: "Токсик", price: 390, rarity: "epic", src: "ShopPage.tsx:61" }, // FILE:LINE ShopPage.tsx:61
-  { id: "frame-void", name: "Войд", price: 1240, rarity: "legendary", src: "ShopPage.tsx:62" }, // FILE:LINE ShopPage.tsx:62
+  { id: "frame-void", name: "Войд", price: 1420, rarity: "legendary", src: "ShopPage.tsx:62" }, // FILE:LINE ShopPage.tsx:62
   { id: "frame-paper", name: "Бумажный", price: 42, rarity: "common", src: "ShopPage.tsx:63" }, // FILE:LINE ShopPage.tsx:63
   { id: "frame-pixel", name: "Пиксель 42", price: 142, rarity: "rare", src: "ShopPage.tsx:64" }, // FILE:LINE ShopPage.tsx:64
   { id: "frame-holo", name: "Голо-рамка", price: 520, rarity: "epic", src: "ShopPage.tsx:65" }, // FILE:LINE ShopPage.tsx:65
@@ -191,7 +202,7 @@ export const SHOP_EXTRA_CATALOG: { id: string; name: string; price: number; rari
   { id: "banner-ocean", name: "Океан", price: 84, rarity: "common", src: "ShopPage.tsx:71" }, // FILE:LINE ShopPage.tsx:71
   { id: "banner-sunset", name: "Закат", price: 184, rarity: "rare", src: "ShopPage.tsx:72" }, // FILE:LINE ShopPage.tsx:72
   { id: "banner-forest", name: "Лес 42", price: 390, rarity: "epic", src: "ShopPage.tsx:73" }, // FILE:LINE ShopPage.tsx:73
-  { id: "banner-nebula", name: "Туманность", price: 1240, rarity: "legendary", src: "ShopPage.tsx:74" }, // FILE:LINE ShopPage.tsx:74
+  { id: "banner-nebula", name: "Туманность", price: 1420, rarity: "legendary", src: "ShopPage.tsx:74" }, // FILE:LINE ShopPage.tsx:74
   { id: "banner-grid", name: "Сетка", price: 62, rarity: "common", src: "ShopPage.tsx:75" }, // FILE:LINE ShopPage.tsx:75
   { id: "banner-tiger", name: "Тигр", price: 520, rarity: "epic", src: "ShopPage.tsx:76" }, // FILE:LINE ShopPage.tsx:76
   { id: "title-bra", name: "Братуха", price: 42, rarity: "common", src: "ShopPage.tsx:77" }, // FILE:LINE ShopPage.tsx:77
@@ -201,7 +212,7 @@ export const SHOP_EXTRA_CATALOG: { id: string; name: string; price: number; rari
   { id: "title-neon", name: "Неоновый", price: 84, rarity: "common", src: "ShopPage.tsx:81" }, // FILE:LINE ShopPage.tsx:81
   { id: "title-hype", name: "Хайп", price: 184, rarity: "rare", src: "ShopPage.tsx:82" }, // FILE:LINE ShopPage.tsx:82
   { id: "title-toxic", name: "Токсичный", price: 390, rarity: "epic", src: "ShopPage.tsx:83" }, // FILE:LINE ShopPage.tsx:83
-  { id: "title-vip", name: "VIP 42", price: 1240, rarity: "legendary", src: "ShopPage.tsx:84" }, // FILE:LINE ShopPage.tsx:84
+  { id: "title-vip", name: "VIP 42", price: 1420, rarity: "legendary", src: "ShopPage.tsx:84" }, // FILE:LINE ShopPage.tsx:84
   { id: "title-noob", name: "Новичок", price: 22, rarity: "common", src: "ShopPage.tsx:85" }, // FILE:LINE ShopPage.tsx:85
   { id: "title-god", name: "Бог 42", price: 4242, rarity: "legendary", src: "ShopPage.tsx:86" }, // FILE:LINE ShopPage.tsx:86
   { id: "mops", name: "Мопс 42", price: 42, rarity: "common", src: "ShopPage.tsx:37" }, // FILE:LINE ShopPage.tsx:37
@@ -267,8 +278,8 @@ export function ShopPage() {
   const [equipped, setEquipped] = useState<string | null>(null);
   const [cosOwned, setCosOwned] = useState<string[]>([]);
   const [cosEquipped, setCosEquipped] = useState<Record<string,string>>({});
-  const [cosTab, setCosTab] = useState<"all"|CosmeticSlot|"prism"|"glacier">("all");
-  const filteredCosmetics = useMemo(()=> cosTab==="all"? COSMETICS : cosTab==="prism"? COSMETICS.filter(x=>x.id.includes("prism")) : cosTab==="glacier"? COSMETICS.filter(x=>GLACIER_IDS_SET.has(x.id)) : COSMETICS.filter(x=>x.slot===cosTab), [cosTab]);
+  const [cosTab, setCosTab] = useState<"all"|CosmeticSlot|"prism"|"glacier"|"crystal"|"volcano">("all");
+  const filteredCosmetics = useMemo(()=> cosTab==="all"? COSMETICS : cosTab==="prism"? COSMETICS.filter(x=>x.id.includes("prism")) : cosTab==="glacier"? COSMETICS.filter(x=>GLACIER_IDS_SET.has(x.id)) : cosTab==="crystal"? COSMETICS.filter(x=>CRYSTAL_IDS_SET.has(x.id)) : cosTab==="volcano"? COSMETICS.filter(x=>VOLCANO_IDS_SET.has(x.id)) : COSMETICS.filter(x=>x.slot===cosTab), [cosTab]);
   const [dust, setDust] = useState(0);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const toastId = useRef(0);
@@ -415,10 +426,12 @@ export function ShopPage() {
   /* hover RGB — chromatic lift */
   const onCardEnter = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const isCrystal = (e.currentTarget as HTMLElement).dataset.crystal==="1";
     gsap.to(e.currentTarget, {
       y: -4,
-      boxShadow: "0 12px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,45,85,0.20), 0 0 22px rgba(255,45,85,0.20), 0 0 22px rgba(0,255,136,0.12), 0 0 28px rgba(255,204,0,0.10)",
-      borderColor: "rgba(255,45,85,0.35)",
+      scale: 1.02,
+      boxShadow: isCrystal ? "0 0 16px #38bdf8, 0 12px 32px rgba(0,0,0,0.45)" : "0 12px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,45,85,0.20), 0 0 22px rgba(255,45,85,0.20), 0 0 22px rgba(0,255,136,0.12), 0 0 28px rgba(255,204,0,0.10)",
+      borderColor: isCrystal ? "rgba(56,189,248,0.55)" : "rgba(255,45,85,0.35)",
       duration: 0.28,
       ease: "power2.out",
       overwrite: true,
@@ -548,23 +561,29 @@ export function ShopPage() {
   };
 
   const buyCosmetic = async (co: Cosmetic) => {
+    if(!me){ pushToast("err","Войди, братуха — без логина магазин закрыт"); window.dispatchEvent(new CustomEvent("magnum:need-auth")); return; }
     if(!isValidCosmeticId(co.id)) return;
     if(cosOwned.includes(co.id)) return;
     if(coins < co.price){ pushToast("err",`Нужно ${co.price}, у тебя ${coins}. Фарми в играх!`); return; }
     try{
       const r=await fetch("/magnum/api/shop/cosmetic/buy",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({cosmeticId:co.id})});
       const d=await r.json().catch(()=>({})) as {balance?:number;error?:string};
-      if(!r.ok){ pushToast("err", String((d as any).error||"Покупка не прошла")); return; }
+      if(!r.ok){ if(r.status===401 || String((d as any).error||"").toLowerCase().includes("unauthorized")){ pushToast("err","Войди, братуха — без логина магазин закрыт"); window.dispatchEvent(new CustomEvent("magnum:need-auth")); return; } pushToast("err", String((d as any).error||"Покупка не прошла")); return; }
       if(typeof (d as any).balance==="number") setCoins((d as any).balance);
       setCosOwned(v=>[...v,co.id]);
       pushToast("ok",`${co.name} куплен!`);
+      if(co.id==="title-vip"||co.id==="frame-void"||co.id==="title-god"){
+        window.dispatchEvent(new CustomEvent("magnum:cosmetic-bought",{detail:co.id}));
+        window.dispatchEvent(new CustomEvent("magnum:tier-refresh"));
+      }
     }catch{ pushToast("err","Сеть упала"); }
   };
   const equipCosmetic = async (co: Cosmetic) => {
+    if(!me){ pushToast("err","Войди, братуха — без логина магазин закрыт"); window.dispatchEvent(new CustomEvent("magnum:need-auth")); return; }
     try{
       const r=await fetch("/magnum/api/shop/cosmetic/equip",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({cosmeticId:co.id})});
       const d=await r.json().catch(()=>({})) as {equipped?:string;slot?:string;error?:string};
-      if(!r.ok){ pushToast("err", String((d as any).error||"Не надеть")); return; }
+      if(!r.ok){ if(r.status===401 || String((d as any).error||"").toLowerCase().includes("unauthorized")){ pushToast("err","Войди, братуха — без логина магазин закрыт"); window.dispatchEvent(new CustomEvent("magnum:need-auth")); return; } pushToast("err", String((d as any).error||"Не надеть")); return; }
       setCosEquipped(prev=>({...prev,[co.slot]:co.id}));
       pushToast("ok",`${co.name} надет · слот ${co.slot}`);
     }catch{ pushToast("err","Сеть упала"); }
@@ -589,6 +608,13 @@ export function ShopPage() {
       }catch{}
       const got=granted.length? ` +${granted.length} предметов`:""; const skip=skipped.length? ` (уже было: ${skipped.length})`:"";
       pushToast("ok",`${b.name} куплен!${got}${skip} · баланс ${ (d as any).balance ?? coins-b.price}`);
+      if(b.id==="bundle-void"){
+        window.dispatchEvent(new CustomEvent("magnum:cosmetic-bought",{detail:b.id}));
+        window.dispatchEvent(new CustomEvent("magnum:tier-refresh"));
+      } else if(granted.some(id=> id==="title-vip"||id==="frame-void"||id==="title-god")){
+        window.dispatchEvent(new CustomEvent("magnum:cosmetic-bought",{detail:granted.find(id=> id==="title-vip"||id==="frame-void"||id==="title-god")||"" }));
+        window.dispatchEvent(new CustomEvent("magnum:tier-refresh"));
+      }
     }catch{ pushToast("err","Сеть упала"); }
   };
   const dismantle = async (co: Cosmetic) => {
@@ -618,13 +644,11 @@ export function ShopPage() {
     if(!me){ pushToast("err","Войди — нужен логин для крафта"); window.dispatchEvent(new CustomEvent("magnum:need-auth")); return; }
     const isUncommon = co.rarity==="rare" && GLACIER_IDS_SET.has(co.id);
     if(isUncommon){
-      // 3×common → uncommon fee 42
       try{
         const r=await fetch("/magnum/api/shop/glacier/craft",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({targetId:co.id})});
         const d=await r.json().catch(()=>({})) as {balance?:number;dust?:number;error?:string;consumed?:string[]};
         if(!r.ok){ pushToast("err", String((d as any).error||"Крафт не прошёл")); return; }
         if(typeof (d as any).balance==="number") setCoins((d as any).balance);
-        // refresh cosmetics from inventory response
         const invIds = ((d as any).inventory as string[])||[];
         if(invIds.length) setCosOwned(invIds);
         else setCosOwned(v=>{ const toRemove = ((d as any).consumed as string[])||[]; const filtered=v.filter(x=>!toRemove.includes(x)); return [...filtered, co.id]; });
@@ -634,6 +658,63 @@ export function ShopPage() {
     }
     if(!GLACIER_IDS_SET.has(co.id)){ pushToast("err","Только GLACIER крафт"); return; }
     pushToast("err","Гляйшер крафт только для uncommon (142) — собери 3×common");
+  };
+  const craftCrystal = async (co: Cosmetic) => {
+    if(!me){ pushToast("err","Войди — нужен логин для крафта"); window.dispatchEvent(new CustomEvent("magnum:need-auth")); return; }
+    if(!CRYSTAL_IDS_SET.has(co.id)){ pushToast("err","Только CRYSTAL крафт"); return; }
+    const fee = co.rarity==="rare" ? 42 : co.rarity==="epic" ? 142 : 0;
+    if(!fee){ pushToast("err","CRYSTAL крафт: uncommon 42 (3×common) или rare 142 (3×uncommon)"); return; }
+    try{
+      const r=await fetch("/magnum/api/shop/crystal/craft",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({targetId:co.id})});
+      const d=await r.json().catch(()=>({})) as {balance?:number;error?:string;consumed?:string[];inventory?:string[]};
+      if(!r.ok){ pushToast("err", String((d as any).error||"Крафт не прошёл")); return; }
+      if(typeof (d as any).balance==="number") setCoins((d as any).balance);
+      const invIds = ((d as any).inventory as string[])||[];
+      if(invIds.length) setCosOwned(invIds);
+      else setCosOwned(v=>{ const toRemove=((d as any).consumed as string[])||[]; const filtered=v.filter(x=>!toRemove.includes(x)); return [...filtered, co.id]; });
+      // GSAP ForgeReveal: scale 0->1 rotate 5->0 0.5 + crystal pulse + confetti 80 #a8e8ff
+      try{
+        const el=document.querySelector('[data-forge-reveal]') as HTMLElement;
+        if(el && !window.matchMedia("(prefers-reduced-motion: reduce)").matches){
+          const gs=(await import("gsap")).default;
+          gs.fromTo(el,{scale:0,rotation:5,opacity:0},{scale:1,rotation:0,opacity:1,duration:0.5,ease:"back.out(1.7)"});
+          gs.to(el,{boxShadow:"0 0 24px #38bdf8",duration:0.4,yoyo:true,repeat:1});
+        }
+        // confetti 80 crystal #a8e8ff
+        const canvas=document.createElement('canvas'); canvas.style.position='fixed'; canvas.style.inset='0'; canvas.style.pointerEvents='none'; canvas.width=window.innerWidth; canvas.height=window.innerHeight; document.body.appendChild(canvas);
+        const ctx=canvas.getContext('2d')!; const parts=Array.from({length:80},()=>({x:window.innerWidth/2,y:window.innerHeight/2,vx:(Math.random()-0.5)*12,vy:(Math.random()-0.5)*12-4,life:1,decay:0.015+Math.random()*0.01}));
+        const tick=()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); let alive=false; for(const p of parts){ if(p.life<=0) continue; alive=true; p.x+=p.vx; p.y+=p.vy; p.vy+=0.25; p.life-=p.decay; ctx.globalAlpha=Math.max(0,p.life); ctx.fillStyle='#a8e8ff'; ctx.beginPath(); ctx.arc(p.x,p.y,3,0,Math.PI*2); ctx.fill(); } if(alive) requestAnimationFrame(tick); else canvas.remove(); }; tick();
+      }catch{}
+      pushToast("ok",`Скрафчено ${co.name} за ${fee} · 3×${co.rarity==="rare"?"common":"uncommon"} 💎`);
+    }catch{ pushToast("err","Сеть упала"); }
+  };
+  const craftVolcano = async (co: Cosmetic) => {
+    if(!me){ pushToast("err","Войди — нужен логин для крафта"); window.dispatchEvent(new CustomEvent("magnum:need-auth")); return; }
+    if(!VOLCANO_IDS_SET.has(co.id)){ pushToast("err","Только VOLCANO крафт"); return; }
+    if(co.rarity!=="rare"){ pushToast("err","VOLCANO крафт только для uncommon (142) — собери 3×common 🌋"); return; }
+    try{
+      const r=await fetch("/magnum/api/shop/volcano/craft",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({targetId:co.id})});
+      const d=await r.json().catch(()=>({})) as {balance?:number;error?:string;consumed?:string[];inventory?:string[]};
+      if(!r.ok){ pushToast("err", String((d as any).error||"Крафт не прошёл")); return; }
+      if(typeof (d as any).balance==="number") setCoins((d as any).balance);
+      const invIds = ((d as any).inventory as string[])||[];
+      if(invIds.length) setCosOwned(invIds);
+      else setCosOwned(v=>{ const toRemove=((d as any).consumed as string[])||[]; const filtered=v.filter(x=>!toRemove.includes(x)); return [...filtered, co.id]; });
+      // FRAME VOLCANO GOLD eruption glow — conic-volcano spin 3s #ff5722 + GSAP spring pulse 2s + confetti 80 #ff5722
+      try{
+        const el=document.querySelector('[data-forge-reveal]') as HTMLElement;
+        if(el && !window.matchMedia("(prefers-reduced-motion: reduce)").matches){
+          const gs=(await import("gsap")).default;
+          gs.fromTo(el,{scale:0,rotation:5,opacity:0},{scale:1,rotation:0,opacity:1,duration:0.5,ease:"back.out(1.7)"});
+          gs.to(el,{boxShadow:"0 0 16px #ff5722, 0 0 28px rgba(255,87,34,0.45)",duration:0.35,yoyo:true,repeat:1});
+          gs.to(el,{scale:1.04,duration:0.35,yoyo:true,repeat:1,delay:0.5});
+        }
+        const canvas=document.createElement('canvas'); canvas.style.position='fixed'; canvas.style.inset='0'; canvas.style.pointerEvents='none'; canvas.width=window.innerWidth; canvas.height=window.innerHeight; document.body.appendChild(canvas);
+        const ctx=canvas.getContext('2d')!; const parts=Array.from({length:80},()=>({x:window.innerWidth/2,y:window.innerHeight/2,vx:(Math.random()-0.5)*12,vy:(Math.random()-0.5)*12-4,life:1,decay:0.015+Math.random()*0.01}));
+        const tick=()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); let alive=false; for(const p of parts){ if(p.life<=0) continue; alive=true; p.x+=p.vx; p.y+=p.vy; p.vy+=0.25; p.life-=p.decay; ctx.globalAlpha=Math.max(0,p.life); ctx.fillStyle='#ff5722'; ctx.beginPath(); ctx.arc(p.x,p.y,3,0,Math.PI*2); ctx.fill(); } if(alive) requestAnimationFrame(tick); else canvas.remove(); }; tick();
+      }catch{}
+      pushToast("ok",`Скрафчено ${co.name} за 42 · 3×common 🌋 eruption`);
+    }catch{ pushToast("err","Сеть упала"); }
   };
 
   const equippedSkin = useMemo(
@@ -792,10 +873,10 @@ export function ShopPage() {
       <section className={styles.cosmetics} aria-label="Косметика 42">
         <div className={styles.cosHead}>
           <h2 className={styles.cosTitle}>КОСМЕТИКА 42 — рамки · баннеры · титулы</h2>
-          <p className={styles.cosSub}>56 предметов (32 + 12 PRISM + 12 GLACIER) · пыль {dust} · Neon · без localStorage</p>
+          <p className={styles.cosSub}>80 предметов (32 + 12 PRISM + 12 GLACIER + 12 CRYSTAL + 12 VOLCANO) · пыль {dust} · Neon · без localStorage</p>
           <div className={styles.cosTabs} role="tablist">
-            {(["all","frame","banner","title","prism","glacier"] as const).map(t => (
-              <button key={t} type="button" role="tab" aria-selected={cosTab===t} className={`${styles.cosTab} ${cosTab===t?styles.cosTabOn:""}`} onClick={()=>setCosTab(t)}>{t==="all"?"Все":t==="frame"?"Рамки":t==="banner"?"Баннеры":t==="prism"?"PRISM 12":t==="glacier"?"GLACIER 12":"Титулы"}</button>
+            {(["all","frame","banner","title","prism","glacier","crystal","volcano"] as const).map(t => (
+              <button key={t} type="button" role="tab" aria-selected={cosTab===t} className={`${styles.cosTab} ${cosTab===t?styles.cosTabOn:""}`} onClick={()=>setCosTab(t)}>{t==="all"?"Все":t==="frame"?"Рамки":t==="banner"?"Баннеры":t==="prism"?"PRISM 12":t==="glacier"?"GLACIER 12":t==="crystal"?"CRYSTAL 12":t==="volcano"?"VOLCANO 12 🌋":"Титулы"}</button>
             ))}
           </div>
         </div>
@@ -805,25 +886,29 @@ export function ShopPage() {
             const isEq = cosEquipped[co.slot]===co.id;
             const isPrism = co.id.includes("prism");
             const isGlacier = GLACIER_IDS_SET.has(co.id);
+            const isCrystal = CRYSTAL_IDS_SET.has(co.id);
+            const isVolcano = VOLCANO_IDS_SET.has(co.id);
             const can = coins >= co.price;
+            const isCrystalEpic = isCrystal && co.rarity==="legendary";
+            const isVolcanoGold = isVolcano && co.rarity==="legendary";
             return (
-              <div key={co.id} className={`${styles.cosCard} ${isEq?styles.cosCardEq:""} ${isPrism?styles.cosCardPrism||"":""} ${isGlacier?styles.cosCardGlacier||"":""} ${isGlacier && co.rarity==="legendary"?styles.cosCardFrost||"":""}`} data-rarity={co.rarity} onMouseEnter={onCardEnter} onMouseLeave={onCardLeave}>
-                <div className={styles.cosPreview} style={co.slot==="banner"?{background:co.style}:{border:co.style, background:"rgba(255,255,255,0.04)"}}>
-                  <span className={styles.cosName}>{co.name}{isPrism?"":isGlacier?" ❄️":""}</span>
-                  <span className={styles.cosSlot}>{co.slot}{isPrism?" · prism":isGlacier?" · glacier":""}</span>
+              <div key={co.id} className={`${styles.cosCard} ${isEq?styles.cosCardEq:""} ${isPrism?styles.cosCardPrism||"":""} ${isGlacier?styles.cosCardGlacier||"":""} ${isGlacier && co.rarity==="legendary"?styles.cosCardFrost||"":""} ${isCrystal?styles.cosCardCrystal||"":""} ${isCrystalEpic?styles.cosCardCrystalSpin||"":""} ${isVolcano?styles.cosCardVolcano||"":""} ${isVolcanoGold?styles.cosCardVolcanoGold||"":""}`} data-rarity={co.rarity} data-crystal={isCrystal?1:0} data-volcano={isVolcano?1:0} onMouseEnter={onCardEnter} onMouseLeave={onCardLeave}>
+                <div className={styles.cosPreview} style={co.slot==="banner"?{background:co.style}:{border:co.style, background:"rgba(255,255,255,0.04)", boxShadow: isEq && isCrystal ? "0 0 24px #38bdf8" : isEq && isVolcano ? "0 0 16px #ff5722, 0 0 28px rgba(255,87,34,0.35)" : isVolcanoGold ? "0 0 16px #ff5722" : undefined, backdropFilter: (isEq && isCrystal) || (isEq && isVolcano) ? "blur(6px)" : undefined} as any}>
+                  <span className={styles.cosName}>{co.name}{isPrism?"":isGlacier?" ❄️":isCrystal?" 💎":isVolcano?" 🌋":""}</span>
+                  <span className={styles.cosSlot}>{co.slot}{isPrism?" · prism":isGlacier?" · glacier":isCrystal?" · crystal":isVolcano?" · volcano":""}</span>
                 </div>
-                <div className={styles.cosMeta}><span className={styles.cosRarity} style={{color:RARITY_META[co.rarity].color}}>{RARITY_META[co.rarity].label}</span><span className={styles.cosPrice}>🪙 {co.price}{isPrism?" · пыль":isGlacier && co.rarity==="legendary"?" · frost ❄️":""}</span></div>
+                <div className={styles.cosMeta}><span className={styles.cosRarity} style={{color:RARITY_META[co.rarity].color}}>{RARITY_META[co.rarity].label}</span><span className={styles.cosPrice}>🪙 {co.price}{isPrism?" · пыль":isGlacier && co.rarity==="legendary"?" · frost ❄️":isCrystal && co.rarity==="legendary"?" · crystal 3s":isVolcano && co.rarity==="legendary"?" · volcano 3s 🌋":isVolcano?" · volcano":""}</span></div>
                 {isOwned ? (
                   <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                     {isEq ? <button type="button" className={styles.btnWear} onClick={()=>equipCosmetic(co)}>✅ Надет</button> : <button type="button" className={styles.btnWear} onClick={()=>equipCosmetic(co)}>Надеть</button>}
-                    <button type="button" className={styles.btnGhost} onClick={()=>dismantle(co)} title="Разобрать → пыль">♻️ +{GLACIER_IDS_SET.has(co.id) ? (co.rarity==="legendary"?420:co.rarity==="epic"?100:co.rarity==="rare"?42:14) : co.rarity==="legendary"?420:co.rarity==="epic"?142:co.rarity==="rare"?42:14}✨</button>
+                    <button type="button" className={styles.btnGhost} onClick={()=>dismantle(co)} title="Разобрать → пыль">♻️ +{CRYSTAL_IDS_SET.has(co.id) ? (co.rarity==="legendary"?420:co.rarity==="epic"?100:co.rarity==="rare"?42:14) : GLACIER_IDS_SET.has(co.id) ? (co.rarity==="legendary"?420:co.rarity==="epic"?100:co.rarity==="rare"?42:14) : VOLCANO_IDS_SET.has(co.id) ? (co.rarity==="legendary"?420:co.rarity==="epic"?100:co.rarity==="rare"?42:14) : co.rarity==="legendary"?420:co.rarity==="epic"?142:co.rarity==="rare"?42:14}✨</button>
                   </div>
-                ) : isPrism ? <button type="button" className={`${styles.btnBuy} ${dust>=co.price?"":styles.btnLocked}`} onClick={()=>craftPrism(co)}>✨ {co.price} пыль</button> : isGlacier ? <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>craftGlacier(co)}>❄️ {co.price} {co.rarity==="rare"?"· крафт 3×common 42":""}</button> : <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>buyCosmetic(co)}>🪙 {co.price}</button>}
+                ) : isPrism ? <button type="button" className={`${styles.btnBuy} ${dust>=co.price?"":styles.btnLocked}`} onClick={()=>craftPrism(co)}>✨ {co.price} пыль</button> : isGlacier ? <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>craftGlacier(co)}>❄️ {co.price} {co.rarity==="rare"?"· крафт 3×common 42":""}</button> : isCrystal ? <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>craftCrystal(co)}>💎 {co.price} {co.rarity==="rare"?"· крафт 3×common 42":co.rarity==="epic"?"· крафт 3×uncommon 142":""}</button> : isVolcano ? <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>craftVolcano(co)}>🌋 {co.price}{co.rarity==="rare"?" · крафт 3×common 42 🌋":""}</button> : <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>buyCosmetic(co)}>🪙 {co.price}</button>}
               </div>
             );
           })}
         </div>
-        {cosOwned.length>0 && <p className={styles.cosHint}>В инвентаре: {cosOwned.length}/56 · пыль: {dust} · разбор: common 14 / rare 42 / epic 142/100 glacier / legendary 420 · крафт PRISM за пыль · GLACIER: 3×common→uncommon 42 · verified -42/нед ❄️</p>}
+        {cosOwned.length>0 && <p className={styles.cosHint}>В инвентаре: {cosOwned.length}/80 · пыль: {dust} · разбор: common 14 / rare 42 / epic 100(142 PRISM)/420 · крафт PRISM за пыль · GLACIER 3×common→uncommon 42 · CRYSTAL 3×common→uncommon 42 / 3×uncommon→rare 142 · VOLCANO 3×common→uncommon 42 🌋 · verified -42/нед 💎</p>}
       </section>
 
       {/* бандлы 8 — со скидкой, Neon-покупка */}

@@ -32,16 +32,7 @@ const UPGRADES_INIT: Upgrade[] = [
   { id: "shaft", name: "Шахта 2042", desc: "+12/сек · бездна 42", icon: "🏗️", baseCost: 2042, power: 5, auto: 12, count: 0 },
 ];
 
-const BOARD_MOCK: BoardEntry[] = [
-  { name: "Шахтёр_42", coins: 42042, date: "2026-08-30" },
-  { name: "Томь_братуха", coins: 28420, date: "2026-08-29" },
-  { name: "42_легенда", coins: 19142, date: "2026-08-28" },
-  { name: "Кузбасс_топ", coins: 12420, date: "2026-08-27" },
-  { name: "БЕЛАЗ_драйвер", coins: 8842, date: "2026-08-27" },
-  { name: "Уголь_магнат", coins: 6242, date: "2026-08-26" },
-  { name: "Братуха_из_Кемерово", coins: 4204, date: "2026-08-25" },
-  { name: "142_клика", coins: 3142, date: "2026-08-25" },
-];
+// Лидерборд — только реальные данные из Neon (GET /magnum/api/coins/top). Фейк-сиды запрещены (см. tests/fake-players-guard.test.ts).
 
 // -- EXTRA 40 -- real, FILE:LINE
 export const MINING_EXTRA_FACTS: { fact: string; src: string }[] = [
@@ -57,8 +48,8 @@ export const MINING_EXTRA_FACTS: { fact: string; src: string }[] = [
   { fact: "POST /mining/click", src: "MiningPage.tsx:181" }, // FILE:LINE MiningPage.tsx:181
   { fact: "POST /mining/upgrade", src: "MiningPage.tsx:204" }, // FILE:LINE MiningPage.tsx:204
   { fact: "WS duel 2-4", src: "MiningPage.tsx:369" }, // FILE:LINE MiningPage.tsx:369
-  { fact: "Шахтёр_42 42042", src: "MiningPage.tsx:32" }, // FILE:LINE MiningPage.tsx:32
-  { fact: "Томь_братуха 28420", src: "MiningPage.tsx:33" }, // FILE:LINE MiningPage.tsx:33
+  { fact: "Топ из Neon coins/top", src: "MiningPage.tsx:203" }, // FILE:LINE MiningPage.tsx:203
+  { fact: "Топ-10 реальных шахтёров", src: "MiningPage.tsx:203" }, // FILE:LINE MiningPage.tsx:203
   { fact: "Без крипты и скама", src: "MiningPage.tsx:292" }, // FILE:LINE MiningPage.tsx:292
   { fact: "Авто tick perSec", src: "MiningPage.tsx:98" }, // FILE:LINE MiningPage.tsx:98
   { fact: "GSAP y24 stagger 0.12", src: "MiningPage.tsx:118" }, // FILE:LINE MiningPage.tsx:118
@@ -75,7 +66,7 @@ export const MINING_EXTRA_FACTS: { fact: string; src: string }[] = [
   { fact: "Гудит как Томь", src: "MiningPage.tsx:26" }, // FILE:LINE MiningPage.tsx:26
   { fact: "Везёт Кузбасс", src: "MiningPage.tsx:27" }, // FILE:LINE MiningPage.tsx:27
   { fact: "Бездна 42", src: "MiningPage.tsx:28" }, // FILE:LINE MiningPage.tsx:28
-  { fact: "Мок 8 топ", src: "MiningPage.tsx:31" }, // FILE:LINE MiningPage.tsx:31
+  { fact: "Лидерборд из Neon", src: "MiningPage.tsx:203" }, // FILE:LINE MiningPage.tsx:203
   { fact: "Баланс 42-коин", src: "MiningPage.tsx:303" }, // FILE:LINE MiningPage.tsx:303
   { fact: "Копай как шахтёр", src: "MiningPage.tsx:291" }, // FILE:LINE MiningPage.tsx:291
   { fact: "CountUp баланса", src: "MiningPage.tsx:177" }, // FILE:LINE MiningPage.tsx:177
@@ -101,7 +92,7 @@ export const MINING_FAQ_EXTRA: { q: string; a: string; src: string }[] = [
   { q: "POST click?", a: "/mining/click", src: "MiningPage.tsx:181" }, // FILE:LINE MiningPage.tsx:181
   { q: "POST upgrade?", a: "/mining/upgrade", src: "MiningPage.tsx:204" }, // FILE:LINE MiningPage.tsx:204
   { q: "WS?", a: "2-4 duel", src: "MiningPage.tsx:369" }, // FILE:LINE MiningPage.tsx:369
-  { q: "Топ шахтёр?", a: "Шахтёр_42 42042", src: "MiningPage.tsx:32" }, // FILE:LINE MiningPage.tsx:32
+  { q: "Топ шахтёр?", a: "Реальный топ по балансу из Neon — /magnum/api/coins/top", src: "MiningPage.tsx:203" }, // FILE:LINE MiningPage.tsx:203
   { q: "Кузбасс?", a: "Кузбасс edition", src: "MiningPage.tsx:290" }, // FILE:LINE MiningPage.tsx:290
   { q: "Без скама?", a: "без крипты", src: "MiningPage.tsx:292" }, // FILE:LINE MiningPage.tsx:292
   { q: "Авто майнинг?", a: "tick perSec", src: "MiningPage.tsx:98" }, // FILE:LINE MiningPage.tsx:98
@@ -173,7 +164,7 @@ export function MiningPage() {
   const [coins, setCoins] = useState<number>(0);
   const [upgrades, setUpgrades] = useState<Upgrade[]>(UPGRADES_INIT);
   const [toast, setToast] = useState<string | null>(null);
-  const [board] = useState<BoardEntry[]>(BOARD_MOCK);
+  const [board, setBoard] = useState<BoardEntry[]>([]);
   const [nick, setNick] = useState("Братуха_42");
   const [loading, setLoading] = useState(true);
   const [me, setMe] = useState<{ id: number; username: string } | null>(null);
@@ -206,6 +197,23 @@ export function MiningPage() {
     window.addEventListener("magnum:auth" as unknown as string, onAuth as EventListener);
     return () => window.removeEventListener("magnum:auth" as unknown as string, onAuth as EventListener);
   }, []);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        // реальный лидерборд из Neon: топ-10 по балансу (coins/top публичный)
+        const res = await fetch("/magnum/api/coins/top", { credentials: "include" });
+        if (res.ok && !cancelled) {
+          const data = (await res.json()) as { top?: Array<{ username: string; balance: number }> };
+          if (Array.isArray(data.top)) {
+            setBoard(data.top.slice(0, 10).map((t) => ({ name: t.username, coins: t.balance, date: new Date().toISOString().slice(0, 10) })));
+          }
+        }
+      } catch { /* топ недоступен — пусто, без фейков */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -409,9 +417,11 @@ export function MiningPage() {
     })();
   };
 
-  // ---- WS duel ----
+  // ---- WS duel — P0 funnel: автоконнект + онбординг "Жми Старт" ----
+  const [duelHintDismissed, setDuelHintDismissed] = useState(false);
+  const duelPromptShownRef = useRef(false);
   const connectDuel = useCallback(async () => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) return;
+    if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) return;
     if (!me) {
       showToast("Войди, братуха — дуэль только для залогиненных");
       window.dispatchEvent(new CustomEvent("magnum:need-auth"));
@@ -428,9 +438,45 @@ export function MiningPage() {
       try {
         const msg = JSON.parse(String(ev.data)) as { type?: string; room?: DuelRoom; you?: string };
         if (msg.room) setDuelRoom(msg.room);
+        if (msg.type === "room" || msg.type === "lobby:created") {
+          if (msg.room) setDuelRoom(msg.room as DuelRoom);
+        }
+        if (msg.type === "finish") {
+          if (msg.room) setDuelRoom(msg.room as DuelRoom);
+          const myScore = (() => {
+            try {
+              const r = (msg as { room?: DuelRoom }).room;
+              const meName = me?.username ?? "";
+              const p = r?.players.find((x) => x.name === meName);
+              return typeof p?.score === "number" ? Math.round(p.score * 10) : 42;
+            } catch { return 42; }
+          })();
+          void fetch("/magnum/api/games/submit", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ game: "duel", score: myScore, meta: { src: "mining-ws-finish" } }) }).catch(() => {});
+        }
+        if (msg.type === "scores" || msg.type === "tick" || msg.type === "start") {
+          if (msg.room) setDuelRoom(msg.room as DuelRoom);
+        }
       } catch {}
     };
-  }, [me]);
+  }, [me, showToast]);
+
+  // автоконнект WS дуэли после логина / при заходе на Майнинг
+  useEffect(() => {
+    if (!me) { duelPromptShownRef.current = false; return; }
+    if (duelConnected) return;
+    if (wsRef.current && wsRef.current.readyState === WebSocket.CONNECTING) return;
+    const t = window.setTimeout(() => { void connectDuel(); }, 300);
+    return () => window.clearTimeout(t);
+  }, [me, duelConnected, connectDuel]);
+  // промпт "Жми Старт" когда комната в waiting и соединена
+  useEffect(() => {
+    if (!duelConnected || !duelRoom) return;
+    if (duelRoom.state !== "waiting") { duelPromptShownRef.current = false; return; }
+    if (duelHintDismissed) return;
+    if (duelPromptShownRef.current) return;
+    duelPromptShownRef.current = true;
+    showToast("Жми Старт — взорви вулкан! 🌋 1/4 братух в комнате");
+  }, [duelConnected, duelRoom, duelHintDismissed, showToast]);
 
   const disconnectDuel = useCallback(() => {
     wsRef.current?.close();
@@ -584,14 +630,23 @@ export function MiningPage() {
         <div style={{ marginTop: 8, fontSize: 11, opacity: 0.45 }}>GET /magnum/api/mining/vault · POST /magnum/api/mining/vault/claim · {vaultClaimed.size}/5 забрано · баланс Neon: {coins} 42</div>
       </section>
 
-      {/* WS duel 2-4 игрока */}
+      {/* WS duel 2-4 игрока — P0 онбординг первого запуска */}
       <section className={styles.duelSection} style={{ marginTop: 32 }}>
         <h2 className={styles.sectionTitle}>ДУЭЛЬ 42 <span>· 2–4 БРАТУХИ · REALTIME WS</span></h2>
         <p style={{ opacity: 0.7, marginBottom: 12 }}>Комната на 2–4 игрока, кликер-дуэль 10 сек, broadcast scores, persist в magnum_leaderboard при финише.</p>
-        <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
+        {duelConnected && duelRoom?.state === "waiting" && !duelHintDismissed && (
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, padding: "10px 14px", border: "1px solid rgba(255,204,0,0.35)", borderRadius: 12, background: "linear-gradient(135deg, rgba(255,204,0,0.16), rgba(255,45,85,0.10))", boxShadow: "0 0 18px rgba(255,204,0,0.18)" }}>
+            <span style={{ fontSize: 18 }}>🌋</span>
+            <div style={{ flex: 1, fontWeight: 800, fontSize: 13, letterSpacing: 0.3 }}>Жми Старт — ворвись в дуэль! 1/4 братух в комнате → 10с кликов, счёт в magnum_game_scores</div>
+            <button className={styles.btnSave} onClick={() => duelStart()} style={{ animation: "pulse 1.2s infinite" }}>ЖМИ СТАРТ →</button>
+            <button className={styles.btnGhost} onClick={() => setDuelHintDismissed(true)} style={{ fontSize: 11, opacity: 0.6 }}>✕</button>
+          </div>
+        )}
+        <div style={{ display: "flex", gap: 12, marginBottom: 12, flexWrap: "wrap", alignItems: "center" }}>
           {!duelConnected ? <button className={styles.btnSave} onClick={connectDuel}>ВОЙТИ В ДУЭЛЬ →</button> : <button className={styles.btnGhost} onClick={disconnectDuel}>ВЫЙТИ</button>}
-          {duelConnected && duelRoom?.state === "waiting" && <button className={styles.btnSave} onClick={duelStart}>СТАРТ 10С</button>}
+          {duelConnected && duelRoom?.state === "waiting" && <button className={styles.btnSave} onClick={duelStart} style={{ boxShadow: "0 0 14px rgba(255,204,0,0.35)" }}>СТАРТ 10С</button>}
           {duelConnected && duelRoom?.state === "playing" && <button className={styles.rock} onClick={duelClick} style={{ padding: "12px 28px" }}>ЖМИ! 🔥</button>}
+          {duelConnected && duelRoom && <span style={{ fontSize: 11, opacity: 0.55, border: "1px solid rgba(255,255,255,0.12)", borderRadius: 999, padding: "4px 8px" }}>{duelConnected ? "WS ● connected" : "WS ○"} · {duelRoom.players.length}/4 · {duelRoom.state}</span>}
         </div>
         {duelRoom ? (
           <div ref={boardRef} style={{ border: "1px solid #333", borderRadius: 12, padding: 12 }}>
@@ -609,6 +664,7 @@ export function MiningPage() {
       <section ref={boardRef} className={styles.board}>
         <h2 className={styles.sectionTitle}>ЛИДЕРБОРД <span>· ТОП ШАХТЁРОВ</span></h2>
         <div className={styles.boardList}>
+          {board.length === 0 && <div style={{ opacity: 0.55, fontSize: 13, padding: "10px 4px" }}>Пока пусто — стань первым шахтёром в топе 🔥</div>}
           {board.map((e, i) => (
             <div key={e.name + i} className={styles.boardRow}>
               <span className={styles.boardRank}>#{i + 1}</span>

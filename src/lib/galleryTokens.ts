@@ -36,13 +36,21 @@ export const GSAP_PRESETS = {
   scrollTrigger: { start: "top 92%", once: true },
 } as const;
 
-// Canonical real gallery files — единый источник (4 стиля × webp) — imported by GalleryPage.tsx
+// Canonical real gallery files — единый источник (5 файлов: 4 стиля + Y2K-02) — imported by GalleryPage.tsx
 export const REAL_BY_STYLE: Record<string, string> = {
   "СССР": "/magnum/images/gallery-42/42-agit-01-800.webp",
   "Y2K": "/magnum/images/gallery-42/42-y2k-01-800.webp",
+  "Y2K-02": "/magnum/images/gallery-42/42-y2k-02-800.webp",
   "киберпанк": "/magnum/images/gallery-42/42-cyber-01-800.webp",
   "мемфис": "/magnum/images/gallery-42/42-memphis-01-800.webp",
 };
+// ECO PLAST 42 — Кузбасс-карты для 8Q сортировки
+export const KUZBASS_ECO_CARDS: { id: string; title: string; fact: string; icon: string }[] = [
+  { id: "kuzbass-geo", title: "Кузбасс 95,7 тыс км²", fact: "86,6% город • 6 границ • 3 хребта (Кузнецкий Алатау/Салаир/Горная Шория)", icon: "🗺️" },
+  { id: "kuzbass-coal", title: "Уголь 190 млн т", fact: "Главный бассейн России • брикеты + лес 4817,5 тыс га", icon: "⛏️" },
+  { id: "kuzbass-tom", title: "Томь 827 км", fact: "Красное озеро • Сосновый бор • без пластика", icon: "🌊" },
+  { id: "kuzbass-sort", title: "Сортировка 7дн", fact: "ПЭТ/стекло/органика • фандомат Лента • стрик 7дн freeze 420", icon: "♻️" },
+];
 // backward compat alias for tests that import REAL_BY_STYLE_FALLBACK
 export const REAL_BY_STYLE_FALLBACK: Record<string, string> = REAL_BY_STYLE;
 export function getRealSrc(style: string, src?: string): string {

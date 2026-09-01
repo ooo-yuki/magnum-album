@@ -1,0 +1,22 @@
+.page{max-width:1100px;margin:0 auto;padding:18px 14px 40px;color:#fff}
+.header{margin-bottom:14px}
+.badge{display:inline-block;padding:6px 10px;border-radius:999;background:rgba(255,45,85,.14);border:1px solid rgba(255,45,85,.22);color:#ff2d55;font-weight:900;letter-spacing:.08em;font-size:12px}
+.title{margin:10px 0 0;font-size:28px;font-weight:900;letter-spacing:-.02em}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:860px){ .grid{grid-template-columns:1fr} }
+.card{padding:14px;border-radius:16px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(8px)}
+.slots{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.slot{padding:10px 12px;border-radius:12px;border:1px dashed rgba(255,255,255,.08);background:rgba(255,255,255,.02);font-weight:700;font-size:13px;min-height:42px;display:flex;align-items:center}
+.slotFilled{border-style:solid;background:rgba(255,45,85,.08);border-color:rgba(255,45,85,.2);color:#fff}
+.slotEmpty{color:rgba(255,255,255,.45)}
+.input{flex:1;padding:.6rem .8rem;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#fff;text-transform:uppercase;letter-spacing:.12em;font-weight:900;text-align:center}
+.primaryBtn{margin-top:10px;width:100%;padding:.75rem;border-radius:999;background:#ff2d55;color:#fff;font-weight:900;border:none;cursor:pointer}
+.secondaryBtn{padding:.6rem .9rem;border-radius:12px;background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.12);font-weight:800;cursor:pointer}
+.pot{font-size:32px;font-weight:900;letter-spacing:-.02em}
+.mult{margin-left:8px;padding:4px 8px;border-radius:999;background:rgba(255,204,0,.14);border:1px solid rgba(255,204,0,.22);color:#ffcc00;font-size:14px;vertical-align:middle}
+.potHint{margin-top:6px;color:rgba(255,255,255,.55);font-size:12px}
+.potBtn{flex:1;padding:.6rem;border-radius:12px;background:rgba(255,204,0,.12);border:1px solid rgba(255,204,0,.22);color:#ffcc00;font-weight:900;cursor:pointer}
+.shareBtn{padding:.6rem .9rem;border-radius:999;background:#00ffcc;color:#111;font-weight:900;border:none;cursor:pointer;white-space:nowrap}
+.clickBtn{margin-top:10px;width:100%;padding:1.2rem;border-radius:16px;background:linear-gradient(90deg,#ff2d55,#ff6a00);color:#fff;font-weight:900;font-size:22px;border:none;cursor:pointer;letter-spacing:.02em}
+.playerTag{padding:.35rem .6rem;border-radius:999;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);font-size:12px}
+.toast{margin-top:10px;padding:.6rem .8rem;border-radius:12px;background:rgba(255,45,85,.12);border:1px solid rgba(255,45,85,.22);font-size:13px}

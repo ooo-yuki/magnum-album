@@ -11,13 +11,20 @@ import { ErrorBoundary } from "./ErrorBoundary";
 import { AiBot } from "./AiBot";
 import { AuthStatus } from "./AuthStatus";
 import { PromoPopup } from "./PromoPopup";
+import { VipActivatedPopup } from "./VipActivatedPopup";
+import { DailyStreakPopup } from "./DailyStreakPopup";
 import { usePresaveTracker } from "../lib/presaveTracker";
+import { StickyPresaveBar } from "./StickyPresaveBar";
+import { ExitIntentPresave } from "./ExitIntentPresave";
 import styles from "./Layout.module.css";
 
 const NAV_ITEMS = [
   { to: "/magnum", label: "Главная" },
   { to: "/magnum/recaps", label: "Пересказы" },
+  { to: "/magnum/squad", label: "Батальон 42" },
+  { to: "/magnum/conveyor", label: "Конвейер 42" },
   { to: "/magnum/shop", label: "Магазин" },
+  { to: "/magnum/map", label: "Карта 42" },
   { to: "/magnum/eco", label: "Эко-рейтинг" },
   { to: "/magnum/gallery", label: "Галерея 42" },
   { to: "/magnum/mining", label: "Майнинг" },
@@ -124,6 +131,16 @@ export function Layout() {
           >
             БРАТ-БОТ
           </button>
+          <a
+            href="https://music.thefence.me/psmagnum"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.drawerCta}
+            style={{ padding: "7px 14px", fontSize: 13 }}
+            data-presave-nav
+          >
+            Пресейв →
+          </a>
           <AuthStatus />
         </div>
 
@@ -204,6 +221,10 @@ export function Layout() {
       <Footer />
       <AiBot />
       <PromoPopup />
+      <VipActivatedPopup />
+      <DailyStreakPopup />
+      {(location.pathname === "/magnum" || location.pathname === "/magnum/") && <StickyPresaveBar />}
+      {(location.pathname === "/magnum" || location.pathname === "/magnum/") && <ExitIntentPresave />}
     </>
   );
 }

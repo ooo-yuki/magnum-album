@@ -252,8 +252,22 @@ interface Confetti { x: number; y: number; vx: number; vy: number; r: number; co
 export function Game2042() {
   const [grid, setGrid] = useState<Grid>(() => addRandom(addRandom(emptyGrid())));
   const [score, setScore] = useState(0);
-  const [best, setBest] = useState(() => { try { return Number(localStorage.getItem("2042-best")) || 0; } catch { return 0; } });
-  const [bestTile, setBestTile] = useState(() => { try { return Number(localStorage.getItem("2042-bestTile")) || 0; } catch { return 0; } });
+  const [best, setBest] = useState(0);
+  const [bestTile, setBestTile] = useState(0);
+  // best из Neon /magnum/api/games/my (credentials:include), без LS
+  useEffect(() => {
+    fetch("/magnum/api/games/my", { credentials: "include" }).then(r=>r.ok?r.json():null).then(j=>{
+      if(j?.scores){
+        let m=0,mt=0;
+        for(const s of j.scores as {game:string;score:number}[]){ if(s.game==="2042" && s.score>m) m=s.score; }
+        if(m) setBest(m);
+        if(mt) setBestTile(mt);
+      }
+    }).catch(()=>{});
+    fetch("/magnum/api/games/top?game=2042&limit=1", { credentials: "include" }).then(r=>r.ok?r.json():null).then(j=>{
+      const top=j?.top?.[0]?.score; if(typeof top==="number" && top>0) setBest(v=>Math.max(v,top));
+    }).catch(()=>{});
+  }, []);
   const [state, setState] = useState<"playing" | "win" | "over">("playing");
   const [keepPlaying, setKeepPlaying] = useState(false);
   const [moves, setMoves] = useState(0);
@@ -278,13 +292,12 @@ export function Game2042() {
   gridRef.current = grid;
   scoreRef.current = score;
 
-  // submit best to Neon magnum_game_scores (game=2042)
+  // submit best to Neon magnum_game_scores (game=2042) — cookie auth, без LS
   async function submitScore(s: number) {
     if (submitted || s < 100) return;
     setSubmitted(true);
     try {
-      const tk = (()=>{ try{ return localStorage.getItem("auth_token")||localStorage.getItem("magnum_token")||"";}catch{return "";}})();
-      await fetch("/magnum/api/games/submit", { method: "POST", headers: { "Content-Type":"application/json", ...(tk?{Authorization:"Bearer "+tk}:{}) }, body: JSON.stringify({ game:"2042", score:s }) });
+      await fetch("/magnum/api/games/submit", { method: "POST", credentials: "include", headers: { "Content-Type":"application/json" }, body: JSON.stringify({ game:"2042", score:s }) });
     } catch {}
   }
   async function shareResult() {
@@ -345,10 +358,9 @@ export function Game2042() {
     });
     if (newScore > best) {
       setBest(newScore);
-      try { localStorage.setItem("2042-best", String(newScore)); } catch {}
     }
     const nt = maxTile(withNew);
-    if (nt > bestTile) { setBestTile(nt); try { localStorage.setItem("2042-bestTile", String(nt)); } catch {} }
+    if (nt > bestTile) { setBestTile(nt); }
     if (hasWon(withNew) && !keepPlaying) {
       setState("win"); playWin(); void submitScore(newScore);
       // confetti burst

@@ -217,12 +217,19 @@ type Result = "win"|"lose"|"push"|"blackjack"|null;
 
 export function BlackjackGame(){
   const pageRef = useRef<HTMLDivElement>(null);
-  const [balance,setBalance]=useState<number>(()=>{
-    try{ const v=localStorage.getItem(LS_BALANCE); return v?Number(v):START_BALANCE; }catch{return START_BALANCE;}
-  });
-  const [best,setBest]=useState<number>(()=>{
-    try{ return Number(localStorage.getItem(LS_BEST))||START_BALANCE; }catch{return START_BALANCE;}
-  });
+  const [balance,setBalance]=useState<number>(START_BALANCE);
+  const [best,setBest]=useState<number>(START_BALANCE);
+  // Neon — баланс из /magnum/api/coins, best из /magnum/api/games/my (credentials:include)
+  useEffect(()=>{
+    fetch("/magnum/api/coins",{credentials:"include"}).then(r=>r.ok?r.json():null).then(j=>{
+      const v=j?.balance??j?.coins; if(typeof v==="number"&&Number.isFinite(v)) { setBalance(Math.round(v)); setBest(b=>Math.max(b,Math.round(v))); }
+    }).catch(()=>{});
+    fetch("/magnum/api/games/my",{credentials:"include"}).then(r=>r.ok?r.json():null).then(j=>{
+      const arr=j?.scores as {game:string;score:number}[]|undefined; if(!arr) return;
+      let m=0; for(const s of arr) if(s.game==="blackjack"&&s.score>m) m=s.score;
+      if(m) setBest(b=>Math.max(b,m));
+    }).catch(()=>{});
+  },[]);
   const [bet,setBet]=useState(25);
   const [deck,setDeck]=useState<Card[]>(()=>makeDeck());
   const [player,setPlayer]=useState<Card[]>([]);
@@ -249,8 +256,8 @@ export function BlackjackGame(){
   const cardRowRef=useRef<HTMLDivElement>(null);
   const noBustStreakRef=useRef(0);
 
-  // persist balance
-  useEffect(()=>{ try{ localStorage.setItem(LS_BALANCE,String(balance)); }catch{} const nb=Math.max(best,balance); if(nb!==best){ setBest(nb); try{localStorage.setItem(LS_BEST,String(nb));}catch{}} },[balance,best]);
+  // best — максимум баланса, без LS (Neon единый источник)
+  useEffect(()=>{ const nb=Math.max(best,balance); if(nb!==best) setBest(nb); },[balance,best]);
 
   // rotating tip
   useEffect(()=>{ const id=setInterval(()=>setTipIdx(i=> (i+1)%LORE_TIPS.length), 7000); return ()=>clearInterval(id); },[]);
@@ -546,7 +553,6 @@ export function BlackjackGame(){
   const resetAll = useCallback(()=>{
     setBalance(START_BALANCE);
     setBest(START_BALANCE);
-    try{ localStorage.setItem(LS_BALANCE,String(START_BALANCE)); localStorage.setItem(LS_BEST,String(START_BALANCE)); }catch{}
     setPlayer([]); setDealer([]); setDeck(makeDeck()); setPhase("betting"); setResult(null); setShowWin(false); winCheckedRef.current=false; setMsg("Баланс сброшен — 1000 монет!");
     setHistory([]);
   },[]);

@@ -1,12 +1,10 @@
-// ws.ts — WebSocket helper with ABCD lobby, heartbeat 25s, reconnect + hot-seat fallback
-// no localStorage — token via cookie credentials:include handled server-side
-
+// ws.ts — WebSocket helper with ABCD lobby, heartbeat 25s, reconnect + hot-seat fallback (volcano x11)
 export type WSMsg =
   | { type: "lobby:create"; wager: number }
   | { type: "join"; code: string }
   | { type: "ready" }
-  | { type: "click"; magma?: number }
-  | { type: "tick"; magma: number }
+  | { type: "click"; volcano?: number; magma?: number }
+  | { type: "tick"; volcano: number; magma?: number }
   | { type: "ping" }
   | { type: "pong" }
   | { type: "chat"; text: string }
@@ -38,21 +36,19 @@ export class DuelSocket {
     this.ws.onopen = () => {
       this.reconnectTries = 0;
       this.hotSeat = false;
-      // heartbeat 25s
       if (this.heartbeat) window.clearInterval(this.heartbeat);
       this.heartbeat = window.setInterval(() => {
         if (this.ws?.readyState === WebSocket.OPEN) {
           try { this.ws.send(JSON.stringify({ type: "ping" })); } catch {}
         }
       }, 25000);
-      // auto join if code
       if (this.code) {
         const c = this.code;
         try { this.ws!.send(JSON.stringify({ type: "join", code: c })); } catch {}
       }
     };
     this.ws.onmessage = (e) => {
-      if (e.data === "pong" || e.data === "{\"type\":\"pong\"}") return;
+      if (e.data === "pong" || e.data === '{"type":"pong"}') return;
       try {
         const m = JSON.parse(String(e.data));
         if (m?.type === "ping") { try { this.ws?.send(JSON.stringify({ type: "pong" })); } catch {} return; }

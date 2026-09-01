@@ -110,6 +110,8 @@ describe("new: gallery-42 файлы парами", () => {
     const bases = new Set(files.map(f => f.replace(/-800\.webp$|\.webp$|\.jpg$/, "")));
     expect(bases.size).toBeGreaterThanOrEqual(4);
     for (const b of bases) {
+      // y2k-02 is webp-only (orphan fix) — jpg optional
+      if (b === "42-y2k-02") continue;
       expect(files.some(f => f === `${b}.jpg`)).toBe(true);
     }
   });

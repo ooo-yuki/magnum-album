@@ -23,10 +23,9 @@ export function calcMagma(prevMagma: number, dtMs: number): number {
   return 1;
 }
 export function magmaScoreMult(magma: number): number {
-  // each step +8% capped at x10 => 1 + (magma-1)*0.08  but spec says 1.08→1.80 капа x10
   if (magma <= 1) return 1;
-  const v = 1 + (magma - 1) * 0.08;
-  return Math.min(1.8, v);
+  const v = 1 + (magma - 1) * 1.0;
+  return Math.min(10, v);
 }
 export function shouldLavaSpike(magma: number): boolean {
   return magma >= MAGMA_CAP;

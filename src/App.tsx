@@ -16,6 +16,10 @@ const MiningPage = lazy(() => import("./pages/MiningPage").then(m => ({ default:
 const PresaveRatingPage = lazy(() => import("./pages/PresaveRatingPage").then(m => ({ default: m.PresaveRatingPage })));
 const IdeasPage = lazy(() => import("./pages/IdeasPage").then(m => ({ default: m.IdeasPage })));
 const RecapsPage = lazy(() => import("./pages/RecapsPage").then(m => ({ default: m.RecapsPage })));
+const SquadPage = lazy(() => import("./pages/SquadPage").then(m => ({ default: m.SquadPage })));
+const ConveyorPage = lazy(() => import("./pages/ConveyorPage").then(m => ({ default: m.ConveyorPage })));
+const Map42Page = lazy(() => import("./pages/Map42Page").then(m => ({ default: m.Map42Page })));
+const ArenaPage = lazy(() => import("./pages/ArenaPage").then(m => ({ default: m.ArenaPage })));
 // opt 15:06 — 5 оставшихся eager страниц → lazy (тяжёлые чанки >50KB каждый не нужен на /)
 const About42Page = lazy(() => import("./pages/About42Page").then(m => ({ default: m.About42Page })));
 const TrackPage = lazy(() => import("./pages/TrackPage").then(m => ({ default: m.TrackPage })));
@@ -45,6 +49,7 @@ const Dodge42Game = lazy(() => import("./pages/games/Dodge42Game").then(m => ({ 
 const QuizGame = lazy(() => import("./pages/games/QuizGame").then(m => ({ default: m.QuizGame })));
 const Timeline2026Game = lazy(() => import("./pages/games/Timeline2026Game").then(m => ({ default: m.Timeline2026Game })));
 const DuelMagma = lazy(() => import("./pages/games/DuelMagma").then(m => ({ default: m.DuelMagma })));
+const DuelVolcano = lazy(() => import("./pages/games/DuelVolcano").then(m => ({ default: m.DuelVolcano })));
 
 function GameFallback() {
   return <div style={{ padding: "4rem 2rem", textAlign: "center", color: "#ff2d55" }}>Загрузка игры… 🎮</div>;
@@ -81,6 +86,7 @@ export default function App() {
           <Route path="games/quiz" element={<Suspense fallback={<GameFallback />}><QuizGame /></Suspense>} />
           <Route path="games/timeline" element={<Suspense fallback={<GameFallback />}><Timeline2026Game /></Suspense>} />
           <Route path="games/duel-magma" element={<Suspense fallback={<GameFallback />}><DuelMagma /></Suspense>} />
+          <Route path="games/duel-volcano" element={<Suspense fallback={<GameFallback />}><DuelVolcano /></Suspense>} />
           <Route path="shop" element={<Suspense fallback={<PageFallback />}><ShopPage /></Suspense>} />
           <Route path="eco" element={<Suspense fallback={<PageFallback />}><EcoPage /></Suspense>} />
           <Route path="gallery" element={<Suspense fallback={<PageFallback />}><GalleryPage /></Suspense>} />
@@ -88,6 +94,10 @@ export default function App() {
           <Route path="presave-rating" element={<Suspense fallback={<PageFallback />}><PresaveRatingPage /></Suspense>} />
           <Route path="ideas" element={<Suspense fallback={<PageFallback />}><IdeasPage /></Suspense>} />
           <Route path="recaps" element={<Suspense fallback={<PageFallback />}><RecapsPage /></Suspense>} />
+          <Route path="squad" element={<Suspense fallback={<PageFallback />}><SquadPage /></Suspense>} />
+          <Route path="conveyor" element={<Suspense fallback={<PageFallback />}><ConveyorPage /></Suspense>} />
+          <Route path="map" element={<Suspense fallback={<PageFallback />}><Map42Page /></Suspense>} />
+          <Route path="arena" element={<Suspense fallback={<PageFallback />}><ArenaPage /></Suspense>} />
         </Route>
       </Routes>
     </BrowserRouter>

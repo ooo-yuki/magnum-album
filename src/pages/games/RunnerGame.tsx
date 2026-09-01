@@ -193,12 +193,18 @@ export function RunnerGame() {
   const scorePopRef = useRef<HTMLDivElement>(null);
   const [gameState, setGameState] = useState<"start" | "playing" | "over" | "win">("start");
   const [score, setScore] = useState(0);
-  const [best, setBest] = useState(() => {
-    try { return Number(localStorage.getItem("runner-best")) || 0; } catch { return 0; }
-  });
+  const [best, setBest] = useState(0);
   const [diff, setDiff] = useState<DiffKey>(() => {
     try { const v = localStorage.getItem(LS_DIFF) as DiffKey | null; return v && DIFFICULTY[v] ? v : "normal"; } catch { return "normal"; }
   });
+  // Neon best — без LS (credentials:include), diff остаётся в LS_DIFF per SPEC §7.1
+  useEffect(()=>{
+    fetch("/magnum/api/games/my",{credentials:"include"}).then(r=>r.ok?r.json():null).then(j=>{
+      const arr=j?.scores as {game:string;score:number}[]|undefined; if(!arr) return;
+      let m=0; for(const s of arr) if(s.game==="runner"&&s.score>m) m=s.score;
+      if(m) setBest(m);
+    }).catch(()=>{});
+  },[]);
   const [tipIdx, setTipIdx] = useState(0);
   const [dashReady, setDashReady] = useState(true);
   const touchStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
@@ -470,7 +476,7 @@ export function RunnerGame() {
           setGameState("win");
           const newBest = Math.max(best, s.score);
           setBest(newBest);
-          try { localStorage.setItem("runner-best", String(newBest)); } catch {}
+          void fetch("/magnum/api/games/submit",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({game:"runner",score:newBest})}).catch(()=>{});
           spawnWinConfetti(stateRef as unknown as { current: Particle[] }, W, groundY);
           playWinSound();
           if (scorePopRef.current && !prefersReducedMotion()) gsap.fromTo(scorePopRef.current, { scale: 1.4, y: -8 }, { scale: 1, y: 0, duration: 0.5, ease: "back.out(1.7)" });
@@ -503,7 +509,7 @@ export function RunnerGame() {
               setGameState("over");
               const newBest = Math.max(best, s.score);
               setBest(newBest);
-              try { localStorage.setItem("runner-best", String(newBest)); } catch {}
+              void fetch("/magnum/api/games/submit",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({game:"runner",score:newBest})}).catch(()=>{});
               if (navigator.vibrate) navigator.vibrate([60, 30, 80]);
               break;
             }

@@ -307,3 +307,32 @@ export const magnumDust = pgTable("magnum_dust", {
   balance: integer("balance").default(0).notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+export const magnumSquads = pgTable("magnum_squads", {
+  id: serial("id").primaryKey(),
+  code: text("code").notNull().unique(),
+  leaderId: integer("leader_id").references(() => magnumUsers.id).notNull(),
+  pot: integer("pot").default(0).notNull(),
+  mult: integer("mult").default(10).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+export const magnumSquadMembers = pgTable("magnum_squad_members", {
+  id: serial("id").primaryKey(),
+  squadId: integer("squad_id").references(() => magnumSquads.id, { onDelete: "cascade" }).notNull(),
+  userId: integer("user_id").references(() => magnumUsers.id, { onDelete: "cascade" }).notNull(),
+  joinedAt: timestamp("joined_at").defaultNow().notNull(),
+});
+export const magnumSquadBattles = pgTable("magnum_squad_battles", {
+  id: serial("id").primaryKey(),
+  squadId: integer("squad_id").references(() => magnumSquads.id, { onDelete: "cascade" }).notNull(),
+  winnerId: integer("winner_id").references(() => magnumUsers.id),
+  score: jsonb("score").default({}).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const magnumConveyorState = pgTable("magnum_conveyor_state", {
+  userId: integer("user_id").primaryKey().references(() => magnumUsers.id, { onDelete: "cascade" }),
+  levels: integer("levels").array().default([0, 0, 0, 0, 0, 0]).notNull(),
+  prestige: integer("prestige").default(0).notNull(),
+  lastClaim: timestamp("last_claim").defaultNow().notNull(),
+  dust: integer("dust").default(0).notNull(),
+});

@@ -93,22 +93,32 @@ export function RouletteGame(){
   const ballRef = useRef({ angle: 0 });
   const particlesRef = useRef<Confetti[]>([]);
   const animRef = useRef(0);
-  const [balance, setBalance] = useState(()=>{ try{ const raw=localStorage.getItem(LS_BALANCE); if(raw===null) return START_BALANCE; const v=Number(raw); return isFinite(v)&&v>=0?v:START_BALANCE;}catch{return START_BALANCE;}});
+  const [balance, setBalance] = useState(START_BALANCE);
   const [chip, setChip] = useState<number>(5);
   const [bets, setBets] = useState<Bet[]>([]);
-  const [history, setHistory] = useState<SpinRecord[]>(()=>{ try{ return JSON.parse(localStorage.getItem(LS_HISTORY)||"[]"); }catch{ return []; }});
+  const [history, setHistory] = useState<SpinRecord[]>([]);
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<number|null>(null);
   const [lastWin, setLastWin] = useState<number>(0);
-  const [won, setWon] = useState(()=>{ try{ return Number(localStorage.getItem(LS_BALANCE))>=WIN_BALANCE; }catch{return false;}});
+  const [won, setWon] = useState(false);
+  // Neon баланс + история — без LS (credentials:include)
+  useEffect(()=>{
+    fetch("/magnum/api/coins",{credentials:"include"}).then(r=>r.ok?r.json():null).then(j=>{
+      const v=j?.balance??j?.coins; if(typeof v==="number"&&Number.isFinite(v)) setBalance(Math.round(v));
+    }).catch(()=>{});
+    fetch("/magnum/api/games/my",{credentials:"include"}).then(r=>r.ok?r.json():null).then(j=>{
+      const arr=j?.scores as {game:string;score:number;coins_earned:number;created_at:string}[]|undefined; if(!arr) return;
+      const recs:SpinRecord[]=[]; for(const s of arr){ if(s.game==="roulette") recs.push({n: (s.score%37), color:getColor(s.score%37), win:s.coins_earned, balance:0}); if(recs.length>=20) break; }
+      if(recs.length) setHistory(recs);
+    }).catch(()=>{});
+  },[]);
   const [showModal, setShowModal] = useState(false);
   const [lastBets, setLastBets] = useState<Bet[]>([]);
   const [autoSpin, setAutoSpin] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
 
-  // persist
-  useEffect(()=>{ try{ localStorage.setItem(LS_BALANCE, String(balance)); }catch{} if(balance>=WIN_BALANCE && !won){ setWon(true); setShowModal(true); playBigWin(); burstConfetti(36); } },[balance, won]);
-  useEffect(()=>{ try{ localStorage.setItem(LS_HISTORY, JSON.stringify(history.slice(0,20))); }catch{} },[history]);
+  // win modal — без LS
+  useEffect(()=>{ if(balance>=WIN_BALANCE && !won){ setWon(true); setShowModal(true); playBigWin(); burstConfetti(36); } },[balance, won]);
 
   // GSAP entrance
   useEffect(()=>{
@@ -360,7 +370,6 @@ export function RouletteGame(){
 
   const resetGame=()=>{
     setBalance(START_BALANCE); setBets([]); setHistory([]); setResult(null); setLastWin(0); setShowModal(false); setWon(false); setLastBets([]); setAutoSpin(false);
-    try{ localStorage.removeItem(LS_BALANCE); localStorage.removeItem(LS_HISTORY);}catch{}
   };
 
   const canSpin = bets.length>0 && !spinning;

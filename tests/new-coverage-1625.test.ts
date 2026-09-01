@@ -17,10 +17,10 @@ describe("1625: галерея реальные файлы + ARCHIVE_42 + build"
     expect(jpg.length).toBeGreaterThanOrEqual(4);
     for (const f of files) expect(statSync(join(dir, f)).size).toBeGreaterThan(1024);
   });
-  it("GalleryPage BASE_ARTS 7 карточек + MOCK_POOL + ARCHIVE_42 секция", () => {
+  it("GalleryPage BASE_ARTS 7 карточек + ARCHIVE_42 секция (MOCK_POOL удалён — no fake arts)", () => {
     const src = read("src/pages/GalleryPage.tsx");
     expect(src).toContain("BASE_ARTS");
-    expect(src).toContain("MOCK_POOL");
+    expect(src).not.toContain("MOCK_POOL");
     expect(src).toContain("ARCHIVE_42");
     // 7 arts id
     for (const id of ["ussr-01","ussr-02","y2k-01","y2k-02","cyber-01","memphis-01","y2k-03"]) {

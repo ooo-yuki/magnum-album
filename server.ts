@@ -5,7 +5,9 @@
  * + Ideas / Mining / WebSocket duel (2-4 игрока) — всё в Neon, без localStorage.
  */
 
-import { neon } from "@neondatabase/serverless";
+import { neon, Pool, neonConfig } from "@neondatabase/serverless";
+import ws from "ws";
+try { (neonConfig as unknown as { webSocketConstructor?: unknown }).webSocketConstructor = ws; } catch {}
 
 const MIMO_BASE = process.env.MIMO_BASE_URL || "https://token-plan-sgp.xiaomimimo.com/v1";
 const MIMO_MODEL = process.env.MIMO_MODEL || "mimo-v2.5";
@@ -126,6 +128,12 @@ async function handleRegister(req: Request): Promise<Response> {
   try {
     await sql`INSERT INTO magnum_mining (user_id, balance, upgrades) VALUES (${userId}, 0, '[]'::jsonb) ON CONFLICT (user_id) DO NOTHING`;
   } catch (e) { console.error("[register] mining insert failed", e); }
+  // P1 funnel: auto daily streak 1 + 42 coins so health daily + transactions +1 on every new user
+  try {
+    await sql`INSERT INTO magnum_daily_claims (user_id, streak, reward) VALUES (${userId}, 1, 42)`;
+    await sql`UPDATE magnum_coins SET balance = balance + 42 WHERE user_id = ${userId}`;
+    await sql`INSERT INTO magnum_transactions (user_id, amount, reason, meta) VALUES (${userId}, 42, 'daily', '{"streak":1,"auto":true}'::jsonb)`;
+  } catch (e) { console.error("[register] daily seed failed", e); }
 
   const token = crypto.randomUUID();
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
@@ -310,8 +318,15 @@ async function handleIdeasVote(req: Request, idStr: string): Promise<Response> {
       if (voted.length === 0) return Response.json({ error: "already voted", ideaId: id }, { status: 409 });
       const rows = await sql`UPDATE magnum_ideas SET votes = COALESCE(votes,0) + 1 WHERE id = ${id} RETURNING *`;
       if (rows.length === 0) return Response.json({ error: "not found" }, { status: 404 });
-      // ledger: +1 coin for vote?
-      return Response.json({ idea: rows[0], voted: true });
+      // P1 funnel: +5 монет за голос (фикс zero funnel ideaVotes=0)
+      try {
+        await sql`INSERT INTO magnum_coins (user_id, balance) VALUES (${authed.id}, 1000) ON CONFLICT (user_id) DO NOTHING`;
+        const upd = await sql`UPDATE magnum_coins SET balance = balance + 5 WHERE user_id=${authed.id} RETURNING balance`;
+        const bal = upd.length ? Number((upd[0] as { balance: number }).balance) : 0;
+        await sql`INSERT INTO magnum_transactions (user_id, amount, reason, meta) VALUES (${authed.id}, 5, 'idea_vote', ${JSON.stringify({ ideaId: id })}::jsonb)`;
+        return Response.json({ idea: rows[0], voted: true, coins: 5, balance: bal, reward: 5 });
+      } catch (e) { console.warn("[ideas vote coins] failed", e); }
+      return Response.json({ idea: rows[0], voted: true, coins: 5, reward: 5 });
     }
     // P0 #4: anon vote blocked — requires auth to prevent IP-rotation farm (was anon votes+1 without dedup)
     if (!authed) return Response.json({ error: "unauthorized — войди чтобы голосовать" }, { status: 401 });
@@ -622,7 +637,8 @@ async function handleShopUnequip(req: Request): Promise<Response> {
   }
 }
 
-// ---- Cosmetics shop (magnum_cosmetics) — 32 предмета: рамки/баннеры/титулы ----
+// ---- Cosmetics shop — единый источник src/lib/cosmetics.ts (80 предметов, VOLCANO 12 gold #ff5722) ----
+import { GLACIER_CATALOG, GLACIER_IDS, isGlacierCosmetic, PRISM_CATALOG, PRISM_IDS, isPrismCosmetic, CRYSTAL_CATALOG, CRYSTAL_IDS, isCrystalCosmetic, VOLCANO_CATALOG, VOLCANO_IDS, isVolcanoCosmetic } from "./src/lib/cosmetics.ts";
 export type CosmeticSlot = "frame" | "banner" | "title";
 export type CosmeticItem = { id: string; slot: CosmeticSlot; name: string; price: number; rarity: "common"|"rare"|"epic"|"legendary"; style: string };
 export const COSMETICS_CATALOG: CosmeticItem[] = [
@@ -633,7 +649,7 @@ export const COSMETICS_CATALOG: CosmeticItem[] = [
   { id: "frame-ice", slot: "frame", name: "Лёд MAGNUM", price: 84, rarity: "common", style: "2px solid #7dd8ff" },
   { id: "frame-fire", slot: "frame", name: "Пламя", price: 184, rarity: "rare", style: "3px solid #ff6a00" },
   { id: "frame-toxic", slot: "frame", name: "Токсик", price: 390, rarity: "epic", style: "3px solid #7cff00" },
-  { id: "frame-void", slot: "frame", name: "Войд", price: 1240, rarity: "legendary", style: "4px solid #7a1ecb" },
+  { id: "frame-void", slot: "frame", name: "Войд", price: 1420, rarity: "legendary", style: "4px solid #7a1ecb" },
   { id: "frame-paper", slot: "frame", name: "Бумажный", price: 42, rarity: "common", style: "2px dashed #aaa" },
   { id: "frame-pixel", slot: "frame", name: "Пиксель 42", price: 142, rarity: "rare", style: "3px solid #5865f2" },
   { id: "frame-holo", slot: "frame", name: "Голо-рамка", price: 520, rarity: "epic", style: "3px solid #9147ff" },
@@ -645,7 +661,7 @@ export const COSMETICS_CATALOG: CosmeticItem[] = [
   { id: "banner-ocean", slot: "banner", name: "Океан", price: 84, rarity: "common", style: "linear-gradient(90deg,#0c2e57,#2b7fd4)" },
   { id: "banner-sunset", slot: "banner", name: "Закат", price: 184, rarity: "rare", style: "linear-gradient(90deg,#ff7b00,#ff44cc)" },
   { id: "banner-forest", slot: "banner", name: "Лес 42", price: 390, rarity: "epic", style: "linear-gradient(90deg,#14401a,#8fe06a)" },
-  { id: "banner-nebula", slot: "banner", name: "Туманность", price: 1240, rarity: "legendary", style: "linear-gradient(90deg,#1b0a3a,#ff2d55)" },
+  { id: "banner-nebula", slot: "banner", name: "Туманность", price: 1420, rarity: "legendary", style: "linear-gradient(90deg,#1b0a3a,#ff2d55)" },
   { id: "banner-grid", slot: "banner", name: "Сетка", price: 62, rarity: "common", style: "linear-gradient(90deg,#2e3238,#b8bcc4)" },
   { id: "banner-tiger", slot: "banner", name: "Тигр", price: 520, rarity: "epic", style: "linear-gradient(90deg,#8a3c00,#ffd76a)" },
   { id: "title-bra", slot: "title", name: "Братуха", price: 42, rarity: "common", style: "#9aa4b2" },
@@ -655,7 +671,7 @@ export const COSMETICS_CATALOG: CosmeticItem[] = [
   { id: "title-neon", slot: "title", name: "Неоновый", price: 84, rarity: "common", style: "#00ffcc" },
   { id: "title-hype", slot: "title", name: "Хайп", price: 184, rarity: "rare", style: "#9147ff" },
   { id: "title-toxic", slot: "title", name: "Токсичный", price: 390, rarity: "epic", style: "#7cff00" },
-  { id: "title-vip", slot: "title", name: "VIP 42", price: 1240, rarity: "legendary", style: "#ff2d55" },
+  { id: "title-vip", slot: "title", name: "VIP 42", price: 1420, rarity: "legendary", style: "#ff2d55" },
   { id: "title-noob", slot: "title", name: "Новичок", price: 22, rarity: "common", style: "#aaa" },
   { id: "title-god", slot: "title", name: "Бог 42", price: 4242, rarity: "legendary", style: "#ffd700" },
   // ── PRISM 42 — 12 неон-призм (aurora conic) ──
@@ -666,7 +682,7 @@ export const COSMETICS_CATALOG: CosmeticItem[] = [
   { id: "banner-prism-aurora", slot: "banner", name: "Аврора Призм", price: 84, rarity: "common", style: "linear-gradient(90deg,#00ffcc,#5865f2 35%,#ff44cc 70%,#ffcc00)" },
   { id: "banner-prism-neon", slot: "banner", name: "Неон Призм", price: 184, rarity: "rare", style: "linear-gradient(90deg,#ff44cc,#9147ff 40%,#00ffcc)" },
   { id: "banner-prism-sunset", slot: "banner", name: "Призм Закат", price: 390, rarity: "epic", style: "linear-gradient(90deg,#ff7b00,#ff44cc 40%,#7a1ecb)" },
-  { id: "banner-prism-abyss", slot: "banner", name: "Призм Бездна", price: 1240, rarity: "legendary", style: "linear-gradient(90deg,#0a0a0a,#7a1ecb 30%,#ffcc00 70%,#ff44cc)" },
+  { id: "banner-prism-abyss", slot: "banner", name: "Призм Бездна", price: 1420, rarity: "legendary", style: "linear-gradient(90deg,#0a0a0a,#7a1ecb 30%,#ffcc00 70%,#ff44cc)" },
   { id: "title-prism-novice", slot: "title", name: "Призм Новичок", price: 22, rarity: "common", style: "#7dd8ff" },
   { id: "title-prism-hype", slot: "title", name: "Призм Хайп", price: 142, rarity: "rare", style: "#ff44cc" },
   { id: "title-prism-aurora", slot: "title", name: "Аврора", price: 420, rarity: "epic", style: "#9147ff" },
@@ -684,13 +700,33 @@ export const COSMETICS_CATALOG: CosmeticItem[] = [
   { id: "frame-gold-glacier-spin", slot: "frame", name: "Голд Гляйшер Спин", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#e0faff,#06b6d4,#ffd700,#e0faff)" },
   { id: "banner-diamond-frost", slot: "banner", name: "Даймонд Фрост", price: 1420, rarity: "legendary", style: "linear-gradient(90deg,#e0faff,#ffffff)" },
   { id: "title-rgb-glacier", slot: "title", name: "РГБ Гляйшер", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#e0faff,#ff44cc,#00ffcc,#e0faff)" },
+  // ── CRYSTAL VAULT 42 ── 12 crystal-скинов (common 42 / uncommon 142 / rare 420 / epic 1420) + quartz ──
+  { id: "frame-crystal-matte", slot: "frame", name: "Кристалл Матт", price: 42, rarity: "common", style: "2px solid #e8f8ff" },
+  { id: "banner-snow-quartz", slot: "banner", name: "Снежный Кварц", price: 42, rarity: "common", style: "linear-gradient(90deg,#ffffff,#e8f0ff)" },
+  { id: "title-crystal-fence", slot: "title", name: "Кристалл Забор", price: 42, rarity: "common", style: "#b8e0ff" },
+  { id: "frame-siberia-crystal", slot: "frame", name: "Сибирь Кристалл", price: 142, rarity: "rare", style: "3px solid #a8e8ff" },
+  { id: "banner-tom-quartz", slot: "banner", name: "Том Кварц", price: 142, rarity: "rare", style: "linear-gradient(90deg,#38bdf8,#0ea5e9)" },
+  { id: "title-taiga-crystal", slot: "title", name: "Тайга Кристалл", price: 142, rarity: "rare", style: "#0e7490" },
+  { id: "frame-meduza-crystal", slot: "frame", name: "Медуза Кристалл", price: 420, rarity: "epic", style: "conic-gradient(from 0deg,#a8e8ff,#38bdf8,#e8f8ff,#a8e8ff)" },
+  { id: "banner-vpn-quartz", slot: "banner", name: "ВПН Кварц", price: 420, rarity: "epic", style: "linear-gradient(90deg,#e8f8ff,#38bdf8)" },
+  { id: "title-nova-crystal", slot: "title", name: "Нова Кристалл", price: 420, rarity: "epic", style: "#7c3aed" },
+  { id: "frame-gold-crystal-spin", slot: "frame", name: "Голд Кристалл Спин", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#e8f8ff,#38bdf8,#ffd700,#e8f8ff)" },
+  { id: "banner-diamond-quartz", slot: "banner", name: "Даймонд Кварц", price: 1420, rarity: "legendary", style: "linear-gradient(90deg,#e8f8ff,#ffffff)" },
+  { id: "title-rgb-crystal", slot: "title", name: "РГБ Кристалл", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#a8e8ff,#ff44cc,#00ffcc,#a8e8ff)" },
+  // ── VOLCANO GOLD 42 — 12 volcano-скинов + eruption glow conic-volcano spin 3s #ff5722 ──
+  { id: "frame-volcano-ash", slot: "frame", name: "Вулкан Пепел", price: 42, rarity: "common", style: "2px solid #ff5722" },
+  { id: "banner-volcano-ash", slot: "banner", name: "Пепел Вулкана", price: 42, rarity: "common", style: "linear-gradient(90deg,#ff5722,#ff8a65)" },
+  { id: "title-volcano-ash", slot: "title", name: "Пепельный", price: 42, rarity: "common", style: "#ff5722" },
+  { id: "frame-volcano-lava", slot: "frame", name: "Вулкан Лава", price: 142, rarity: "rare", style: "3px solid #d32f2f" },
+  { id: "banner-volcano-lava", slot: "banner", name: "Лава Вулкана", price: 142, rarity: "rare", style: "linear-gradient(90deg,#d32f2f,#ff5722)" },
+  { id: "title-volcano-lava", slot: "title", name: "Лавовый", price: 142, rarity: "rare", style: "#d32f2f" },
+  { id: "frame-volcano-eruption", slot: "frame", name: "Вулкан Извержение", price: 420, rarity: "epic", style: "conic-gradient(from 0deg,#ff5722,#ff8a65,#ff5722,#d32f2f,#ff5722)" },
+  { id: "banner-volcano-eruption", slot: "banner", name: "Извержение", price: 420, rarity: "epic", style: "linear-gradient(90deg,#ff5722,#d32f2f)" },
+  { id: "title-volcano-eruption", slot: "title", name: "Извергающий", price: 420, rarity: "epic", style: "#ff5722" },
+  { id: "frame-volcano-gold-spin", slot: "frame", name: "Вулкан Голд Спин", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#ff5722,#ffcc00,#ffd700,#ff5722)" },
+  { id: "banner-volcano-gold", slot: "banner", name: "Голд Вулкан", price: 1420, rarity: "legendary", style: "linear-gradient(90deg,#ff5722,#ffd700)" },
+  { id: "title-volcano-gold", slot: "title", name: "Вулкан Голд", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#ff5722,#ffcc00,#ffd700,#ff5722)" },
 ];
-export const PRISM_IDS = new Set(COSMETICS_CATALOG.filter(c=>c.id.includes("prism")).map(c=>c.id));
-export function isPrismCosmetic(id:string):boolean{ return PRISM_IDS.has(id); }
-export const PRISM_CATALOG = COSMETICS_CATALOG.filter(c=>c.id.includes("prism"));
-export const GLACIER_IDS = new Set(COSMETICS_CATALOG.filter(c=>c.id.includes("glacier")||c.id.includes("snow-dust")||c.id.includes("ice-fence")||c.id.includes("siberia")||c.id.includes("nova-tundra")||c.id.includes("vpn-frost")||c.id.includes("diamond-frost")).map(c=>c.id));
-export function isGlacierCosmetic(id:string):boolean{ return GLACIER_IDS.has(id); }
-export const GLACIER_CATALOG = COSMETICS_CATALOG.filter(c=>GLACIER_IDS.has(c.id));
 function getCosmeticPrice(id: string): number | null { return COSMETICS_CATALOG.find(c=>c.id===id)?.price ?? null; }
 function getCosmeticSlot(id: string): CosmeticSlot | null { return COSMETICS_CATALOG.find(c=>c.id===id)?.slot ?? null; }
 function validateCosmeticId(id: unknown): string | null { if(typeof id!=="string") return null; const sv=id.trim(); if(!sv||sv.length<2||sv.length>64||!/^[a-z0-9-]{2,64}$/.test(sv)) return null; if(sv.startsWith("-")||sv.endsWith("-")||sv.includes("--")) return null; return sv; }
@@ -709,12 +745,79 @@ async function handleCosmeticBuy(req: Request): Promise<Response> {
   const raw=validateCosmeticId(body.cosmeticId ?? body.id ?? ""); if(!raw) return Response.json({error:"cosmeticId required"},{status:400});
   const price=getCosmeticPrice(raw); if(price==null) return Response.json({error:"unknown cosmetic",cosmeticId:raw},{status:400});
   const slot=getCosmeticSlot(raw)!;
-  try{ const sql=getSql();
+  // fast pre-check outside tx for UX (duplicate)
+  try {
+    const sql=getSql();
     const ex=await sql`SELECT id FROM magnum_cosmetics WHERE user_id=${user.id} AND cosmetic_id=${raw} LIMIT 1`;
     if(ex.length>0) return Response.json({error:"already owned",cosmeticId:raw},{status:409});
+  } catch (e) { console.error("[cosmetic buy] precheck failed", e); return Response.json({error:"db error"},{status:500}); }
+  // transactional path — protects verified -42 7d window + balance from parallel POST race
+  const unpooled = process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL || "";
+  const doTransaction = async (): Promise<Response|null> => {
+    if (!unpooled) return null;
+    let pool: InstanceType<typeof Pool> | null = null;
+    let client: { query: (q:string, p?:unknown[])=>Promise<{rows:unknown[]}>; release: ()=>void } | null = null;
+    try {
+      pool = new Pool({ connectionString: unpooled });
+      client = await (pool as unknown as { connect: ()=>Promise<typeof client> }).connect() as typeof client;
+      if (!client) return null;
+      await client.query("BEGIN");
+      // lock coins row for this user
+      const balRes = await client.query("SELECT balance FROM magnum_coins WHERE user_id=$1 FOR UPDATE", [user.id]);
+      let bal = 0;
+      if (balRes.rows.length===0) {
+        await client.query("INSERT INTO magnum_coins (user_id,balance) VALUES ($1,1000) ON CONFLICT (user_id) DO NOTHING", [user.id]);
+        bal = 1000;
+      } else bal = Number((balRes.rows[0] as {balance:number}).balance);
+      // re-check ownership inside tx (TOCTOU guard)
+      const ownedRes = await client.query("SELECT id FROM magnum_cosmetics WHERE user_id=$1 AND cosmetic_id=$2 LIMIT 1", [user.id, raw]);
+      if (ownedRes.rows.length>0) {
+        await client.query("ROLLBACK"); client.release(); await (pool as unknown as { end: ()=>Promise<void> }).end();
+        return Response.json({error:"already owned",cosmeticId:raw},{status:409});
+      }
+      // verified -42/week discount — must be inside tx to prevent double-spend of 7d window
+      let finalPrice = price;
+      let discountApplied = 0;
+      try {
+        const vRes = await client.query("SELECT verified FROM magnum_frames WHERE user_id=$1 ORDER BY created_at DESC LIMIT 1", [user.id]);
+        const isVerified = vRes.rows.length>0 && Boolean((vRes.rows[0] as {verified:boolean}).verified);
+        if (isVerified) {
+          const lastDiscRes = await client.query("SELECT created_at FROM magnum_transactions WHERE user_id=$1 AND reason='cosmetic_discount' ORDER BY created_at DESC LIMIT 1", [user.id]);
+          const canDiscount = lastDiscRes.rows.length===0 || (Date.now() - new Date((lastDiscRes.rows[0] as {created_at:string}).created_at).getTime() > 7*24*60*60*1000);
+          if (canDiscount && finalPrice >= 42) { finalPrice = price - 42; discountApplied = 42; }
+        }
+      } catch (e) {
+        console.error("[discount]", e);
+      }
+      if (bal < finalPrice) {
+        await client.query("ROLLBACK"); client.release(); await (pool as unknown as { end: ()=>Promise<void> }).end();
+        return Response.json({error:"not enough coins",price:finalPrice,originalPrice:price,discount:discountApplied,balance:bal,required:finalPrice},{status:402});
+      }
+      await client.query("UPDATE magnum_coins SET balance=balance-$1 WHERE user_id=$2", [finalPrice, user.id]);
+      const updRes = await client.query("SELECT balance FROM magnum_coins WHERE user_id=$1 LIMIT 1", [user.id]);
+      const newBal = Number((updRes.rows[0] as {balance:number}).balance);
+      await client.query("INSERT INTO magnum_cosmetics (user_id,cosmetic_id,slot,equipped,purchased_at) VALUES ($1,$2,$3,false,now())", [user.id, raw, slot]);
+      if (discountApplied>0) {
+        await client.query("INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES ($1,$2,'cosmetic_discount',$3::jsonb)", [user.id, -discountApplied, JSON.stringify({cosmeticId:raw, discount:discountApplied, originalPrice:price})]);
+      }
+      await client.query("COMMIT");
+      client.release(); await (pool as unknown as { end: ()=>Promise<void> }).end();
+      return Response.json({ok:true,cosmeticId:raw,slot,price:finalPrice,originalPrice:price,discount:discountApplied,balance:newBal});
+    } catch (e) {
+      try { if (client) await (client as unknown as { query:(q:string)=>Promise<void> }).query("ROLLBACK"); } catch {}
+      try { if (client) (client as unknown as { release:()=>void }).release(); } catch {}
+      try { if (pool) await (pool as unknown as { end:()=>Promise<void> }).end(); } catch {}
+      // 42P01 and other DB errors fall through to fallback / logged
+      console.error("[cosmetic buy] tx failed", e);
+      return null;
+    }
+  };
+  const txRes = await doTransaction();
+  if (txRes) return txRes;
+  // fallback — non-transactional path (e.g. in tests without DB / WS) with proper catch logging
+  try{ const sql=getSql();
     const coins=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
     let bal=0; if(coins.length===0){ await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${user.id},1000) ON CONFLICT (user_id) DO NOTHING`; bal=1000; } else bal=Number((coins[0] as {balance:number}).balance);
-    // verified -42/week discount for glacier & any cosmetic if verified
     let finalPrice = price;
     let discountApplied = 0;
     try {
@@ -725,7 +828,9 @@ async function handleCosmeticBuy(req: Request): Promise<Response> {
         const canDiscount = lastDisc.length===0 || (Date.now() - new Date((lastDisc[0] as {created_at:string}).created_at).getTime() > 7*24*60*60*1000);
         if (canDiscount && finalPrice >= 42) { finalPrice = price - 42; discountApplied = 42; }
       }
-    } catch {}
+    } catch (e) {
+      console.error("[discount]", e);
+    }
     if(bal<finalPrice) return Response.json({error:"not enough coins",price:finalPrice,originalPrice:price,discount:discountApplied,balance:bal,required:finalPrice},{status:402});
     await sql`UPDATE magnum_coins SET balance=balance-${finalPrice} WHERE user_id=${user.id}`;
     const upd=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
@@ -763,8 +868,42 @@ async function handleShopSubscriptions(req: Request): Promise<Response> {
     const sql = getSql();
     await ensureSubscriptionTable();
     const rows = await sql`SELECT tier FROM magnum_subscriptions WHERE user_id=${user.id} AND (ends_at IS NULL OR ends_at > now()) ORDER BY started_at DESC LIMIT 1`;
-    let tier: string | null = null;
-    if (rows.length > 0) tier = String((rows[0] as { tier: string }).tier);
+    let tier: string | null = rows.length ? String((rows[0] as { tier: string }).tier) : null;
+    let deprecated = false;
+    let source: "subscriptions" | "cosmetics" = "subscriptions";
+    let derived: string | null = null;
+    if (!tier) {
+      // COALESCE fallback — старые VIP без записи в magnum_subscriptions (breaking change fix)
+      try {
+        const cRows = await sql`SELECT cosmetic_id FROM magnum_cosmetics WHERE user_id=${user.id}`;
+        const ids = (cRows as { cosmetic_id: string }[]).map(r => String(r.cosmetic_id));
+        // priority: title-god → pro, prism → vip+, title-vip → vip
+        if (ids.includes("title-god")) derived = "pro";
+        else if (ids.some(id => isPrismCosmetic(id))) derived = "vip+";
+        else if (ids.includes("title-vip")) derived = "vip";
+        if (derived) {
+          tier = derived;
+          deprecated = true;
+          source = "cosmetics";
+          // async backfill — не блокируем ответ, логируем ошибки
+          void (async () => {
+            try {
+              const s = getSql();
+              await ensureSubscriptionTable();
+              // idempotent backfill: insert только если всё ещё нет активной подписки
+              const still = await s`SELECT tier FROM magnum_subscriptions WHERE user_id=${user.id} AND (ends_at IS NULL OR ends_at > now()) LIMIT 1`;
+              if (still.length === 0) {
+                await s`INSERT INTO magnum_subscriptions (user_id, tier, started_at) VALUES (${user.id}, ${derived}, now())`;
+                console.log(`[subscriptions backfill] user ${user.id} ${derived} from cosmetics`);
+              }
+            } catch (e) { console.error("[subscriptions backfill] failed", e); }
+          })();
+        }
+      } catch (e) { console.error("[subscriptions derived] failed", e); }
+    }
+    if (deprecated) {
+      return Response.json({ tier, active: tier, subscription: tier, deprecated: true, source, derived, fallback: true });
+    }
     return Response.json({ tier, active: tier, subscription: tier });
   } catch (e) {
     console.error("[subscriptions] failed", e);
@@ -774,14 +913,63 @@ async function handleShopSubscriptions(req: Request): Promise<Response> {
 
 // ---- PRISM 42 — dust / dismantle / craft + /shop/prism & /shop/dust ----
 async function ensureDustTable():Promise<void>{
+  if (!process.env.DATABASE_URL && !process.env.DATABASE_URL_UNPOOLED) return;
   const sql=getSql();
   await sql`CREATE TABLE IF NOT EXISTS magnum_dust (user_id integer primary key references magnum_users(id) on delete cascade, balance integer not null default 0, updated_at timestamp default now())`;
 }
+// backfill job: one-shot scan of cosmetics → subscriptions for legacy VIP without row
+export async function backfillSubscriptionsFromCosmetics(): Promise<{ scanned: number; backfilled: number }> {
+  if (!process.env.DATABASE_URL && !process.env.DATABASE_URL_UNPOOLED) return { scanned: 0, backfilled: 0 };
+  const sql=getSql();
+  await ensureSubscriptionTable();
+  // find users with cosmetics that imply tier but no active subscription
+  const allCos = await sql`SELECT user_id, cosmetic_id FROM magnum_cosmetics WHERE cosmetic_id IN ('title-god','title-vip') OR cosmetic_id LIKE '%prism%'`;
+  const byUser = new Map<number, string[]>();
+  for (const r of allCos as { user_id:number; cosmetic_id:string }[]) {
+    const arr = byUser.get(Number(r.user_id)) ?? [];
+    arr.push(String(r.cosmetic_id));
+    byUser.set(Number(r.user_id), arr);
+  }
+  let backfilled = 0;
+  for (const [uid, ids] of byUser) {
+    let derived: string|null=null;
+    if (ids.includes("title-god")) derived="pro";
+    else if (ids.some(id=>isPrismCosmetic(id))) derived="vip+";
+    else if (ids.includes("title-vip")) derived="vip";
+    if (!derived) continue;
+    const active = await sql`SELECT 1 FROM magnum_subscriptions WHERE user_id=${uid} AND (ends_at IS NULL OR ends_at > now()) LIMIT 1`;
+    if (active.length===0) {
+      try { await sql`INSERT INTO magnum_subscriptions (user_id, tier, started_at) VALUES (${uid}, ${derived}, now())`; backfilled++; } catch (e) { console.error("[backfill] insert failed", e); }
+    }
+  }
+  return { scanned: byUser.size, backfilled };
+}
+// startup ensure + backfill (non-blocking, logged)
+void ensureDustTable().then(()=> console.log("[startup] magnum_dust ensured")).catch(e=> console.error("[startup] ensureDustTable failed", e));
+void ensureSubscriptionTable().then(()=> console.log("[startup] magnum_subscriptions ensured")).catch(e=> console.error("[startup] ensureSubscriptionTable failed", e));
+void backfillSubscriptionsFromCosmetics().then(r=> { if(r.backfilled) console.log(`[startup] subscriptions backfill ${r.backfilled}/${r.scanned}`); }).catch(e=> console.error("[startup] backfill failed", e));
+// FRAME VOLCANO GOLD — ensure magnum_frames for mimo-v2.5 vision verify
+void (async()=>{ try{ const sql=getSql(); await sql`CREATE TABLE IF NOT EXISTS magnum_frames (id serial PRIMARY KEY, user_id integer REFERENCES magnum_users(id) ON DELETE CASCADE, verified boolean NOT NULL DEFAULT false, created_at timestamp DEFAULT now() NOT NULL)`; console.log("[startup] magnum_frames ensured"); }catch(e){ console.error("[startup] magnum_frames failed", e); } })();
 function prismDismantleReward(rarity:CosmeticItem["rarity"]):number{
   if(rarity==="legendary") return 420;
   if(rarity==="epic") return 142;
   if(rarity==="rare") return 42;
   return 14;
+}
+function crystalDismantleReward(item: CosmeticItem): number {
+  if (isCrystalCosmetic(item.id)) {
+    if (item.rarity==="legendary") return 420;
+    if (item.rarity==="epic") return 100;
+    if (item.rarity==="rare") return 42;
+    return 14;
+  }
+  if (isGlacierCosmetic(item.id)) {
+    if (item.rarity==="legendary") return 420;
+    if (item.rarity==="epic") return 100;
+    if (item.rarity==="rare") return 42;
+    return 14;
+  }
+  return prismDismantleReward(item.rarity);
 }
 function glacierDismantleReward(item: CosmeticItem): number {
   if (isGlacierCosmetic(item.id)) {
@@ -792,18 +980,40 @@ function glacierDismantleReward(item: CosmeticItem): number {
   }
   return prismDismantleReward(item.rarity);
 }
+function volcanoDismantleReward(item: CosmeticItem): number {
+  if (isVolcanoCosmetic(item.id)) {
+    if (item.rarity==="legendary") return 420;
+    if (item.rarity==="epic") return 100;
+    if (item.rarity==="rare") return 42;
+    return 14;
+  }
+  return crystalDismantleReward(item);
+}
 async function ensureSubscriptionTable(): Promise<void> {
+  if (!process.env.DATABASE_URL && !process.env.DATABASE_URL_UNPOOLED) return;
   const sql = getSql();
   await sql`CREATE TABLE IF NOT EXISTS magnum_subscriptions (id serial PRIMARY KEY, user_id integer NOT NULL REFERENCES magnum_users(id) ON DELETE CASCADE, tier text NOT NULL, started_at timestamp NOT NULL DEFAULT now(), ends_at timestamp, created_at timestamp NOT NULL DEFAULT now())`;
   await sql`CREATE INDEX IF NOT EXISTS idx_magnum_subscriptions_user ON magnum_subscriptions(user_id)`;
-  // P0 42703: existing DB had old 4-col schema (user_id PK, tier, expires_at, created_at) — backfill missing cols
+  // P0 42703: existing DB had old 4-col schema (user_id PK, tier, expires_at, created_at) — backfill missing cols + id PK drift
   await sql`ALTER TABLE magnum_subscriptions ADD COLUMN IF NOT EXISTS started_at timestamp DEFAULT now()`;
   await sql`ALTER TABLE magnum_subscriptions ADD COLUMN IF NOT EXISTS ends_at timestamp`;
-  await sql`ALTER TABLE magnum_subscriptions ADD COLUMN IF NOT EXISTS id serial`;
+  await sql`ALTER TABLE magnum_subscriptions ADD COLUMN IF NOT EXISTS id integer`;
+  await sql`CREATE SEQUENCE IF NOT EXISTS magnum_subscriptions_id_seq`;
+  await sql`ALTER TABLE magnum_subscriptions ALTER COLUMN id SET DEFAULT nextval('magnum_subscriptions_id_seq')`;
+  await sql`UPDATE magnum_subscriptions SET id = nextval('magnum_subscriptions_id_seq') WHERE id IS NULL`;
+  await sql`ALTER TABLE magnum_subscriptions ALTER COLUMN id SET NOT NULL`;
+  // sync ends_at from legacy expires_at if exists
+  await sql`DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='magnum_subscriptions' AND column_name='expires_at') THEN EXECUTE 'UPDATE magnum_subscriptions SET ends_at = expires_at WHERE ends_at IS NULL AND expires_at IS NOT NULL'; END IF; END $$`;
+  // ensure PK is on id (old table had user_id PK)
+  await sql`DO $$ DECLARE pk_col text; BEGIN SELECT string_agg(a.attname, ',' ORDER BY a.attnum) INTO pk_col FROM pg_constraint c JOIN pg_attribute a ON a.attrelid=c.conrelid AND a.attnum=ANY(c.conkey) WHERE c.conrelid='magnum_subscriptions'::regclass AND c.contype='p'; IF pk_col IS NULL OR pk_col <> 'id' THEN IF EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid='magnum_subscriptions'::regclass AND contype='p') THEN EXECUTE (SELECT 'ALTER TABLE "magnum_subscriptions" DROP CONSTRAINT "' || conname || '"' FROM pg_constraint WHERE conrelid='magnum_subscriptions'::regclass AND contype='p' LIMIT 1); END IF; CREATE UNIQUE INDEX IF NOT EXISTS "magnum_subscriptions_id_unique" ON magnum_subscriptions (id); EXECUTE 'ALTER TABLE magnum_subscriptions ADD PRIMARY KEY (id)'; END IF; END $$`;
 }
 function isGlacierEpicLegendary(id:string):boolean {
   const it = COSMETICS_CATALOG.find(c=>c.id===id);
   return !!it && isGlacierCosmetic(id) && (it.rarity==="legendary" || it.rarity==="epic");
+}
+function isCrystalEpicLegendary(id:string):boolean {
+  const it = COSMETICS_CATALOG.find(c=>c.id===id);
+  return !!it && isCrystalCosmetic(id) && (it.rarity==="legendary" || it.rarity==="epic");
 }
 async function handlePrismCatalog():Promise<Response>{ return Response.json({ catalog: PRISM_CATALOG, count: PRISM_CATALOG.length, dustCosts: { common:42, rare:142, epic:420, legendary:1420 } }); }
 async function handleDustGet(req:Request):Promise<Response>{
@@ -826,7 +1036,7 @@ async function handleDismantle(req:Request):Promise<Response>{
   const sql=getSql();
   const owned=await sql`SELECT id FROM magnum_cosmetics WHERE user_id=${user.id} AND cosmetic_id=${raw} LIMIT 1`;
   if(owned.length===0) return Response.json({error:"not owned",cosmeticId:raw},{status:404});
-  const reward=glacierDismantleReward(item);
+  const reward=crystalDismantleReward(item);
   await sql`DELETE FROM magnum_cosmetics WHERE user_id=${user.id} AND cosmetic_id=${raw}`;
   await sql`INSERT INTO magnum_dust (user_id,balance) VALUES (${user.id},${reward}) ON CONFLICT (user_id) DO UPDATE SET balance=magnum_dust.balance+${reward}, updated_at=now()`;
   await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${reward},'dismantle',${JSON.stringify({cosmeticId:raw,reward})}::jsonb)`;
@@ -893,6 +1103,91 @@ async function handleGlacierCraft(req: Request): Promise<Response> {
   const inv=await sql`SELECT cosmetic_id FROM magnum_cosmetics WHERE user_id=${user.id} ORDER BY purchased_at ASC`;
   return Response.json({ ok:true, crafted:raw, slot:target.slot, cost:42, balance:newBal, consumed:ownedCommons.slice(0,3), inventory:(inv as {cosmetic_id:string}[]).map(r=>r.cosmetic_id) });
 }
+async function handleCrystalCatalog(): Promise<Response> {
+  return Response.json({ catalog: CRYSTAL_CATALOG, count: CRYSTAL_CATALOG.length, dustCosts: { common:42, rare:142, epic:420, legendary:1420 } });
+}
+async function handleCrystalCraft(req: Request): Promise<Response> {
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
+  const user=await getUserByToken(token); if(!user) return Response.json({error:"unauthorized"},{status:401});
+  const ip=getClientIp(req); if(!checkRateLimit(`shop:crystal-craft:${user.id}:${ip}`,12,60_000)) return Response.json({error:"rate limited"},{status:429});
+  let body:{ targetId?:string; cosmeticId?:string; id?:string }; try{ body=(await req.json()) as typeof body;}catch{ return Response.json({error:"Invalid JSON"},{status:400});}
+  const raw=validateCosmeticId(body.targetId??body.cosmeticId??body.id??""); if(!raw) return Response.json({error:"targetId required"},{status:400});
+  const target=COSMETICS_CATALOG.find(c=>c.id===raw); if(!target) return Response.json({error:"unknown cosmetic",cosmeticId:raw},{status:400});
+  if(!isCrystalCosmetic(raw)) return Response.json({error:"only crystal craft allowed",cosmeticId:raw},{status:400});
+  await ensureDustTable();
+  const sql=getSql();
+  const ex=await sql`SELECT id FROM magnum_cosmetics WHERE user_id=${user.id} AND cosmetic_id=${raw} LIMIT 1`;
+  if(ex.length>0) return Response.json({error:"already owned",cosmeticId:raw},{status:409});
+  const allRows = await sql`SELECT cosmetic_id FROM magnum_cosmetics WHERE user_id=${user.id}`;
+  const ownedIds = new Set((allRows as {cosmetic_id:string}[]).map(r=>r.cosmetic_id));
+  if(target.rarity==="rare"){
+    const commonCrystalIds = CRYSTAL_CATALOG.filter(c=>c.rarity==="common").map(c=>c.id);
+    const ownedCommons = commonCrystalIds.filter(id=>ownedIds.has(id));
+    if(ownedCommons.length < 3) return Response.json({error:"need 3 common crystal skins",owned:ownedCommons.length,required:3},{status:402});
+    const coins=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+    let bal=coins.length? Number((coins[0] as {balance:number}).balance):0;
+    if(bal < 42) return Response.json({error:"not enough coins",required:42,balance:bal},{status:402});
+    await sql`UPDATE magnum_coins SET balance=balance-42 WHERE user_id=${user.id}`;
+    for(let i=0;i<3;i++){ const cid=ownedCommons[i]!; await sql`DELETE FROM magnum_cosmetics WHERE user_id=${user.id} AND cosmetic_id=${cid}`; }
+    await sql`INSERT INTO magnum_cosmetics (user_id,cosmetic_id,slot,equipped,purchased_at) VALUES (${user.id},${raw},${target.slot},false,now())`;
+    await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${-42},'crystal_craft',${JSON.stringify({target:raw, consumed:ownedCommons.slice(0,3)})}::jsonb)`;
+    const upd=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+    const newBal=Number((upd[0] as {balance:number}).balance);
+    const inv=await sql`SELECT cosmetic_id FROM magnum_cosmetics WHERE user_id=${user.id} ORDER BY purchased_at ASC`;
+    return Response.json({ ok:true, crafted:raw, slot:target.slot, cost:42, balance:newBal, consumed:ownedCommons.slice(0,3), inventory:(inv as {cosmetic_id:string}[]).map(r=>r.cosmetic_id) });
+  }
+  if(target.rarity==="epic"){
+    const uncommonCrystalIds = CRYSTAL_CATALOG.filter(c=>c.rarity==="rare").map(c=>c.id);
+    const ownedUncommons = uncommonCrystalIds.filter(id=>ownedIds.has(id));
+    if(ownedUncommons.length < 3) return Response.json({error:"need 3 uncommon crystal skins",owned:ownedUncommons.length,required:3},{status:402});
+    const coins=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+    let bal=coins.length? Number((coins[0] as {balance:number}).balance):0;
+    if(bal < 142) return Response.json({error:"not enough coins",required:142,balance:bal},{status:402});
+    await sql`UPDATE magnum_coins SET balance=balance-142 WHERE user_id=${user.id}`;
+    for(let i=0;i<3;i++){ const cid=ownedUncommons[i]!; await sql`DELETE FROM magnum_cosmetics WHERE user_id=${user.id} AND cosmetic_id=${cid}`; }
+    await sql`INSERT INTO magnum_cosmetics (user_id,cosmetic_id,slot,equipped,purchased_at) VALUES (${user.id},${raw},${target.slot},false,now())`;
+    await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${-142},'crystal_craft',${JSON.stringify({target:raw, consumed:ownedUncommons.slice(0,3)})}::jsonb)`;
+    const upd=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+    const newBal=Number((upd[0] as {balance:number}).balance);
+    const inv=await sql`SELECT cosmetic_id FROM magnum_cosmetics WHERE user_id=${user.id} ORDER BY purchased_at ASC`;
+    return Response.json({ ok:true, crafted:raw, slot:target.slot, cost:142, balance:newBal, consumed:ownedUncommons.slice(0,3), inventory:(inv as {cosmetic_id:string}[]).map(r=>r.cosmetic_id) });
+  }
+  return Response.json({error:"only uncommon(142) and rare(420) craftable",cosmeticId:raw},{status:400});
+}
+
+async function handleVolcanoCatalog(): Promise<Response> {
+  return Response.json({ catalog: VOLCANO_CATALOG, count: VOLCANO_CATALOG.length, dustCosts: { common:42, rare:142, epic:420, legendary:1420 } });
+}
+async function handleVolcanoCraft(req: Request): Promise<Response> {
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
+  const user=await getUserByToken(token); if(!user) return Response.json({error:"unauthorized"},{status:401});
+  const ip=getClientIp(req); if(!checkRateLimit(`shop:volcano-craft:${user.id}:${ip}`,12,60_000)) return Response.json({error:"rate limited"},{status:429});
+  let body:{ targetId?:string; cosmeticId?:string; id?:string }; try{ body=(await req.json()) as typeof body;}catch{ return Response.json({error:"Invalid JSON"},{status:400});}
+  const raw=validateCosmeticId(body.targetId??body.cosmeticId??body.id??""); if(!raw) return Response.json({error:"targetId required"},{status:400});
+  const target=COSMETICS_CATALOG.find(c=>c.id===raw); if(!target) return Response.json({error:"unknown cosmetic",cosmeticId:raw},{status:400});
+  if(!isVolcanoCosmetic(raw)) return Response.json({error:"only volcano craft allowed",cosmeticId:raw},{status:400});
+  if(target.rarity!=="rare") return Response.json({error:"only uncommon (142) craftable via 3x common",cosmeticId:raw},{status:400});
+  await ensureDustTable();
+  const sql=getSql();
+  const ex=await sql`SELECT id FROM magnum_cosmetics WHERE user_id=${user.id} AND cosmetic_id=${raw} LIMIT 1`;
+  if(ex.length>0) return Response.json({error:"already owned",cosmeticId:raw},{status:409});
+  const allRows = await sql`SELECT cosmetic_id FROM magnum_cosmetics WHERE user_id=${user.id}`;
+  const ownedIds = new Set((allRows as {cosmetic_id:string}[]).map(r=>r.cosmetic_id));
+  const commonVolcanoIds = VOLCANO_CATALOG.filter(c=>c.rarity==="common").map(c=>c.id);
+  const ownedCommons = commonVolcanoIds.filter(id=>ownedIds.has(id));
+  if(ownedCommons.length < 3) return Response.json({error:"need 3 common volcano skins",owned:ownedCommons.length,required:3},{status:402});
+  const coins=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+  let bal=coins.length? Number((coins[0] as {balance:number}).balance):0;
+  if(bal < 42) return Response.json({error:"not enough coins",required:42,balance:bal},{status:402});
+  await sql`UPDATE magnum_coins SET balance=balance-42 WHERE user_id=${user.id}`;
+  for(let i=0;i<3;i++){ const cid=ownedCommons[i]!; await sql`DELETE FROM magnum_cosmetics WHERE user_id=${user.id} AND cosmetic_id=${cid}`; }
+  await sql`INSERT INTO magnum_cosmetics (user_id,cosmetic_id,slot,equipped,purchased_at) VALUES (${user.id},${raw},${target.slot},false,now())`;
+  await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${-42},'volcano_craft',${JSON.stringify({target:raw, consumed:ownedCommons.slice(0,3)})}::jsonb)`;
+  const upd=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+  const newBal=Number((upd[0] as {balance:number}).balance);
+  const inv=await sql`SELECT cosmetic_id FROM magnum_cosmetics WHERE user_id=${user.id} ORDER BY purchased_at ASC`;
+  return Response.json({ ok:true, crafted:raw, slot:target.slot, cost:42, balance:newBal, consumed:ownedCommons.slice(0,3), inventory:(inv as {cosmetic_id:string}[]).map(r=>r.cosmetic_id) });
+}
 
 
 // ---- Shop Bundles — 8 наборов со скидкой 10-18% vs сумма ---- 
@@ -948,6 +1243,10 @@ async function handleShopBundleBuy(req:Request):Promise<Response>{
 }
 
 // ---- Frame handlers (magnum_frames) ----
+async function ensureFrameTable(): Promise<void> {
+  const sql = getSql();
+  await sql`CREATE TABLE IF NOT EXISTS magnum_frames (id serial PRIMARY KEY, user_id integer REFERENCES magnum_users(id) ON DELETE CASCADE, verified boolean NOT NULL DEFAULT false, created_at timestamp DEFAULT now() NOT NULL)`;
+}
 async function handleFrameVerify(req: Request): Promise<Response> {
   const token = extractToken(req);
   if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
@@ -959,6 +1258,7 @@ async function handleFrameVerify(req: Request): Promise<Response> {
   try { body = (await req.json()) as typeof body; } catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
   const verified = Boolean(body.verified);
   try {
+    await ensureFrameTable();
     const sql = getSql();
     const rows = await sql`INSERT INTO magnum_frames (user_id, verified, created_at) VALUES (${user.id}, ${verified}, now()) RETURNING *`;
     return Response.json({ ok: true, frame: rows[0], verified });
@@ -975,6 +1275,7 @@ async function handleFrameStatus(req: Request): Promise<Response> {
   try { user = await getUserByToken(token); } catch (e) { console.error("[frame status] getUserByToken failed", e); return Response.json({ error: "db error" }, { status: 500 }); }
   if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
   try {
+    await ensureFrameTable();
     const sql = getSql();
     const rows = await sql`SELECT f.id, u.username, f.verified, f.created_at, s.skin_id as avatar FROM magnum_frames f LEFT JOIN magnum_users u ON u.id = f.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id = f.user_id AND s.equipped = true WHERE f.user_id = ${user.id} ORDER BY f.created_at DESC LIMIT 50`;
     const frames = rows.map((r: unknown) => {
@@ -982,7 +1283,10 @@ async function handleFrameStatus(req: Request): Promise<Response> {
       return { id: Number(x.id), username: String(x.username || user!.username), verified: Boolean(x.verified), status: x.verified ? "verified" : "pending", created_at: x.created_at, avatar: x.avatar || null };
     });
     const verified = frames.filter(f => f.verified).length;
-    return Response.json({ frames, total: frames.length, verified, pending: frames.length - verified, user: user.username });
+    // tier for FRAME VOLCANO GOLD — volcano-gold when verified, else none
+    const tier = verified > 0 ? "volcano-gold" : "none";
+    const tierLabel = verified > 0 ? "VOLCANO GOLD" : "NONE";
+    return Response.json({ frames, total: frames.length, verified, pending: frames.length - verified, user: user.username, tier, tierLabel });
   } catch (e) {
     console.error("[frame status] failed", e);
     return Response.json({ error: "db error" }, { status: 500 });
@@ -1075,6 +1379,250 @@ async function handleEcoRatingTop(): Promise<Response> {
     const top=rows.map((x:unknown)=>{const r=x as {player:string;score:number;rating:number;tier:string;created_at:string;avatar:string|null}; return {player:String(r.player),username:String(r.player),score:Number(r.score),rating:Number(r.rating),tier:String(r.tier),created_at:r.created_at,avatar:r.avatar};});
     return Response.json({top,count:top.length,tiers:ECO_TIERS});
   }catch(e){console.error("[eco rating top] failed",e); return Response.json({error:"db error"},{status:500});}
+}
+
+// ---- ECO LES 42 — Лес/Тайга/Кузбасс bio-вахта 7дн + freeze 420 1x/нед + share 1080 + economy 42/142/420 +1420 ----
+function ecoWeekId(d=new Date()): string { const jan1=new Date(d.getFullYear(),0,1); const days=Math.floor((d.getTime()-jan1.getTime())/86400000); const w=Math.ceil((days+jan1.getDay()+1)/7); return `${d.getFullYear()}-W${String(w).padStart(2,"0")}`; }
+function ecoTodayKey(d=new Date()): string { return d.toISOString().slice(0,10); }
+async function ensureEcoChallengeTable(){ const sql=getSql(); await sql`CREATE TABLE IF NOT EXISTS magnum_eco_challenges (user_id integer PRIMARY KEY REFERENCES magnum_users(id) ON DELETE CASCADE, week_id text NOT NULL, streak integer NOT NULL DEFAULT 0, freeze_used boolean NOT NULL DEFAULT false, last_claim_date text, streak_days jsonb DEFAULT '[]'::jsonb NOT NULL, updated_at timestamp DEFAULT now() NOT NULL)`; await sql`CREATE TABLE IF NOT EXISTS magnum_eco_shares (id serial PRIMARY KEY, user_id integer REFERENCES magnum_users(id) ON DELETE CASCADE, week_id text NOT NULL, created_at timestamp DEFAULT now() NOT NULL)`; }
+async function handleEcoChallengeGet(req: Request): Promise<Response> {
+  const token=extractToken(req); if(!token) return Response.json({ weekId: ecoWeekId(), streak: 0, freezeUsed: false, canFreeze: false, streakDays: [], guest: true });
+  let user:{id:number;username:string}|null=null; try{ user=await getUserByToken(token);}catch{} if(!user) return Response.json({ weekId: ecoWeekId(), streak: 0, freezeUsed: false, canFreeze: false, streakDays: [] });
+  await ensureEcoChallengeTable(); const sql=getSql(); const wk=ecoWeekId();
+  const rows=await sql`SELECT week_id, streak, freeze_used, streak_days FROM magnum_eco_challenges WHERE user_id=${user.id} LIMIT 1`;
+  if(rows.length===0) return Response.json({ weekId: wk, streak: 0, freezeUsed: false, canFreeze: true, streakDays: [] });
+  const r=rows[0] as {week_id:string;streak:number;freeze_used:boolean;streak_days:unknown};
+  if(r.week_id!==wk) return Response.json({ weekId: wk, streak: 0, freezeUsed: false, canFreeze: true, streakDays: [] });
+  return Response.json({ weekId: r.week_id, streak: Number(r.streak), freezeUsed: Boolean(r.freeze_used), canFreeze: !r.freeze_used, streakDays: Array.isArray(r.streak_days)?r.streak_days:[] });
+}
+async function handleEcoChallengeClaim(req: Request): Promise<Response> {
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
+  let user:{id:number;username:string}|null=null; try{ user=await getUserByToken(token);}catch{} if(!user) return Response.json({error:"unauthorized"},{status:401});
+  const ip=getClientIp(req); if(!checkRateLimit(`eco:challenge:${user.id}:${ip}`,12,60_000)) return Response.json({error:"rate limited"},{status:429});
+  let body:{score?:unknown;answers?:unknown;boss?:unknown}; try{ body=await req.json() as typeof body;}catch{ return Response.json({error:"Invalid JSON"},{status:400});}
+  const score=validateEcoScore(body.score); if(score===null) return Response.json({error:"score -1000..1000"},{status:400});
+  const isBoss=Boolean(body.boss);
+  const today=ecoTodayKey(); const wk=ecoWeekId();
+  await ensureEcoChallengeTable(); const sql=getSql();
+  const rows=await sql`SELECT week_id, streak, freeze_used, last_claim_date, streak_days FROM magnum_eco_challenges WHERE user_id=${user.id} LIMIT 1`;
+  let streak=0; let freeze_used=false; let last_claim=""; let streak_days: string[]=[];
+  let week_id=wk;
+  if(rows.length>0){ const r=rows[0] as {week_id:string;streak:number;freeze_used:boolean;last_claim_date:string|null;streak_days:unknown}; if(r.week_id===wk){ streak=Number(r.streak); freeze_used=Boolean(r.freeze_used); last_claim=String(r.last_claim_date||""); streak_days=Array.isArray(r.streak_days)?r.streak_days as string[]:[]; } }
+  if(last_claim===today) return Response.json({ ok:false, alreadyClaimed:true, streak, weekId: wk, coins:0 });
+  // streak increment
+  const yesterday=new Date(); yesterday.setDate(yesterday.getDate()-1); const yKey=yesterday.toISOString().slice(0,10);
+  let nextStreak=1;
+  if(last_claim===yKey) nextStreak=Math.min(7, streak+1);
+  else if(streak===0 || last_claim==="") nextStreak=1;
+  else if(last_claim!==today) { // gap >1 day -> reset but freeze can save once per week
+    if(freeze_used) { nextStreak=Math.min(7, streak+1); } else nextStreak=1;
+  }
+  if(!streak_days.includes(today)) streak_days=[...streak_days, today].slice(-7);
+  // economy: 42/142/420 +1420 boss
+  let coins=42; if(score>=200) coins=420; else if(score>=100) coins=142;
+  if(isBoss) coins+=1420 - (coins===420?420:coins===142?142:42) + 0; // boss overrides to 1420 total
+  if(isBoss) coins=1420;
+  // grant coins
+  await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${user.id},1000) ON CONFLICT (user_id) DO NOTHING`;
+  await sql`UPDATE magnum_coins SET balance=balance+${coins} WHERE user_id=${user.id}`;
+  await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${coins},'eco_les',${JSON.stringify({score, boss:isBoss, streak: nextStreak, weekId: wk})}::jsonb)`;
+  // upsert challenge
+  await sql`INSERT INTO magnum_eco_challenges (user_id, week_id, streak, freeze_used, last_claim_date, streak_days, updated_at) VALUES (${user.id}, ${wk}, ${nextStreak}, ${freeze_used}, ${today}, ${JSON.stringify(streak_days)}::jsonb, now()) ON CONFLICT (user_id) DO UPDATE SET week_id=${wk}, streak=${nextStreak}, last_claim_date=${today}, streak_days=${JSON.stringify(streak_days)}::jsonb, updated_at=now()`;
+  return Response.json({ ok:true, coins, streak: nextStreak, weekId: wk, boss: isBoss });
+}
+async function handleEcoFreeze(req: Request): Promise<Response> {
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
+  let user:{id:number;username:string}|null=null; try{ user=await getUserByToken(token);}catch{} if(!user) return Response.json({error:"unauthorized"},{status:401});
+  const ip=getClientIp(req); if(!checkRateLimit(`eco:freeze:${user.id}:${ip}`,5,60_000)) return Response.json({error:"rate limited"},{status:429});
+  const wk=ecoWeekId(); await ensureEcoChallengeTable(); const sql=getSql();
+  const rows=await sql`SELECT week_id, freeze_used FROM magnum_eco_challenges WHERE user_id=${user.id} LIMIT 1`;
+  if(rows.length>0){ const r=rows[0] as {week_id:string;freeze_used:boolean}; if(r.week_id===wk && r.freeze_used) return Response.json({error:"freeze already used this week", weekId:wk},{status:409}); }
+  // cost 420
+  const coinsRows=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+  let bal=coinsRows.length?Number((coinsRows[0] as {balance:number}).balance):1000;
+  if(coinsRows.length===0) await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${user.id},1000) ON CONFLICT (user_id) DO NOTHING`;
+  if(bal<420) return Response.json({error:"not enough coins", required:420, balance:bal},{status:402});
+  await sql`UPDATE magnum_coins SET balance=balance-420 WHERE user_id=${user.id}`;
+  await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${-420},'eco_freeze',${JSON.stringify({weekId:wk})}::jsonb)`;
+  const existing=await sql`SELECT user_id FROM magnum_eco_challenges WHERE user_id=${user.id} LIMIT 1`;
+  if(existing.length===0) await sql`INSERT INTO magnum_eco_challenges (user_id, week_id, streak, freeze_used, last_claim_date, streak_days) VALUES (${user.id}, ${wk}, 0, true, null, '[]'::jsonb)`;
+  else await sql`UPDATE magnum_eco_challenges SET week_id=${wk}, freeze_used=true, updated_at=now() WHERE user_id=${user.id}`;
+  const upd=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+  return Response.json({ ok:true, weekId:wk, balance: Number((upd[0] as {balance:number}).balance) });
+}
+async function handleEcoShare(req: Request): Promise<Response> {
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
+  let user:{id:number;username:string}|null=null; try{ user=await getUserByToken(token);}catch{} if(!user) return Response.json({error:"unauthorized"},{status:401});
+  const wk=ecoWeekId(); await ensureEcoChallengeTable(); const sql=getSql();
+  const today=ecoTodayKey();
+  // 1 share per day guard via magnum_eco_shares
+  const todayRows=await sql`SELECT id FROM magnum_eco_shares WHERE user_id=${user.id} AND week_id=${wk} AND created_at::date = ${today}::date LIMIT 1`;
+  // allow 1 per day but give coins only once per day
+  if(todayRows.length>0) return Response.json({ ok:false, error:"already shared today", coins:0 },{status:409});
+  await sql`INSERT INTO magnum_eco_shares (user_id, week_id) VALUES (${user.id}, ${wk})`;
+  await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${user.id},1000) ON CONFLICT (user_id) DO NOTHING`;
+  await sql`UPDATE magnum_coins SET balance=balance+42 WHERE user_id=${user.id}`;
+  await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},42,'eco_share',${JSON.stringify({weekId:wk})}::jsonb)`;
+  return Response.json({ ok:true, coins:42, weekId:wk });
+}
+
+// ---- MAP KUZBASS 42 — 5 точек ×2Q + босс +1420 + streak 7дн + freeze 420 + OG 1080 + vision verify ----
+const MAP_POINTS = ["kemerovo","novokuznetsk","belovo","prokopievsk","mezhdurechensk"] as const;
+type MapPointId = typeof MAP_POINTS[number];
+function isMapPoint(v:string): boolean { return (MAP_POINTS as readonly string[]).includes(v); }
+async function ensureMapTable(): Promise<void> {
+  const sql=getSql();
+  await sql`CREATE TABLE IF NOT EXISTS magnum_map_progress (user_id integer PRIMARY KEY REFERENCES magnum_users(id) ON DELETE CASCADE, points jsonb NOT NULL DEFAULT '{}'::jsonb, completed integer NOT NULL DEFAULT 0, streak integer NOT NULL DEFAULT 0, week_id text NOT NULL DEFAULT '', freeze_used boolean NOT NULL DEFAULT false, last_claim_date text, streak_days jsonb NOT NULL DEFAULT '[]'::jsonb, boss_done boolean NOT NULL DEFAULT false, updated_at timestamp DEFAULT now() NOT NULL)`;
+  await sql`CREATE TABLE IF NOT EXISTS magnum_map_events (id serial PRIMARY KEY, user_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, point_id text NOT NULL, q integer NOT NULL DEFAULT 0, correct boolean NOT NULL DEFAULT true, created_at timestamp DEFAULT now() NOT NULL)`;
+  await sql`CREATE TABLE IF NOT EXISTS magnum_map_shares (id serial PRIMARY KEY, user_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, week_id text NOT NULL, created_at timestamp DEFAULT now() NOT NULL)`;
+  // migrate missing cols for old table created via spec literal
+  await sql`ALTER TABLE magnum_map_progress ADD COLUMN IF NOT EXISTS boss_done boolean DEFAULT false`;
+  await sql`ALTER TABLE magnum_map_progress ADD COLUMN IF NOT EXISTS freeze_used boolean DEFAULT false`;
+  await sql`ALTER TABLE magnum_map_progress ADD COLUMN IF NOT EXISTS streak_days jsonb DEFAULT '[]'::jsonb`;
+  await sql`ALTER TABLE magnum_map_progress ADD COLUMN IF NOT EXISTS last_claim_date text`;
+  await sql`ALTER TABLE magnum_map_progress ADD COLUMN IF NOT EXISTS week_id text DEFAULT ''`;
+}
+function mapWeekId(d=new Date()): string { const jan1=new Date(d.getFullYear(),0,1); const days=Math.floor((d.getTime()-jan1.getTime())/86400000); const w=Math.ceil((days+jan1.getDay()+1)/7); return `${d.getFullYear()}-W${String(w).padStart(2,"0")}`; }
+function mapTodayKey(d=new Date()): string { return d.toISOString().slice(0,10); }
+async function handleMapProgress(req: Request): Promise<Response> {
+  const token=extractToken(req);
+  const wk=mapWeekId();
+  if(!token){
+    return Response.json({ points:{}, completed:0, streak:0, weekId:wk, freezeUsed:false, canFreeze:false, streakDays:[], bossDone:false, guest:true });
+  }
+  let user:{id:number;username:string}|null=null; try{ user=await getUserByToken(token);}catch{}
+  if(!user) return Response.json({ points:{}, completed:0, streak:0, weekId:wk, freezeUsed:false, canFreeze:false, streakDays:[], bossDone:false });
+  await ensureMapTable(); const sql=getSql();
+  const rows=await sql`SELECT points, completed, streak, week_id, freeze_used, streak_days, boss_done FROM magnum_map_progress WHERE user_id=${user.id} LIMIT 1`;
+  if(rows.length===0){
+    return Response.json({ points:{}, completed:0, streak:0, weekId:wk, freezeUsed:false, canFreeze:true, streakDays:[], bossDone:false });
+  }
+  const r=rows[0] as {points:unknown;completed:number;streak:number;week_id:string;freeze_used:boolean;streak_days:unknown;boss_done:boolean};
+  const points = (r.points && typeof r.points==="object" && !Array.isArray(r.points)) ? r.points as Record<string,boolean> : {};
+  const weekId = String(r.week_id||wk);
+  if(weekId!==wk){
+    return Response.json({ points, completed:Number(r.completed||0), streak:0, weekId:wk, freezeUsed:false, canFreeze:true, streakDays:[], bossDone: Boolean(r.boss_done) });
+  }
+  return Response.json({ points, completed:Number(r.completed||0), streak:Number(r.streak||0), weekId, freezeUsed:Boolean(r.freeze_used), canFreeze:!r.freeze_used, streakDays: Array.isArray(r.streak_days)?r.streak_days:[], bossDone: Boolean(r.boss_done) });
+}
+async function handleMapAnswer(req: Request): Promise<Response> {
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
+  let user:{id:number;username:string}|null=null; try{ user=await getUserByToken(token);}catch{} if(!user) return Response.json({error:"unauthorized"},{status:401});
+  const ip=getClientIp(req); if(!checkRateLimit(`map:answer:${user.id}:${ip}`,20,60_000)) return Response.json({error:"rate limited"},{status:429});
+  let body:{pointId?:string}; try{ body=(await req.json()) as typeof body;}catch{ return Response.json({error:"Invalid JSON"},{status:400});}
+  const pid=String(body.pointId||"").trim().toLowerCase(); if(!isMapPoint(pid)) return Response.json({error:"pointId kemerovo|novokuznetsk|belovo|prokopievsk|mezhdurechensk"},{status:400});
+  await ensureMapTable(); const sql=getSql(); const wk=mapWeekId(); const today=mapTodayKey();
+  const rows=await sql`SELECT points, completed, streak, week_id, freeze_used, last_claim_date, streak_days, boss_done FROM magnum_map_progress WHERE user_id=${user.id} LIMIT 1`;
+  let points: Record<string,boolean>={}; let completed=0; let streak=0; let freeze_used=false; let last_claim=""; let streak_days:string[]=[]; let boss_done=false; let week_id=wk;
+  if(rows.length>0){
+    const r=rows[0] as {points:unknown;completed:number;streak:number;week_id:string;freeze_used:boolean;last_claim_date:string|null;streak_days:unknown;boss_done:boolean};
+    points=(r.points && typeof r.points==="object" && !Array.isArray(r.points)) ? r.points as Record<string,boolean> : {};
+    completed=Number(r.completed||0); streak=Number(r.streak||0); week_id=String(r.week_id||wk); freeze_used=Boolean(r.freeze_used); last_claim=String(r.last_claim_date||""); streak_days=Array.isArray(r.streak_days)?r.streak_days as string[]:[]; boss_done=Boolean(r.boss_done);
+    if(week_id!==wk){ points={}; completed=0; streak=0; freeze_used=false; streak_days=[]; week_id=wk; last_claim=""; }
+  }
+  if(points[pid]) return Response.json({error:"already completed", pointId:pid, points, completed},{status:409});
+  // mark point done
+  points[pid]=true; completed=Object.keys(points).filter(k=>points[k]).length;
+  // streak update
+  const yesterday=new Date(); yesterday.setDate(yesterday.getDate()-1); const yKey=yesterday.toISOString().slice(0,10);
+  let nextStreak=1;
+  if(last_claim===yKey) nextStreak=Math.min(7, streak+1);
+  else if(last_claim===today) nextStreak=streak;
+  else if(streak===0 || last_claim==="") nextStreak=1;
+  else if(last_claim!==today){ if(freeze_used) nextStreak=Math.min(7, streak+1); else nextStreak=1; }
+  if(!streak_days.includes(today)) streak_days=[...streak_days, today].slice(-7);
+  // coins: 42 per point, +142 region bonus when 5/5 ? give +142 extra on 5th point
+  let coins=42;
+  if(completed===5) coins+=142;
+  await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${user.id},1000) ON CONFLICT (user_id) DO NOTHING`;
+  await sql`UPDATE magnum_coins SET balance=balance+${coins} WHERE user_id=${user.id}`;
+  await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${coins},'map_point',${JSON.stringify({pointId:pid, completed, streak:nextStreak, weekId:wk})}::jsonb)`;
+  await sql`INSERT INTO magnum_map_events (user_id, point_id, q, correct) VALUES (${user.id}, ${pid}, 2, true)`;
+  await sql`INSERT INTO magnum_map_progress (user_id, points, completed, streak, week_id, freeze_used, last_claim_date, streak_days, boss_done, updated_at) VALUES (${user.id}, ${JSON.stringify(points)}::jsonb, ${completed}, ${nextStreak}, ${wk}, ${freeze_used}, ${today}, ${JSON.stringify(streak_days)}::jsonb, ${boss_done}, now()) ON CONFLICT (user_id) DO UPDATE SET points=${JSON.stringify(points)}::jsonb, completed=${completed}, streak=${nextStreak}, week_id=${wk}, last_claim_date=${today}, streak_days=${JSON.stringify(streak_days)}::jsonb, updated_at=now()`;
+  const upd=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+  return Response.json({ ok:true, pointId:pid, points, completed, streak:nextStreak, weekId:wk, coins, balance: Number((upd[0] as {balance:number}).balance), bossAvailable: completed===5 && !boss_done });
+}
+async function handleMapBoss(req: Request): Promise<Response> {
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
+  let user:{id:number;username:string}|null=null; try{ user=await getUserByToken(token);}catch{} if(!user) return Response.json({error:"unauthorized"},{status:401});
+  const ip=getClientIp(req); if(!checkRateLimit(`map:boss:${user.id}:${ip}`,8,60_000)) return Response.json({error:"rate limited"},{status:429});
+  await ensureMapTable(); const sql=getSql();
+  const rows=await sql`SELECT points, completed, boss_done FROM magnum_map_progress WHERE user_id=${user.id} LIMIT 1`;
+  if(rows.length===0) return Response.json({error:"need 5/5 points"},{status:400});
+  const r=rows[0] as {points:unknown;completed:number;boss_done:boolean};
+  const completed=Number(r.completed||0); const bossDone=Boolean(r.boss_done);
+  if(bossDone) return Response.json({error:"boss already done"},{status:409});
+  if(completed<5) return Response.json({error:"need 5/5 points", completed},{status:400});
+  await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${user.id},1000) ON CONFLICT (user_id) DO NOTHING`;
+  await sql`UPDATE magnum_coins SET balance=balance+1420 WHERE user_id=${user.id}`;
+  await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},1420,'map_boss',${JSON.stringify({completed})}::jsonb)`;
+  await sql`UPDATE magnum_map_progress SET boss_done=true, updated_at=now() WHERE user_id=${user.id}`;
+  const upd=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+  return Response.json({ ok:true, coins:1420, balance: Number((upd[0] as {balance:number}).balance) });
+}
+async function handleMapShare(req: Request): Promise<Response> {
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
+  let user:{id:number;username:string}|null=null; try{ user=await getUserByToken(token);}catch{} if(!user) return Response.json({error:"unauthorized"},{status:401});
+  const wk=mapWeekId(); await ensureMapTable(); const sql=getSql(); const today=mapTodayKey();
+  const todayRows=await sql`SELECT id FROM magnum_map_shares WHERE user_id=${user.id} AND week_id=${wk} AND created_at::date = ${today}::date LIMIT 1`;
+  if(todayRows.length>0) return Response.json({ ok:false, error:"already shared today", coins:0 },{status:409});
+  await sql`INSERT INTO magnum_map_shares (user_id, week_id) VALUES (${user.id}, ${wk})`;
+  await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${user.id},1000) ON CONFLICT (user_id) DO NOTHING`;
+  await sql`UPDATE magnum_coins SET balance=balance+42 WHERE user_id=${user.id}`;
+  await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},42,'map_share',${JSON.stringify({weekId:wk})}::jsonb)`;
+  return Response.json({ ok:true, coins:42, weekId:wk });
+}
+async function handleMapFreeze(req: Request): Promise<Response> {
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
+  let user:{id:number;username:string}|null=null; try{ user=await getUserByToken(token);}catch{} if(!user) return Response.json({error:"unauthorized"},{status:401});
+  const ip=getClientIp(req); if(!checkRateLimit(`map:freeze:${user.id}:${ip}`,5,60_000)) return Response.json({error:"rate limited"},{status:429});
+  const wk=mapWeekId(); await ensureMapTable(); const sql=getSql();
+  const rows=await sql`SELECT week_id, freeze_used FROM magnum_map_progress WHERE user_id=${user.id} LIMIT 1`;
+  if(rows.length>0){ const r=rows[0] as {week_id:string;freeze_used:boolean}; if(r.week_id===wk && r.freeze_used) return Response.json({error:"freeze already used this week", weekId:wk},{status:409}); }
+  const coinsRows=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+  let bal=coinsRows.length?Number((coinsRows[0] as {balance:number}).balance):1000;
+  if(coinsRows.length===0) await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${user.id},1000) ON CONFLICT (user_id) DO NOTHING`;
+  if(bal<420) return Response.json({error:"not enough coins", required:420, balance:bal},{status:402});
+  await sql`UPDATE magnum_coins SET balance=balance-420 WHERE user_id=${user.id}`;
+  await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${-420},'map_freeze',${JSON.stringify({weekId:wk})}::jsonb)`;
+  const existing=await sql`SELECT user_id FROM magnum_map_progress WHERE user_id=${user.id} LIMIT 1`;
+  if(existing.length===0) await sql`INSERT INTO magnum_map_progress (user_id, points, completed, streak, week_id, freeze_used, last_claim_date, streak_days, boss_done) VALUES (${user.id}, '{}'::jsonb, 0, 0, ${wk}, true, null, '[]'::jsonb, false)`;
+  else await sql`UPDATE magnum_map_progress SET week_id=${wk}, freeze_used=true, updated_at=now() WHERE user_id=${user.id}`;
+  const upd=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+  return Response.json({ ok:true, weekId:wk, balance: Number((upd[0] as {balance:number}).balance) });
+}
+async function handleMapVerify(req: Request): Promise<Response> {
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
+  let user:{id:number;username:string}|null=null; try{ user=await getUserByToken(token);}catch{} if(!user) return Response.json({error:"unauthorized"},{status:401});
+  const ip=getClientIp(req); if(!checkRateLimit(`map:verify:${user.id}:${ip}`,12,60_000)) return Response.json({error:"rate limited"},{status:429});
+  let body:{pointId?:string}; try{ body=(await req.json()) as typeof body;}catch{ return Response.json({error:"Invalid JSON"},{status:400});}
+  const pid=String(body.pointId||"").trim().toLowerCase(); if(!isMapPoint(pid)) return Response.json({error:"pointId required"},{status:400});
+  await ensureMapTable(); const sql=getSql(); const wk=mapWeekId(); const today=mapTodayKey();
+  const rows=await sql`SELECT points, completed, streak, week_id, freeze_used, last_claim_date, streak_days, boss_done FROM magnum_map_progress WHERE user_id=${user.id} LIMIT 1`;
+  let points: Record<string,boolean>={}; let completed=0; let streak=0; let freeze_used=false; let last_claim=""; let streak_days:string[]=[]; let boss_done=false; let week_id=wk;
+  if(rows.length>0){
+    const r=rows[0] as {points:unknown;completed:number;streak:number;week_id:string;freeze_used:boolean;last_claim_date:string|null;streak_days:unknown;boss_done:boolean};
+    points=(r.points && typeof r.points==="object" && !Array.isArray(r.points)) ? r.points as Record<string,boolean> : {};
+    completed=Number(r.completed||0); streak=Number(r.streak||0); week_id=String(r.week_id||wk); freeze_used=Boolean(r.freeze_used); last_claim=String(r.last_claim_date||""); streak_days=Array.isArray(r.streak_days)?r.streak_days as string[]:[]; boss_done=Boolean(r.boss_done);
+    if(week_id!==wk){ points={}; completed=0; streak=0; freeze_used=false; streak_days=[]; week_id=wk; last_claim=""; }
+  }
+  if(points[pid]) return Response.json({error:"already completed", pointId:pid},{status:409});
+  points[pid]=true; completed=Object.keys(points).filter(k=>points[k]).length;
+  const yesterday=new Date(); yesterday.setDate(yesterday.getDate()-1); const yKey=yesterday.toISOString().slice(0,10);
+  let nextStreak=1;
+  if(last_claim===yKey) nextStreak=Math.min(7, streak+1);
+  else if(last_claim===today) nextStreak=streak;
+  else if(streak===0 || last_claim==="") nextStreak=1;
+  else if(last_claim!==today){ if(freeze_used) nextStreak=Math.min(7, streak+1); else nextStreak=1; }
+  if(!streak_days.includes(today)) streak_days=[...streak_days, today].slice(-7);
+  let coins=42; if(completed===5) coins+=142;
+  await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${user.id},1000) ON CONFLICT (user_id) DO NOTHING`;
+  await sql`UPDATE magnum_coins SET balance=balance+${coins} WHERE user_id=${user.id}`;
+  await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${coins},'map_verify',${JSON.stringify({pointId:pid, completed, via:"vision"})}::jsonb)`;
+  await sql`INSERT INTO magnum_map_events (user_id, point_id, q, correct) VALUES (${user.id}, ${pid}, 0, true)`;
+  await sql`INSERT INTO magnum_map_progress (user_id, points, completed, streak, week_id, freeze_used, last_claim_date, streak_days, boss_done, updated_at) VALUES (${user.id}, ${JSON.stringify(points)}::jsonb, ${completed}, ${nextStreak}, ${wk}, ${freeze_used}, ${today}, ${JSON.stringify(streak_days)}::jsonb, ${boss_done}, now()) ON CONFLICT (user_id) DO UPDATE SET points=${JSON.stringify(points)}::jsonb, completed=${completed}, streak=${nextStreak}, week_id=${wk}, last_claim_date=${today}, streak_days=${JSON.stringify(streak_days)}::jsonb, updated_at=now()`;
+  const upd=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+  return Response.json({ ok:true, pointId:pid, points, completed, streak:nextStreak, coins, balance: Number((upd[0] as {balance:number}).balance) });
 }
 
 // ---- Mining handlers ----
@@ -2210,18 +2758,200 @@ async function handleDuelSeasonTop(req: Request, idStr: string): Promise<Respons
   }catch(e){ console.error("[duel season top] failed",e); return Response.json({error:"db error"},{status:500}); }
 }
 const MINING_BOOST_PRICE=142; const MINING_BOOST_MS=60_000; const miningBoostUntil=new Map<number,number>();
-// ---- DUEL MAGMA 42: season 7d leaderboard + ELO + wager ----
+// ---- БАТАЛЬОН 42: squads 5 + котёл + ELO + OG sharing ----
+async function ensureSquadTables(): Promise<void>{
+  const sql=getSql();
+  await sql`CREATE TABLE IF NOT EXISTS magnum_squads (id serial PRIMARY KEY, code text NOT NULL UNIQUE, leader_id integer NOT NULL REFERENCES magnum_users(id) ON DELETE CASCADE, pot integer NOT NULL DEFAULT 0, mult integer NOT NULL DEFAULT 10, created_at timestamp DEFAULT now() NOT NULL)`;
+  await sql`CREATE TABLE IF NOT EXISTS magnum_squad_members (id serial PRIMARY KEY, squad_id integer NOT NULL REFERENCES magnum_squads(id) ON DELETE CASCADE, user_id integer NOT NULL REFERENCES magnum_users(id) ON DELETE CASCADE, joined_at timestamp DEFAULT now() NOT NULL, UNIQUE(squad_id, user_id))`;
+  await sql`CREATE TABLE IF NOT EXISTS magnum_squad_battles (id serial PRIMARY KEY, squad_id integer NOT NULL REFERENCES magnum_squads(id) ON DELETE CASCADE, winner_id integer REFERENCES magnum_users(id), score jsonb NOT NULL DEFAULT '{}'::jsonb, created_at timestamp DEFAULT now() NOT NULL)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_squad_members_squad ON magnum_squad_members(squad_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_squad_battles_squad ON magnum_squad_battles(squad_id, created_at DESC)`;
+}
+function squadMultForPot(pot:number):{mult:number;label:string}{
+  if(pot>=420) return {mult:20,label:"x2.0"};
+  if(pot>=142) return {mult:15,label:"x1.5"};
+  if(pot>=42) return {mult:12,label:"x1.2"};
+  return {mult:10,label:"x1.0"};
+}
+function genSquadCode():string{
+  const letters="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let s=""; for(let i=0;i<4;i++) s+=letters[Math.floor(Math.random()*letters.length)]!;
+  return `B42-${s}`;
+}
+async function handleSquadCreate(req:Request):Promise<Response>{
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
+  const user=await getUserByToken(token); if(!user) return Response.json({error:"unauthorized"},{status:401});
+  await ensureSquadTables();
+  const sql=getSql();
+  // already in squad?
+  const existing=await sql`SELECT squad_id FROM magnum_squad_members WHERE user_id=${user.id} LIMIT 1`;
+  if(existing.length>0) return Response.json({error:"already in squad"},{status:409});
+  let code=genSquadCode(); let tries=0;
+  while(tries<5){
+    try{
+      const rows=await sql`INSERT INTO magnum_squads (code, leader_id, pot, mult) VALUES (${code}, ${user.id}, 0, 10) RETURNING id, code, pot, mult, created_at`;
+      const squad=rows[0] as {id:number;code:string;pot:number;mult:number;created_at:string};
+      await sql`INSERT INTO magnum_squad_members (squad_id, user_id) VALUES (${Number(squad.id)}, ${user.id})`;
+      return Response.json({ok:true,squad:{id:Number(squad.id),code:String(squad.code),pot:0,mult:10,label:"x1.0",leaderId:user.id,members:[{userId:user.id,username:user.username}] }},{status:201});
+    }catch(e:any){
+      const msg=String(e?.message||"");
+      if(msg.includes("duplicate")||msg.includes("unique")||msg.includes("23505")){ code=genSquadCode(); tries++; continue; }
+      console.error("[squad create] failed",e); return Response.json({error:"db error"},{status:500});
+    }
+  }
+  return Response.json({error:"retry"},{status:500});
+}
+async function handleSquadJoin(req:Request):Promise<Response>{
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
+  const user=await getUserByToken(token); if(!user) return Response.json({error:"unauthorized"},{status:401});
+  let body:{code?:string;invite?:string}; try{body=(await req.json()) as any;}catch{return Response.json({error:"Invalid JSON"},{status:400});}
+  const raw=String(body.code??body.invite??"").trim().toUpperCase().replace(/[^A-Z0-9-]/g,"");
+  if(!raw || raw.length<4) return Response.json({error:"code required B42-XXXX"},{status:400});
+  const code=raw.startsWith("B42-")?raw:`B42-${raw.slice(-4)}`;
+  await ensureSquadTables();
+  const sql=getSql();
+  const squads=await sql`SELECT id, code, leader_id, pot, mult FROM magnum_squads WHERE code=${code} LIMIT 1`;
+  if(squads.length===0) return Response.json({error:"squad not found"},{status:404});
+  const squad=squads[0] as {id:number;code:string;leader_id:number;pot:number;mult:number};
+  const sid=Number(squad.id);
+  const members=await sql`SELECT user_id FROM magnum_squad_members WHERE squad_id=${sid}`;
+  if(members.some((m:any)=>Number((m as any).user_id)===user.id)) return Response.json({error:"already member"},{status:409});
+  if(members.length>=5) return Response.json({error:"squad full 5/5"},{status:409});
+  const existingSquad=await sql`SELECT squad_id FROM magnum_squad_members WHERE user_id=${user.id} LIMIT 1`;
+  if(existingSquad.length>0) return Response.json({error:"already in another squad"},{status:409});
+  await sql`INSERT INTO magnum_squad_members (squad_id, user_id) VALUES (${sid}, ${user.id})`;
+  // invite bonus +42 both (joiner + leader)
+  try{
+    const bonus=42;
+    await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${user.id},1000) ON CONFLICT (user_id) DO NOTHING`;
+    await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${Number(squad.leader_id)},1000) ON CONFLICT (user_id) DO NOTHING`;
+    await sql`UPDATE magnum_coins SET balance=balance+${bonus} WHERE user_id=${user.id}`;
+    await sql`UPDATE magnum_coins SET balance=balance+${bonus} WHERE user_id=${Number(squad.leader_id)}`;
+    await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${bonus},'squad_invite',${JSON.stringify({code,squadId:sid})}::jsonb)`;
+    await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${Number(squad.leader_id)},${bonus},'squad_invite_bonus',${JSON.stringify({code,newMember:user.username})}::jsonb)`;
+    try{ await ensureNotification(Number(squad.leader_id),`Батальон ${code}: +${bonus}`,`Братуха ${user.username} вступил по инвайту B42 +${bonus} обоим`,"squad"); }catch{}
+  }catch(e){ console.error("[squad join bonus] failed",e); }
+  const updMembers=await sql`SELECT m.user_id, u.username FROM magnum_squad_members m JOIN magnum_users u ON u.id=m.user_id WHERE m.squad_id=${sid} ORDER BY m.joined_at ASC`;
+  const list=updMembers.map((r:any)=>({userId:Number(r.user_id),username:String(r.username)}));
+  return Response.json({ok:true,squad:{id:sid,code:String(squad.code),pot:Number(squad.pot),mult:Number(squad.mult),label:squadMultForPot(Number(squad.pot)).label,leaderId:Number(squad.leader_id),members:list}});
+}
+async function handleSquadPot(req:Request):Promise<Response>{
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
+  const user=await getUserByToken(token); if(!user) return Response.json({error:"unauthorized"},{status:401});
+  let body:{squadId?:number;amount?:number}; try{body=(await req.json()) as any;}catch{return Response.json({error:"Invalid JSON"},{status:400});}
+  const amount=Number(body.amount);
+  if(![42,142,420].includes(amount)) return Response.json({error:"amount must be 42/142/420"},{status:400});
+  await ensureSquadTables();
+  const sql=getSql();
+  const mem=await sql`SELECT squad_id FROM magnum_squad_members WHERE user_id=${user.id} LIMIT 1`;
+  if(mem.length===0) return Response.json({error:"not in squad"},{status:400});
+  const sid=Number((mem[0] as any).squad_id);
+  if(body.squadId && Number(body.squadId)!==sid) return Response.json({error:"wrong squad"},{status:400});
+  const coins=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+  let bal=coins.length?Number((coins[0] as any).balance):1000;
+  if(coins.length===0) await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${user.id},1000) ON CONFLICT (user_id) DO NOTHING`;
+  if(bal<amount) return Response.json({error:"not enough coins",balance:bal,required:amount},{status:402});
+  await sql`UPDATE magnum_coins SET balance=balance-${amount} WHERE user_id=${user.id}`;
+  const sq=await sql`UPDATE magnum_squads SET pot=pot+${amount} WHERE id=${sid} RETURNING pot`;
+  const pot=Number((sq[0] as any).pot);
+  const {mult,label}=squadMultForPot(pot);
+  await sql`UPDATE magnum_squads SET mult=${mult} WHERE id=${sid}`;
+  await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${-amount},'squad_pot',${JSON.stringify({squadId:sid,amount,pot})}::jsonb)`;
+  const updated=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+  return Response.json({ok:true,pot,mult,label,balance:Number((updated[0] as any).balance)});
+}
+async function handleSquadMy(req:Request):Promise<Response>{
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
+  const user=await getUserByToken(token); if(!user) return Response.json({error:"unauthorized"},{status:401});
+  await ensureSquadTables();
+  const sql=getSql();
+  const mem=await sql`SELECT squad_id FROM magnum_squad_members WHERE user_id=${user.id} LIMIT 1`;
+  if(mem.length===0) return Response.json({squad:null,members:[],battles:[]});
+  const sid=Number((mem[0] as any).squad_id);
+  const squads=await sql`SELECT id, code, leader_id, pot, mult, created_at FROM magnum_squads WHERE id=${sid} LIMIT 1`;
+  if(squads.length===0) return Response.json({squad:null});
+  const s=squads[0] as any;
+  const members=await sql`SELECT m.user_id, u.username, m.joined_at FROM magnum_squad_members m JOIN magnum_users u ON u.id=m.user_id WHERE m.squad_id=${sid} ORDER BY m.joined_at ASC`;
+  const battles=await sql`SELECT id, winner_id, score, created_at FROM magnum_squad_battles WHERE squad_id=${sid} ORDER BY created_at DESC LIMIT 20`;
+  const coins=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+  const bal=coins.length?Number((coins[0] as any).balance):0;
+  return Response.json({squad:{id:Number(s.id),code:String(s.code),pot:Number(s.pot),mult:Number(s.mult),label:squadMultForPot(Number(s.pot)).label,leaderId:Number(s.leader_id),created_at:s.created_at},members:members.map((r:any)=>({userId:Number(r.user_id),username:String(r.username),joined_at:r.joined_at})),battles:battles.map((r:any)=>({id:Number(r.id),winnerId:r.winner_id?Number(r.winner_id):null,score:r.score,created_at:r.created_at})),balance:bal});
+}
+async function handleSquadBattles(req:Request):Promise<Response>{
+  const url=new URL(req.url);
+  const code=url.searchParams.get("code"); const sidParam=url.searchParams.get("squadId");
+  await ensureSquadTables();
+  const sql=getSql();
+  let sid: number|null=null;
+  if(sidParam) sid=Number(sidParam);
+  else if(code){ const r=await sql`SELECT id FROM magnum_squads WHERE code=${String(code).trim().toUpperCase()} LIMIT 1`; if(r.length) sid=Number((r[0] as any).id); }
+  else{
+    const token=extractToken(req);
+    if(token){ try{ const u=await getUserByToken(token); if(u){ const m=await sql`SELECT squad_id FROM magnum_squad_members WHERE user_id=${u.id} LIMIT 1`; if(m.length) sid=Number((m[0] as any).squad_id); } }catch{} }
+  }
+  if(sid===null) return Response.json({battles:[],count:0});
+  const rows=await sql`SELECT b.id, b.winner_id, b.score, b.created_at, u.username as winner FROM magnum_squad_battles b LEFT JOIN magnum_users u ON u.id=b.winner_id WHERE b.squad_id=${sid} ORDER BY b.created_at DESC LIMIT 20`;
+  return Response.json({battles:rows.map((r:any)=>({id:Number(r.id),winnerId:r.winner_id?Number(r.winner_id):null,winner:String(r.winner||""),score:r.score,created_at:r.created_at})),count:rows.length,squadId:sid});
+}
+// ---- VOLCANO SEASON 42: ELO 7d + volcano-crown топ-3 + pulse 1.2s + duel42 store ----
 async function handleDuel42Leaderboard(req: Request): Promise<Response> {
   try {
     const sql=getSql();
     const url=new URL(req.url);
     const limit=Math.min(30,Math.max(1,Number(url.searchParams.get("limit")||20)));
     // season 7d: game=duel42 + created_at > now-7d
-    const rows=await sql`SELECT player, score, created_at, s.skin_id as avatar FROM magnum_leaderboard l LEFT JOIN magnum_users u ON u.username=l.player LEFT JOIN magnum_shop_inventory s ON s.user_id=u.id AND s.equipped=true WHERE l.game='duel42' AND l.created_at > now() - interval '7 days' ORDER BY l.score DESC, l.created_at ASC LIMIT ${limit}`;
+    const rows=await sql`SELECT l.player, l.score, l.created_at, s.skin_id as avatar FROM magnum_leaderboard l LEFT JOIN magnum_users u ON u.username=l.player LEFT JOIN magnum_shop_inventory s ON s.user_id=u.id AND s.equipped=true WHERE l.game='duel42' AND l.created_at > now() - interval '7 days' ORDER BY l.score DESC, l.created_at ASC LIMIT ${limit}`;
     const board=rows.map((r:unknown)=>{const x=r as {player:string;score:number;created_at:string;avatar:string|null}; return {player:String(x.player),score:Number(x.score),created_at:x.created_at,avatar:x.avatar||null};});
-    // top 3 crown bonus info
-    return Response.json({ leaderboard:board, season:"7d", game:"duel42", count:board.length, top3Bonus:1420, crown:"magma-crown-42" });
+    // top 3 volcano-crown bonus + pulse 1.2s (VOLCANO SEASON 42 spec)
+    return Response.json({ leaderboard:board, season:"7d", game:"duel42", count:board.length, top3Bonus:1420, crown:"volcano-crown-42", pulse:"1.2s", volcanoBar:"conic-volcano" });
   } catch(e){ console.error("[duel42 lb] failed",e); return Response.json({error:"db error"},{status:500}); }
+}
+// Generic leaderboard: /magnum/api/leaderboard?game=duel42 — ELO season 7d, alias for duel42
+async function handleLeaderboard(req: Request): Promise<Response> {
+  try {
+    const url=new URL(req.url);
+    const game=String(url.searchParams.get("game")||"duel42");
+    if(game==="duel42" || game==="duel") return handleDuel42Leaderboard(req);
+    const sql=getSql();
+    const limit=Math.min(30,Math.max(1,Number(url.searchParams.get("limit")||20)));
+    const rows=await sql`SELECT l.player, l.score, l.created_at FROM magnum_leaderboard l WHERE l.game=${game} AND l.created_at > now() - interval '7 days' ORDER BY l.score DESC, l.created_at ASC LIMIT ${limit}`;
+    const board=rows.map((r:unknown)=>{const x=r as {player:string;score:number;created_at:string}; return {player:String(x.player),score:Number(x.score),created_at:x.created_at};});
+    return Response.json({ leaderboard:board, season:"7d", game, count:board.length });
+  } catch(e){ console.error("[leaderboard] failed",e); return Response.json({error:"db error"},{status:500}); }
+}
+// Arena season claim — +42 win / +142 streak3 / +1420 crown топ-3 (idempotent per season via transactions meta)
+async function handleArenaClaim(req: Request): Promise<Response> {
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
+  const user=await getUserByToken(token); if(!user) return Response.json({error:"unauthorized"},{status:401});
+  const ip=getClientIp(req); if(!checkRateLimit(`arena:claim:${user.id}:${ip}`,12,60_000)) return Response.json({error:"rate limited"},{status:429});
+  let body:{kind?:unknown; season?:unknown}; try{ body=(await req.json()) as typeof body; }catch{ return Response.json({error:"Invalid JSON"},{status:400}); }
+  const kind=String(body.kind||"");
+  const season=String(body.season|| weekIdNowArena());
+  const allowed=["win","streak3","crown"] as const;
+  if(!allowed.includes(kind as typeof allowed[number])) return Response.json({error:"kind must be win/streak3/crown"},{status:400});
+  const rewardMap:{Record<string,number>}={win:42,streak3:142,crown:1420};
+  const reward=rewardMap[kind]!;
+  try{
+    const sql=getSql();
+    // idempotence: check transactions meta season+kind
+    const dup=await sql`SELECT id FROM magnum_transactions WHERE user_id=${user.id} AND reason=${"arena_"+kind} AND meta->>'season'=${season} LIMIT 1`;
+    if(dup.length) return Response.json({ok:true, already:true, reward:0, season, kind});
+    // crown requires top-3 check
+    if(kind==="crown"){
+      const rows=await sql`SELECT l.player FROM magnum_leaderboard l WHERE l.game='duel42' AND l.created_at > now() - interval '7 days' ORDER BY l.score DESC LIMIT 3`;
+      const isTop3=rows.some((r:unknown)=> String((r as {player:string}).player)===user.username);
+      if(!isTop3) return Response.json({error:"not in top-3", top3:false},{status:403});
+    }
+    await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${user.id},1000) ON CONFLICT (user_id) DO NOTHING`;
+    const upd=await sql`UPDATE magnum_coins SET balance=balance+${reward} WHERE user_id=${user.id} RETURNING balance`;
+    const balance=Number((upd[0] as {balance:number}).balance);
+    await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${reward},${"arena_"+kind},${JSON.stringify({season,kind,reward})}::jsonb)`;
+    return Response.json({ok:true, reward, balance, season, kind});
+  }catch(e){ console.error("[arena claim] failed",e); return Response.json({error:"db error"},{status:500}); }
+}
+function weekIdNowArena(): string {
+  const d=new Date(); const jan1=new Date(d.getFullYear(),0,1); const days=Math.floor((d.getTime()-jan1.getTime())/86400000);
+  const week=Math.ceil((days + jan1.getDay()+1)/7); return `${d.getFullYear()}-W${String(week).padStart(2,"0")}`;
 }
 async function handleDuel42Elo(req: Request): Promise<Response> {
   const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401}); const user=await getUserByToken(token); if(!user) return Response.json({error:"unauthorized"},{status:401});
@@ -2244,18 +2974,56 @@ async function handleDuel42Wager(req: Request): Promise<Response> {
   if(wager===0) return Response.json({ok:true,wager:0});
   try{
     const sql=getSql();
-    const cr=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
-    let bal=cr.length?Number((cr[0] as {balance:number}).balance):1000;
-    if(cr.length===0) { await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${user.id},1000) ON CONFLICT (user_id) DO NOTHING`; bal=1000; }
-    if(bal<wager) return Response.json({error:"not enough coins",required:wager,balance:bal},{status:402});
-    await sql`UPDATE magnum_coins SET balance=balance-${wager} WHERE user_id=${user.id}`;
-    await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${-wager},'duel42_wager_hold',${JSON.stringify({wager,roomId:String(body.roomId||"")})}::jsonb)`;
+    await sql`CREATE TABLE IF NOT EXISTS magnum_duel42_wager_hold (id serial PRIMARY KEY, user_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, wager integer NOT NULL, room_id text NOT NULL, refunded boolean DEFAULT false NOT NULL, created_at timestamp DEFAULT now() NOT NULL)`;
+    await sql`BEGIN`;
+    let bal:number;
+    try{
+      const cr=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1 FOR UPDATE`;
+      bal=cr.length?Number((cr[0] as {balance:number}).balance):1000;
+      if(cr.length===0) { await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${user.id},1000) ON CONFLICT (user_id) DO NOTHING`; bal=1000; }
+      if(bal<wager) { await sql`ROLLBACK`; return Response.json({error:"not enough coins",required:wager,balance:bal},{status:402}); }
+      await sql`UPDATE magnum_coins SET balance=balance-${wager} WHERE user_id=${user.id}`;
+      await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${-wager},'duel42_wager_hold',${JSON.stringify({wager,roomId:String(body.roomId||"")})}::jsonb)`;
+      await sql`INSERT INTO magnum_duel42_wager_hold (user_id,wager,room_id,refunded) VALUES (${user.id},${wager},${String(body.roomId||"")},false)`;
+      await sql`COMMIT`;
+    }catch(e){ try{ await sql`ROLLBACK`; }catch{} throw e; }
     const upd=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
     const nb=Number((upd[0] as {balance:number}).balance);
-    // attach to in-memory room if exists
-    if(typeof body.roomId==="string" && body.roomId){
-      const r=rooms.get(body.roomId) || rooms.get(`room:${body.roomId}`);
+    // attach to in-memory room if exists + track hold for 30s expiry
+    const holdRoomId = typeof body.roomId==="string" && body.roomId ? String(body.roomId) : "";
+    if(holdRoomId){
+      const r=rooms.get(holdRoomId) || rooms.get(`room:${holdRoomId}`) || rooms.get(holdRoomId.replace(/^room:/,"")) || null;
       if(r) r.wager=Math.max(r.wager,wager);
+      const key = r ? r.id : (holdRoomId.startsWith("room:") || holdRoomId.startsWith("room-") || holdRoomId.startsWith("squad:") ? holdRoomId : holdRoomId ? `room:${holdRoomId}` : `hold:${user.id}:${Date.now()}`);
+      let m=duel42WagerHolds.get(key); if(!m){ m=new Map(); duel42WagerHolds.set(key,m); }
+      m.set(user.id, (m.get(user.id)??0)+wager);
+      if(!duel42WagerTimers.has(key)){
+        const t=setTimeout(async()=>{
+          duel42WagerTimers.delete(key);
+          const holds=duel42WagerHolds.get(key); if(!holds) return;
+          const room=rooms.get(key) || rooms.get(holdRoomId) || null;
+          const isFinished = room?.state==="finished";
+          if(isFinished){ duel42WagerHolds.delete(key); return; }
+          // refund if not finished (timeout / room dissolved)
+          for(const [uid,w] of holds){
+            if(w<=0) continue;
+            try{
+              const s=getSql();
+              const rows=await s`SELECT id FROM magnum_duel42_wager_hold WHERE user_id=${uid} AND room_id=${holdRoomId} AND refunded=false LIMIT 1`;
+              if(rows.length===0) continue;
+              await s`UPDATE magnum_coins SET balance=balance+${w} WHERE user_id=${uid}`;
+              await s`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${uid},${w},'duel42_wager_refund',${JSON.stringify({wager:w,roomId:holdRoomId,reason:"timeout"})}::jsonb)`;
+              await s`UPDATE magnum_duel42_wager_hold SET refunded=true WHERE user_id=${uid} AND room_id=${holdRoomId} AND refunded=false`;
+              const rr=rooms.get(key); if(rr) rr.wager=Math.max(0, rr.wager-w);
+              holds.set(uid,0);
+            }catch(e){ console.error("[duel42 wager expiry] refund failed",e); }
+          }
+          duel42WagerHolds.delete(key);
+        }, 30_000);
+        // @ts-ignore
+        if(typeof (t as any).unref==="function") (t as any).unref();
+        duel42WagerTimers.set(key,t);
+      }
     }
     return Response.json({ok:true,wager,balance:nb});
   }catch(e){ console.error("[duel42 wager] failed",e); return Response.json({error:"db error"},{status:500}); }
@@ -2275,6 +3043,147 @@ async function handleMiningBoost(req: Request): Promise<Response> {
     return Response.json({ok:true,active:true,until:newUntil,remainingMs:MINING_BOOST_MS,price:MINING_BOOST_PRICE,balance: upd.length?Number((upd[0] as {balance:number}).balance):bal-MINING_BOOST_PRICE});
   }catch(e){ console.error("[mining boost] failed",e); return Response.json({error:"db error"},{status:500}); }
 }
+// ---- КОНВЕЙЕР 42 — Idle-завод Кузбасса offline фабрика 6 цехов ----
+export const CONVEYOR_CATALOG = [
+  { idx:0, id:"mine", name:"Шахта", icon:"⛏️", base:4, price:42 },
+  { idx:1, id:"crusher", name:"Дробилка", icon:"🪨", base:14, price:42 },
+  { idx:2, id:"belt", name:"Конвейер", icon:"🚚", base:42, price:142 },
+  { idx:3, id:"enrich", name:"Обогатиловка", icon:"🏭", base:84, price:142 },
+  { idx:4, id:"tec", name:"ТЭЦ", icon:"⚡", base:142, price:420 },
+  { idx:5, id:"lab", name:"Лаба", icon:"🧪", base:420, price:1420 },
+] as const;
+const CONVEYOR_CAP_MIN = 240; // 4ч
+const CONVEYOR_PRESTIGE_NEED = 42000;
+async function ensureConveyorTable():Promise<void>{
+  const sql=getSql();
+  await sql`CREATE TABLE IF NOT EXISTS magnum_conveyor_state (user_id integer PRIMARY KEY REFERENCES magnum_users(id) ON DELETE CASCADE, levels integer[] NOT NULL DEFAULT '{0,0,0,0,0,0}', prestige integer NOT NULL DEFAULT 0, last_claim timestamptz NOT NULL DEFAULT now(), dust integer NOT NULL DEFAULT 0)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_conveyor_prestige ON magnum_conveyor_state(prestige)`;
+}
+function conveyorIncomePerMin(levels:number[], prestige:number):number{
+  let sum=0;
+  for(let i=0;i<6;i++){ const base=CONVEYOR_CATALOG[i]!.base; const lvl=Number(levels[i]||0); sum+=lvl*base; }
+  const mult=1+prestige*0.15;
+  return Math.floor(sum*mult);
+}
+async function getPresaveBonus(userId:number):Promise<number>{
+  try{ const sql=getSql(); const r=await sql`SELECT count(*)::int as c FROM magnum_presave_clicks WHERE user_id=${userId}`; const c=Number((r[0] as {c:number}).c); return c>0?2:1; }catch{ return 1; }
+}
+async function ensureConveyorRow(userId:number){
+  await ensureConveyorTable();
+  const sql=getSql();
+  const rows=await sql`SELECT user_id, levels, prestige, last_claim, dust FROM magnum_conveyor_state WHERE user_id=${userId} LIMIT 1`;
+  if(rows.length) return rows[0] as {user_id:number;levels:number[];prestige:number;last_claim:string;dust:number};
+  const ins=await sql`INSERT INTO magnum_conveyor_state (user_id, levels, prestige, last_claim, dust) VALUES (${userId}, '{0,0,0,0,0,0}'::int[], 0, now(), 0) RETURNING user_id, levels, prestige, last_claim, dust`;
+  return ins[0] as {user_id:number;levels:number[];prestige:number;last_claim:string;dust:number};
+}
+async function handleConveyorState(req:Request):Promise<Response>{
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
+  const user=await getUserByToken(token); if(!user) return Response.json({error:"unauthorized"},{status:401});
+  try{
+    const row=await ensureConveyorRow(user.id);
+    const levels=(row.levels as unknown as number[]).map(n=>Number(n)||0); while(levels.length<6) levels.push(0);
+    const prestige=Number(row.prestige||0);
+    const dust=Number(row.dust||0);
+    const last=new Date(row.last_claim).getTime();
+    const now=Date.now();
+    const elapsedMin=Math.min(CONVEYOR_CAP_MIN, Math.max(0, (now-last)/60000));
+    const basePerMin=conveyorIncomePerMin(levels, prestige);
+    const bonus=await getPresaveBonus(user.id);
+    const perMin=Math.floor(basePerMin*bonus);
+    const pending=Math.floor(elapsedMin*perMin);
+    const sql=getSql();
+    const coinsR=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+    const balance=coinsR.length?Number((coinsR[0] as {balance:number}).balance):1000;
+    // leaderboard top 10 conveyor
+    let top:unknown[]=[];
+    try{ const r=await sql`SELECT player, score, created_at FROM magnum_leaderboard WHERE game='conveyor' ORDER BY score DESC LIMIT 10`; top=r as unknown[]; }catch{}
+    return Response.json({ ok:true, levels, prestige, dust, lastClaim:row.last_claim, perMin, basePerMin, bonusX2:bonus===2, pending, elapsedMin:Math.floor(elapsedMin), capMin:CONVEYOR_CAP_MIN, balance, catalog:CONVEYOR_CATALOG, prestigeNeed:CONVEYOR_PRESTIGE_NEED, prestigeBonus:`+${prestige*15}%`, top });
+  }catch(e){ console.error("[conveyor state] failed",e); return Response.json({error:"db error"},{status:500}); }
+}
+async function handleConveyorClaim(req:Request):Promise<Response>{
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
+  const user=await getUserByToken(token); if(!user) return Response.json({error:"unauthorized"},{status:401});
+  const ip=getClientIp(req); if(!checkRateLimit(`conveyor:claim:${user.id}:${ip}`,12,60_000)) return Response.json({error:"rate limited"},{status:429});
+  try{
+    const row=await ensureConveyorRow(user.id);
+    const levels=(row.levels as unknown as number[]).map(n=>Number(n)||0); while(levels.length<6) levels.push(0);
+    const prestige=Number(row.prestige||0);
+    const dust=Number(row.dust||0);
+    const last=new Date(row.last_claim).getTime();
+    const now=Date.now();
+    const elapsedMin=Math.min(CONVEYOR_CAP_MIN, Math.max(0, (now-last)/60000));
+    const basePerMin=conveyorIncomePerMin(levels, prestige);
+    const bonus=await getPresaveBonus(user.id);
+    const perMin=Math.floor(basePerMin*bonus);
+    const pending=Math.floor(elapsedMin*perMin);
+    if(pending<=0) return Response.json({ok:true, claimed:0, pending:0, dust, balance:(await getSql()`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`).then(r=>r.length?Number((r[0] as {balance:number}).balance):1000) });
+    const sql=getSql();
+    await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${user.id},1000) ON CONFLICT (user_id) DO NOTHING`;
+    const upd=await sql`UPDATE magnum_coins SET balance=balance+${pending} WHERE user_id=${user.id} RETURNING balance`;
+    const balance=Number((upd[0] as {balance:number}).balance);
+    const newDust=dust+pending;
+    await sql`UPDATE magnum_conveyor_state SET dust=${newDust}, last_claim=now() WHERE user_id=${user.id}`;
+    // also add to magnum_dust for shop vault discount
+    try{ await ensureDustTable(); await sql`INSERT INTO magnum_dust (user_id,balance) VALUES (${user.id},${pending}) ON CONFLICT (user_id) DO UPDATE SET balance=magnum_dust.balance+${pending}, updated_at=now()`; }catch{}
+    await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${pending},'conveyor_claim',${JSON.stringify({pending, perMin, elapsedMin:Math.floor(elapsedMin)})}::jsonb)`;
+    // leaderboard update — best dust
+    try{ await sql`INSERT INTO magnum_leaderboard (player,score,game,created_at) VALUES (${user.username},${newDust},'conveyor',now())`; }catch{}
+    return Response.json({ok:true, claimed:pending, pending:0, dust:newDust, balance, perMin});
+  }catch(e){ console.error("[conveyor claim] failed",e); return Response.json({error:"db error"},{status:500}); }
+}
+async function handleConveyorUpgrade(req:Request):Promise<Response>{
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
+  const user=await getUserByToken(token); if(!user) return Response.json({error:"unauthorized"},{status:401});
+  const ip=getClientIp(req); if(!checkRateLimit(`conveyor:upgrade:${user.id}:${ip}`,20,60_000)) return Response.json({error:"rate limited"},{status:429});
+  let body:{idx?:unknown; bulk?:unknown; index?:unknown}; try{ body=(await req.json()) as typeof body; }catch{ return Response.json({error:"Invalid JSON"},{status:400}); }
+  const idxRaw=Number(body.idx ?? body.index);
+  if(!Number.isInteger(idxRaw)||idxRaw<0||idxRaw>5) return Response.json({error:"idx must be 0..5"},{status:400});
+  const bulk=Boolean(body.bulk);
+  const countInc=bulk?10:1;
+  const shop=CONVEYOR_CATALOG[idxRaw]!;
+  const price=shop.price*(bulk?10:1);
+  try{
+    const sql=getSql();
+    const row=await ensureConveyorRow(user.id);
+    const coinsR=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+    let bal=coinsR.length?Number((coinsR[0] as {balance:number}).balance):0;
+    if(coinsR.length===0){ await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${user.id},1000) ON CONFLICT (user_id) DO NOTHING`; bal=1000; }
+    if(bal<price) return Response.json({error:"not enough coins",required:price,balance:bal,price},{status:402});
+    await sql`UPDATE magnum_coins SET balance=balance-${price} WHERE user_id=${user.id}`;
+    const levels=(row.levels as unknown as number[]).map(n=>Number(n)||0); while(levels.length<6) levels.push(0);
+    levels[idxRaw]+=countInc;
+    const pgLevels=`{${levels.join(",")}}`;
+    await sql`UPDATE magnum_conveyor_state SET levels=${pgLevels}::int[] WHERE user_id=${user.id}`;
+    await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${-price},'conveyor_upgrade',${JSON.stringify({idx:idxRaw, bulk, price, shop:shop.id})}::jsonb)`;
+    const upd=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+    const newBal=Number((upd[0] as {balance:number}).balance);
+    const prestige=Number(row.prestige||0);
+    const perMin=Math.floor(conveyorIncomePerMin(levels, prestige)*(await getPresaveBonus(user.id)));
+    return Response.json({ok:true, idx:idxRaw, levels, price, balance:newBal, perMin});
+  }catch(e){ console.error("[conveyor upgrade] failed",e); return Response.json({error:"db error"},{status:500}); }
+}
+async function handleConveyorPrestige(req:Request):Promise<Response>{
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
+  const user=await getUserByToken(token); if(!user) return Response.json({error:"unauthorized"},{status:401});
+  const ip=getClientIp(req); if(!checkRateLimit(`conveyor:prestige:${user.id}:${ip}`,6,60_000)) return Response.json({error:"rate limited"},{status:429});
+  try{
+    const row=await ensureConveyorRow(user.id);
+    const levels=(row.levels as unknown as number[]).map(n=>Number(n)||0);
+    const prestige=Number(row.prestige||0);
+    const dust=Number(row.dust||0);
+    const totalMined=dust;
+    if(totalMined<CONVEYOR_PRESTIGE_NEED) return Response.json({error:`need ${CONVEYOR_PRESTIGE_NEED} добытых, сейчас ${totalMined}`,required:CONVEYOR_PRESTIGE_NEED,dust:totalMined},{status:402});
+    const sql=getSql();
+    const newPrestige=prestige+1;
+    const newDust=dust; // keep dust for shop
+    await sql`UPDATE magnum_conveyor_state SET levels='{0,0,0,0,0,0}'::int[], prestige=${newPrestige}, dust=${newDust} WHERE user_id=${user.id}`;
+    // bonus +15% permanent captured via prestige count
+    try{ await sql`INSERT INTO magnum_leaderboard (player,score,game,created_at) VALUES (${user.username},${newDust},'conveyor',now())`; }catch{}
+    await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},0,'conveyor_prestige',${JSON.stringify({prestige:newPrestige, dust:newDust})}::jsonb)`;
+    return Response.json({ok:true, prestige:newPrestige, dust:newDust, bonus:`+${newPrestige*15}%`, levels:[0,0,0,0,0,0]});
+  }catch(e){ console.error("[conveyor prestige] failed",e); return Response.json({error:"db error"},{status:500}); }
+}
+
 const wsReady=new Map<import("bun").ServerWebSocket<WSData>,boolean>();
 
 async function handleHealth(): Promise<Response> {
@@ -2296,22 +3205,21 @@ async function handleHealth(): Promise<Response> {
       sql`SELECT count(*)::int as c FROM magnum_referrals`,
       sql`SELECT count(*)::int as c FROM magnum_duel_history`,
     ]);
-    let exchangesCount = 0; let commentsCount = 0; let reportsCount = 0; let modLogCount = 0; let chatCount = 0;
+    let exchangesCount = 0; let commentsCount = 0; let reportsCount = 0; let modLogCount = 0; let chatCount = 0; let squadCount=0; let squadBattlesCount=0;
     const healthWarnings: string[] = [];
     try { const r = await sql`SELECT count(*)::int as c FROM magnum_mining_exchanges`; exchangesCount = Number((r[0] as {c:number}).c); } catch (e) { console.error("[health] mining_exchanges count failed", e); healthWarnings.push("mining_exchanges: drift"); }
     try { const r = await sql`SELECT count(*)::int as c FROM magnum_idea_comments`; commentsCount = Number((r[0] as {c:number}).c); } catch (e) { console.error("[health] idea_comments count failed", e); healthWarnings.push("idea_comments: drift"); }
     try { const r = await sql`SELECT count(*)::int as c FROM magnum_reports`; reportsCount = Number((r[0] as {c:number}).c); } catch (e) { console.error("[health] reports count failed", e); healthWarnings.push("reports: drift"); }
     try { const r = await sql`SELECT count(*)::int as c FROM magnum_moderation_log`; modLogCount = Number((r[0] as {c:number}).c); } catch (e) { console.error("[health] mod_log count failed", e); healthWarnings.push("moderation_log: drift"); }
     try { const r = await sql`SELECT count(*)::int as c FROM magnum_chat_messages`; chatCount = Number((r[0] as {c:number}).c); } catch (e) { console.error("[health] chat_messages count failed", e); healthWarnings.push("chat_messages: drift"); }
+    try{ const r=await sql`SELECT count(*)::int as c FROM magnum_squads`; squadCount=Number((r[0] as {c:number}).c);}catch(e){ squadCount=0; }
+    try{ const r=await sql`SELECT count(*)::int as c FROM magnum_squad_battles`; squadBattlesCount=Number((r[0] as {c:number}).c);}catch(e){ squadBattlesCount=0; }
     // P0: follows/aiUsage must fail health honestly (500) on 42P01 — no try/catch masking
     const followsRes = await sql`SELECT count(*)::int as c FROM magnum_follows`;
     const followsCount = Number((followsRes[0] as {c:number}).c);
     const aiUsageRes = await sql`SELECT count(*)::int as c FROM magnum_ai_usage`;
     const aiUsageCount = Number((aiUsageRes[0] as {c:number}).c);
-    return Response.json({
-      ok: true,
-      ts: new Date().toISOString(),
-      counts: {
+    const counts = {
         users: Number((users[0] as { c: number }).c),
         coins: Number((coins[0] as { c: number }).c),
         mining: Number((mining[0] as { c: number }).c),
@@ -2333,7 +3241,16 @@ async function handleHealth(): Promise<Response> {
         chatMessages: chatCount,
         follows: followsCount,
         aiUsage: aiUsageCount,
-      },
+        squads: squadCount,
+        squadBattles: squadBattlesCount,
+      };
+    if (healthWarnings.length) {
+      return Response.json({ ok: false, warnings: healthWarnings, counts, ts: new Date().toISOString(), uptime: process.uptime() }, { status: 500 });
+    }
+    return Response.json({
+      ok: true,
+      ts: new Date().toISOString(),
+      counts,
       warnings: healthWarnings,
       uptime: process.uptime(),
     });
@@ -2535,7 +3452,7 @@ function wsChatRateOk(wsId: string): boolean {
   return true;
 }
 
-// ---- WebSocket duel (2-4 игрока) + DUEL MAGMA 42 2-4 magma x10 lava-spike ghost wager ELO heartbeat ----
+// ---- WebSocket duel (2-4 игрока) + DUEL VOLCANO 42 2-4 volcano x11 eruption ghost wager ELO heartbeat ----
 type WSData = { id: string; username: string; roomId: string | null };
 
 type DuelRoom = {
@@ -2550,6 +3467,8 @@ type DuelRoom = {
   // MAGMA 42 extensions
   wager: number;
   magma: Map<import("bun").ServerWebSocket<WSData>, number>;
+  volcano: Map<import("bun").ServerWebSocket<WSData>, number>;
+  eruptionPending: Map<import("bun").ServerWebSocket<WSData>, boolean>;
   lastClickAt: Map<import("bun").ServerWebSocket<WSData>, number>;
   heldMaxSince: Map<import("bun").ServerWebSocket<WSData>, number | null>;
   suspect: Set<import("bun").ServerWebSocket<WSData>>;
@@ -2559,11 +3478,15 @@ type DuelRoom = {
 };
 
 const rooms = new Map<string, DuelRoom>();
+// duel42 wager hold — возврат при timeout/развале комнаты 30с если не finished
+const duel42WagerHolds = new Map<string, Map<number, number>>(); // roomId -> userId->wager
+const duel42WagerTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 function roomPublic(room: DuelRoom) {
-  const players: Array<{ name: string; score: number; ready: boolean; magma?: number; suspect?: boolean }> = [];
+  const players: Array<{ name: string; score: number; ready: boolean; magma?: number; volcano?: number; suspect?: boolean }> = [];
   for (const ws of room.players) {
-    players.push({ name: room.names.get(ws) ?? "Братуха", score: room.scores.get(ws) ?? 0, ready: wsReady.get(ws) ?? false, magma: room.magma.get(ws) ?? 0, suspect: room.suspect.has(ws) });
+    const v = room.volcano?.get(ws) ?? room.magma.get(ws) ?? 0;
+    players.push({ name: room.names.get(ws) ?? "Братуха", score: room.scores.get(ws) ?? 0, ready: wsReady.get(ws) ?? false, magma: v, volcano: v, suspect: room.suspect.has(ws) });
   }
   return { id: room.id, state: room.state, players, durationSec: room.durationSec, wager: room.wager };
 }
@@ -2580,7 +3503,7 @@ function findOrCreateRoom(): DuelRoom {
     if (r.state === "waiting" && r.players.size < 4) return r;
   }
   const id = `room-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
-  const room: DuelRoom = { id, players: new Set(), scores: new Map(), names: new Map(), state: "waiting", startedAt: null, timer: null, durationSec: 10, wager: 0, magma: new Map(), lastClickAt: new Map(), heldMaxSince: new Map(), suspect: new Set(), overheatUntil: new Map(), heartbeat: null, clickCounts: new Map() };
+  const room: DuelRoom = { id, players: new Set(), scores: new Map(), names: new Map(), state: "waiting", startedAt: null, timer: null, durationSec: 10, wager: 0, magma: new Map(), volcano: new Map(), lastClickAt: new Map(), heldMaxSince: new Map(), suspect: new Set(), overheatUntil: new Map(), heartbeat: null, clickCounts: new Map(), eruptionPending: new Map() };
   rooms.set(id, room);
   return room;
 }
@@ -2589,7 +3512,7 @@ function findOrCreateRoomABCD(code?: string): DuelRoom {
     const cid = code.toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,8);
     if (cid.length===4 && rooms.has(`room:${cid}`)) return rooms.get(`room:${cid}`)!;
     if (cid.length===4) {
-      const r: DuelRoom = { id:`room:${cid}`, players:new Set(), scores:new Map(), names:new Map(), state:"waiting", startedAt:null, timer:null, durationSec:10, wager:0, magma:new Map(), lastClickAt:new Map(), heldMaxSince:new Map(), suspect:new Set(), overheatUntil:new Map(), heartbeat:null, clickCounts:new Map() };
+      const r: DuelRoom = { id:`room:${cid}`, players:new Set(), scores:new Map(), names:new Map(), state:"waiting", startedAt:null, timer:null, durationSec:10, wager:0, magma:new Map(), volcano:new Map(), lastClickAt:new Map(), heldMaxSince:new Map(), suspect:new Set(), overheatUntil:new Map(), heartbeat:null, clickCounts:new Map(), eruptionPending:new Map() };
       rooms.set(r.id,r); return r;
     }
   }
@@ -2612,6 +3535,19 @@ async function persistDuelResults(room: DuelRoom) {
       if (!isSuspect) {
         await sql`INSERT INTO magnum_leaderboard (player, score, game, created_at) VALUES (${name}, ${score}, 'duel', ${now})`;
         await sql`INSERT INTO magnum_leaderboard (player, score, game, created_at) VALUES (${name}, ${score}, 'duel42', ${now})`;
+        try {
+          const uid = Number(ws.data.id);
+          if (Number.isFinite(uid) && uid > 0) {
+            const gScore = Math.max(0, Math.min(999999, Math.round(score * 10) || 0));
+            const coinsEarned = gScore < 10 ? 0 : Math.min(42, Math.floor(gScore / 200));
+            await sql`INSERT INTO magnum_game_scores (user_id, game, score, coins_earned, meta) VALUES (${uid}, 'duel', ${gScore}, ${coinsEarned}, ${JSON.stringify({ src: 'ws-duel', room: room.id, raw: score })}::jsonb)`;
+            if (coinsEarned > 0) {
+              await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${uid},1000) ON CONFLICT (user_id) DO NOTHING`;
+              await sql`UPDATE magnum_coins SET balance = balance + ${coinsEarned} WHERE user_id=${uid}`;
+              await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${uid},${coinsEarned},'game_reward',${JSON.stringify({ game:'duel', score:gScore })}::jsonb)`;
+            }
+          }
+        } catch (e) { console.error("[duel game_scores] failed", e); }
       }
       if (!isSuspect && score > maxScore) { maxScore = score; winner = name; }
     }
@@ -2645,6 +3581,46 @@ async function persistDuelResults(room: DuelRoom) {
         }
       } catch(e){ console.error("[duel42 settle] failed",e); }
     }
+    // squad battles persistence: if room is squad:* also insert into magnum_squad_battles + ELO + pot 10%
+    if (room.id.startsWith("squad:")) {
+      try{
+        const code=`B42-${room.id.replace("squad:","")}`;
+        const sqRows=await sql`SELECT id, pot FROM magnum_squads WHERE code=${code} LIMIT 1`;
+        if(sqRows.length>0){
+          const sid=Number((sqRows[0] as any).id);
+          const pot=Number((sqRows[0] as any).pot);
+          // find winner ws
+          let winnerWs: import("bun").ServerWebSocket<WSData>|null=null;
+          let winnerUid:number|null=null;
+          for(const ws of room.players){ const n=room.names.get(ws); if(n===winner && !room.suspect.has(ws)) { winnerWs=ws; winnerUid=Number(ws.data.id); break; } }
+          const scoreJson={ room:room.id, winner, scores:scoresJson, durationSec:room.durationSec };
+          await sql`INSERT INTO magnum_squad_battles (squad_id, winner_id, score) VALUES (${sid}, ${winnerUid}, ${JSON.stringify(scoreJson)}::jsonb)`;
+          // winner gets +42 ELO (duel42_elo) + 10% pot coins
+          if(winnerWs && winnerUid){
+            await sql`CREATE TABLE IF NOT EXISTS magnum_duel42_elo (user_id integer PRIMARY KEY REFERENCES magnum_users(id) ON DELETE CASCADE, elo integer NOT NULL DEFAULT 1000, updated_at timestamp DEFAULT now())`;
+            await sql`INSERT INTO magnum_duel42_elo (user_id,elo) VALUES (${winnerUid},1000) ON CONFLICT (user_id) DO NOTHING`;
+            await sql`UPDATE magnum_duel42_elo SET elo=elo+42, updated_at=now() WHERE user_id=${winnerUid}`;
+            const potBonus=Math.floor(pot*0.1);
+            if(potBonus>0){
+              await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${winnerUid},1000) ON CONFLICT (user_id) DO NOTHING`;
+              await sql`UPDATE magnum_coins SET balance=balance+${potBonus} WHERE user_id=${winnerUid}`;
+              await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${winnerUid},${potBonus},'squad_win_pot',${JSON.stringify({squadId:sid,pot,winner})}::jsonb)`;
+            }
+            await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${winnerUid},42,'squad_elo',${JSON.stringify({squadId:sid,winner})}::jsonb)`;
+          }
+        }
+      }catch(e){ console.error("[squad persist] failed",e); }
+    }
+    // cleanup wager holds — prevent 30s refund after normal finish
+    try{
+      const hk=room.id;
+      if(duel42WagerHolds.has(hk)){ duel42WagerHolds.delete(hk); }
+      if(duel42WagerTimers.has(hk)){ clearTimeout(duel42WagerTimers.get(hk)!); duel42WagerTimers.delete(hk); }
+      // also clear any hold:* that matches room
+      for(const k of [...duel42WagerHolds.keys()]){ if(k.includes(hk) || hk.includes(k)) { duel42WagerHolds.delete(k); if(duel42WagerTimers.has(k)){ clearTimeout(duel42WagerTimers.get(k)!); duel42WagerTimers.delete(k); } } }
+      // mark DB holds as settled (refunded=true to avoid double refund logic)
+      try{ const s=getSql(); await s`UPDATE magnum_duel42_wager_hold SET refunded=true WHERE room_id=${hk} AND refunded=false`; }catch{}
+    }catch{}
   } catch (e) {
     console.error("[ws persist] failed", e);
   }
@@ -2655,7 +3631,7 @@ function startDuel(room: DuelRoom) {
   room.state = "playing";
   room.startedAt = Date.now();
   // reset scores for new round
-  for (const ws of room.players) { room.scores.set(ws, 0); room.magma.set(ws,0); room.lastClickAt.set(ws,0); room.heldMaxSince.set(ws,null); room.overheatUntil.set(ws,0); room.suspect.delete(ws); room.clickCounts.set(ws, []); }
+  for (const ws of room.players) { room.scores.set(ws, 0); room.magma.set(ws,0); room.volcano.set(ws,0); room.lastClickAt.set(ws,0); room.heldMaxSince.set(ws,null); room.overheatUntil.set(ws,0); room.suspect.delete(ws); room.clickCounts.set(ws, []); room.eruptionPending.set(ws,false); }
   broadcast(room, { type: "start", room: roomPublic(room), duration: room.durationSec });
   // heartbeat 25s
   if (room.heartbeat) clearInterval(room.heartbeat);
@@ -2669,7 +3645,7 @@ function startDuel(room: DuelRoom) {
     // reset to waiting after 5s for rematch
     setTimeout(() => {
       room.state = "waiting";
-      for (const ws of room.players) { room.scores.set(ws, 0); room.magma.set(ws,0); room.suspect.delete(ws); }
+      for (const ws of room.players) { room.scores.set(ws, 0); room.magma.set(ws,0); room.volcano.set(ws,0); room.suspect.delete(ws); room.eruptionPending.set(ws,false); }
       broadcast(room, { type: "room", room: roomPublic(room) });
     }, 5000);
   }, room.durationSec * 1000);
@@ -2706,6 +3682,31 @@ const server = Bun.serve<WSData>({
     const url = new URL(req.url);
 
     // upgrade WS — требует авторизацию, анонимов не пускаем
+    if (url.pathname === "/magnum/api/squad" || url.pathname === "/magnum/api/squad/") {
+      const token = extractToken(req);
+      if (!token) return Response.json({ error: "unauthorized — войди, братуха" }, { status: 401 });
+      let user: { id: number; username: string } | null = null;
+      try { user = await getUserByToken(token); } catch (e) { console.error("[ws squad] getUserByToken failed", e); }
+      if (!user) return Response.json({ error: "unauthorized — войди, братуха" }, { status: 401 });
+      // need squad membership to enter squad WS; create/find squad room
+      try{ await ensureSquadTables(); }catch{}
+      try{
+        const sql=getSql();
+        const mem=await sql`SELECT squad_id FROM magnum_squad_members WHERE user_id=${user.id} LIMIT 1`;
+        if(mem.length===0) return Response.json({ error: "no squad — создай батальон" }, { status: 400 });
+        const sid=Number((mem[0] as any).squad_id);
+        const sq=await sql`SELECT code FROM magnum_squads WHERE id=${sid} LIMIT 1`;
+        const code=sq.length?String((sq[0] as any).code).replace("B42-",""):String(sid);
+        const roomId=`squad:${code}`;
+        if(!rooms.has(roomId)){
+          const nr: DuelRoom = { id:roomId, players:new Set(), scores:new Map(), names:new Map(), state:"waiting", startedAt:null, timer:null, durationSec:10, wager:0, magma:new Map(), volcano:new Map(), lastClickAt:new Map(), heldMaxSince:new Map(), suspect:new Set(), overheatUntil:new Map(), heartbeat:null, clickCounts:new Map(), eruptionPending:new Map() };
+          rooms.set(roomId,nr);
+        }
+        const ok = server.upgrade(req, { data: { id: String(user.id), username: user.username, roomId } });
+        if (ok) return undefined as unknown as Response;
+        return Response.json({ error: "Upgrade failed" }, { status: 426 });
+      }catch(e){ console.error("[squad ws upgrade] failed",e); return Response.json({error:"db error"},{status:500}); }
+    }
     if (url.pathname === "/magnum/api/ws" || url.pathname === "/magnum/api/ws/") {
       const token = extractToken(req);
       if (!token) return Response.json({ error: "unauthorized — войди, братуха" }, { status: 401 });
@@ -2772,6 +3773,17 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/eco/tiers" && req.method === "GET") return handleEcoTiers();
     if (url.pathname === "/magnum/api/eco/rating" && req.method === "GET") return handleEcoRatingTop();
     if (url.pathname === "/magnum/api/eco/rating" && req.method === "POST") return handleEcoRatingSubmit(req);
+    if (url.pathname === "/magnum/api/eco/challenge" && req.method === "GET") return handleEcoChallengeGet(req);
+    if (url.pathname === "/magnum/api/eco/challenge/claim" && req.method === "POST") return handleEcoChallengeClaim(req);
+    if (url.pathname === "/magnum/api/eco/challenge/freeze" && req.method === "POST") return handleEcoFreeze(req);
+    if (url.pathname === "/magnum/api/eco/share" && req.method === "POST") return handleEcoShare(req);
+    // map kuzbass
+    if (url.pathname === "/magnum/api/map/progress" && req.method === "GET") return handleMapProgress(req);
+    if (url.pathname === "/magnum/api/map/answer" && req.method === "POST") return handleMapAnswer(req);
+    if (url.pathname === "/magnum/api/map/boss" && req.method === "POST") return handleMapBoss(req);
+    if (url.pathname === "/magnum/api/map/share" && req.method === "POST") return handleMapShare(req);
+    if (url.pathname === "/magnum/api/map/freeze" && req.method === "POST") return handleMapFreeze(req);
+    if (url.pathname === "/magnum/api/map/verify" && req.method === "POST") return handleMapVerify(req);
 
     // shop
     if (url.pathname === "/magnum/api/shop/buy" && req.method === "POST") return handleShopBuy(req);
@@ -2790,11 +3802,15 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/shop/bundle/buy" && req.method === "POST") return handleShopBundleBuy(req);
     if (url.pathname === "/magnum/api/shop/prism" && req.method === "GET") return handlePrismCatalog();
     if (url.pathname === "/magnum/api/shop/glacier" && req.method === "GET") return handleGlacierCatalog();
+    if (url.pathname === "/magnum/api/shop/crystal" && req.method === "GET") return handleCrystalCatalog();
+    if (url.pathname === "/magnum/api/shop/volcano" && req.method === "GET") return handleVolcanoCatalog();
     if (url.pathname === "/magnum/api/shop/dust" && req.method === "GET") return handleDustGet(req);
     if (url.pathname === "/magnum/api/shop/dismantle" && req.method === "POST") return handleDismantle(req);
     if (url.pathname === "/magnum/api/shop/craft" && req.method === "POST") return handlePrismCraft(req);
     if (url.pathname === "/magnum/api/shop/prism/craft" && req.method === "POST") return handlePrismCraft(req);
     if (url.pathname === "/magnum/api/shop/glacier/craft" && req.method === "POST") return handleGlacierCraft(req);
+    if (url.pathname === "/magnum/api/shop/crystal/craft" && req.method === "POST") return handleCrystalCraft(req);
+    if (url.pathname === "/magnum/api/shop/volcano/craft" && req.method === "POST") return handleVolcanoCraft(req);
     if (url.pathname === "/magnum/api/shop/forge" && req.method === "POST") return handleGlacierCraft(req);
 
     // mining
@@ -2842,10 +3858,22 @@ const server = Bun.serve<WSData>({
     if (url.pathname.startsWith("/magnum/api/duel/invite/") && url.pathname.endsWith("/respond") && req.method === "POST") { const parts=url.pathname.split("/"); const idStr=parts[5] ?? ""; return handleDuelInviteRespond(req,idStr); }
     if (url.pathname.startsWith("/magnum/api/duel/seasons/") && url.pathname.endsWith("/top") && req.method === "GET") { const parts=url.pathname.split("/"); const idStr=parts[4] ?? ""; return handleDuelSeasonTop(req,idStr); }
     if (url.pathname === "/magnum/api/duel42/leaderboard" && req.method === "GET") return handleDuel42Leaderboard(req);
+    if (url.pathname === "/magnum/api/leaderboard" && req.method === "GET") return handleLeaderboard(req);
     if (url.pathname === "/magnum/api/duel42/elo" && req.method === "GET") return handleDuel42Elo(req);
     if (url.pathname === "/magnum/api/duel42/wager" && req.method === "POST") return handleDuel42Wager(req);
+    if (url.pathname === "/magnum/api/arena/claim" && req.method === "POST") return handleArenaClaim(req);
+    if (url.pathname === "/magnum/api/squad/create" && req.method === "POST") return handleSquadCreate(req);
+    if (url.pathname === "/magnum/api/squad/join" && req.method === "POST") return handleSquadJoin(req);
+    if (url.pathname === "/magnum/api/squad/pot" && req.method === "POST") return handleSquadPot(req);
+    if (url.pathname === "/magnum/api/squad/my" && req.method === "GET") return handleSquadMy(req);
+    if (url.pathname === "/magnum/api/squad/battles" && req.method === "GET") return handleSquadBattles(req);
     if (url.pathname === "/magnum/api/mining/boost" && req.method === "POST") return handleMiningBoost(req);
     if (url.pathname === "/magnum/api/mining/boost" && req.method === "GET") return handleMiningBoost(req);
+    // conveyor 42
+    if (url.pathname === "/magnum/api/conveyor/state" && req.method === "GET") return handleConveyorState(req);
+    if (url.pathname === "/magnum/api/conveyor/claim" && req.method === "POST") return handleConveyorClaim(req);
+    if (url.pathname === "/magnum/api/conveyor/upgrade" && req.method === "POST") return handleConveyorUpgrade(req);
+    if (url.pathname === "/magnum/api/conveyor/prestige" && req.method === "POST") return handleConveyorPrestige(req);
     // chat 42 persisted (Neon, rate limit 12/min, 1..500 char, no <>)
     if (url.pathname === "/magnum/api/chat" && req.method === "GET") return handleChatHistory(req);
     if (url.pathname === "/magnum/api/chat" && req.method === "POST") return handleChatSend(req);
@@ -2887,11 +3915,18 @@ const server = Bun.serve<WSData>({
   },
   websocket: {
     open(ws) {
-      const room = findOrCreateRoom();
+      const preRoomId=(ws.data as WSData).roomId;
+      let room: DuelRoom;
+      if(preRoomId && preRoomId.startsWith("squad:") && rooms.has(preRoomId)){
+        room=rooms.get(preRoomId)!;
+      } else {
+        room = findOrCreateRoom();
+        (ws.data as WSData).roomId = room.id;
+      }
       room.players.add(ws);
       room.scores.set(ws, 0);
       room.names.set(ws, ws.data.username);
-      room.magma.set(ws,0); room.lastClickAt.set(ws,0); room.heldMaxSince.set(ws,null); room.overheatUntil.set(ws,0); room.clickCounts.set(ws,[]);
+      room.magma.set(ws,0); room.volcano.set(ws,0); room.lastClickAt.set(ws,0); room.heldMaxSince.set(ws,null); room.overheatUntil.set(ws,0); room.clickCounts.set(ws,[]); room.eruptionPending.set(ws,false);
       wsReady.set(ws,false);
       (ws.data as WSData).roomId = room.id;
       ws.subscribe(room.id);
@@ -2914,18 +3949,18 @@ const server = Bun.serve<WSData>({
       if (msg.type === "lobby:create") {
         const w = [0,42,142,420].includes(Number(msg.wager)) ? Number(msg.wager) : 0;
         const letters="ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let abcd=""; for(let i=0;i<4;i++) abcd+=letters[Math.floor(Math.random()*letters.length)]!;
-        const nr: DuelRoom = { id:`room:${abcd}`, players:new Set(), scores:new Map(), names:new Map(), state:"waiting", startedAt:null, timer:null, durationSec:10, wager:w, magma:new Map(), lastClickAt:new Map(), heldMaxSince:new Map(), suspect:new Set(), overheatUntil:new Map(), heartbeat:null, clickCounts:new Map() };
+        const nr: DuelRoom = { id:`room:${abcd}`, players:new Set(), scores:new Map(), names:new Map(), state:"waiting", startedAt:null, timer:null, durationSec:10, wager:w, magma:new Map(), volcano:new Map(), lastClickAt:new Map(), heldMaxSince:new Map(), suspect:new Set(), overheatUntil:new Map(), heartbeat:null, clickCounts:new Map(), eruptionPending:new Map() };
         rooms.set(nr.id,nr);
         // move ws to new room
         const oldId = data.roomId; if(oldId){ const old=rooms.get(oldId); if(old){ old.players.delete(ws); old.scores.delete(ws); old.names.delete(ws); try{ws.unsubscribe(oldId);}catch{} } }
-        nr.players.add(ws); nr.scores.set(ws,0); nr.names.set(ws, ws.data.username); nr.magma.set(ws,0); nr.lastClickAt.set(ws,0); nr.heldMaxSince.set(ws,null); (ws.data as WSData).roomId=nr.id; ws.subscribe(nr.id); wsReady.set(ws,false);
+        nr.players.add(ws); nr.scores.set(ws,0); nr.names.set(ws, ws.data.username); nr.magma.set(ws,0); nr.volcano.set(ws,0); nr.lastClickAt.set(ws,0); nr.heldMaxSince.set(ws,null); (ws.data as WSData).roomId=nr.id; ws.subscribe(nr.id); wsReady.set(ws,false);
         broadcast(nr,{type:"lobby:created", code:abcd, room:roomPublic(nr), wager:w}); broadcast(nr,{type:"room", room:roomPublic(nr)}); return;
       }
       if (msg.type === "join" && typeof msg.code === "string" && msg.code.trim().length===4) {
         const code = msg.code.trim().toUpperCase(); const target = rooms.get(`room:${code}`);
         if(target && target.players.size<4 && target.state==="waiting"){
           const oldId=data.roomId; if(oldId && oldId!==target.id){ const old=rooms.get(oldId); if(old){ old.players.delete(ws); old.scores.delete(ws); old.names.delete(ws); try{ws.unsubscribe(oldId);}catch{} } }
-          target.players.add(ws); target.scores.set(ws,0); target.names.set(ws, ws.data.username); target.magma.set(ws,0); (ws.data as WSData).roomId=target.id; ws.subscribe(target.id); wsReady.set(ws,false);
+          target.players.add(ws); target.scores.set(ws,0); target.names.set(ws, ws.data.username); target.magma.set(ws,0); target.volcano.set(ws,0); (ws.data as WSData).roomId=target.id; ws.subscribe(target.id); wsReady.set(ws,false);
           broadcast(target,{type:"room", room:roomPublic(target)}); return;
         }
       }
@@ -2935,37 +3970,39 @@ const server = Bun.serve<WSData>({
       // re-parse for room-bound messages already have msg
       if (msg.type === "click") {
         if (room.state !== "playing") return;
-        if (!wsRateOk(ws.data.id)) { room.suspect.add(ws); broadcast(room,{type:"suspect", from:ws.data.username}); return; }
-        // overheat cooldown 1.2s
+        if (!wsRateOk(ws.data.id)) { room.suspect.add(ws); broadcast(room,{type:"suspect", from:ws.data.username, toast:"братуха, ты вулкан? 🌋"}); return; }
+        // overheat cooldown 1.5s (volcano spec)
         const ohUntil = room.overheatUntil.get(ws) ?? 0;
         if (Date.now() < ohUntil) return;
-        // CPS>20 suspect
+        // CPS>20 or >165/10s suspect + ban round, not in leaderboard
         const now = Date.now();
         const arr = room.clickCounts.get(ws) ?? [];
         const fresh = arr.filter(t=> now - t < 1000);
         fresh.push(now); room.clickCounts.set(ws, fresh);
         const total10 = (room.clickCounts.get(ws) ?? []).filter(t=> now - t < 10000).length;
-        if (fresh.length>20 || total10>160) { room.suspect.add(ws); broadcast(room,{type:"suspect", from:ws.data.username, cps:fresh.length}); }
-        // magma logic <0.15s +8% cap x10, lava-spike 2x, overheat 3.5s→1.2s -60%
+        if (fresh.length>20 || total10>165) { room.suspect.add(ws); broadcast(room,{type:"suspect", from:ws.data.username, cps:fresh.length, toast:"братуха, ты вулкан? 🌋"}); }
+        // volcano logic <0.12s +7% cap x11 (1.07..1.77), eruption 2.5x next click, overheat 4s->1.5s -65%
         const last = room.lastClickAt.get(ws) ?? 0;
         const dt = last? now - last : 999;
-        let magma = room.magma.get(ws) ?? 0;
-        if (dt < 150) magma = Math.min(10, magma+1); else magma = 1;
-        room.magma.set(ws, magma); room.lastClickAt.set(ws, now);
+        let volcano = room.volcano.get(ws) ?? room.magma.get(ws) ?? 0;
+        if (dt < 120) volcano = Math.min(11, volcano+1); else volcano = 1;
+        room.volcano.set(ws, volcano); room.magma.set(ws, volcano); room.lastClickAt.set(ws, now);
         let held = room.heldMaxSince.get(ws) ?? null;
-        if (magma>=10) { if(held===null) held=now; } else held=null;
+        if (volcano>=11) { if(held===null) held=now; } else held=null;
         room.heldMaxSince.set(ws, held);
         const heldMs = held!==null? now - held : 0;
-        const overheat = heldMs >= 3500;
+        const overheat = heldMs >= 4000;
         let cur = room.scores.get(ws) ?? 0;
-        let mult = magma<=1?1:Math.min(1.8, 1+(magma-1)*0.08);
+        let mult = volcano<=1?1:Math.min(1.77, 1+(volcano-1)*0.07);
         let add = 1*mult;
-        const lavaSpike = magma>=10;
-        if (lavaSpike) add *= 2;
-        if (overheat) { add = cur*0.4 - cur; room.overheatUntil.set(ws, now+1200); room.heldMaxSince.set(ws,null); broadcast(room,{type:"overheat", from:ws.data.username}); }
+        const eruptionReady = room.eruptionPending.get(ws)===true;
+        if (eruptionReady) { add *= 2.5; room.eruptionPending.set(ws,false); }
+        const eruption = volcano>=11 && !eruptionReady;
+        if (eruption) room.eruptionPending.set(ws,true);
+        if (overheat) { add = cur*0.35 - cur; room.overheatUntil.set(ws, now+1500); room.heldMaxSince.set(ws,null); room.eruptionPending.set(ws,false); broadcast(room,{type:"overheat", from:ws.data.username}); }
         cur = Math.max(0, cur + add);
         room.scores.set(ws, cur);
-        broadcast(room, { type: "tick", from:ws.data.username, magma, score:cur, lavaSpike, overheat });
+        broadcast(room, { type: "tick", from:ws.data.username, magma:volcano, volcano, score:cur, eruption, eruptionPending: room.eruptionPending.get(ws)??false, overheat, lavaSpike: eruption });
         broadcast(room, { type: "scores", room: roomPublic(room) });
       } else if (msg.type === "ping") { try{ ws.send(JSON.stringify({type:"pong"})); }catch{} return;
       } else if (msg.type === "pong") { return;
@@ -2977,7 +4014,7 @@ const server = Bun.serve<WSData>({
         if (!wsChatRateOk(ws.data.id)) return;
         broadcast(room, { type: "chat", from: ws.data.username, text, at: new Date().toISOString() });
       } else if (msg.type === "start") {
-        if (room.state === "waiting" && room.players.size >= 2) startDuel(room);
+        if (room.state === "waiting" && room.players.size >= 1) startDuel(room);
       } else if (msg.type === "join" && typeof msg.username === "string" && msg.username.trim()) {
         const name = msg.username.trim().slice(0, 24);
         room.names.set(ws, name);
@@ -3018,7 +4055,7 @@ const server = Bun.serve<WSData>({
       room.players.delete(ws);
       room.scores.delete(ws);
       room.names.delete(ws);
-      room.magma.delete(ws); room.lastClickAt.delete(ws); room.heldMaxSince.delete(ws); room.overheatUntil.delete(ws); room.clickCounts.delete(ws); room.suspect.delete(ws);
+      room.magma.delete(ws); room.volcano.delete(ws); room.lastClickAt.delete(ws); room.heldMaxSince.delete(ws); room.overheatUntil.delete(ws); room.clickCounts.delete(ws); room.suspect.delete(ws); room.eruptionPending.delete(ws);
       wsReady.delete(ws);
       wsClickTimes.delete(ws.data.id);
       wsChatTimes.delete(ws.data.id);

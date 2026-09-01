@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 700" role="img" aria-label="Карта Кузбасса 42 — 5 точек + Томь">
+  <title>Карта Кузбасса 42 — вектор SVG 5 точек + Томь</title>
+  <rect width="1000" height="700" rx="24" fill="#0a1620"/>
+  <path d="M 180 140 L 820 120 L 880 280 L 760 560 L 420 620 L 180 480 L 140 260 Z" fill="#0f2a32" stroke="#1a4a5a" stroke-width="3"/>
+  <!-- Томь 827 км -->
+  <path id="tom" d="M 460 70 C 470 150 430 220 440 300 C 450 380 520 420 500 500 C 480 580 460 640 460 640" fill="none" stroke="#38bdf8" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="490" y="95" fill="#78dcff" font-size="13" font-weight="800" letter-spacing=".14em">ТОМЬ 827КМ</text>
+  <!-- 5 точек -->
+  <g><circle cx="470" cy="210" r="14" fill="#00ff88" stroke="#fff" stroke-width="2"/><text x="470" y="238" text-anchor="middle" fill="#fff" font-size="11" font-weight="800">КЕМЕРОВО</text></g>
+  <g><circle cx="620" cy="420" r="14" fill="#ff2d55" stroke="#fff" stroke-width="2"/><text x="620" y="448" text-anchor="middle" fill="#fff" font-size="11" font-weight="800">НОВОКУЗНЕЦК</text></g>
+  <g><circle cx="540" cy="340" r="14" fill="#ffcc00" stroke="#fff" stroke-width="2"/><text x="540" y="368" text-anchor="middle" fill="#fff" font-size="11" font-weight="800">БЕЛОВО</text></g>
+  <g><circle cx="580" cy="380" r="14" fill="#9147ff" stroke="#fff" stroke-width="2"/><text x="580" y="408" text-anchor="middle" fill="#fff" font-size="11" font-weight="800">ПРОКОПЬЕВСК</text></g>
+  <g><circle cx="700" cy="520" r="14" fill="#00ffcc" stroke="#fff" stroke-width="2"/><text x="700" y="548" text-anchor="middle" fill="#fff" font-size="11" font-weight="800">МЕЖДУРЕЧЕНСК</text></g>
+  <text x="20" y="685" fill="rgba(255,255,255,.34)" font-size="10">95,7 тыс км² • 190M уголь • 4817,5 тыс га леса • 3 хребта • Кузнецкий Алатау • Салаир</text>
+</svg>

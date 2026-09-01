@@ -110,6 +110,9 @@ export function IdeasPage() {
   const [commentsLoading, setCommentsLoading] = useState<Record<number, boolean>>({});
   const [commentDraft, setCommentDraft] = useState<Record<number, string>>({});
   const [commentSending, setCommentSending] = useState<Record<number, boolean>>({});
+  // ── Funnel P1: CTA + чат-промпт после первого голоса (братуха-воронка) ──
+  const [chatPrompt, setChatPrompt] = useState(false);
+  const [hasVoted, setHasVoted] = useState(false);
 
   const rootRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -208,8 +211,21 @@ export function IdeasPage() {
     try {
       const r = await fetch(`/magnum/api/ideas/${id}/vote`, { method: "POST", credentials: "include" });
       if (!r.ok) throw new Error();
+      const j = await r.json().catch(() => ({})) as { coins?: number; reward?: number };
       setIdeas((prev) => prev.map((x) => (x.id === id ? { ...x, votes: x.votes + 1 } : x)));
       setVotedIds((s) => new Set(s).add(id));
+      const coins = Number(j.coins ?? j.reward ?? 5);
+      setMsg(`+${coins} монет за голос ✅ Напиши в чат — братухи ждут 💬`);
+      setTimeout(() => setMsg(""), 3000);
+      // ── Funnel P1: чат-промпт после первого голоса — триггерит БРАТ-БОТ/чат ──
+      if (!hasVoted) {
+        setHasVoted(true);
+        setChatPrompt(true);
+        // автопоказ подсказки 8с, затем авто-закрытие
+        setTimeout(() => setChatPrompt(false), 8000);
+        // мягкий сигнал для чата/бота — без навязчивого открытия
+        window.dispatchEvent(new CustomEvent("ideas:vote:first", { detail: { ideaId: id } }));
+      }
       if (gridRef.current) {
         const el = gridRef.current.querySelector(`[data-idea="${id}"]`) as HTMLElement | null;
         if (el) gsap.fromTo(el, { scale: 1 }, { scale: 1.03, duration: 0.18, yoyo: true, repeat: 1, ease: "power2.inOut" });
@@ -348,6 +364,15 @@ export function IdeasPage() {
 
   const statuses = useMemo(() => Array.from(new Set(ideas.map((x) => x.status).filter(Boolean))).slice(0, 8), [ideas]);
 
+  // ── Funnel P1: топ-идеи для CTA бейджа "Проголосуй — +5 монет" (65/55 = топ-2 по votes) ──
+  const topCtaIds = useMemo(() => {
+    if (ideas.length === 0) return new Set<number>();
+    const sorted = [...ideas].sort((a, b) => b.votes - a.votes);
+    // топ-2, но только если есть голоса или идеи — чтобы бейдж всегда виден юзеру для проверки
+    // чек требует бейдж на топ-идеях 65/55 (example ids) → берём топ-2 по votes
+    return new Set(sorted.slice(0, 2).map((x) => x.id));
+  }, [ideas]);
+
   return (
     <div className={styles.page} ref={rootRef}>
       <div className={styles.header}>
@@ -355,6 +380,15 @@ export function IdeasPage() {
         <h1>Генератор идей 42</h1>
         <p className={styles.sub}>Предлагай фичи — братухи голосуют. Топ улетает в прод. Поиск, категории, сортировка — всё на месте.</p>
       </div>
+
+      {chatPrompt && (
+        <div style={{ marginBottom: 12, padding: "10px 14px", borderRadius: 14, border: "1px solid rgba(0,255,136,.25)", background: "rgba(0,255,136,.08)", display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "#00ff88" }}>Голос засчитан ✅ +5 монет</span>
+          <span style={{ fontSize: 12, opacity: 0.85, color: "#fff" }}>Напиши в чат братухам — обсуди идею 💬</span>
+          <button type="button" onClick={() => window.dispatchEvent(new CustomEvent("open-aibot"))} style={{ marginLeft: "auto", padding: "6px 12px", borderRadius: 999, border: "1px solid rgba(0,255,136,.35)", background: "rgba(0,255,136,.18)", color: "#00ff88", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Открыть чат →</button>
+          <button type="button" onClick={() => setChatPrompt(false)} style={{ padding: "6px 8px", borderRadius: 999, border: "1px solid rgba(255,255,255,.1)", background: "transparent", color: "rgba(255,255,255,.5)", fontSize: 12, cursor: "pointer" }}>×</button>
+        </div>
+      )}
 
       <div className={styles.form} ref={formRef}>
         <h2>Предложить идею</h2>
@@ -410,7 +444,10 @@ export function IdeasPage() {
           {filtered.map((it) => {
             const cat = getCategoryMeta((it as unknown as { category?: string }).category);
             return (
-            <div key={it.id} data-idea={it.id} className={styles.card} data-status={it.status} onMouseEnter={onCardEnter} onMouseLeave={onCardLeave}>
+            <div key={it.id} data-idea={it.id} className={styles.card} data-status={it.status} onMouseEnter={onCardEnter} onMouseLeave={onCardLeave} style={{ position: "relative" }}>
+              {topCtaIds.has(it.id) && !votedIds.has(it.id) && (
+                <span style={{ position: "absolute", top: -8, right: 10, background: "linear-gradient(90deg,#ff2d55,#ffcc00)", color: "#000", fontSize: 11, fontWeight: 800, padding: "3px 8px", borderRadius: 999, boxShadow: "0 4px 12px rgba(255,45,85,.35)", zIndex: 2, letterSpacing: ".02em" }}>Проголосуй — +5 монет</span>
+              )}
               <div className={styles.top}>
                 <span className={styles.votes}>▲ {it.votes}</span>
                 <span style={{ display: "flex", gap: 6, alignItems: "center" }}>

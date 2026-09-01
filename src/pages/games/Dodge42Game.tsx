@@ -122,7 +122,15 @@ export function Dodge42Game() {
   const [state, setState] = useState<"menu" | "playing" | "win" | "dead">("menu");
   const [elapsed, setElapsed] = useState(0);
   const [dodged, setDodged] = useState(0);
-  const [bestDodged, setBestDodged] = useState(() => { try { return Number(localStorage.getItem("dodge42-best")) || 0; } catch { return 0; } });
+  const [bestDodged, setBestDodged] = useState(0);
+  // best из Neon magnum_game_scores, diff остаётся в LS_DIFF (SPEC §7.1 разрешает)
+  useEffect(()=>{
+    fetch("/magnum/api/games/my",{credentials:"include"}).then(r=>r.ok?r.json():null).then(j=>{
+      const arr=j?.scores as {game:string;score:number}[]|undefined; if(!arr) return;
+      let m=0; for(const s of arr) if(s.game==="dodge"&&s.score>m) m=s.score;
+      if(m) setBestDodged(m);
+    }).catch(()=>{});
+  },[]);
   const [wave, setWave] = useState(0);
   const [diff, setDiff] = useState<DiffKey>(() => { try { const v = localStorage.getItem(LS_DIFF) as DiffKey | null; return v && DIFFICULTY[v] ? v : "normal"; } catch { return "normal"; } });
   const [tipIdx, setTipIdx] = useState(0);
@@ -352,7 +360,7 @@ export function Dodge42Game() {
           }
           const nb = Math.max(bestDodged, dodgedRef.current);
           setBestDodged(nb);
-          try { localStorage.setItem("dodge42-best", String(nb)); } catch {}
+          void fetch("/magnum/api/games/submit",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({game:"dodge",score:nb})}).catch(()=>{});
           setState("dead");
         }
 
@@ -370,7 +378,7 @@ export function Dodge42Game() {
           if (navigator.vibrate) navigator.vibrate([40,30,60]);
           const nb = Math.max(bestDodged, dodgedRef.current);
           setBestDodged(nb);
-          try { localStorage.setItem("dodge42-best", String(nb)); } catch {}
+          void fetch("/magnum/api/games/submit",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({game:"dodge",score:nb})}).catch(()=>{});
           setState("win");
         }
 
