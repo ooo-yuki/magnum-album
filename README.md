@@ -108,3 +108,4 @@ CI: `.github/workflows/deploy.yml` → `tsc → bun test → build → scp /srv/
 
 ---
 © 2026 5opka / 42 братухи · Сделано на Bun + Neon
+
