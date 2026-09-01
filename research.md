@@ -280,4 +280,18 @@
 
 ---
 
-*Исследование выполнено 31 августа 2026 года*
+---
+
+## 10. Аудит спецификаций MAGNUM 2026-09-01 — краткий план (P0/P1/P2)
+
+> Полный отчёт: [`docs/spec-audit-2026-09-01.md`](docs/spec-audit-2026-09-01.md) (42KB). Здесь — выжимка для кронов/ревьюера.
+
+**Итог:** из ~30 фич-групп полная спека есть только у Ideas и схемы Neon; `docs/hype-features.md` покрывает 4/30. Галерея 350 фейков → исправлено `REAL_BY_STYLE` → 404 нет, но 350 карточек показывают 3 картинки. 7 клиентских ручек 404, 9 игр без `prefers-reduced-motion`/`gsap.context`.
+
+**P0 (до деплоя):** `ShopPage.tsx:79,92,210,263` убрать 404 `shop/state/equipped/purchase/unequip` или добавить алиасы в `server.ts:821-823`; `src/lib/coins.ts:97` `POST /coins/set` — реализовать `server.ts:792` или удалить; `tests/gallery-404.test.ts` — CI проверка `fs.existsSync(public + src)`; `src/pages/games/*` обернуть все `gsap.*` в `gsap.context` + `prefers-reduced-motion` gate (Clicker/Memory/Match3/Roulette/Flappy — 0 gates); `AiBot.tsx:214` → `POST /frame/verify` связать бота с рамкой (сейчас `frame/status` читается, но `verify` никогда не вызывается).
+
+**P1:** догенерить уникальные арты или сократить галерею до 12 + `docs/gallery-spec.md`; вынести `TOKENS/I18N/CHANGELOG` из `GalleryPage.tsx:791-853` (2570 строк); удалить дубли `economy.ts` QUEST_1..50 vs `ShopPage` цены; объединить 2 квиза `GamePage.tsx:14` + `QuizGame.tsx` + `EcoPage.tsx` vs hype-вопросы; написать `docs/games-spec.md` (16 игр, награды 4200), обновить `README.md:19` 15→16; `shop/equip` поля `coins`; `Ideas` анти-накрутка `UNIQUE(user_id,idea_id)`.
+
+**P2:** удалить дубль `AboutPage.tsx` vs `About42Page.tsx`; разнести `RecapsPage.tsx:3378`/`perf-analytics.ts`/`coins.ts` мок-транскрипты в `public/mocks/`; кроны `README:83-91` → `docs/ops.md`; `AiBot` GSAP вспышка + `Blackjack` GSAP.
+
+*Исследование выполнено 31 августа 2026 года · аудит добавлен 01 сентября 2026*

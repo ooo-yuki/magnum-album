@@ -5,9 +5,9 @@ import styles from "./PresaveRatingPage.module.css";
 
 gsap.registerPlugin(ScrollTrigger);
 
-/* ── API types ─────────────────────── */
-type FrameRow = { id: number; username: string; verified: boolean; status: string; created_at: string };
-type EcoRow = { username: string; player: string; score: number; rank: string; status: string; created_at: string };
+/* ── API types (real Neon) ─────────────────────── */
+type FrameRow = { id: number; username: string; verified: boolean; status: string; created_at: string; avatar?: string | null };
+type EcoRow = { username: string; player: string; score: number; rank: string; status: string; created_at: string; avatar?: string | null; verified?: boolean };
 type IdeaRow = { id: number; title: string; description: string; votes: number; status: string; created_at: string };
 
 type RatingRow = {
@@ -19,11 +19,28 @@ type RatingRow = {
   city: string;
   source: "eco" | "idea" | "frame";
   avatar: string;
+  verified: boolean;
+  skinId: string | null;
 };
 
 type CheckState = "idle" | "checking" | "ok" | "fail";
 
 const EMPTY_FALLBACK = "пока пусто — стань первым";
+
+/* shop skin -> emoji map (из ShopPage SKINS, для реального аватара) */
+const SKIN_EMOJI: Record<string, string> = {
+  mops: "🐗", rhino: "🦏", monkey: "🐵", frog: "🐸",
+  panda: "🐼", fox: "🦊", owl: "🦉",
+  shark: "🦈", flamingo: "🦩", wolf: "🐺",
+  tiger: "🐯", dragon: "🐉",
+  "skin-common": "🐗", "skin-rare": "🦊", "skin-epic": "🦈", "skin-legendary": "🐉",
+};
+
+function skinToEmoji(skinId: string | null | undefined): string {
+  if (!skinId) return "👤";
+  const k = skinId.trim().toLowerCase();
+  return SKIN_EMOJI[k] ?? SKIN_EMOJI[k.replace("skin_", "").replace("skin-", "")] ?? "👤";
+}
 
 export function PresaveRatingPage() {
   const [filter, setFilter] = useState<"all" | RatingRow["status"]>("all");
@@ -36,6 +53,7 @@ export function PresaveRatingPage() {
   const [ideas, setIdeas] = useState<IdeaRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [bandlink, setBandlink] = useState<{ title: string; image: string | null; ok: boolean } | null>(null);
 
   const rootRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
@@ -52,14 +70,12 @@ export function PresaveRatingPage() {
         fetch("/magnum/api/ideas", { credentials: "include" }),
       ]);
 
-      // frame/status
       if (frRes.ok) {
-        const j = (await frRes.json()) as { frames?: FrameRow[]; total?: number };
-        if (Array.isArray(j.frames)) setFrames(j.frames);
+        const j = (await frRes.json()) as { frames?: (FrameRow & { avatar?: string | null })[]; total?: number };
+        if (Array.isArray(j.frames)) setFrames(j.frames as FrameRow[]);
         else setFrames([]);
       } else setFrames([]);
 
-      // eco/leaderboard
       if (ecoRes.ok) {
         const j = (await ecoRes.json()) as { leaderboard?: EcoRow[]; entries?: EcoRow[] } | EcoRow[];
         if (Array.isArray(j)) setEco(j as EcoRow[]);
@@ -68,12 +84,27 @@ export function PresaveRatingPage() {
         else setEco([]);
       } else setEco([]);
 
-      // ideas
       if (ideasRes.ok) {
         const j = (await ideasRes.json()) as { ideas?: IdeaRow[] };
         if (Array.isArray(j.ideas)) setIdeas(j.ideas);
         else setIdeas([]);
       } else setIdeas([]);
+
+      // Bandlink fallback: try API, else parse OG
+      try {
+        const bl = await fetch("https://music.thefence.me/psmagnum", { method: "GET" });
+        if (bl.ok) {
+          const html = await bl.text();
+          const ogTitle = html.match(/<meta property="og:title" content="([^"]+)"/)?.[1] ?? html.match(/<title>([^<]+)<\/title>/)?.[1] ?? "5opka, MellSher - Magnum | BandLink";
+          const ogImage = html.match(/<meta property="og:image" content="([^"]+)"/)?.[1] ?? null;
+          const hasPresave = html.includes("presave") || html.includes("Пресейв");
+          setBandlink({ title: ogTitle, image: ogImage, ok: hasPresave });
+        } else {
+          setBandlink({ title: "5opka, MellSher - Magnum | BandLink", image: null, ok: false });
+        }
+      } catch {
+        setBandlink(null);
+      }
     } catch (e) {
       setErr(String(e).slice(0, 120));
     } finally {
@@ -87,48 +118,64 @@ export function PresaveRatingPage() {
 
   const ratingRows: RatingRow[] = useMemo(() => {
     const out: RatingRow[] = [];
-    // eco first sorted by score desc
+    // eco — отсортированы по score desc, топ-50 из Neon
     const sortedEco = [...eco].sort((a, b) => b.score - a.score);
-    sortedEco.forEach((e, i) => {
+    sortedEco.forEach((e) => {
       const s = String(e.status || e.rank || "").toLowerCase();
       let status: RatingRow["status"] = "pending";
-      if (s.includes("топ") || s.includes("legend") || i < 3) status = i < 3 ? "топ" : "verified";
-      else if (s.includes("verified") || s.includes("approved") || s.includes("братуха")) status = "verified";
+      if (e.verified) status = "verified";
+      else if (s.includes("legend") || s.includes("epic")) status = "verified";
       out.push({
-        rank: i + 1,
+        rank: 0,
         username: e.username || e.player || "Братуха",
         score: Number(e.score) || 0,
         status,
         date: e.created_at ? String(e.created_at).slice(0, 10) : new Date().toISOString().slice(0, 10),
         city: "Кемерово",
         source: "eco",
-        avatar: i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "🌿",
+        avatar: skinToEmoji(e.avatar),
+        verified: Boolean(e.verified),
+        skinId: e.avatar || null,
       });
     });
-    // frames — append after eco
+
+    // frames — после eco, но verified даёт +42 к score
     frames.forEach((f) => {
-      const idx = out.length;
+      const already = out.find((r) => r.username === f.username && r.source === "eco");
+      if (already) {
+        // если юзер уже в eco, мерджим verified и аватар
+        if (f.verified) already.verified = true;
+        if (f.avatar && already.skinId == null) {
+          already.skinId = f.avatar;
+          already.avatar = skinToEmoji(f.avatar);
+        }
+        if (f.verified) already.status = "verified";
+        return;
+      }
       out.push({
-        rank: idx + 1,
+        rank: 0,
         username: f.username,
-        score: f.verified ? 42 : 0,
+        score: f.verified ? 420 : 0,
         status: f.verified ? "verified" : "pending",
         date: f.created_at ? String(f.created_at).slice(0, 10) : new Date().toISOString().slice(0, 10),
         city: "Кемерово",
         source: "frame",
-        avatar: f.verified ? "✓" : "…",
+        avatar: skinToEmoji(f.avatar),
+        verified: Boolean(f.verified),
+        skinId: f.avatar || null,
       });
     });
-    // ideas — append, votes as score
-    const sortedIdeas = [...ideas].sort((a, b) => b.votes - a.votes);
+
+    // ideas — votes как отдельный источник, но username = title обрезаем
+    const sortedIdeas = [...ideas].sort((a, b) => b.votes - a.votes).slice(0, 20);
     sortedIdeas.forEach((it) => {
+      if ((Number(it.votes) || 0) === 0) return;
       const s = String(it.status || "").toLowerCase();
       let status: RatingRow["status"] = "pending";
       if (s === "approved" || s === "топ") status = "топ";
       else if (s === "verified") status = "verified";
-      const idx = out.length;
       out.push({
-        rank: idx + 1,
+        rank: 0,
         username: it.title.slice(0, 22),
         score: Number(it.votes) || 0,
         status,
@@ -136,16 +183,20 @@ export function PresaveRatingPage() {
         city: "Идея",
         source: "idea",
         avatar: "💡",
+        verified: s === "approved" || s === "verified",
+        skinId: null,
       });
     });
-    // re-rank by score desc for unified rating, but keep stable top logic
-    out.sort((a, b) => b.score - a.score);
+
+    // единый рейтинг по score desc, стабильный топ
+    out.sort((a, b) => b.score - a.score || (b.verified ? 1 : 0) - (a.verified ? 1 : 0));
     out.forEach((r, i) => (r.rank = i + 1));
-    // fix status for top 3 after resort
+    // топ-3 с положительным score помечаем как топ
     out.forEach((r, i) => {
       if (i < 3 && r.score > 0) r.status = "топ";
     });
-    return out;
+    // ограничим до топ-20 для таблицы (остальные в фильтре)
+    return out.slice(0, 20);
   }, [frames, eco, ideas]);
 
   const filtered = useMemo(() => {
@@ -302,8 +353,7 @@ export function PresaveRatingPage() {
         <div className={styles.badge}>★ РЕЙТИНГ ПРЕСЕЙВА · MAGNUM · 42 БРАТУХИ</div>
         <h1 className={styles.title}>КТО ПОСТАВИЛ<br />ПРЕСЕЙВ — ТОТ БРАТУХА</h1>
         <p className={styles.subtitle}>
-          Реальный рейтинг — только живые братухи, без фейков.
-          Проверка — через <b>БРАТ-БОТа</b>.
+          Реальный рейтинг — только живые братухи, без фейков. {bandlink?.title ? `BandLink: ${bandlink.title}` : ""} Проверка — через <b>БРАТ-БОТа</b>.
         </p>
       </header>
 
@@ -313,17 +363,17 @@ export function PresaveRatingPage() {
         <div className={styles.kpi} onMouseEnter={onKpiEnter} onMouseLeave={onKpiLeave}>
           <div className={styles.kpiNum}>{loading ? "…" : stats.frames}</div>
           <div className={styles.kpiLbl}>рамок выдано</div>
-          <div className={styles.kpiHint}>magnum_frames</div>
+          <div className={styles.kpiHint}>magnum_frames · {stats.verified} ✓</div>
         </div>
         <div className={`${styles.kpi} ${styles.kpiAccent}`} onMouseEnter={onKpiEnter} onMouseLeave={onKpiLeave}>
           <div className={styles.kpiNum}>{loading ? "…" : stats.ecoCount}</div>
           <div className={styles.kpiLbl}>эко-результатов</div>
-          <div className={styles.kpiHint}>magnum_eco_results</div>
+          <div className={styles.kpiHint}>magnum_eco_results · {stats.totalScore} очков</div>
         </div>
         <div className={styles.kpi} onMouseEnter={onKpiEnter} onMouseLeave={onKpiLeave}>
           <div className={styles.kpiNum}>{loading ? "…" : stats.ideasCount}</div>
           <div className={styles.kpiLbl}>идей</div>
-          <div className={styles.kpiHint}>{stats.totalVotes} голосов</div>
+          <div className={styles.kpiHint}>{stats.totalVotes} голосов · magnum_ideas</div>
         </div>
         <div className={styles.kpi} onMouseEnter={onKpiEnter} onMouseLeave={onKpiLeave}>
           <div className={styles.kpiNum}>{loading ? "…" : stats.verified}</div>
@@ -343,8 +393,8 @@ export function PresaveRatingPage() {
           {check === "ok" && "✓ Обновлено"}
           {check === "fail" && "× Пока пусто"}
         </button>
-        <a className={styles.presaveLink} href="https://music.yandex.ru/artist/7544304" target="_blank" rel="noopener noreferrer">Поставить пресейв на Яндексе →</a>
-        <span className={styles.verifyHint}>GET /magnum/api/frame/status · /magnum/api/eco/leaderboard · /magnum/api/ideas — live</span>
+        <a className={styles.presaveLink} href="https://music.thefence.me/psmagnum" target="_blank" rel="noopener noreferrer">Поставить пресейв на BandLink →</a>
+        <span className={styles.verifyHint}>GET /magnum/api/frame/status · /magnum/api/eco/leaderboard · /magnum/api/ideas — live · {bandlink?.ok ? "BandLink OK" : bandlink ? "BandLink OG fallback" : "BandLink…"}</span>
       </div>
 
       <div className={styles.controls}>
@@ -379,7 +429,7 @@ export function PresaveRatingPage() {
               </span>
               <span className={styles.user}>
                 <span className={styles.avatar} aria-hidden>{r.avatar}</span>
-                <span className={styles.nick} title={r.username}>{r.username}</span>
+                <span className={styles.nick} title={r.username}>{r.username}{r.verified && <span className={styles.verifiedBadge} title="verified"> ✓</span>}</span>
               </span>
               <span className={styles.meta}>
                 <span className={styles.date}>{r.date}</span>
@@ -387,7 +437,7 @@ export function PresaveRatingPage() {
               </span>
               <span className={styles.stats}>
                 <span className={styles.clips}>{r.score} очков</span>
-                <span className={styles.views}>{r.source}</span>
+                <span className={styles.views}>{r.source}{r.skinId ? ` · ${r.skinId}` : ""}</span>
               </span>
               <span className={`${styles.status} ${r.status === "топ" ? styles.sTop : r.status === "verified" ? styles.sVerified : styles.sPending}`}>
                 {r.status === "топ" ? "★ ТОП" : r.status === "verified" ? "✓ VERIFIED" : "… PENDING"}
@@ -400,10 +450,10 @@ export function PresaveRatingPage() {
       <div className={styles.foot}>
         <div className={styles.footCard}>
           <strong>Как попасть в топ?</strong> Поставь пресейв → эко-тест /magnum/eco → идея /magnum/ideas → появишься здесь.
-          Топ-3 получают рамку 42 + респект.
+          Топ-3 получают рамку 42 + респект. Аватар берётся из магазина (экипированный скин).
         </div>
         <div className={styles.footStats}>
-          {stats.frames} фреймов · {stats.ecoCount} эко · {stats.ideasCount} идей · {new Date().toISOString().slice(0,10)}
+          {stats.frames} фреймов · {stats.ecoCount} эко · {stats.ideasCount} идей · Neon proud-bar-62331523 · BandLink {bandlink?.title?.slice(0, 36) ?? "…"} · {new Date().toISOString().slice(0,10)}
         </div>
       </div>
     </div>

@@ -391,20 +391,20 @@ async function handleFrameStatus(req: Request): Promise<Response> {
     let user: { id: number; username: string } | null = null;
     if (token) { try { user = await getUserByToken(token); } catch {} }
     if (user) {
-      const rows = await sql`SELECT f.id, u.username, f.verified, f.created_at FROM magnum_frames f LEFT JOIN magnum_users u ON u.id = f.user_id WHERE f.user_id = ${user.id} ORDER BY f.created_at DESC LIMIT 50`;
+      const rows = await sql`SELECT f.id, u.username, f.verified, f.created_at, s.skin_id as avatar FROM magnum_frames f LEFT JOIN magnum_users u ON u.id = f.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id = f.user_id AND s.equipped = true WHERE f.user_id = ${user.id} ORDER BY f.created_at DESC LIMIT 50`;
       const frames = rows.map((r: unknown) => {
-        const x = r as { id: number; username: string; verified: boolean | null; created_at: string };
-        return { id: Number(x.id), username: String(x.username || user!.username), verified: Boolean(x.verified), status: x.verified ? "verified" : "pending", created_at: x.created_at };
+        const x = r as { id: number; username: string; verified: boolean | null; created_at: string; avatar: string | null };
+        return { id: Number(x.id), username: String(x.username || user!.username), verified: Boolean(x.verified), status: x.verified ? "verified" : "pending", created_at: x.created_at, avatar: x.avatar || null };
       });
       const verified = frames.filter(f => f.verified).length;
       return Response.json({ frames, total: frames.length, verified, pending: frames.length - verified, user: user.username });
     }
-    const rows = await sql`SELECT f.id, COALESCE(u.username, 'Братуха') as username, f.verified, f.created_at, f.user_id as raw_user_id FROM magnum_frames f LEFT JOIN magnum_users u ON u.id = f.user_id ORDER BY f.created_at DESC LIMIT 50`;
+    const rows = await sql`SELECT f.id, COALESCE(u.username, 'Братуха') as username, f.verified, f.created_at, f.user_id as raw_user_id, s.skin_id as avatar FROM magnum_frames f LEFT JOIN magnum_users u ON u.id = f.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id = f.user_id AND s.equipped = true ORDER BY f.created_at DESC LIMIT 50`;
     const total = rows.length;
     const verified = rows.filter((r: unknown) => (r as { verified: boolean }).verified === true).length;
     const frames = rows.map((r: unknown) => {
-      const x = r as { id: number; username: string; verified: boolean | null; created_at: string; raw_user_id: number };
-      return { id: Number(x.id), username: String(x.username || "Братуха"), verified: Boolean(x.verified), status: x.verified ? "verified" : "pending", created_at: x.created_at };
+      const x = r as { id: number; username: string; verified: boolean | null; created_at: string; raw_user_id: number; avatar: string | null };
+      return { id: Number(x.id), username: String(x.username || "Братуха"), verified: Boolean(x.verified), status: x.verified ? "verified" : "pending", created_at: x.created_at, avatar: x.avatar || null };
     });
     return Response.json({ frames, total, verified, pending: total - verified });
   } catch (e) {
@@ -417,10 +417,10 @@ async function handleFrameStatus(req: Request): Promise<Response> {
 async function handleEcoLeaderboard(): Promise<Response> {
   try {
     const sql = getSql();
-    const rows = await sql`SELECT COALESCE(u.username, r.player, 'Братуха') as player, r.score, r.rank, r.created_at FROM magnum_eco_results r LEFT JOIN magnum_users u ON u.id = r.user_id ORDER BY r.score DESC, r.created_at ASC LIMIT 50`;
+    const rows = await sql`SELECT COALESCE(u.username, r.player, 'Братуха') as player, r.score, r.rank, r.created_at, s.skin_id as avatar, COALESCE(f.verified,false) as verified FROM magnum_eco_results r LEFT JOIN magnum_users u ON u.id = r.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id = r.user_id AND s.equipped = true LEFT JOIN magnum_frames f ON f.user_id = r.user_id ORDER BY r.score DESC, r.created_at ASC LIMIT 50`;
     const leaderboard = rows.map((r: unknown) => {
-      const x = r as { player: string; score: number; rank: string; created_at: string };
-      return { player: String(x.player), username: String(x.player), score: Number(x.score), rank: String(x.rank), status: String(x.rank || "pending"), created_at: x.created_at };
+      const x = r as { player: string; score: number; rank: string; created_at: string; avatar: string | null; verified: boolean | null };
+      return { player: String(x.player), username: String(x.player), score: Number(x.score), rank: String(x.rank), status: String(x.rank || "pending"), created_at: x.created_at, avatar: x.avatar || null, verified: Boolean(x.verified) };
     });
     return Response.json({ leaderboard, entries: leaderboard });
   } catch (e) {

@@ -26,6 +26,23 @@ interface Art42 {
   tag: string;
 }
 
+// Реальные файлы — только 3 сета существуют на диске: 42-agit-01 / 42-cyber-01 / 42-memphis-01 (+800.webp)
+// Маппим все arts на них, чтобы не было 404/эмодзи-заглушек
+const REAL_BY_STYLE: Record<Style42, string> = {
+  "СССР": "/magnum/images/gallery-42/42-agit-01-800.webp",
+  "Y2K": "/magnum/images/gallery-42/42-memphis-01-800.webp",
+  "киберпанк": "/magnum/images/gallery-42/42-cyber-01-800.webp",
+  "мемфис": "/magnum/images/gallery-42/42-memphis-01-800.webp",
+};
+const REAL_FALLBACK: Record<string, string> = {
+  "ussr-01": "/magnum/images/gallery-42/42-agit-01-800.webp",
+  "ussr-02": "/magnum/images/gallery-42/42-agit-01.jpg",
+  "y2k-01": "/magnum/images/gallery-42/42-memphis-01-800.webp",
+  "y2k-02": "/magnum/images/gallery-42/42-memphis-01.jpg",
+  "cyber-01": "/magnum/images/gallery-42/42-cyber-01-800.webp",
+  "memphis-01": "/magnum/images/gallery-42/42-memphis-01-800.webp",
+  "y2k-03": "/magnum/images/gallery-42/42-cyber-01.jpg",
+};
 const BASE_ARTS: Art42[] = [
   {
     id: "ussr-01",
@@ -33,7 +50,7 @@ const BASE_ARTS: Art42[] = [
     style: "СССР",
     emoji: "🏭",
     gradient: "linear-gradient(135deg,#ff2d55 0%,#8a162c 35%,#2b0e14 100%)",
-    src: "/magnum/images/gallery-42/ussr-01.jpg",
+    src: REAL_FALLBACK["ussr-01"],
     desc: "Плакат «42 удара в смену» — молот, неон и бетон.",
     tag: "агитплакат",
   },
@@ -43,7 +60,7 @@ const BASE_ARTS: Art42[] = [
     style: "СССР",
     emoji: "🚀",
     gradient: "linear-gradient(135deg,#ff2d55 0%,#ff6b2d 35%,#1a1a2e 70%,#0a0a1a 100%)",
-    src: "/magnum/images/gallery-42/ussr-02.jpg",
+    src: REAL_FALLBACK["ussr-02"],
     desc: "Спутник с надписью «МАГНУМ — вперёд к звёздам».",
     tag: "космоплакат",
   },
@@ -53,7 +70,7 @@ const BASE_ARTS: Art42[] = [
     style: "Y2K",
     emoji: "💿",
     gradient: "linear-gradient(135deg,#ffcc00 0%,#ff2d55 30%,#a855f7 65%,#22d3ee 100%)",
-    src: "/magnum/images/gallery-42/y2k-01.jpg",
+    src: REAL_FALLBACK["y2k-01"],
     desc: "Хром, глянец и Comic Sans — ностальгия 2007.",
     tag: "Y2K-bling",
   },
@@ -63,7 +80,7 @@ const BASE_ARTS: Art42[] = [
     style: "Y2K",
     emoji: "📟",
     gradient: "linear-gradient(135deg,#00ff88 0%,#22d3ee 35%,#ff2d55 75%,#ffcc00 100%)",
-    src: "/magnum/images/gallery-42/y2k-02.jpg",
+    src: REAL_FALLBACK["y2k-02"],
     desc: "Раскладушка с монохромным экраном «42 пропущенных».",
     tag: "ретро-тек",
   },
@@ -73,7 +90,7 @@ const BASE_ARTS: Art42[] = [
     style: "киберпанк",
     emoji: "🌃",
     gradient: "linear-gradient(135deg,#0a0a0a 0%,#1a0a2e 25%,#ff2d55 55%,#00ff88 85%,#060a14 100%)",
-    src: "/magnum/images/gallery-42/cyber-01.jpg",
+    src: REAL_FALLBACK["cyber-01"],
     desc: "Кемерово 2142 — дождь, вывески и дрон с 42.",
     tag: "ночной город",
   },
@@ -83,7 +100,7 @@ const BASE_ARTS: Art42[] = [
     style: "мемфис",
     emoji: "🎨",
     gradient: "linear-gradient(135deg,#ffcc00 0%,#ff2d55 25%,#00ff88 50%,#ff9ad5 75%,#5865f2 100%)",
-    src: "/magnum/images/gallery-42/memphis-01.jpg",
+    src: REAL_FALLBACK["memphis-01"],
     desc: "Сквот, точки, зигзаги — мопс в очках на фоне сетки.",
     tag: "мемфис-поп",
   },
@@ -93,13 +110,13 @@ const BASE_ARTS: Art42[] = [
     style: "Y2K",
     emoji: "🏅",
     gradient: "linear-gradient(135deg,#ffcc00 0%,#ff6b2d 25%,#ff2d55 50%,#a855f7 75%,#22d3ee 100%)",
-    src: "/magnum/images/gallery-42/y2k-03.jpg",
+    src: REAL_FALLBACK["y2k-03"],
     desc: "Коллекционный бейдж за 42 лайка — светится в профиле и на стриме. Лимитка.",
     tag: "бейдж-дроп",
   },
 ];
 
-// пул для мок-генерации — 42-agit-01 оптимизирован до 800px webp (3.4MB → 119KB)
+// пул для мок-генерации — только реальные файлы
 const MOCK_POOL: Omit<Art42, "id">[] = [
   {
     title: "Ковёр 42",
@@ -115,7 +132,7 @@ const MOCK_POOL: Omit<Art42, "id">[] = [
     style: "Y2K",
     emoji: "🎮",
     gradient: "linear-gradient(135deg,#9147ff,#ff2d55 45%,#ffcc00 100%)",
-    src: "/magnum/images/gallery-42/42-cyber-01.jpg",
+    src: "/magnum/images/gallery-42/42-memphis-01-800.webp",
     desc: "Пиксели, сканлайны и цифра 42 из блоков.",
     tag: "пиксель",
   },
@@ -124,7 +141,7 @@ const MOCK_POOL: Omit<Art42, "id">[] = [
     style: "киберпанк",
     emoji: "🌃",
     gradient: "linear-gradient(135deg,#00ff88,#0a2e1a 40%,#ff2d55 80%,#000 100%)",
-    src: "/magnum/images/gallery-42/42-cyber-01.jpg",
+    src: "/magnum/images/gallery-42/42-cyber-01-800.webp",
     desc: "Кемерово 2142 — шахтный копёр в неоне, дождь и жигули-хoвер с номером 42.",
     tag: "неон-кузбасс",
   },
@@ -133,7 +150,7 @@ const MOCK_POOL: Omit<Art42, "id">[] = [
     style: "мемфис",
     emoji: "🔷",
     gradient: "linear-gradient(135deg,#ffcc00,#ff2d55 30%,#00ff88 60%,#7c3aed 100%)",
-    src: "/magnum/images/gallery-42/mock-geo.jpg",
+    src: "/magnum/images/gallery-42/42-memphis-01-800.webp",
     desc: "Круги, треугольники и 42 как знак свободы.",
     tag: "паттерн",
   },
@@ -142,7 +159,7 @@ const MOCK_POOL: Omit<Art42, "id">[] = [
     style: "СССР",
     emoji: "🥤",
     gradient: "linear-gradient(135deg,#ff2d55,#7a0a1a 40%,#c9c9c9 100%)",
-    src: "/magnum/images/gallery-42/mock-soda.jpg",
+    src: "/magnum/images/gallery-42/42-agit-01.jpg",
     desc: "Газировка по 3 копейки — стакан гранёный.",
     tag: "автомат",
   },
@@ -151,7 +168,7 @@ const MOCK_POOL: Omit<Art42, "id">[] = [
     style: "Y2K",
     emoji: "🥚",
     gradient: "linear-gradient(135deg,#ff9ad5,#ffcc00 35%,#00ff88 70%,#5865f2 100%)",
-    src: "/magnum/images/gallery-42/mock-tama.jpg",
+    src: "/magnum/images/gallery-42/42-memphis-01.jpg",
     desc: "Корми братуху каждые 42 минуты.",
     tag: "тамагочи",
   },
@@ -763,6 +780,12 @@ const ARCHIVE_WAVE_2: Art42[] = [
 ];
 
 const FULL_ARCHIVE: Art42[] = [...ARCHIVE_42, ...ARCHIVE_WAVE_2];
+
+// Фикс: переписываем все фейковые src архива на реальные файлы, чтобы не было 404/эмодзи
+for (const a of ARCHIVE_42) a.src = REAL_BY_STYLE[a.style] ?? a.src;
+for (const a of ARCHIVE_WAVE_2) a.src = REAL_BY_STYLE[a.style] ?? a.src;
+for (const a of FULL_ARCHIVE) a.src = REAL_BY_STYLE[a.style] ?? a.src;
+
 
 
 // ─── DESIGN TOKENS — 180 строк реальных токенов (цвета, тени, радиусы) ──────

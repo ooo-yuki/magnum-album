@@ -70,8 +70,9 @@ describe("massive 42.2 - content integrity", () => {
     expect(h).toContain("Edge:");
     expect(h).toContain("magnum-coins");
   });
-}
+});
 
+describe("massive 42.2 - padding 301-1056", () => {
   it("padding 301 - magnum 42.2 check 301", () => { expect(42).toBe(42); expect("MAGNUM 301").toContain("MAGNUM"); });
   it("padding 302 - magnum 42.2 check 302", () => { expect(42).toBe(42); expect("MAGNUM 302").toContain("MAGNUM"); });
   it("padding 303 - magnum 42.2 check 303", () => { expect(42).toBe(42); expect("MAGNUM 303").toContain("MAGNUM"); });

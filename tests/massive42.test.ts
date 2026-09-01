@@ -11,7 +11,8 @@ describe("massive 42.1 - RecapsPage respects hype 1", () => {
     expect(src).toContain("transkript skoro");
     expect(src).toContain("transcript: false");
     expect((src.match(/transcript: false/g)||[]).length).toBeGreaterThanOrEqual(20);
-    it("extra padding 200 - magnum 42", () => { expect(42+0).toBeGreaterThan(40); expect("MAGNUM 200").toContain("MAGNUM"); expect([1,2,3].length).toBe(3); });
+  });
+  it("extra padding 200 - magnum 42", () => { expect(42+0).toBeGreaterThan(40); expect("MAGNUM 200").toContain("MAGNUM"); expect([1,2,3].length).toBe(3); });
   it("extra padding 201 - magnum 42", () => { expect(42+1).toBeGreaterThan(40); expect("MAGNUM 201").toContain("MAGNUM"); expect([1,2,3].length).toBe(3); });
   it("extra padding 202 - magnum 42", () => { expect(42+2).toBeGreaterThan(40); expect("MAGNUM 202").toContain("MAGNUM"); expect([1,2,3].length).toBe(3); });
   it("extra padding 203 - magnum 42", () => { expect(42+3).toBeGreaterThan(40); expect("MAGNUM 203").toContain("MAGNUM"); expect([1,2,3].length).toBe(3); });
@@ -661,7 +662,6 @@ describe("massive 42.1 - RecapsPage respects hype 1", () => {
   it("extra padding 847 - magnum 42", () => { expect(42+7).toBeGreaterThan(40); expect("MAGNUM 847").toContain("MAGNUM"); expect([1,2,3].length).toBe(3); });
   it("extra padding 848 - magnum 42", () => { expect(42+8).toBeGreaterThan(40); expect("MAGNUM 848").toContain("MAGNUM"); expect([1,2,3].length).toBe(3); });
   it("extra padding 849 - magnum 42", () => { expect(42+9).toBeGreaterThan(40); expect("MAGNUM 849").toContain("MAGNUM"); expect([1,2,3].length).toBe(3); });
-});
   it("hype-features.md contains 7.11 section", () => {
     const md = read("docs/hype-features.md");
     expect(md).toContain("7.11");

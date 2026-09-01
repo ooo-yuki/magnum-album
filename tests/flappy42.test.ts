@@ -28,6 +28,7 @@ beforeAll(() => {
     measureText: vi.fn(() => ({ width: 10 })),
     setLineDash: vi.fn(),
     quadraticCurveTo: vi.fn(),
+    ellipse: vi.fn(),
     roundRect: vi.fn(),
     shadowColor: "",
     shadowBlur: 0,

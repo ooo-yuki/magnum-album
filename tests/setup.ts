@@ -83,5 +83,9 @@ vi.mock("gsap", async () => {
 });
 
 vi.mock("gsap/ScrollTrigger", () => ({
-  ScrollTrigger: { register: vi.fn() },
+  default: { register: vi.fn(), getAll: vi.fn(() => []), refresh: vi.fn(), batch: vi.fn(), create: vi.fn() },
+  ScrollTrigger: { register: vi.fn(), getAll: vi.fn(() => []), refresh: vi.fn(), batch: vi.fn(), create: vi.fn() },
+  getAll: vi.fn(() => []),
+  refresh: vi.fn(),
+  batch: vi.fn(),
 }));

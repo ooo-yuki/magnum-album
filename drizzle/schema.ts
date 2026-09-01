@@ -70,3 +70,12 @@ export const magnumFrames = pgTable("magnum_frames", {
   verified: boolean("verified"),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+export const magnumCosmetics = pgTable("magnum_cosmetics", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => magnumUsers.id),
+  cosmeticId: text("cosmetic_id").notNull(),
+  slot: text("slot").notNull(),
+  equipped: boolean("equipped").default(false),
+  purchasedAt: timestamp("purchased_at").defaultNow(),
+});
