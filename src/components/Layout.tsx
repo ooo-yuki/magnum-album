@@ -25,9 +25,12 @@ export function Layout() {
   const drawerRef = useRef<HTMLDivElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
 
-  // close on route change
+  // close on route change + nav-indicator-gsap pulse
   useEffect(() => {
     setMenuOpen(false);
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const active = document.querySelector(`.${'active'}`) as HTMLElement | null;
+    if (active) gsap.fromTo(active, { scale: 0.96 }, { scale: 1, duration: 0.4, ease: "back.out(1.6)", overwrite: "auto" });
   }, [location.pathname]);
 
   // lock scroll when open

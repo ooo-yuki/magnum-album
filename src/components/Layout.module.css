@@ -55,6 +55,7 @@
 }
 
 /* nav polish v2 — active indicator anim */
+/* nav polish v3 — softer indicator + focus */
 .links a {
   position: relative;
   font-size: 0.8rem;
@@ -85,6 +86,7 @@
 .links a.active::after { transform: scaleX(1); opacity: 1; }
 .links a.active:hover::after { transform: scaleX(1); opacity: 1; }
 .links a:active { transform: scale(0.97); }
+.links a:focus-visible { outline: 2px solid rgba(255,45,85,0.5); outline-offset: 2px; background: rgba(255,255,255,0.06); }
 .links a:hover {
   color: var(--text);
   background: rgba(255, 255, 255, 0.06);
