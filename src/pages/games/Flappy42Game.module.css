@@ -19,3 +19,4 @@
 .modalCard { background: #12122a; border: 1px solid rgba(255,255,255,0.10); border-radius: 16px; padding: 2rem 1.5rem; max-width: 400px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 0.7rem; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
 .modalCard h2 { font-size: 1.4rem; }
 .presaveBtn { display: inline-block; padding: 0.75rem 1.5rem; border-radius: 100px; background: var(--accent); color: #fff; font-weight: 700; box-shadow: 0 0 20px rgba(255,45,85,0.4); }
+@keyframes floatUp { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-28px) scale(1.05); } }

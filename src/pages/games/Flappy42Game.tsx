@@ -36,6 +36,30 @@ const BIRD_X = 78;
 
 interface Pipe { x: number; gapY: number; scored: boolean; }
 interface Particle { x: number; y: number; vx: number; vy: number; life: number; maxLife: number; color: string; size: number; rot: number; vr: number; }
+interface FloatText { id: number; x: number; y: number; text: string; color: string; }
+
+// ── Difficulty presets — баланс 3 уровня (требование: контент-массив 50+ строк эквивалент) ──
+type DifficultyId = "norm" | "hard" | "turbo";
+interface DifficultyPreset { id: DifficultyId; label: string; emoji: string; gravity: number; flap: number; gap: number; speed: number; interval: number; coinMul: number; desc: string; }
+const DIFFICULTIES: DifficultyPreset[] = [
+  { id: "norm",  label: "НОРМ",  emoji: "🟢", gravity: 0.38, flap: -7.6, gap: 146, speed: 2.45, interval: 1550, coinMul: 1, desc: "Классика — 146px щель, 2.45 скор" },
+  { id: "hard",  label: "ХАРД",  emoji: "🟡", gravity: 0.42, flap: -7.9, gap: 132, speed: 2.9,  interval: 1380, coinMul: 1.5, desc: "132px щель, 2.9 скор — +50% монет" },
+  { id: "turbo", label: "ТУРБО", emoji: "🔴", gravity: 0.46, flap: -8.2, gap: 118, speed: 3.35, interval: 1220, coinMul: 2, desc: "118px щель, 3.35 скор — x2 монеты!" },
+];
+
+// ── Bird skins — 5 скинов с лором 42/MAGNUM ──
+interface BirdSkin { id: string; name: string; emoji: string; body: string; glow: string; wing: string; lore: string; }
+const BIRD_SKINS: BirdSkin[] = [
+  { id: "classic", name: "Классик 42", emoji: "🐦", body: "#ff2d55", glow: "#ff2d55", wing: "#cc1f3a", lore: "OG братуха — красный как логотип 42" },
+  { id: "magnum",  name: "MAGNUM Gold", emoji: "🦅", body: "#ffcc00", glow: "#ffcc00", wing: "#cc9900", lore: "Золотой орёл MAGNUM — сияет на пресейве" },
+  { id: "vpn",     name: "VPN Призрак", emoji: "👻", body: "#7af0ff", glow: "#00d4ff", wing: "#0099bb", lore: "Трек VPN — полупрозрачный неон" },
+  { id: "meduza",  name: "Медуза", emoji: "🪼", body: "#a78bfa", glow: "#a78bfa", wing: "#7c3aed", lore: "ТУСА МЕДУЗА 14.08 — фиолетовый вайб" },
+  { id: "void",    name: "Void 42", emoji: "🖤", body: "#1a1a2e", glow: "#ff0066", wing: "#2a0a1a", lore: "Тёмная материя 42 — чёрный с розовым ореолом" },
+];
+
+// ── Confetti palette + float lore ──
+const CONFETTI_COLORS = ["#ff2d55", "#ffcc00", "#00ff88", "#a78bfa", "#fff", "#ff6b8a", "#00d4ff", "#ffaa44"] as const;
+const SCORE_TITLES: Record<number, string> = { 7: "🔥 Разогрев!", 14: "⚡ На стиле!", 21: "💎 Полпути!", 28: "🚀 Турбо!", 35: "👑 Легенда!", 42: "🏆 MAGNUM!" };
 
 let ac: AudioContext | null = null;
 function ensureAC(): AudioContext | null {
@@ -112,12 +136,38 @@ function playWin() {
   bg.gain.setValueAtTime(0.22, t0); expFade(bg.gain, 0.001, t0 + 0.7);
   bo.start(t0); bo.stop(t0 + 0.75);
 }
+function playCoin() {
+  const ctx = ensureAC(); if (!ctx) return;
+  const o = ctx.createOscillator(); const g = ctx.createGain();
+  o.connect(g); g.connect(ctx.destination);
+  o.type = "sine"; o.frequency.value = 1200; rampTo(o.frequency, 1800, ctx.currentTime + 0.06);
+  g.gain.setValueAtTime(0.14, ctx.currentTime); expFade(g.gain, 0.001, ctx.currentTime + 0.18);
+  o.start(); o.stop(ctx.currentTime + 0.19);
+  const o2 = ctx.createOscillator(); const g2 = ctx.createGain();
+  o2.connect(g2); g2.connect(ctx.destination);
+  o2.type = "triangle"; o2.frequency.value = 2400;
+  g2.gain.setValueAtTime(0.05, ctx.currentTime); expFade(g2.gain, 0.001, ctx.currentTime + 0.1);
+  o2.start(ctx.currentTime + 0.03); o2.stop(ctx.currentTime + 0.12);
+}
+function playPause() {
+  const ctx = ensureAC(); if (!ctx) return;
+  const o = ctx.createOscillator(); const g = ctx.createGain();
+  o.connect(g); g.connect(ctx.destination);
+  o.type = "square"; o.frequency.value = 440; rampTo(o.frequency, 330, ctx.currentTime + 0.08);
+  g.gain.setValueAtTime(0.09, ctx.currentTime); expFade(g.gain, 0.001, ctx.currentTime + 0.12);
+  o.start(); o.stop(ctx.currentTime + 0.13);
+}
 
 export function Flappy42Game() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [state, setState] = useState<"menu" | "playing" | "win" | "dead">("menu");
+  const hudRef = useRef<HTMLDivElement>(null);
+  const [state, setState] = useState<"menu" | "playing" | "paused" | "win" | "dead">("menu");
   const [score, setScore] = useState(0);
+  const [diffId, setDiffId] = useState<DifficultyId>(() => { try { const v = localStorage.getItem("flappy42-diff") as DifficultyId | null; return v && DIFFICULTIES.some(d=>d.id===v) ? v : "norm"; } catch { return "norm"; } });
+  const [skinId, setSkinId] = useState<string>(() => { try { return localStorage.getItem("flappy42-skin") || "classic"; } catch { return "classic"; } });
   const [best, setBest] = useState(() => { try { return Number(localStorage.getItem("flappy42-best")) || 0; } catch { return 0; } });
+  const [floats, setFloats] = useState<FloatText[]>([]);
+  const floatIdRef = useRef(0);
 
   const birdRef = useRef({ y: 250, vy: 0, rot: 0 });
   const pipesRef = useRef<Pipe[]>([]);
@@ -129,8 +179,10 @@ export function Flappy42Game() {
   const trailRef = useRef<{ x: number; y: number; a: number }[]>([]);
   const stateRef = useRef(state);
   stateRef.current = state;
+  const diff = DIFFICULTIES.find(d=>d.id===diffId) ?? DIFFICULTIES[0]!;
+  const skin = BIRD_SKINS.find(s=>s.id===skinId) ?? BIRD_SKINS[0]!;
 
-  const spawnParticles = useCallback((x: number, y: number, n: number, colors: string[], spread = 1) => {
+  const spawnParticles = useCallback((x: number, y: number, n: number, colors: readonly string[] | string[], spread = 1) => {
     for (let i = 0; i < n; i++) {
       const ang = Math.random() * Math.PI * 2;
       const spd = (Math.random() * 4 + 1.5) * spread;
@@ -147,8 +199,36 @@ export function Flappy42Game() {
     }
   }, []);
 
+  const addFloat = useCallback((x: number, y: number, text: string, color = "#ffcc00") => {
+    const id = ++floatIdRef.current;
+    setFloats(f => [...f, { id, x, y, text, color }]);
+    setTimeout(() => setFloats(f => f.filter(fl => fl.id !== id)), 900);
+  }, []);
+
+  const submitScore = useCallback(async (sc: number) => {
+    try {
+      const coins = Math.round(sc * 4 * diff.coinMul);
+      await fetch("/magnum/api/games/submit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ game: "flappy", score: sc, difficulty: diffId, skin: skinId, coins }) });
+      if (sc >= 7) playCoin();
+    } catch {}
+  }, [diff.coinMul, diffId, skinId]);
+
+  const doScorePop = useCallback(() => {
+    if (prefersReducedMotion() || !hudRef.current) return;
+    const el = hudRef.current.querySelector<HTMLElement>("[data-score]");
+    if (!el) return;
+    gsap.killTweensOf(el);
+    gsap.fromTo(el, { scale: 1 }, { scale: 1.22, duration: 0.14, ease: "back.out(2)", yoyo: true, repeat: 1, overwrite: true });
+  }, []);
+
+  const togglePause = useCallback(() => {
+    if (stateRef.current === "playing") { setState("paused"); stateRef.current = "paused"; playPause(); try { navigator.vibrate?.(12); } catch {} }
+    else if (stateRef.current === "paused") { setState("playing"); stateRef.current = "playing"; lastPipeRef.current = performance.now(); playFlap(); }
+  }, []);
+
   const flap = useCallback(() => {
     if (stateRef.current === "dead" || stateRef.current === "win") return;
+    if (stateRef.current === "paused") { togglePause(); return; }
     if (stateRef.current === "menu") {
       birdRef.current = { y: 250, vy: 0, rot: 0 };
       pipesRef.current = [];
@@ -157,25 +237,30 @@ export function Flappy42Game() {
       scoreRef.current = 0;
       lastPipeRef.current = performance.now();
       shakeRef.current = 0;
+      setFloats([]);
       setScore(0);
       setState("playing");
       stateRef.current = "playing";
     }
-    birdRef.current.vy = FLAP_FORCE;
-    // small screen nudge on flap
+    birdRef.current.vy = diff.flap;
     shakeRef.current = Math.max(shakeRef.current, 1.2);
     spawnParticles(BIRD_X - 8, birdRef.current.y + 6, 3, ["rgba(255,255,255,0.9)", "rgba(160,220,255,0.8)"], 0.5);
     playFlap();
-  }, [spawnParticles]);
+    try { if (scoreRef.current > 0 && scoreRef.current % 5 === 0) navigator.vibrate?.(8); } catch {}
+  }, [spawnParticles, diff.flap, togglePause]);
 
-  // keyboard + pointer
+  // keyboard — Space/W/ArrowUp flap, P pause, R restart
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.code === "Space" || e.code === "ArrowUp" || e.code === "KeyW") { e.preventDefault(); flap(); }
+      if (e.code === "KeyP" && stateRef.current === "playing") { e.preventDefault(); togglePause(); }
+      if (e.code === "Escape" && stateRef.current === "paused") { e.preventDefault(); togglePause(); }
       if (e.code === "KeyR" && (stateRef.current === "dead" || stateRef.current === "win")) flap();
     };
     window.addEventListener("keydown", onKey);
-  
+    return () => window.removeEventListener("keydown", onKey);
+  }, [flap, togglePause]);
+
   // GSAP spec: y24 stagger 0.12 ScrollTrigger batch + reduced-motion gate + gsap.context cleanup + hover y:-4 RGB glow
   useEffect(() => {
     const root: HTMLElement | null = document.querySelector<HTMLElement>("[data-gsap-root]") || (document.body as unknown as HTMLElement);
@@ -204,8 +289,9 @@ export function Flappy42Game() {
     return () => ctx.revert();
   }, []);
 
-  return () => window.removeEventListener("keydown", onKey);
-  }, [flap]);
+  // persist diff/skin
+  useEffect(() => { try { localStorage.setItem("flappy42-diff", diffId); } catch {} }, [diffId]);
+  useEffect(() => { try { localStorage.setItem("flappy42-skin", skinId); } catch {} }, [skinId]);
 
   // canvas loop
   useEffect(() => {
@@ -268,42 +354,41 @@ export function Flappy42Game() {
       ctx.fillRect(0, H * 0.48, w, 40);
 
       if (stateRef.current === "playing") {
-        // Physics — balanced gravity + clamp
-        bird.vy += GRAVITY;
+        // Physics — difficulty-aware gravity + clamp
+        bird.vy += diff.gravity;
         if (bird.vy > MAX_FALL) bird.vy = MAX_FALL;
         bird.y += bird.vy;
         bird.rot = Math.max(-28, Math.min(68, bird.vy * 3.5));
-        // subtle air drag when rising
         if (bird.vy < 0) bird.vy *= 0.995;
 
-        // trail
         trailRef.current.push({ x: BIRD_X, y: bird.y, a: 1 });
         if (trailRef.current.length > 7) trailRef.current.shift();
         for (const t of trailRef.current) t.a *= 0.92;
 
-        // Spawn pipes — slightly harder over time
-        const curInterval = Math.max(1200, PIPE_INTERVAL - scoreRef.current * 12);
+        const curInterval = Math.max(980, diff.interval - scoreRef.current * 10);
+        const curGap = diff.gap;
         if (now - lastPipeRef.current > curInterval) {
-          const minGap = 82, maxGap = H - 56 - PIPE_GAP;
+          const minGap = 78, maxGap = H - 56 - curGap;
           const gapY = minGap + Math.random() * (maxGap - minGap);
           pipes.push({ x: w + 10, gapY, scored: false });
           lastPipeRef.current = now;
         }
 
-        // Move pipes
-        for (const p of pipes) p.x -= PIPE_SPEED;
+        for (const p of pipes) p.x -= diff.speed;
         while (pipes.length > 0 && pipes[0]!.x < -PIPE_W - 16) pipes.shift();
 
-        // Score — pipe passed bird
         for (const p of pipes) {
           if (!p.scored && p.x + PIPE_W < BIRD_X - BIRD_R) {
             p.scored = true;
             scoreRef.current++;
             setScore(scoreRef.current);
-            // pitch rises slightly every 7 points
             playScore();
-            spawnParticles(BIRD_X + 10, bird.y, 7, ["#ff2d55", "#ffcc00", "#00ff88", "#7af"], 1);
-            // milestone shake
+            doScorePop();
+            addFloat(BIRD_X + 14, bird.y - 18, "+1", scoreRef.current % 7 === 0 ? "#ffcc00" : "#fff");
+            const title = SCORE_TITLES[scoreRef.current];
+            if (title) addFloat(w / 2, 84, title, "#ffcc00");
+            spawnParticles(BIRD_X + 10, bird.y, 7, CONFETTI_COLORS, 1);
+            try { navigator.vibrate?.(10); } catch {}
             if (scoreRef.current % 7 === 0) shakeRef.current = Math.max(shakeRef.current, 2.5);
             else shakeRef.current = Math.max(shakeRef.current, 1);
 
@@ -312,10 +397,12 @@ export function Flappy42Game() {
               const nb = Math.max(best, scoreRef.current); setBest(nb);
               try { localStorage.setItem("flappy42-best", String(nb)); } catch {}
               playWin();
+              void submitScore(scoreRef.current);
+              try { navigator.vibrate?.([30, 40, 60]); } catch {}
               shakeRef.current = 9;
-              // win burst
-              spawnParticles(BIRD_X, bird.y, 28, ["#ffcc00", "#ff2d55", "#00ff88", "#a78bfa", "#fff"], 1.6);
-              spawnParticles(w / 2, H / 2, 22, ["#ffcc00", "#fff"], 1.2);
+              spawnParticles(BIRD_X, bird.y, 32, CONFETTI_COLORS, 1.7);
+              spawnParticles(w / 2, H / 2, 26, CONFETTI_COLORS, 1.3);
+              addFloat(w / 2, H / 2 - 10, "42 ТРУБЫ! +" + Math.round(WIN_SCORE * 4 * diff.coinMul) + " монет", "#ffcc00");
             }
           }
         }
@@ -342,8 +429,9 @@ export function Flappy42Game() {
             }
           }
         }
+      } else if (stateRef.current === "paused") {
+        // frozen — keep bird pos, no physics
       } else {
-        // idle float in menu/dead/win — gentle sine
         bird.y = 250 + Math.sin(now * 0.0026) * 16;
         bird.rot = Math.sin(now * 0.0032) * 9;
         trailRef.current = [];
@@ -365,7 +453,7 @@ export function Flappy42Game() {
         ctx.fillStyle = "rgba(255,255,255,0.08)";
         ctx.fillRect(p.x - 5, topH - 18, PIPE_W + 10, 2);
         // bottom
-        const botY = p.gapY + PIPE_GAP;
+        const botY = p.gapY + diff.gap;
         ctx.fillStyle = grad;
         ctx.fillRect(p.x, botY, PIPE_W, H - botY);
         ctx.fillStyle = "#2f7a4a";
@@ -379,7 +467,7 @@ export function Flappy42Game() {
         ctx.strokeRect(p.x + 0.5, 0, PIPE_W - 1, topH);
         ctx.strokeRect(p.x + 0.5, botY, PIPE_W - 1, H - botY);
         // 42 badge in gap — pill
-        const badgeY = topH + PIPE_GAP / 2;
+        const badgeY = topH + diff.gap / 2;
         const passed = p.scored;
         ctx.fillStyle = passed ? "rgba(0,255,136,0.18)" : "rgba(255,204,0,0.14)";
         ctx.beginPath();
@@ -404,15 +492,13 @@ export function Flappy42Game() {
       }
       ctx.globalAlpha = 1;
 
-      // Draw bird — layered
+      // Draw bird — layered (skin-aware)
       ctx.save();
       ctx.translate(BIRD_X, bird.y);
       ctx.rotate((bird.rot * Math.PI) / 180);
-      // wing flap hint
       const wingY = Math.sin(now * 0.02) * 2;
-      // body glow
-      ctx.shadowColor = stateRef.current === "win" ? "#ffcc00" : "#ff2d55"; ctx.shadowBlur = stateRef.current === "win" ? 20 : 14;
-      ctx.fillStyle = stateRef.current === "win" ? "#ffcc33" : "#ff2d55";
+      ctx.shadowColor = stateRef.current === "win" ? "#ffcc00" : skin.glow; ctx.shadowBlur = stateRef.current === "win" ? 20 : 14;
+      ctx.fillStyle = stateRef.current === "win" ? "#ffcc33" : skin.body;
       ctx.beginPath(); ctx.arc(0, 0, BIRD_R, 0, Math.PI * 2); ctx.fill();
       ctx.shadowBlur = 0;
       // inner highlight
@@ -423,7 +509,7 @@ export function Flappy42Game() {
       // wing
       ctx.fillStyle = "rgba(0,0,0,0.16)";
       ctx.beginPath(); ctx.ellipse(-5, 4 + wingY, 8, 5, -0.3, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = "#cc1f3a";
+      ctx.fillStyle = skin.wing;
       ctx.beginPath(); ctx.ellipse(-5, 3 + wingY, 7, 4, -0.3, 0, Math.PI * 2); ctx.fill();
       // eye
       ctx.fillStyle = "#fff";
@@ -475,27 +561,54 @@ export function Flappy42Game() {
     };
     animRef.current = requestAnimationFrame(draw);
     return () => { cancelAnimationFrame(animRef.current); window.removeEventListener("resize", resize); };
-  }, [best, spawnParticles]);
+  }, [best, spawnParticles, diff.gravity, diff.speed, diff.interval, diff.gap, diff.coinMul, skin.body, skin.glow, skin.wing, addFloat, doScorePop, submitScore]);
 
   return (
-    <div className={styles.page}>
+    <div className={styles.page} data-gsap-root>
       <h1>FLAPPY 42</h1>
-      <p className={styles.sub}>Тапай или пробел — пролети {WIN_SCORE} труб, забери пресейв MAGNUM!</p>
+      <p className={styles.sub}>Тапай/пробел/Space — пролети {WIN_SCORE} труб · P пауза · {diff.label} {diff.emoji} · {skin.emoji} {skin.name}</p>
 
-      <div className={styles.hud}>
-        <div className={styles.stat}><span>Очки</span><strong>{score}</strong></div>
+      <div className={styles.hud} ref={hudRef}>
+        <div className={styles.stat}><span>Очки</span><strong data-score>{score}</strong></div>
         <div className={styles.stat}><span>Цель</span><strong>{WIN_SCORE}</strong></div>
         <div className={styles.stat}><span>Рекорд</span><strong>{best}</strong></div>
+        <div className={styles.stat}><span>Множитель</span><strong>x{diff.coinMul}</strong></div>
       </div>
 
-      <div className={styles.canvasWrap}>
-        <canvas ref={canvasRef} className={styles.canvas} onPointerDown={(e) => { e.preventDefault(); flap(); }} />
+      <div className={styles.canvasWrap} style={{ position: "relative" }}>
+        <canvas ref={canvasRef} className={styles.canvas} onPointerDown={(e) => { e.preventDefault(); flap(); }} onTouchStart={(e) => { e.preventDefault(); flap(); }} />
+        {floats.map(f => (
+          <span key={f.id} style={{ position: "absolute", left: f.x, top: f.y, color: f.color, fontWeight: 900, fontSize: f.text.includes("42") ? "13px" : "11px", textShadow: "0 1px 6px rgba(0,0,0,0.7)", pointerEvents: "none", animation: "floatUp 0.9s ease-out forwards" }}>{f.text}</span>
+        ))}
+        {state === "paused" && (
+          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.52)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10 }}>
+            <span style={{ fontSize: 28 }}>⏸️ Пауза</span><span style={{ fontSize: 12, color: "rgba(255,255,255,0.6)" }}>P / Esc — продолжить · тап/пробел тоже</span>
+            <button className={styles.playBtn} onClick={togglePause}>Продолжить</button>
+          </div>
+        )}
       </div>
 
       {state === "menu" && (
         <div className={styles.menu}>
-          <p className={styles.hint}>Гравитация 0.38 · флэп −7.6 · 42 трубы до победы. На телефоне — тап, на ПК — пробел/W/↑.</p>
-          <button className={styles.playBtn} onClick={flap}>Играть!</button>
+          <p className={styles.hint}>{diff.desc} · {skin.lore} · На телефоне — тап/свайп вверх, на ПК — пробел/W/↑, P — пауза.</p>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
+            {DIFFICULTIES.map(d => (
+              <button key={d.id} onClick={() => setDiffId(d.id)} onMouseEnter={(e)=>hoverIn(e.currentTarget)} onMouseLeave={(e)=>hoverOut(e.currentTarget)}
+                style={{ padding: "0.45rem 0.8rem", borderRadius: 100, fontWeight: 800, fontSize: 12, cursor: "pointer", border: d.id===diffId ? "1px solid rgba(255,45,85,0.5)" : "1px solid rgba(255,255,255,0.12)", background: d.id===diffId ? "rgba(255,45,85,0.18)" : "rgba(255,255,255,0.06)", color: d.id===diffId ? "#fff" : "rgba(255,255,255,0.7)" }}>
+                {d.emoji} {d.label} {d.id===diffId ? "✓" : ""}<span data-glow style={{ display: "none" }} />
+              </button>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "center" }}>
+            {BIRD_SKINS.map(s => (
+              <button key={s.id} onClick={() => setSkinId(s.id)} title={s.lore} onMouseEnter={(e)=>hoverIn(e.currentTarget)} onMouseLeave={(e)=>hoverOut(e.currentTarget)}
+                style={{ width: 44, height: 44, borderRadius: 12, fontSize: 18, cursor: "pointer", border: s.id===skinId ? "2px solid " + s.glow : "1px solid rgba(255,255,255,0.1)", background: s.body + "22", boxShadow: s.id===skinId ? "0 0 12px " + s.glow + "66" : "none" }}>
+                {s.emoji}<span data-glow style={{ display: "none" }} />
+              </button>
+            ))}
+          </div>
+          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>{skin.emoji} {skin.name} — {skin.lore}</span>
+          <button className={styles.playBtn} onClick={flap} onMouseEnter={(e)=>hoverIn(e.currentTarget)} onMouseLeave={(e)=>hoverOut(e.currentTarget)}>Играть {diff.emoji}!<span data-glow style={{ display: "none" }} /></button>
           <Link to="/magnum/games" className={styles.back}>← К играм</Link>
         </div>
       )}
@@ -514,7 +627,7 @@ export function Flappy42Game() {
             <p>{score} очков — ты братуха-пилот высшего класса!</p>
             <p className={styles.hint} style={{ maxWidth: 320 }}>Сохрани MAGNUM, чтобы не пропустить дроп — один клик и альбом у тебя в библиотеке.</p>
             <a href={PRESAVE} target="_blank" rel="noreferrer" className={styles.presaveBtn}>Пресейв MAGNUM →</a>
-            <button className={styles.restartBtn} onClick={() => { birdRef.current = { y: 250, vy: 0, rot: 0 }; pipesRef.current = []; particlesRef.current = []; trailRef.current = []; scoreRef.current = 0; shakeRef.current = 0; setScore(0); setState("playing"); stateRef.current = "playing"; lastPipeRef.current = performance.now(); }}>Ещё раз</button>
+            <button className={styles.restartBtn} onClick={() => { birdRef.current = { y: 250, vy: 0, rot: 0 }; pipesRef.current = []; particlesRef.current = []; trailRef.current = []; scoreRef.current = 0; shakeRef.current = 0; setScore(0); setState("playing"); stateRef.current = "playing"; lastPipeRef.current = performance.now(); setFloats([]); }}>Ещё раз</button>
             <Link to="/magnum/games" className={styles.backInline}>← К играм</Link>
           </div>
         </div>
@@ -525,7 +638,7 @@ export function Flappy42Game() {
           <div className={styles.modalCard}>
             <h2>💥 Упал!</h2>
             <p>{score} / {WIN_SCORE} • Рекорд {best}</p>
-            <button className={styles.playBtn} onClick={() => { birdRef.current = { y: 250, vy: 0, rot: 0 }; pipesRef.current = []; particlesRef.current = []; trailRef.current = []; scoreRef.current = 0; shakeRef.current = 0; setScore(0); setState("playing"); stateRef.current = "playing"; lastPipeRef.current = performance.now(); }}>Ещё попытка</button>
+            <button className={styles.playBtn} onClick={() => { birdRef.current = { y: 250, vy: 0, rot: 0 }; pipesRef.current = []; particlesRef.current = []; trailRef.current = []; scoreRef.current = 0; shakeRef.current = 0; setScore(0); setState("playing"); stateRef.current = "playing"; lastPipeRef.current = performance.now(); setFloats([]); }}>Ещё попытка</button>
             <Link to="/magnum/games" className={styles.backInline}>← К играм</Link>
           </div>
         </div>
