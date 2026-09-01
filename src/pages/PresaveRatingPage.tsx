@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Link } from "react-router-dom";
+import { SocialHook } from "../components/SocialHook";
 import styles from "./PresaveRatingPage.module.css";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -552,6 +553,10 @@ export function PresaveRatingPage() {
         <a className={styles.presaveLink} href="https://music.thefence.me/psmagnum" target="_blank" rel="noopener noreferrer">Поставить пресейв на BandLink →</a>
         <span className={styles.verifyHint}>GET /magnum/api/frame/status · /magnum/api/eco/leaderboard · /magnum/api/ideas — live · {bandlink?.ok ? "BandLink OK" : bandlink ? "BandLink OG fallback" : "BandLink…"} · 1080×1080 Web Share → PNG</span>
       </div>
+
+      <SocialHook
+        presavers={ratingRows.slice(0, 7).map((r) => ({ username: r.username, avatar: r.skinId, verified: r.verified }))}
+      />
 
       <div className={styles.controls}>
         <input className={styles.search} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Поиск по нику…" aria-label="Поиск по нику" />
