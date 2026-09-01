@@ -170,7 +170,7 @@ export function AiBot() {
           <div className={styles.list} ref={listRef}>
             {messages.map((m, i) => (
               <div key={i} className={m.role === "bot" ? styles.rowBot : styles.rowUser}>
-                {m.image && <img src={m.image} alt="скрин пользователя" className={styles.userImg} />}
+                {m.image && <img src={m.image} alt="скрин пользователя" className={styles.userImg} loading="lazy" decoding="async" />}
                 <div className={m.role === "bot" ? styles.bubbleBot : styles.bubbleUser}>{m.text}</div>
               </div>
             ))}
@@ -179,7 +179,7 @@ export function AiBot() {
 
           {pendingImage && (
             <div className={styles.pending}>
-              <img src={pendingImage} alt="скрин для отправки" className={styles.pendingImg} />
+              <img src={pendingImage} alt="скрин для отправки" className={styles.pendingImg} loading="lazy" decoding="async" />
               <button className={styles.pendingRemove} onClick={() => setPendingImage(null)} aria-label="Убрать скрин">
                 ✕
               </button>
