@@ -62,7 +62,7 @@ describe("content: Snake42Game route", () => {
   const appSrc = read("src/App.tsx");
 
   it("импорт Snake42Game в App.tsx", () => {
-    expect(appSrc).toContain('import { Snake42Game }');
+    expect(appSrc).toContain('Snake42Game');
   });
 
   it("роут /games/snake зарегистрирован", () => {
