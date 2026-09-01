@@ -815,6 +815,53 @@ async function handleEcoSubmit(req: Request): Promise<Response> {
   }
 }
 
+// ---- Eco Rating 0-10 (magnum_eco_ratings) ----
+export type EcoTier = { rating: number; tier: string; minScore: number; maxScore: number; color: string; badge: string; desc: string };
+export const ECO_TIERS: EcoTier[] = [
+  { rating: 0, tier: "Токсик", minScore: -1000, maxScore: -400, color: "#ff1a1a", badge: "☠️", desc: "Томь плачет" },
+  { rating: 1, tier: "Дымный", minScore: -399, maxScore: -250, color: "#ff3b30", badge: "🏭", desc: "Коптим Кузбасс" },
+  { rating: 2, tier: "Пассажир", minScore: -249, maxScore: -100, color: "#ff6a00", badge: "🚌", desc: "Крузак бати" },
+  { rating: 3, tier: "Нормис", minScore: -99, maxScore: 0, color: "#8a8a8a", badge: "😐", desc: "Батилки впереди" },
+  { rating: 4, tier: "Стажёр", minScore: 1, maxScore: 50, color: "#6aa84f", badge: "🌱", desc: "Первые ростки" },
+  { rating: 5, tier: "Братуха", minScore: 51, maxScore: 110, color: "#00c951", badge: "🤝", desc: "Крепкий братуха" },
+  { rating: 6, tier: "Эко-воин", minScore: 111, maxScore: 170, color: "#00d4a0", badge: "🛡️", desc: "Чистишь Томь" },
+  { rating: 7, tier: "Хранитель Томи", minScore: 171, maxScore: 230, color: "#00b8ff", badge: "🌊", desc: "Томь чище" },
+  { rating: 8, tier: "Легенда бора", minScore: 231, maxScore: 290, color: "#7c3aed", badge: "🌲", desc: "Бор гордится" },
+  { rating: 9, tier: "ЭкоЛегенда", minScore: 291, maxScore: 336, color: "#ff2d55", badge: "🌿👑", desc: "Дух Кузбасса" },
+  { rating: 10, tier: "42 Абсолют", minScore: 337, maxScore: 1000, color: "#ffd700", badge: "💎42", desc: "42/42 сияние" },
+];
+export const ECO_RATING_LABELS: string[] = ECO_TIERS.map(t => `${t.rating} — ${t.tier}`);
+export function calcEcoRating(score: number): EcoTier { const s=Math.round(score); for(const t of ECO_TIERS) if(s>=t.minScore&&s<=t.maxScore) return t; return s<0?ECO_TIERS[0]!:ECO_TIERS[ECO_TIERS.length-1]!; }
+function validateEcoScore(v: unknown): number | null { const n=Number(v); if(!Number.isFinite(n)) return null; const r=Math.round(n); if(r<-1000||r>1000) return null; return r; }
+function validateEcoAnswers(v: unknown): number[] | null { if(!Array.isArray(v)||v.length>20) return null; const o:number[]=[]; for(const x of v){const n=Number(x); if(!Number.isInteger(n)||n<0||n>10) return null; o.push(n);} return o; }
+async function handleEcoTiers(): Promise<Response> { return Response.json({ tiers: ECO_TIERS, labels: ECO_RATING_LABELS, count: ECO_TIERS.length }); }
+async function handleEcoRatingSubmit(req: Request): Promise<Response> {
+  const token=extractToken(req); let user:{id:number;username:string}|null=null; if(token) try{user=await getUserByToken(token);}catch{}
+  let body:{score?:unknown;answers?:unknown;player?:unknown}; try{body=(await req.json()) as typeof body;}catch{return Response.json({error:"Invalid JSON"},{status:400});}
+  const score=validateEcoScore(body.score); if(score===null) return Response.json({error:"score -1000..1000"},{status:400});
+  const answers=body.answers!==undefined?validateEcoAnswers(body.answers):[]; if(body.answers!==undefined&&answers===null) return Response.json({error:"answers 0..10 max20"},{status:400});
+  const tier=calcEcoRating(score); const player=user?.username??(typeof body.player==="string"?body.player.trim().slice(0,32):null);
+  if(!user&&(!player||player.length<2)) return Response.json({error:"player 2..32 or auth"},{status:400});
+  const ip=getClientIp(req); if(!checkRateLimit(`eco:rating:${user?.id??ip}`,10,60_000)) return Response.json({error:"rate limited"},{status:429});
+  try{ const sql=getSql();
+    await sql`CREATE TABLE IF NOT EXISTS magnum_eco_ratings (id serial PRIMARY KEY, user_id integer REFERENCES magnum_users(id) ON DELETE SET NULL, player text, score integer NOT NULL, rating integer NOT NULL, tier text NOT NULL, answers jsonb DEFAULT '[]'::jsonb NOT NULL, created_at timestamp DEFAULT now() NOT NULL)`;
+    const rows=await sql`INSERT INTO magnum_eco_ratings (user_id,player,score,rating,tier,answers) VALUES (${user?.id??null},${player},${score},${tier.rating},${tier.tier},${JSON.stringify(answers??[])}::jsonb) RETURNING id,score,rating,tier,created_at`;
+    let coinsBonus=0; if(user&&tier.rating>=7){ coinsBonus=tier.rating===10?142:tier.rating>=9?84:42;
+      await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${user.id},1000) ON CONFLICT (user_id) DO NOTHING`;
+      await sql`UPDATE magnum_coins SET balance=balance+${coinsBonus} WHERE user_id=${user.id}`;
+      await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${coinsBonus},'eco_rating',${JSON.stringify({rating:tier.rating,tier:tier.tier,score})}::jsonb)`; }
+    return Response.json({ok:true,entry:rows[0],tier,coinsBonus},{status:201});
+  }catch(e){console.error("[eco rating submit] failed",e); return Response.json({error:"db error"},{status:500});}
+}
+async function handleEcoRatingTop(): Promise<Response> {
+  try{ const sql=getSql();
+    await sql`CREATE TABLE IF NOT EXISTS magnum_eco_ratings (id serial PRIMARY KEY, user_id integer REFERENCES magnum_users(id) ON DELETE SET NULL, player text, score integer NOT NULL, rating integer NOT NULL, tier text NOT NULL, answers jsonb DEFAULT '[]'::jsonb NOT NULL, created_at timestamp DEFAULT now() NOT NULL)`;
+    const rows=await sql`SELECT COALESCE(u.username,r.player,'Братуха') as player,r.score,r.rating,r.tier,r.created_at,s.skin_id as avatar FROM magnum_eco_ratings r LEFT JOIN magnum_users u ON u.id=r.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id=r.user_id AND s.equipped=true ORDER BY r.rating DESC,r.score DESC,r.created_at ASC LIMIT 30`;
+    const top=rows.map((x:unknown)=>{const r=x as {player:string;score:number;rating:number;tier:string;created_at:string;avatar:string|null}; return {player:String(r.player),username:String(r.player),score:Number(r.score),rating:Number(r.rating),tier:String(r.tier),created_at:r.created_at,avatar:r.avatar};});
+    return Response.json({top,count:top.length,tiers:ECO_TIERS});
+  }catch(e){console.error("[eco rating top] failed",e); return Response.json({error:"db error"},{status:500});}
+}
+
 // ---- Mining handlers ----
 const UPGRADES_DEF: Record<string, { baseCost: number; power: number; auto: number }> = {
   shovel: { baseCost: 42, power: 1, auto: 0 },
@@ -998,6 +1045,71 @@ async function handleMiningVaultClaim(req: Request): Promise<Response> {
     const balance=Number((after[0] as {balance:number}).balance);
     return Response.json({ ok:true, vaultId:raw, price:item.price, reward:item.reward, balance });
   } catch(e){ console.error("[vault claim] failed",e); return Response.json({ error:"db error" },{status:500}); }
+}
+
+// ---- Mining exchange: руда → монеты 10:1 + лог magnum_mining_exchanges ----
+const MINING_EXCHANGE_RATE = 10;
+async function handleMiningExchange(req: Request): Promise<Response> {
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
+  const user=await getUserByToken(token); if(!user) return Response.json({error:"unauthorized"},{status:401});
+  const ip=getClientIp(req); if(!checkRateLimit(`mining:exchange:${user.id}:${ip}`,8,60_000)) return Response.json({error:"rate limited"},{status:429});
+  let body:{amount?:unknown}; try{ body=(await req.json()) as typeof body;}catch{ return Response.json({error:"Invalid JSON"},{status:400});}
+  const amount=Number(body.amount); if(!Number.isInteger(amount)||amount<=0) return Response.json({error:"amount positive integer required"},{status:400});
+  if(amount<10) return Response.json({error:"min 10 руды"},{status:400}); if(amount>10000) return Response.json({error:"max 10000"},{status:400});
+  if(amount%MINING_EXCHANGE_RATE!==0) return Response.json({error:`amount must be multiple of ${MINING_EXCHANGE_RATE}`},{status:400});
+  const coinsEarned=Math.floor(amount/MINING_EXCHANGE_RATE);
+  try{
+    const sql=getSql();
+    await sql`CREATE TABLE IF NOT EXISTS magnum_mining_exchanges (id serial PRIMARY KEY, user_id integer REFERENCES magnum_users(id) NOT NULL, mining_amount integer NOT NULL, coins_amount integer NOT NULL, rate integer NOT NULL, created_at timestamp DEFAULT now() NOT NULL)`;
+    const m=await ensureMiningRow(user.id); if(m.balance<amount) return Response.json({error:"not enough руды",balance:m.balance,required:amount},{status:402});
+    await sql`UPDATE magnum_mining SET balance=balance-${amount}, updated_at=now() WHERE user_id=${user.id}`;
+    await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${user.id},1000) ON CONFLICT (user_id) DO NOTHING`;
+    const upd=await sql`UPDATE magnum_coins SET balance=balance+${coinsEarned} WHERE user_id=${user.id} RETURNING balance`;
+    const bal=Number((upd[0] as {balance:number}).balance);
+    await sql`INSERT INTO magnum_mining_exchanges (user_id,mining_amount,coins_amount,rate) VALUES (${user.id},${amount},${coinsEarned},${MINING_EXCHANGE_RATE})`;
+    await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${coinsEarned},'mining_exchange',${JSON.stringify({ mining:amount, coins:coinsEarned, rate:MINING_EXCHANGE_RATE })}::jsonb)`;
+    const after=await sql`SELECT balance FROM magnum_mining WHERE user_id=${user.id} LIMIT 1`;
+    const miningBal=Number((after[0] as {balance:number}).balance);
+    return Response.json({ok:true,miningDeducted:amount,coinsEarned,rate:MINING_EXCHANGE_RATE,balance:bal,miningBalance:miningBal});
+  }catch(e){ console.error("[mining exchange] failed",e); return Response.json({error:"db error"},{status:500}); }
+}
+
+// ---- Idea comments (Neon magnum_idea_comments) — без localStorage ----
+function validateCommentBody(v: unknown): string | null {
+  if(typeof v!=="string") return null; const s=v.trim(); if(s.length<3||s.length>400) return null; if(s.includes("<")||s.includes(">")) return null; return s;
+}
+async function handleIdeaCommentsGet(req: Request, idStr: string): Promise<Response> {
+  const id=Number(idStr); if(!Number.isInteger(id)||id<=0) return Response.json({error:"invalid id"},{status:400});
+  try{
+    const sql=getSql();
+    await sql`CREATE TABLE IF NOT EXISTS magnum_idea_comments (id serial PRIMARY KEY, idea_id integer REFERENCES magnum_ideas(id) ON DELETE CASCADE NOT NULL, user_id integer REFERENCES magnum_users(id) NOT NULL, body text NOT NULL, created_at timestamp DEFAULT now() NOT NULL)`;
+    const rows=await sql`SELECT c.id, c.body, c.created_at, u.username FROM magnum_idea_comments c JOIN magnum_users u ON u.id=c.user_id WHERE c.idea_id=${id} ORDER BY c.created_at ASC LIMIT 50`;
+    return Response.json({ comments: rows.map((r:unknown)=>{ const x=r as {id:number;body:string;created_at:string;username:string}; return {id:Number(x.id),body:String(x.body),username:String(x.username),created_at:x.created_at}; }), count: rows.length, ideaId:id });
+  }catch(e){ console.error("[idea comments get] failed",e); return Response.json({error:"db error"},{status:500}); }
+}
+async function handleIdeaCommentPost(req: Request, idStr: string): Promise<Response> {
+  const id=Number(idStr); if(!Number.isInteger(id)||id<=0) return Response.json({error:"invalid id"},{status:400});
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
+  const user=await getUserByToken(token); if(!user) return Response.json({error:"unauthorized"},{status:401});
+  const ip=getClientIp(req); if(!checkRateLimit(`idea:comment:${user.id}:${ip}`,10,60_000)) return Response.json({error:"rate limited"},{status:429});
+  let body:{body?:unknown;text?:unknown;comment?:unknown}; try{ body=(await req.json()) as typeof body;}catch{ return Response.json({error:"Invalid JSON"},{status:400});}
+  const text=validateCommentBody(body.body??body.text??body.comment); if(!text) return Response.json({error:"body 3..400 chars, no <>"},{status:400});
+  try{
+    const sql=getSql();
+    await sql`CREATE TABLE IF NOT EXISTS magnum_idea_comments (id serial PRIMARY KEY, idea_id integer REFERENCES magnum_ideas(id) ON DELETE CASCADE NOT NULL, user_id integer REFERENCES magnum_users(id) NOT NULL, body text NOT NULL, created_at timestamp DEFAULT now() NOT NULL)`;
+    const ex=await sql`SELECT id FROM magnum_ideas WHERE id=${id} LIMIT 1`; if(ex.length===0) return Response.json({error:"idea not found"},{status:404});
+    const rows=await sql`INSERT INTO magnum_idea_comments (idea_id,user_id,body) VALUES (${id},${user.id},${text}) RETURNING id, body, created_at`;
+    return Response.json({ ok:true, comment:{ id:Number((rows[0] as {id:number}).id), body:String((rows[0] as {body:string}).body), username:user.username, created_at:(rows[0] as {created_at:string}).created_at } }, {status:201});
+  }catch(e){ console.error("[idea comment post] failed",e); return Response.json({error:"db error"},{status:500}); }
+}
+
+// ---- Presave leaderboard (per-user stats, без localStorage) ----
+async function handlePresaveLeaderboard(): Promise<Response> {
+  try{
+    const sql=getSql();
+    const rows=await sql`SELECT COALESCE(u.username, 'Аноним') as username, count(*)::int as clicks, max(c.created_at) as last_click FROM magnum_presave_clicks c LEFT JOIN magnum_users u ON u.id=c.user_id GROUP BY u.username ORDER BY clicks DESC, last_click ASC LIMIT 20`;
+    return Response.json({ leaderboard: rows.map((r:unknown)=>{ const x=r as {username:string;clicks:number;last_click:string}; return {username:String(x.username),clicks:Number(x.clicks),lastClick:x.last_click}; }), count: rows.length });
+  }catch(e){ console.error("[presave leaderboard] failed",e); return Response.json({error:"db error"},{status:500}); }
 }
 
 // ---- Achievements + Profile (Neon magnum_user_achievements) ----
@@ -1530,6 +1642,9 @@ async function handleHealth(): Promise<Response> {
       sql`SELECT count(*)::int as c FROM magnum_referrals`,
       sql`SELECT count(*)::int as c FROM magnum_duel_history`,
     ]);
+    let exchangesCount = 0; let commentsCount = 0;
+    try { const r = await sql`SELECT count(*)::int as c FROM magnum_mining_exchanges`; exchangesCount = Number((r[0] as {c:number}).c); } catch {}
+    try { const r = await sql`SELECT count(*)::int as c FROM magnum_idea_comments`; commentsCount = Number((r[0] as {c:number}).c); } catch {}
     return Response.json({
       ok: true,
       ts: new Date().toISOString(),
@@ -1548,6 +1663,8 @@ async function handleHealth(): Promise<Response> {
         gameScores: Number((gameScores[0] as { c: number }).c),
         referrals: Number((referrals[0] as { c: number }).c),
         duels: Number((duels[0] as { c: number }).c),
+        exchanges: exchangesCount,
+        ideaComments: commentsCount,
       },
       uptime: process.uptime(),
     });
@@ -1671,6 +1788,16 @@ function wsRateOk(wsId: string): boolean {
   if (fresh.length >= 30) return false; // 30 clicks/sec max
   fresh.push(now);
   wsClickTimes.set(wsId, fresh);
+  return true;
+}
+const wsChatTimes = new Map<string, number[]>();
+function wsChatRateOk(wsId: string): boolean {
+  const now = Date.now();
+  const arr = wsChatTimes.get(wsId) ?? [];
+  const fresh = arr.filter(t => now - t < 3000);
+  if (fresh.length >= 5) return false; // 5 msg / 3s
+  fresh.push(now);
+  wsChatTimes.set(wsId, fresh);
   return true;
 }
 
@@ -1817,6 +1944,7 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/daily/claim" && req.method === "POST") return handleDailyClaim(req);
     if (url.pathname === "/magnum/api/presave/click" && req.method === "POST") return handlePresaveClick(req);
     if (url.pathname === "/magnum/api/presave/stats" && req.method === "GET") return handlePresaveStats(req);
+    if (url.pathname === "/magnum/api/presave/leaderboard" && req.method === "GET") return handlePresaveLeaderboard();
 
     // ideas
     if (url.pathname === "/magnum/api/ideas/bookmarks" && req.method === "GET") return handleIdeaBookmarksGet(req);
@@ -1832,6 +1960,16 @@ const server = Bun.serve<WSData>({
       const idStr = parts[4] ?? "";
       return handleIdeaBookmark(req, idStr);
     }
+    if (url.pathname.startsWith("/magnum/api/ideas/") && url.pathname.endsWith("/comments") && req.method === "GET") {
+      const parts = url.pathname.split("/");
+      const idStr = parts[4] ?? "";
+      return handleIdeaCommentsGet(req, idStr);
+    }
+    if (url.pathname.startsWith("/magnum/api/ideas/") && url.pathname.endsWith("/comments") && req.method === "POST") {
+      const parts = url.pathname.split("/");
+      const idStr = parts[4] ?? "";
+      return handleIdeaCommentPost(req, idStr);
+    }
 
     // frame status (rating)
     if (url.pathname === "/magnum/api/frame/status" && req.method === "GET") return handleFrameStatus(req);
@@ -1839,6 +1977,9 @@ const server = Bun.serve<WSData>({
     // eco leaderboard
     if (url.pathname === "/magnum/api/eco/leaderboard" && req.method === "GET") return handleEcoLeaderboard();
     if (url.pathname === "/magnum/api/eco/submit" && req.method === "POST") return handleEcoSubmit(req);
+    if (url.pathname === "/magnum/api/eco/tiers" && req.method === "GET") return handleEcoTiers();
+    if (url.pathname === "/magnum/api/eco/rating" && req.method === "GET") return handleEcoRatingTop();
+    if (url.pathname === "/magnum/api/eco/rating" && req.method === "POST") return handleEcoRatingSubmit(req);
 
     // shop
     if (url.pathname === "/magnum/api/shop/buy" && req.method === "POST") return handleShopBuy(req);
@@ -1861,6 +2002,7 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/mining/top" && req.method === "GET") return handleMiningTop();
     if (url.pathname === "/magnum/api/mining/vault" && req.method === "GET") return handleMiningVaultGet(req);
     if (url.pathname === "/magnum/api/mining/vault/claim" && req.method === "POST") return handleMiningVaultClaim(req);
+    if (url.pathname === "/magnum/api/mining/exchange" && req.method === "POST") return handleMiningExchange(req);
 
     // achievements + profile
     if (url.pathname === "/magnum/api/achievements/catalog" && req.method === "GET") return handleAchCatalog();
@@ -1931,13 +2073,20 @@ const server = Bun.serve<WSData>({
       } catch {
         return;
       }
-      const msg = parsed as { type?: string; username?: string };
+      const msg = parsed as { type?: string; username?: string; text?: string; message?: string };
       if (msg.type === "click") {
         if (room.state !== "playing") return;
         if (!wsRateOk(ws.data.id)) return; // anti-cheat throttle
         const cur = room.scores.get(ws) ?? 0;
         room.scores.set(ws, cur + 1);
         broadcast(room, { type: "scores", room: roomPublic(room) });
+      } else if (msg.type === "chat") {
+        const raw = typeof msg.text === "string" ? msg.text : typeof msg.message === "string" ? msg.message : "";
+        const text = raw.trim().slice(0, 200);
+        if (!text || text.length < 1) return;
+        if (text.includes("<") || text.includes(">")) return;
+        if (!wsChatRateOk(ws.data.id)) return;
+        broadcast(room, { type: "chat", from: ws.data.username, text, at: new Date().toISOString() });
       } else if (msg.type === "start") {
         if (room.state === "waiting" && room.players.size >= 2) startDuel(room);
       } else if (msg.type === "join" && typeof msg.username === "string" && msg.username.trim()) {
@@ -1962,6 +2111,7 @@ const server = Bun.serve<WSData>({
       room.scores.delete(ws);
       room.names.delete(ws);
       wsClickTimes.delete(ws.data.id);
+      wsChatTimes.delete(ws.data.id);
       try { ws.unsubscribe(roomId); } catch {}
       if (room.players.size === 0) {
         if (room.timer) clearTimeout(room.timer);

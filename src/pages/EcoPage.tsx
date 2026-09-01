@@ -28,6 +28,9 @@ type LeaderEntry = {
   date: string;
 };
 
+type EcoTierFront = { rating: number; tier: string; minScore: number; maxScore: number; color: string; badge: string; desc: string };
+type EcoTopRow = { player: string; score: number; rating: number; tier: string; avatar?: string | null };
+
 /* ── 8 вопросов — ироничная пропаганда Кузбасса ───────────── */
 
 const QUESTIONS: Question[] = [
@@ -220,6 +223,9 @@ export function EcoPage() {
   const [copied, setCopied] = useState(false);
   const [leaderboard, setLeaderboard] = useState<LeaderEntry[]>([]);
   const [savedScore, setSavedScore] = useState<number | null>(null);
+  const [ecoTiers, setEcoTiers] = useState<EcoTierFront[]>([]);
+  const [ecoTop, setEcoTop] = useState<EcoTopRow[]>([]);
+  const [ratingMsg, setRatingMsg] = useState<string | null>(null);
 
   const answeredCount = useMemo(() => answers.filter((a) => a !== null).length, [answers]);
   const progress = Math.round((answeredCount / QUESTIONS.length) * 100);
@@ -319,6 +325,13 @@ export function EcoPage() {
     void (async () => {
       const list = await fetchLeaderboard();
       if (!cancelled) setLeaderboard(list);
+      // eco tiers + rating top (Neon)
+      try {
+        const rt = await fetch("/magnum/api/eco/tiers", { credentials: "include" });
+        if (rt.ok) { const d = await rt.json() as { tiers: EcoTierFront[] }; if (Array.isArray(d.tiers)) setEcoTiers(d.tiers); }
+        const rr = await fetch("/magnum/api/eco/rating", { credentials: "include" });
+        if (rr.ok) { const d2 = await rr.json() as { top: EcoTopRow[] }; if (Array.isArray(d2.top)) setEcoTop(d2.top.slice(0, 10)); }
+      } catch {}
     })();
     return () => { cancelled = true; };
   }, []);
@@ -364,6 +377,16 @@ export function EcoPage() {
       window.setTimeout(() => setToast(null), 3000);
       return;
     }
+    // также пишем в Neon рейтинг 0-10 (взвешенный) — единый источник, без localStorage
+    try {
+      await fetch("/magnum/api/eco/rating", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ score, answers: answers.map(a => a ?? 0), player: name }) });
+      const rr = await fetch("/magnum/api/eco/rating", { credentials: "include" });
+      if (rr.ok) { const d2 = await rr.json() as { top: EcoTopRow[] }; if (Array.isArray(d2.top)) setEcoTop(d2.top.slice(0, 10)); }
+      const cur = ecoTiers.find(t => score >= t.minScore && score <= t.maxScore);
+      if (cur && cur.rating >= 7) setRatingMsg(`Рейтинг ${cur.rating}/10 — ${cur.tier} +${cur.rating===10?142:cur.rating>=9?84:42} монет`);
+      else if (cur) setRatingMsg(`Рейтинг ${cur.rating}/10 — ${cur.tier}`);
+      window.setTimeout(() => setRatingMsg(null), 4000);
+    } catch {}
     const list = await fetchLeaderboard();
     if (list.length > 0) setLeaderboard(list);
     else {
@@ -529,7 +552,25 @@ export function EcoPage() {
           <button type="button" className={styles.shareBtn} onClick={handleShare}>
             {copied ? "✅ Скопировано" : "📋 Поделиться результатом"}
           </button>
+          {ratingMsg && <p style={{ marginTop: 10, fontSize: 13, color: "#ffd700", textAlign: "center" }}>{ratingMsg}</p>}
           <p className={styles.shareHint}>Копирует текст в буфер через navigator.clipboard.writeText</p>
+          {/* ── Шкала 0-10 Neon tiers + GSAP hover ── */}
+          {ecoTiers.length > 0 && (
+            <div style={{ marginTop: 18, display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "center" }}>
+              {ecoTiers.map(t => {
+                const active = score >= t.minScore && score <= t.maxScore;
+                return (
+                  <span
+                    key={t.rating}
+                    onMouseEnter={e => { if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return; import("gsap").then(({ default: gsap }) => { gsap.to(e.currentTarget, { y: -3, scale: 1.04, boxShadow: `0 0 14px ${t.color}66`, duration: 0.22, ease: "power2.out", overwrite: true }); }); }}
+                    onMouseLeave={e => { if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return; import("gsap").then(({ default: gsap }) => { gsap.to(e.currentTarget, { y: 0, scale: 1, boxShadow: "0 0 0 transparent", duration: 0.3, overwrite: true }); }); }}
+                    style={{ fontSize: 11, padding: "5px 8px", borderRadius: 999, border: active ? `1px solid ${t.color}` : "1px solid rgba(255,255,255,.10)", background: active ? `${t.color}22` : "rgba(255,255,255,.06)", color: active ? t.color : "rgba(255,255,255,.7)", fontWeight: active ? 700 : 400 }}
+                    title={`${t.tier} ${t.minScore}..${t.maxScore} — ${t.desc}`}
+                  >{t.badge} {t.rating} {t.tier}</span>
+                );
+              })}
+            </div>
+          )}
         </section>
       )}
 
@@ -538,6 +579,22 @@ export function EcoPage() {
         <h2 className={styles.boardTitle}>
           🏆 Топ-10 ЭкоЛегенд Кузбасса <span className={styles.boardSub}>magnum/api/eco/leaderboard</span>
         </h2>
+        {/* Neon rating 0-10 топ — второй ряд */}
+        {ecoTop.length > 0 && (
+          <div style={{ marginBottom: 12, padding: "10px 12px", borderRadius: 12, background: "rgba(255,215,0,.06)", border: "1px solid rgba(255,215,0,.18)" }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#ffd700", marginBottom: 6 }}>⭐ Рейтинг 0-10 Neon • топ по tiers</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {ecoTop.map((r, i) => (
+                <div key={`${r.player}-${i}`} style={{ display: "flex", gap: 8, fontSize: 12, alignItems: "center" }}>
+                  <span style={{ minWidth: 18, color: i < 3 ? "#ffd700" : "rgba(255,255,255,.6)" }}>{i + 1}</span>
+                  <span style={{ flex: 1, color: "#fff" }}>{r.player}</span>
+                  <span style={{ padding: "2px 6px", borderRadius: 999, background: "rgba(255,255,255,.08)", fontSize: 11 }}>{r.rating}/10 {r.tier}</span>
+                  <span style={{ color: r.score > 0 ? "#00ff88" : "#ff6b6b" }}>{r.score > 0 ? `+${r.score}` : r.score}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         {leaderboard.length === 0 ? (
           <p className={styles.boardEmpty}>Пока пусто — стань первым ЭкоЛегендой! Пройди тест и сохрани результат.</p>
         ) : (

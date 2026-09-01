@@ -187,3 +187,31 @@ export const magnumDuelHistory = pgTable("magnum_duel_history", {
   playerCount: integer("player_count").default(2).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+export const magnumEcoRatings = pgTable("magnum_eco_ratings", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => magnumUsers.id),
+  player: text("player"),
+  score: integer("score").notNull(),
+  rating: integer("rating").notNull(),
+  tier: text("tier").notNull(),
+  answers: jsonb("answers").default([]).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const magnumMiningExchanges = pgTable("magnum_mining_exchanges", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => magnumUsers.id).notNull(),
+  miningAmount: integer("mining_amount").notNull(),
+  coinsAmount: integer("coins_amount").notNull(),
+  rate: integer("rate").default(10).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const magnumIdeaComments = pgTable("magnum_idea_comments", {
+  id: serial("id").primaryKey(),
+  ideaId: integer("idea_id").references(() => magnumIdeas.id).notNull(),
+  userId: integer("user_id").references(() => magnumUsers.id).notNull(),
+  body: text("body").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
