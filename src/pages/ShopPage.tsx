@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import gsap from "gsap";
 import styles from "./ShopPage.module.css";
-import { getCoins, addCoins, subscribe } from "../lib/coins";
+import { getCoins, subscribe } from "../lib/coins";
 
 /* ── Редкости ─────────────────────────────────────────────── */
 
@@ -28,7 +28,7 @@ type Skin = {
   name: string;
   emoji: string;
   rarity: Rarity;
-  bg: string; // CSS-градиент
+  bg: string;
   tagline: string;
 };
 
@@ -47,45 +47,6 @@ const SKINS: Skin[] = [
   { id: "dragon",  name: "Дракон 42",   emoji: "🐉", rarity: "legendary", bg: "linear-gradient(135deg,#ff2d55,#8a1ecb 55%,#1b0a3a)", tagline: "Жжёт чарты как MAGNUM" },
 ];
 
-/* ── Инвентарь (localStorage) ─────────────────────────────── */
-
-const INV_KEY = "magnum-shop-inventory";
-const EQUIPPED_KEY = "magnum-shop-equipped";
-
-function loadInventory(): string[] {
-  try {
-    const raw = JSON.parse(localStorage.getItem(INV_KEY) || "[]");
-    return Array.isArray(raw) ? raw.filter((x) => typeof x === "string") : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveInventory(inv: string[]): void {
-  try {
-    localStorage.setItem(INV_KEY, JSON.stringify(inv));
-  } catch {
-    /* ignore */
-  }
-}
-
-function loadEquipped(): string | null {
-  try {
-    return localStorage.getItem(EQUIPPED_KEY);
-  } catch {
-    return null;
-  }
-}
-
-function saveEquipped(id: string | null): void {
-  try {
-    if (id) localStorage.setItem(EQUIPPED_KEY, id);
-    else localStorage.removeItem(EQUIPPED_KEY);
-  } catch {
-    /* ignore */
-  }
-}
-
 /* ── Компонент ────────────────────────────────────────────── */
 
 type Toast = { id: number; kind: "ok" | "err"; text: string };
@@ -96,16 +57,57 @@ export function ShopPage() {
   const cardsRef = useRef<(HTMLDivElement | null)[]>([]);
 
   const [coins, setCoins] = useState(() => getCoins());
-  const [inventory, setInventory] = useState<string[]>(() => loadInventory());
-  const [equipped, setEquipped] = useState<string | null>(() => loadEquipped());
+  const [inventory, setInventory] = useState<string[]>([]);
+  const [equipped, setEquipped] = useState<string | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const toastId = useRef(0);
   const shownCoins = useRef(getCoins());
 
-  /* подписка на единый кошелёк */
+  /* подписка на единый кошелёк (polling 2с внутри coins.ts) */
   useEffect(() => {
     const unsub = subscribe((v) => setCoins(v));
     return unsub;
+  }, []);
+
+  /* загрузка инвентаря/эквипа с сервера */
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        // пробуем unified state, fallback на отдельные эндпоинты
+        const res = await fetch("/magnum/api/shop/state", { credentials: "include" });
+        if (res.ok) {
+          const data = await res.json() as { inventory?: string[]; equipped?: string | null; coins?: number };
+          if (cancelled) return;
+          if (Array.isArray(data.inventory)) setInventory(data.inventory.filter((x) => typeof x === "string"));
+          if (data.equipped !== undefined) setEquipped(data.equipped);
+          if (typeof data.coins === "number") setCoins(data.coins);
+          return;
+        }
+      } catch { /* fallback */ }
+      try {
+        const [invRes, eqRes] = await Promise.all([
+          fetch("/magnum/api/shop/inventory", { credentials: "include" }),
+          fetch("/magnum/api/shop/equipped", { credentials: "include" }),
+        ]);
+        if (cancelled) return;
+        if (invRes.ok) {
+          const d = await invRes.json() as { inventory?: string[] } | string[];
+          const arr = Array.isArray(d) ? d : (d as { inventory?: string[] }).inventory;
+          if (Array.isArray(arr)) setInventory(arr.filter((x) => typeof x === "string"));
+        }
+        if (eqRes.ok) {
+          const d = await eqRes.json() as { equipped?: string | null; skinId?: string | null } | string | null;
+          if (typeof d === "string" || d === null) setEquipped(d as string | null);
+          else if (typeof d === "object" && d !== null) {
+            const v = (d as { equipped?: string | null; skinId?: string | null }).equipped ?? (d as { skinId?: string | null }).skinId ?? null;
+            setEquipped(v);
+          }
+        }
+      } catch { /* ignore */ }
+    }
+    void load();
+    return () => { cancelled = true; };
   }, []);
 
   /* анимация баланса при покупке (GSAP count-up) */
@@ -156,30 +158,98 @@ export function ShopPage() {
     window.setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3200);
   };
 
-  const buy = (skin: Skin) => {
+  const buy = async (skin: Skin) => {
     const price = RARITY_META[skin.rarity].price;
     if (inventory.includes(skin.id)) return;
     if (coins < price) {
       pushToast("err", `Не хватает монет: нужно ${price}, у тебя ${coins}. Гони в Blackjack 42 или Рулетку — фарми до 4200!`);
       return;
     }
-    addCoins(-price);
-    const next = [...inventory, skin.id];
-    setInventory(next);
-    saveInventory(next);
-    pushToast("ok", `${skin.name} куплен! Легенда в инвентаре.`);
+    try {
+      const res = await fetch("/magnum/api/shop/buy", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ skinId: skin.id, id: skin.id, rarity: skin.rarity, price }),
+      });
+      if (!res.ok) {
+        // пробуем альтернативный путь
+        const alt = await fetch("/magnum/api/shop/purchase", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ skinId: skin.id, id: skin.id }),
+        });
+        if (!alt.ok) {
+          const txt = await alt.text().catch(() => "");
+          pushToast("err", txt || "Покупка не прошла — попробуй ещё раз");
+          return;
+        }
+        const dataAlt = await alt.json().catch(() => ({})) as { coins?: number; balance?: number; inventory?: string[] };
+        if (typeof dataAlt.coins === "number") setCoins(dataAlt.coins);
+        else if (typeof dataAlt.balance === "number") setCoins(dataAlt.balance);
+        if (Array.isArray(dataAlt.inventory)) setInventory(dataAlt.inventory);
+        else setInventory((prev) => [...prev, skin.id]);
+        pushToast("ok", `${skin.name} куплен! Легенда в инвентаре.`);
+        return;
+      }
+      const data = await res.json().catch(() => ({})) as { coins?: number; balance?: number; inventory?: string[]; equipped?: string | null };
+      if (typeof data.coins === "number") setCoins(data.coins);
+      else if (typeof data.balance === "number") setCoins(data.balance);
+      if (Array.isArray(data.inventory)) setInventory(data.inventory);
+      else setInventory((prev) => [...prev, skin.id]);
+      if (data.equipped !== undefined) setEquipped(data.equipped);
+      pushToast("ok", `${skin.name} куплен! Легенда в инвентаре.`);
+    } catch {
+      pushToast("err", "Сеть упала — не смогли купить");
+    }
   };
 
-  const equip = (skin: Skin) => {
-    setEquipped(skin.id);
-    saveEquipped(skin.id);
-    pushToast("ok", `${skin.name} надет. Братуха, ты красавчик.`);
+  const equip = async (skin: Skin) => {
+    try {
+      const res = await fetch("/magnum/api/shop/equip", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ skinId: skin.id, id: skin.id }),
+      });
+      if (!res.ok) {
+        pushToast("err", "Не удалось надеть — попробуй ещё раз");
+        return;
+      }
+      const data = await res.json().catch(() => ({})) as { equipped?: string | null };
+      setEquipped(data.equipped ?? skin.id);
+      pushToast("ok", `${skin.name} надет. Братуха, ты красавчик.`);
+    } catch {
+      pushToast("err", "Сеть упала");
+    }
   };
 
-  const unequip = () => {
-    setEquipped(null);
-    saveEquipped(null);
-    pushToast("ok", "Скин снят. Голый магнум — тоже стиль.");
+  const unequip = async () => {
+    try {
+      const res = await fetch("/magnum/api/shop/unequip", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) {
+        // fallback на equip null
+        const alt = await fetch("/magnum/api/shop/equip", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ skinId: null }),
+        });
+        if (!alt.ok) { pushToast("err", "Не вышло снять"); return; }
+      }
+      setEquipped(null);
+      pushToast("ok", "Скин снят. Голый магнум — тоже стиль.");
+    } catch {
+      // оптимистично снимаем даже без сети
+      setEquipped(null);
+      pushToast("ok", "Скин снят. Голый магнум — тоже стиль.");
+    }
   };
 
   const equippedSkin = useMemo(

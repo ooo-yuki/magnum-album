@@ -20,8 +20,7 @@ type BoardEntry = {
   date: string;
 };
 
-const STORAGE_KEY = "magnum-coins-v1";
-const BOARD_KEY = "magnum-mining-board-v1";
+// server-backed state via /magnum/api/mining/*
 
 const UPGRADES_INIT: Upgrade[] = [
   { id: "shovel", name: "Лопата 42", desc: "+1 за клик · шахтёрский старт", icon: "🪓", baseCost: 42, power: 1, auto: 0, count: 0 },
@@ -48,27 +47,12 @@ function costOf(u: Upgrade): number {
 }
 
 export function MiningPage() {
-  const [coins, setCoins] = useState<number>(() => {
-    try { const v = localStorage.getItem(STORAGE_KEY); if (v) return JSON.parse(v).coins ?? 0; } catch { /* */ }
-    return 0;
-  });
-  const [totalMined, setTotalMined] = useState<number>(() => {
-    try { const v = localStorage.getItem(STORAGE_KEY); if (v) return JSON.parse(v).totalMined ?? 0; } catch { /* */ }
-    return 0;
-  });
-  const [clicks, setClicks] = useState<number>(() => {
-    try { const v = localStorage.getItem(STORAGE_KEY); if (v) return JSON.parse(v).clicks ?? 0; } catch { /* */ }
-    return 0;
-  });
-  const [upgrades, setUpgrades] = useState<Upgrade[]>(() => {
-    try { const v = localStorage.getItem(STORAGE_KEY); if (v && v) { const p = JSON.parse(v); if (p.upgrades) return p.upgrades; } } catch { /* */ }
-    return UPGRADES_INIT;
-  });
+  const [coins, setCoins] = useState<number>(0);
+  const [totalMined, setTotalMined] = useState<number>(0);
+  const [clicks, setClicks] = useState<number>(0);
+  const [upgrades, setUpgrades] = useState<Upgrade[]>(UPGRADES_INIT);
   const [toast, setToast] = useState<string | null>(null);
-  const [board, setBoard] = useState<BoardEntry[]>(() => {
-    try { const v = localStorage.getItem(BOARD_KEY); if (v) return JSON.parse(v); } catch { /* */ }
-    return BOARD_MOCK;
-  });
+  const [board, setBoard] = useState<BoardEntry[]>(BOARD_MOCK);
   const [nick, setNick] = useState("Братуха_42");
 
   const rockRef = useRef<HTMLButtonElement>(null);
@@ -79,20 +63,48 @@ export function MiningPage() {
   const perClick = upgrades.reduce((s, u) => s + u.power * u.count, 1);
   const perSec = upgrades.reduce((s, u) => s + u.auto * u.count, 0);
 
-  // persist
+  // load state from server on mount
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ coins, totalMined, clicks, upgrades }));
-  }, [coins, totalMined, clicks, upgrades]);
-  useEffect(() => {
-    localStorage.setItem(BOARD_KEY, JSON.stringify(board));
-  }, [board]);
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/magnum/api/mining/state", { credentials: "include" });
+        if (res.ok) {
+          const data = await res.json() as { coins?: number; totalMined?: number; clicks?: number; upgrades?: Upgrade[]; board?: BoardEntry[] };
+          if (cancelled) return;
+          if (typeof data.coins === "number") setCoins(data.coins);
+          if (typeof data.totalMined === "number") setTotalMined(data.totalMined);
+          if (typeof data.clicks === "number") setClicks(data.clicks);
+          if (Array.isArray(data.upgrades)) setUpgrades(data.upgrades);
+          if (Array.isArray(data.board)) setBoard(data.board);
+          return;
+        }
+      } catch { /* fallback */ }
+      // fallback to separate endpoints
+      try {
+        const [s, b] = await Promise.all([
+          fetch("/magnum/api/mining/board", { credentials: "include" }).catch(() => null),
+          fetch("/magnum/api/mining/leaderboard", { credentials: "include" }).catch(() => null),
+        ]);
+        void s; void b;
+      } catch { /* ignore */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
-  // auto-mining tick
+  // auto-mining tick — локально + синхронизация с сервером каждую секунду
   useEffect(() => {
     if (perSec === 0) return;
     const id = window.setInterval(() => {
       setCoins((c) => c + perSec);
       setTotalMined((t) => t + perSec);
+      // fire-and-forget sync tick to server
+      void fetch("/magnum/api/mining/tick", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ perSec }),
+      }).catch(() => {});
     }, 1000);
     return () => clearInterval(id);
   }, [perSec]);
@@ -132,9 +144,27 @@ export function MiningPage() {
 
   const handleDig = (e: React.MouseEvent<HTMLButtonElement>) => {
     const val = perClick;
+    // optimistic update
     setCoins((c) => c + val);
     setTotalMined((t) => t + val);
     setClicks((k) => k + 1);
+    // server click
+    void (async () => {
+      try {
+        const res = await fetch("/magnum/api/mining/click", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ value: val, perClick: val }),
+        });
+        if (res.ok) {
+          const data = await res.json().catch(() => ({})) as { coins?: number; totalMined?: number; clicks?: number };
+          if (typeof data.coins === "number") setCoins(data.coins);
+          if (typeof data.totalMined === "number") setTotalMined(data.totalMined);
+          if (typeof data.clicks === "number") setClicks(data.clicks);
+        }
+      } catch { /* optimistic already applied */ }
+    })();
 
     // GSAP punch
     if (rockRef.current && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
@@ -169,28 +199,82 @@ export function MiningPage() {
     const u = upgrades[idx];
     const price = costOf(u);
     if (coins < price) { showToast("Мало 42-коинов, братуха — покопай ещё"); return; }
+    // optimistic
     setCoins((c) => c - price);
     setUpgrades((prev) => prev.map((x) => x.id === id ? { ...x, count: x.count + 1 } : x));
     showToast(`Куплено: ${u.name} · −${price} 🪙`);
     if (boardRef.current) gsap.fromTo(boardRef.current, { scale: 0.998 }, { scale: 1, duration: 0.2 });
+    void (async () => {
+      try {
+        const res = await fetch("/magnum/api/mining/buy", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id, upgradeId: id, price }),
+        });
+        if (!res.ok) {
+          // try alternate endpoint
+          const alt = await fetch("/magnum/api/mining/upgrade", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id }),
+          });
+          if (!alt.ok) return;
+          const dataAlt = await alt.json().catch(() => ({})) as { coins?: number; upgrades?: Upgrade[] };
+          if (typeof dataAlt.coins === "number") setCoins(dataAlt.coins);
+          if (Array.isArray(dataAlt.upgrades)) setUpgrades(dataAlt.upgrades);
+          return;
+        }
+        const data = await res.json().catch(() => ({})) as { coins?: number; upgrades?: Upgrade[]; totalMined?: number };
+        if (typeof data.coins === "number") setCoins(data.coins);
+        if (Array.isArray(data.upgrades)) setUpgrades(data.upgrades);
+        if (typeof data.totalMined === "number") setTotalMined(data.totalMined);
+      } catch { /* optimistic retained */ }
+    })();
   };
 
   const saveToBoard = () => {
     const name = nick.trim() || "Братуха_42";
     const entry: BoardEntry = { name, coins: totalMined, date: new Date().toISOString().slice(0, 10) };
+    // optimistic
     setBoard((prev) => {
       const next = [...prev.filter((p) => p.name !== name), entry].sort((a, b) => b.coins - a.coins).slice(0, 20);
       return next;
     });
     showToast("Сохранено в лидерборд — респект, шахтёр!");
-    // flash board
     if (boardRef.current) gsap.fromTo(boardRef.current, { y: 6, opacity: 0.9 }, { y: 0, opacity: 1, duration: 0.35, ease: "power2.out" });
+    void (async () => {
+      try {
+        const res = await fetch("/magnum/api/mining/leaderboard", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(entry),
+        });
+        if (!res.ok) {
+          await fetch("/magnum/api/mining/board", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(entry),
+          }).catch(() => {});
+        }
+        // refresh board from server
+        const r = await fetch("/magnum/api/mining/board", { credentials: "include" }).catch(() => null);
+        if (r && r.ok) {
+          const data = await r.json().catch(() => null) as { board?: BoardEntry[] } | BoardEntry[] | null;
+          if (Array.isArray(data)) setBoard(data as BoardEntry[]);
+          else if (data && Array.isArray((data as { board?: BoardEntry[] }).board)) setBoard((data as { board: BoardEntry[] }).board);
+        }
+      } catch { /* ignore */ }
+    })();
   };
 
   const reset = () => {
     if (!confirm("Сбросить прогресс майнинга?")) return;
     setCoins(0); setTotalMined(0); setClicks(0); setUpgrades(UPGRADES_INIT);
-    localStorage.removeItem(STORAGE_KEY);
+    void fetch("/magnum/api/mining/reset", { method: "POST", credentials: "include" }).catch(() => {});
     showToast("Прогресс сброшен — начинай заново, братуха");
   };
 
@@ -201,7 +285,7 @@ export function MiningPage() {
         <h1 className={styles.heroTitle}>МАЙНИ 42-КОИНЫ<br /><span>КОПАЙ КАК ШАХТЁР</span></h1>
         <p className={styles.subtitle}>
           Кликер-дриг без крипты и без скама. Кликай по породе, покупай лопаты и кирки, включай авто-бур — и стань легендой Кузбасса.
-          Всё хранится в <code>localStorage</code> — без бэкенда, по-братски.
+          Баланс и прогресс хранятся на сервере — токен в cookie, по-братски.
         </p>
       </header>
 
@@ -275,8 +359,8 @@ export function MiningPage() {
 
       <section ref={boardRef} className={styles.board}>
         <div className={styles.boardHead}>
-          <h2 className={styles.sectionTitle}>ЛИДЕРБОРД <span>· LOCALSTORAGE</span></h2>
-          <span className={styles.boardHint}>топ шахтёров Кузбасса · сохраняется у тебя в браузере</span>
+          <h2 className={styles.sectionTitle}>ЛИДЕРБОРД <span>· С СЕРВЕРА</span></h2>
+          <span className={styles.boardHint}>топ шахтёров Кузбасса · сохраняется на сервере</span>
         </div>
         <div className={styles.boardTableWrap}>
           <table className={styles.boardTable}>

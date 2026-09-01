@@ -125,43 +125,33 @@ function getRank(score: number): { title: string; emoji: string; cls: string; de
   return { title: "Нормис", emoji: "😐", cls: styles.rankNormis, desc: "Пока нормис. Пора менять батилки и привычки." };
 }
 
-/* ── localStorage ключи ───────────────────────────────────── */
+/* ── API: /magnum/api/eco/* ─────────────────────────────────── */
 
-const RESULT_KEY = "magnum-eco-result";
-const LEADER_KEY = "magnum-eco-leaderboard";
-
-function loadLeaderboard(): LeaderEntry[] {
+async function fetchLeaderboard(): Promise<LeaderEntry[]> {
   try {
-    const raw = JSON.parse(localStorage.getItem(LEADER_KEY) || "[]");
-    return Array.isArray(raw) ? raw : [];
+    const res = await fetch("/magnum/api/eco/leaderboard", { credentials: "include" });
+    if (!res.ok) return [];
+    const data = await res.json() as { leaderboard?: LeaderEntry[]; entries?: LeaderEntry[] } | LeaderEntry[];
+    if (Array.isArray(data)) return data as LeaderEntry[];
+    if (Array.isArray(data.leaderboard)) return data.leaderboard;
+    if (Array.isArray(data.entries)) return data.entries;
+    return [];
   } catch {
     return [];
   }
 }
 
-function saveLeaderboard(list: LeaderEntry[]): void {
+async function submitEcoResult(entry: LeaderEntry & { score: number }): Promise<boolean> {
   try {
-    localStorage.setItem(LEADER_KEY, JSON.stringify(list.slice(0, 10)));
+    const res = await fetch("/magnum/api/eco/submit", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(entry),
+    });
+    return res.ok;
   } catch {
-    /* ignore */
-  }
-}
-
-function loadResult(): { score: number; date: string } | null {
-  try {
-    const raw = JSON.parse(localStorage.getItem(RESULT_KEY) || "null");
-    if (raw && typeof raw.score === "number") return raw;
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-function saveResult(score: number): void {
-  try {
-    localStorage.setItem(RESULT_KEY, JSON.stringify({ score, date: new Date().toISOString() }));
-  } catch {
-    /* ignore */
+    return false;
   }
 }
 
@@ -179,8 +169,8 @@ export function EcoPage() {
   const [nickname, setNickname] = useState("");
   const [toast, setToast] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [leaderboard, setLeaderboard] = useState<LeaderEntry[]>(() => loadLeaderboard());
-  const [savedScore, setSavedScore] = useState<number | null>(() => loadResult()?.score ?? null);
+  const [leaderboard, setLeaderboard] = useState<LeaderEntry[]>([]);
+  const [savedScore, setSavedScore] = useState<number | null>(null);
 
   const answeredCount = useMemo(() => answers.filter((a) => a !== null).length, [answers]);
   const progress = Math.round((answeredCount / QUESTIONS.length) * 100);
@@ -249,6 +239,16 @@ export function EcoPage() {
     gsap.to(rows, { x: 0, opacity: 1, duration: 0.45, stagger: 0.06, ease: "power2.out", delay: 0.1 });
   }, [leaderboard, showResult]);
 
+  /* загрузка лидерборда с сервера */
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const list = await fetchLeaderboard();
+      if (!cancelled) setLeaderboard(list);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const selectAnswer = (qIdx: number, oIdx: number) => {
     setAnswers((prev) => {
       const next = [...prev];
@@ -269,7 +269,6 @@ export function EcoPage() {
       return;
     }
     setShowResult(true);
-    saveResult(score);
     setSavedScore(score);
     // автосохранение в лидерборд если введён ник
     window.setTimeout(() => {
@@ -277,19 +276,26 @@ export function EcoPage() {
     }, 100);
   };
 
-  const handleSaveToBoard = () => {
-    const name = nickname.trim() || "Аноним 42";
+  const handleSaveToBoard = async () => {
+    const name = (nickname.trim() || "Аноним 42").slice(0, 18);
     const entry: LeaderEntry = {
-      name: name.slice(0, 18),
+      name,
       score,
       rank: rank.title,
       date: new Date().toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" }),
     };
-    const next = [entry, ...leaderboard]
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 10);
-    setLeaderboard(next);
-    saveLeaderboard(next);
+    const ok = await submitEcoResult(entry);
+    if (!ok) {
+      setToast("Не удалось сохранить — попробуй ещё раз");
+      window.setTimeout(() => setToast(null), 3000);
+      return;
+    }
+    const list = await fetchLeaderboard();
+    if (list.length > 0) setLeaderboard(list);
+    else {
+      const next = [entry, ...leaderboard].sort((a, b) => b.score - a.score).slice(0, 10);
+      setLeaderboard(next);
+    }
     setToast(`Сохранено! Ты в топе, ${name} — ${score} баллов`);
     window.setTimeout(() => setToast(null), 3000);
   };
@@ -456,7 +462,7 @@ export function EcoPage() {
       {/* ── Лидерборд ── */}
       <section className={styles.board} ref={boardRef} aria-label="Топ-10 Эко-рейтинга">
         <h2 className={styles.boardTitle}>
-          🏆 Топ-10 ЭкоЛегенд Кузбасса <span className={styles.boardSub}>magnum-eco-leaderboard</span>
+          🏆 Топ-10 ЭкоЛегенд Кузбасса <span className={styles.boardSub}>magnum/api/eco/leaderboard</span>
         </h2>
         {leaderboard.length === 0 ? (
           <p className={styles.boardEmpty}>Пока пусто — стань первым ЭкоЛегендой! Пройди тест и сохрани результат.</p>
@@ -473,7 +479,7 @@ export function EcoPage() {
             ))}
           </div>
         )}
-        <p className={styles.boardFoot}>Сохранение в localStorage • Топ сортируется по баллам • Обновляется после каждого теста</p>
+        <p className={styles.boardFoot}>Топ с сервера • Сортировка по баллам • Обновляется после каждого теста</p>
       </section>
 
       {/* ── Футер ── */}
