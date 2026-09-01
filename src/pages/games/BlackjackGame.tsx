@@ -49,6 +49,91 @@ function isSoft17(hand: Card[]): boolean {
   return aces>0;
 }
 
+// ── WebAudio ──
+let ac: AudioContext | null = null;
+function ensureAC(): AudioContext | null {
+  if (!ac) try { ac = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)(); } catch { return null; }
+  if (ac && ac.state === "suspended") void ac.resume();
+  return ac;
+}
+function safeRamp(param: AudioParam, fn: () => void, fallback: number) {
+  try { fn(); } catch { param.value = fallback; }
+}
+function playDeal() {
+  const ctx = ensureAC(); if (!ctx) return;
+  // short click like a card snap
+  const o = ctx.createOscillator(); const g = ctx.createGain();
+  o.connect(g); g.connect(ctx.destination);
+  o.type = "square"; o.frequency.value = 800;
+  safeRamp(o.frequency, () => o.frequency.linearRampToValueAtTime(400, ctx.currentTime + 0.03), 400);
+  g.gain.setValueAtTime(0.12, ctx.currentTime);
+  safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06), 0.001);
+  o.start(); o.stop(ctx.currentTime + 0.07);
+}
+function playHit() {
+  const ctx = ensureAC(); if (!ctx) return;
+  const o = ctx.createOscillator(); const g = ctx.createGain();
+  o.connect(g); g.connect(ctx.destination);
+  o.type = "sine"; o.frequency.value = 520;
+  safeRamp(o.frequency, () => o.frequency.linearRampToValueAtTime(680, ctx.currentTime + 0.06), 680);
+  g.gain.setValueAtTime(0.1, ctx.currentTime);
+  safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1), 0.001);
+  o.start(); o.stop(ctx.currentTime + 0.12);
+}
+function playBust() {
+  const ctx = ensureAC(); if (!ctx) return;
+  const o = ctx.createOscillator(); const g = ctx.createGain();
+  o.connect(g); g.connect(ctx.destination);
+  o.type = "sawtooth"; o.frequency.value = 200;
+  safeRamp(o.frequency, () => o.frequency.linearRampToValueAtTime(80, ctx.currentTime + 0.3), 80);
+  g.gain.setValueAtTime(0.12, ctx.currentTime);
+  safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35), 0.001);
+  o.start(); o.stop(ctx.currentTime + 0.38);
+}
+function playBlackjack() {
+  const ctx = ensureAC(); if (!ctx) return;
+  // triumphant arpeggio
+  [0, 0.08, 0.16, 0.26, 0.38].forEach((d, i) => {
+    const o = ctx.createOscillator(); const g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type = i % 2 === 0 ? "sine" : "triangle";
+    o.frequency.value = 440 + i * 110;
+    g.gain.setValueAtTime(0.14, ctx.currentTime + d);
+    safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + d + 0.4), 0.001);
+    o.start(ctx.currentTime + d); o.stop(ctx.currentTime + d + 0.45);
+  });
+}
+function playWinSound() {
+  const ctx = ensureAC(); if (!ctx) return;
+  [0, 0.1, 0.2].forEach((d, i) => {
+    const o = ctx.createOscillator(); const g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type = "sine"; o.frequency.value = 523 + i * 110;
+    g.gain.setValueAtTime(0.13, ctx.currentTime + d);
+    safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + d + 0.3), 0.001);
+    o.start(ctx.currentTime + d); o.stop(ctx.currentTime + d + 0.35);
+  });
+}
+function playLoseSound() {
+  const ctx = ensureAC(); if (!ctx) return;
+  const o = ctx.createOscillator(); const g = ctx.createGain();
+  o.connect(g); g.connect(ctx.destination);
+  o.type = "sawtooth"; o.frequency.value = 180;
+  safeRamp(o.frequency, () => o.frequency.linearRampToValueAtTime(100, ctx.currentTime + 0.25), 100);
+  g.gain.setValueAtTime(0.09, ctx.currentTime);
+  safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3), 0.001);
+  o.start(); o.stop(ctx.currentTime + 0.32);
+}
+function playPush() {
+  const ctx = ensureAC(); if (!ctx) return;
+  const o = ctx.createOscillator(); const g = ctx.createGain();
+  o.connect(g); g.connect(ctx.destination);
+  o.type = "sine"; o.frequency.value = 440;
+  g.gain.setValueAtTime(0.08, ctx.currentTime);
+  safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2), 0.001);
+  o.start(); o.stop(ctx.currentTime + 0.22);
+}
+
 type Phase = "betting"|"player"|"dealer"|"result";
 type Result = "win"|"lose"|"push"|"blackjack"|null;
 
@@ -112,6 +197,7 @@ export function BlackjackGame(){
     setPhase("player");
     setResult(null);
     setDealt(true);
+    playDeal();
 
     // immediate blackjack checks
     const pj = isBlackjack(p);
@@ -125,6 +211,7 @@ export function BlackjackGame(){
       setResult("push");
       setMsg("Оба БЛЭКДЖЕК — ничья!");
       setHistory(h=> [`PUSH (оба BJ) — ставка возвращена`,...h].slice(0,8));
+      playPush();
     } else if(pj){
       const win = Math.floor(bet*1.5);
       setDealer(dlFull);
@@ -133,6 +220,7 @@ export function BlackjackGame(){
       setBalance(b=>b+win);
       setMsg(`БЛЭКДЖЕК 42! +${win} монет`);
       setHistory(h=> [`BLACKJACK +${win}`,...h].slice(0,8));
+      playBlackjack();
     } else if(dj){
       // peek dealer BJ - instant lose (rare)
       setDealer(dlFull);
@@ -141,6 +229,7 @@ export function BlackjackGame(){
       setBalance(b=>Math.max(0,b-bet));
       setMsg("У дилера БЛЭКДЖЕК — проигрыш");
       setHistory(h=> [`LOSE vs BJ -${bet}`,...h].slice(0,8));
+      playLoseSound();
     } else {
       setMsg(`Твоя рука ${handValue(p)} — ещё карту?`);
     }
@@ -153,12 +242,14 @@ export function BlackjackGame(){
     const np=[...player, c[0]!];
     setDeck(nd);
     setPlayer(np);
+    playHit();
     if(isBust(np)){
       setPhase("result");
       setResult("lose");
       setBalance(b=>Math.max(0,b-bet));
       setMsg(`Перебор ${handValue(np)} — сгорел!`);
       setHistory(h=> [`BUST ${handValue(np)} -${bet}`,...h].slice(0,8));
+      playBust();
     } else if(handValue(np)===21){
       // auto stand on 21
       setMsg("21 — стоим!");
@@ -195,20 +286,24 @@ export function BlackjackGame(){
         setBalance(b=>b+bet);
         msgLocal=`Дилер сгорел (${dv}) — победа +${bet}!`;
         setHistory(h=> [`WIN vs bust +${bet}`,...h].slice(0,8));
+        playWinSound();
       } else if(dv>pv){
         setResult("lose");
         setBalance(b=>Math.max(0,b-bet));
         msgLocal=`Дилер ${dv} vs ${pv} — проигрыш -${bet}`;
         setHistory(h=> [`LOSE ${pv} vs ${dv} -${bet}`,...h].slice(0,8));
+        playLoseSound();
       } else if(dv < pv){
         setResult("win");
         setBalance(b=>b+bet);
         msgLocal=`${pv} vs ${dv} — победа +${bet}!`;
         setHistory(h=> [`WIN ${pv} vs ${dv} +${bet}`,...h].slice(0,8));
+        playWinSound();
       } else {
         setResult("push");
         msgLocal=`Ничья ${pv}:${dv} — ставка сохранена`;
         setHistory(h=> [`PUSH ${pv}:${dv}`,...h].slice(0,8));
+        playPush();
       }
       setMsg(msgLocal);
       setPhase("result");
@@ -237,6 +332,7 @@ export function BlackjackGame(){
       setBalance(b=>Math.max(0,b - doubledBet));
       setMsg(`Дабл — перебор ${handValue(np)}! -${doubledBet}`);
       setHistory(h=> [`DOUBLE BUST -${doubledBet}`,...h].slice(0,8));
+      playBust();
       return;
     }
     // otherwise dealer plays with doubled bet
@@ -262,20 +358,24 @@ export function BlackjackGame(){
       setBalance(b=>b+doubledBet);
       setMsg(`Дабл! Дилер сгорел — +${doubledBet} 🔥`);
       setHistory(h=> [`DOUBLE WIN +${doubledBet}`,...h].slice(0,8));
+      playWinSound();
     } else if(dv>pv){
       setResult("lose");
       setBalance(b=>Math.max(0,b-doubledBet));
       setMsg(`Дабл: ${pv} vs ${dv} — проигрыш -${doubledBet}`);
       setHistory(h=> [`DOUBLE LOSE -${doubledBet}`,...h].slice(0,8));
+      playLoseSound();
     } else if(dv < pv){
       setResult("win");
       setBalance(b=>b+doubledBet);
       setMsg(`Дабл победа ${pv} vs ${dv} +${doubledBet}!`);
       setHistory(h=> [`DOUBLE WIN +${doubledBet}`,...h].slice(0,8));
+      playWinSound();
     } else {
       setResult("push");
       setMsg(`Дабл ничья ${pv}:${dv}`);
       setHistory(h=> [`DOUBLE PUSH`,...h].slice(0,8));
+      playPush();
     }
     setPhase("result");
   },[phase,player,dealer,deck,draw,bet,balance]);
