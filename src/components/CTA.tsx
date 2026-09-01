@@ -13,6 +13,7 @@ export function CTA() {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const textRef = useRef<HTMLParagraphElement>(null);
   const btnRef = useRef<HTMLAnchorElement>(null);
+  const shimmerRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     if (!sectionRef.current) return;
@@ -57,6 +58,28 @@ export function CTA() {
         ease: "back.out(1.7)",
         delay: 0.4,
       });
+
+      // periodic shimmer sweep across the CTA button
+      if (shimmerRef.current) {
+        // respect reduced motion
+        if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          const shimmerTl = gsap.timeline({
+            repeat: -1,
+            delay: 2,
+            scrollTrigger: {
+              trigger: sectionRef.current,
+              start: "top 80%",
+              toggleActions: "play pause resume pause",
+            },
+          });
+          shimmerTl.fromTo(
+            shimmerRef.current,
+            { x: "-120%" },
+            { x: "220%", duration: 1.4, ease: "power2.inOut" },
+          );
+          shimmerTl.to({}, { duration: 3.6 }); // pause between sweeps
+        }
+      }
     }, sectionRef);
 
     return () => ctx.revert();
@@ -72,6 +95,7 @@ export function CTA() {
         className={styles.btn}
         ref={btnRef}
       >
+        <span ref={shimmerRef} className={styles.shimmer} aria-hidden />
         Пресейв на Яндекс Музыке
       </a>
     </section>

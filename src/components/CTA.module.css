@@ -90,6 +90,26 @@
   100% { text-shadow: none; transform: translateY(-2px) scale(1.04) skew(0deg); }
 }
 
+.shimmer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    110deg,
+    transparent 20%,
+    rgba(255, 255, 255, 0.18) 45%,
+    rgba(255, 255, 255, 0.28) 50%,
+    rgba(255, 255, 255, 0.18) 55%,
+    transparent 80%
+  );
+  pointer-events: none;
+  z-index: 1;
+  will-change: transform;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .btn::before, .btn:hover { animation: none !important; }
+  .shimmer { display: none; }
 }
