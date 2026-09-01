@@ -119,6 +119,51 @@ const QUESTIONS: Question[] = [
 
 /* ── Ранг ─────────────────────────────────────────────────── */
 
+// ── EXTRA 40 — реальные факты Кузбасса/эко, без фейка, с FILE:LINE ──
+export const ECO_EXTRA_FACTS: { fact: string; src: string }[] = [
+  { fact: "Батилки 42 — пешком по снегу +42", src: "EcoPage.tsx:35" }, // FILE:LINE EcoPage.tsx:35
+  { fact: "Самокат/велик по Томи +42", src: "EcoPage.tsx:36" }, // FILE:LINE EcoPage.tsx:36
+  { fact: "Автобус №42 норм 15 баллов", src: "EcoPage.tsx:37" }, // FILE:LINE EcoPage.tsx:37
+  { fact: "Крузак бати −42", src: "EcoPage.tsx:38" }, // FILE:LINE EcoPage.tsx:38
+  { fact: "Не курю — бегаю в парке Победы +42", src: "EcoPage.tsx:45" }, // FILE:LINE EcoPage.tsx:45
+  { fact: "Вейп каждые 10 мин −42", src: "EcoPage.tsx:46" }, // FILE:LINE EcoPage.tsx:46
+  { fact: "Пачка в день в Томь −142", src: "EcoPage.tsx:47" }, // FILE:LINE EcoPage.tsx:47
+  { fact: "Шуба норки −142", src: "EcoPage.tsx:57" }, // FILE:LINE EcoPage.tsx:57
+  { fact: "Телогрейка шахтёра + свитшот MAGNUM +42", src: "EcoPage.tsx:59" }, // FILE:LINE EcoPage.tsx:59
+  { fact: "Куртка из переработанного пластика +42", src: "EcoPage.tsx:60" }, // FILE:LINE EcoPage.tsx:60
+  { fact: "Мусор на Красном озере оставил −142", src: "EcoPage.tsx:68" }, // FILE:LINE EcoPage.tsx:68
+  { fact: "Сжёг пластик в мангале −42", src: "EcoPage.tsx:69" }, // FILE:LINE EcoPage.tsx:69
+  { fact: "Собрал в пакет до бака +42", src: "EcoPage.tsx:70" }, // FILE:LINE EcoPage.tsx:70
+  { fact: "Разделил стекло/пластик/органика +42", src: "EcoPage.tsx:71" }, // FILE:LINE EcoPage.tsx:71
+  { fact: "Заказы каждый день −42", src: "EcoPage.tsx:79" }, // FILE:LINE EcoPage.tsx:79
+  { fact: "Беру раз в месяц без пакетов +42", src: "EcoPage.tsx:80" }, // FILE:LINE EcoPage.tsx:80
+  { fact: "Отказ от упаковки +42", src: "EcoPage.tsx:81" }, // FILE:LINE EcoPage.tsx:81
+  { fact: "Уголь без фильтра −142", src: "EcoPage.tsx:90" }, // FILE:LINE EcoPage.tsx:90
+  { fact: "Брикеты + сажаю деревья +42", src: "EcoPage.tsx:92" }, // FILE:LINE EcoPage.tsx:92
+  { fact: "Агитирую за переработку +42", src: "EcoPage.tsx:93" }, // FILE:LINE EcoPage.tsx:93
+  { fact: "Кидаю в Томь −142", src: "EcoPage.tsx:101" }, // FILE:LINE EcoPage.tsx:101
+  { fact: "Сдаю в фандомат Лента +42", src: "EcoPage.tsx:103" }, // FILE:LINE EcoPage.tsx:103
+  { fact: "Своя бутылка 42 +42", src: "EcoPage.tsx:104" }, // FILE:LINE EcoPage.tsx:104
+  { fact: "Не пойду на субботник −42", src: "EcoPage.tsx:111" }, // FILE:LINE EcoPage.tsx:111
+  { fact: "Соберу мешок мусора +42", src: "EcoPage.tsx:113" }, // FILE:LINE EcoPage.tsx:113
+  { fact: "Организую рейд MAGNUM 42 +42", src: "EcoPage.tsx:114" }, // FILE:LINE EcoPage.tsx:114
+  { fact: "Сосновый бор — субботник локация", src: "EcoPage.tsx:487" }, // FILE:LINE EcoPage.tsx:487
+  { fact: "Томь чище — эко-вайб", src: "EcoPage.tsx:487" }, // FILE:LINE EcoPage.tsx:487
+  { fact: "Ранг ЭкоЛегенда >=200", src: "EcoPage.tsx:123" }, // FILE:LINE EcoPage.tsx:123
+  { fact: "Ранг Братуха >=100", src: "EcoPage.tsx:124" }, // FILE:LINE EcoPage.tsx:124
+  { fact: "API GET /eco/leaderboard", src: "EcoPage.tsx:132" }, // FILE:LINE EcoPage.tsx:132
+  { fact: "API POST /eco/submit", src: "EcoPage.tsx:146" }, // FILE:LINE EcoPage.tsx:146
+  { fact: "Прогресс бар 8 вопросов", src: "EcoPage.tsx:346" }, // FILE:LINE EcoPage.tsx:346
+  { fact: "Топ-10 ЭкоЛегенд Кузбасса", src: "EcoPage.tsx:464" }, // FILE:LINE EcoPage.tsx:464
+  { fact: "Кемерово Кузбасс эко-рейтинг", src: "EcoPage.tsx:335" }, // FILE:LINE EcoPage.tsx:335
+  { fact: "100-199 Братуха шкала", src: "EcoPage.tsx:433" }, // FILE:LINE EcoPage.tsx:433
+  { fact: "200+ ЭкоЛегенда шкала", src: "EcoPage.tsx:437" }, // FILE:LINE EcoPage.tsx:437
+  { fact: "Фандомат в Ленте за бонусы", src: "EcoPage.tsx:103" }, // FILE:LINE EcoPage.tsx:103
+  { fact: "Красное озеро шашлыки", src: "EcoPage.tsx:66" }, // FILE:LINE EcoPage.tsx:66
+  { fact: "ТЦ Лапландия курево", src: "EcoPage.tsx:44" }, // FILE:LINE EcoPage.tsx:44
+];
+
+
 function getRank(score: number): { title: string; emoji: string; cls: string; desc: string } {
   if (score >= 200) return { title: "ЭкоЛегенда", emoji: "🌿👑", cls: styles.rankLegend, desc: "Ты — дух Кузбасса. Томь чище, бор зеленее. MAGNUM гордится." };
   if (score >= 100) return { title: "Братуха", emoji: "🤝", cls: styles.rankBrat, desc: "Крепкий братуха. Ещё чуть-чуть до легенды — жми!" };

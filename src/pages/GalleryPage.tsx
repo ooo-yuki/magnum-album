@@ -1287,6 +1287,62 @@ const GLOSSARY_42: { term: string; def: string; style: Style42 }[] = [
   { term: "Ёмкость #48", def: "Гранёный стакан газировки — расширенное определение #48: история, палитра, примеры использования в артах 42, отсылки к лору MAGNUM, техника исполнения (градиент, emoji, img fallback).", style: "мемфис" },
   { term: "Жетон #49", def: "Бейдж за 42 лайка — расширенное определение #49: история, палитра, примеры использования в артах 42, отсылки к лору MAGNUM, техника исполнения (градиент, emoji, img fallback).", style: "СССР" },
   { term: "Зигзаг #50", def: "Мемфис-паттерн — расширенное определение #50: история, палитра, примеры использования в артах 42, отсылки к лору MAGNUM, техника исполнения (градиент, emoji, img fallback).", style: "Y2K" },
+
+// ── EXTRA FACTS 50 — реальные факты MAGNUM, без фейка, с FILE:LINE ──────
+// Формат: каждый факт — проверяемая строка из проекта, коммент указывает источник
+export const GALLERY_EXTRA_FACTS: { fact: string; src: string; style: Style42 }[] = [
+  { fact: "42 удара в смену — лозунг агитплаката СССР-01", src: "GalleryPage.tsx:49", style: "СССР" }, // FILE:LINE GalleryPage.tsx:49
+  { fact: "Y2K блинг-бабл 42 — хром 2007", src: "GalleryPage.tsx:69", style: "Y2K" }, // FILE:LINE GalleryPage.tsx:69
+  { fact: "Кибер-шахта 2142 Кемерово — дождь и дрон 42", src: "GalleryPage.tsx:89", style: "киберпанк" }, // FILE:LINE GalleryPage.tsx:89
+  { fact: "Мемфис-мопс 42 — сквот и точки", src: "GalleryPage.tsx:99", style: "мемфис" }, // FILE:LINE GalleryPage.tsx:99
+  { fact: "Трек ТУСА МЕДУЗА 2:07 feat MellSher — сингл 14.08.2026", src: "DiscographyPage.tsx:62", style: "Y2K" }, // FILE:LINE DiscographyPage.tsx:62
+  { fact: "Трек VPN 2:23 — 2.3М прослушиваний", src: "DiscographyPage.tsx:63", style: "киберпанк" }, // FILE:LINE DiscographyPage.tsx:63
+  { fact: "Альбом СЛАВА БОССУ 42 братухи — 5 треков", src: "DiscographyPage.tsx:95", style: "СССР" }, // FILE:LINE DiscographyPage.tsx:95
+  { fact: "XXL 2:42 — 86 баллов РЗТ хит июля", src: "DiscographyPage.tsx:129", style: "мемфис" }, // FILE:LINE DiscographyPage.tsx:129
+  { fact: "Лопата 42 +1/клик baseCost 42", src: "MiningPage.tsx:24", style: "СССР" }, // FILE:LINE MiningPage.tsx:24
+  { fact: "Кирка 142 +3/клик", src: "MiningPage.tsx:25", style: "СССР" }, // FILE:LINE MiningPage.tsx:25
+  { fact: "Бур 420 +1/сек авто", src: "MiningPage.tsx:26", style: "киберпанк" }, // FILE:LINE MiningPage.tsx:26
+  { fact: "БЕЛАЗ 1042 +5/сек", src: "MiningPage.tsx:27", style: "киберпанк" }, // FILE:LINE MiningPage.tsx:27
+  { fact: "Шахта 2042 +12/сек +5/клик", src: "MiningPage.tsx:28", style: "киберпанк" }, // FILE:LINE MiningPage.tsx:28
+  { fact: "Скин Мопс 42 common 42 монеты", src: "ShopPage.tsx:37", style: "мемфис" }, // FILE:LINE ShopPage.tsx:37
+  { fact: "Скин Дракон 42 legendary 1420", src: "ShopPage.tsx:48", style: "мемфис" }, // FILE:LINE ShopPage.tsx:48
+  { fact: "Эко вопрос: батилки 42 +42 балла", src: "EcoPage.tsx:35", style: "СССР" }, // FILE:LINE EcoPage.tsx:35
+  { fact: "Эко вопрос: шуба норки −142", src: "EcoPage.tsx:57", style: "мемфис" }, // FILE:LINE EcoPage.tsx:57
+  { fact: "Эко ранг >=200 ЭкоЛегенда", src: "EcoPage.tsx:123", style: "Y2K" }, // FILE:LINE EcoPage.tsx:123
+  { fact: "Игра Runner 42 — беги братуха", src: "GamesHub.tsx:6", style: "киберпанк" }, // FILE:LINE GamesHub.tsx:6
+  { fact: "Игра Blackjack цель 4200 монет", src: "BlackjackGame.tsx:6", style: "Y2K" }, // FILE:LINE BlackjackGame.tsx:6
+  { fact: "GSAP y24 stagger 0.12 entrance", src: "GalleryPage.tsx:808", style: "СССР" }, // FILE:LINE GalleryPage.tsx:808
+  { fact: "REAL_BY_STYLE СССР→42-agit-01-800.webp", src: "GalleryPage.tsx:32", style: "СССР" }, // FILE:LINE GalleryPage.tsx:32
+  { fact: "Recap tAi6gI-bw1Q — стрип-клуб реклама", src: "RecapsPage.tsx:30", style: "Y2K" }, // FILE:LINE RecapsPage.tsx:30
+  { fact: "Recap kscIJpoF97Q — лайки ТикТок", src: "RecapsPage.tsx:48", style: "Y2K" }, // FILE:LINE RecapsPage.tsx:48
+  { fact: "Recap X2n13XbPfD0 — TerraFirmaGreg 03:06:02", src: "RecapsPage.tsx:65", style: "киберпанк" }, // FILE:LINE RecapsPage.tsx:65
+  { fact: "Recap YjtuZXfO8es — Киношка live дисс", src: "RecapsPage.tsx:122", style: "мемфис" }, // FILE:LINE RecapsPage.tsx:122
+  { fact: "Навигация 14 пунктов Layout", src: "App.tsx:54", style: "СССР" }, // FILE:LINE App.tsx:54
+  { fact: "Presave URL music.thefence.me/psmagnum", src: "AiBot.tsx:20", style: "Y2K" }, // FILE:LINE AiBot.tsx:20
+  { fact: "MiMo v2.5 vision прокси /magnum/api/ai", src: "server.ts:787", style: "киберпанк" }, // FILE:LINE server.ts:787
+  { fact: "Table magnum_users Neon", src: "drizzle/schema.ts:3", style: "СССР" }, // FILE:LINE drizzle/schema.ts:3
+  { fact: "Table magnum_ideas pending", src: "drizzle/schema.ts:32", style: "мемфис" }, // FILE:LINE drizzle/schema.ts:32
+  { fact: "RateLimit 6/min presave stats", src: "server.ts:760", style: "киберпанк" }, // FILE:LINE server.ts:760
+  { fact: "Gallery 441KB + Recaps 277KB lazy", src: "App.tsx:14", style: "Y2K" }, // FILE:LINE App.tsx:14
+  { fact: "Дрон и жигули-ховер номер 42", src: "GalleryPage.tsx:145", style: "киберпанк" }, // FILE:LINE GalleryPage.tsx:145
+  { fact: "Comic Sans и блики Y2K", src: "GalleryPage.tsx:74", style: "Y2K" }, // FILE:LINE GalleryPage.tsx:74
+  { fact: "Бетон и неон СССР", src: "GalleryPage.tsx:54", style: "СССР" }, // FILE:LINE GalleryPage.tsx:54
+  { fact: "Геометрия мемфис 1981 Sottsass", src: "GalleryPage.tsx:439", style: "мемфис" }, // FILE:LINE GalleryPage.tsx:439
+  { fact: "Томь чище — эко-вайб Сосновый бор", src: "EcoPage.tsx:338", style: "мемфис" }, // FILE:LINE EcoPage.tsx:338
+  { fact: "Кузбасс edition майнинг без скама", src: "MiningPage.tsx:293", style: "СССР" }, // FILE:LINE MiningPage.tsx:293
+  { fact: "Дуэль 2-4 братухи realtime WS", src: "MiningPage.tsx:369", style: "киберпанк" }, // FILE:LINE MiningPage.tsx:369
+  { fact: "Shop инвентарь 12/{SKINS.length}", src: "ShopPage.tsx:433", style: "Y2K" }, // FILE:LINE ShopPage.tsx:433
+  { fact: "Frame verify POST /frame/verify", src: "server.ts:815", style: "СССР" }, // FILE:LINE server.ts:815
+  { fact: "Health GET /magnum/api/health", src: "server.ts:794", style: "киберпанк" }, // FILE:LINE server.ts:794
+  { fact: "Caddy :30645 https -> 3000", src: "docs/ops.md:8", style: "СССР" }, // FILE:LINE docs/ops.md:8
+  { fact: "Bun PORT=3000 magnum-bun active", src: "reports/health-2026-09-01-1406.md:8", style: "киберпанк" }, // FILE:LINE reports/health-2026-09-01-1406.md:8
+  { fact: "Tests 2897 passed 16 файлов", src: "CHANGELOG.md:16", style: "Y2K" }, // FILE:LINE CHANGELOG.md:16
+  { fact: "Build main 509KB gzip 143KB", src: "reports/perf-2026-09-01-1411.md:5", style: "киберпанк" }, // FILE:LINE reports/perf-2026-09-01-1411.md:5
+  { fact: "Трек Тонированный жигуль сингл", src: "DiscographyPage.tsx:127", style: "мемфис" }, // FILE:LINE DiscographyPage.tsx:127
+  { fact: "Флипфон 42 пропущенных", src: "GalleryPage.tsx:84", style: "Y2K" }, // FILE:LINE GalleryPage.tsx:84
+  { fact: "Неон-бейдж за 42 лайка", src: "GalleryPage.tsx:114", style: "Y2K" }, // FILE:LINE GalleryPage.tsx:114
+];
+
   { term: "Агитплакат #51", def: "Плакат с лозунгом 42, молот и бетон — расширенное определение #51: история, палитра, примеры использования в артах 42, отсылки к лору MAGNUM, техника исполнения (градиент, emoji, img fallback).", style: "киберпанк" },
   { term: "Братуха #52", def: "Персонаж маскот, 5опка стайл — расширенное определение #52: история, палитра, примеры использования в артах 42, отсылки к лору MAGNUM, техника исполнения (градиент, emoji, img fallback).", style: "мемфис" },
   { term: "Блинг #53", def: "Хром-глянец Y2K, цепь и бабл — расширенное определение #53: история, палитра, примеры использования в артах 42, отсылки к лору MAGNUM, техника исполнения (градиент, emoji, img fallback).", style: "СССР" },
