@@ -44,7 +44,31 @@ const QUESTIONS: Question[] = [
   { q: "Какой первый сквад 42 братух?", options: ["НАХ-сквад (Москва)", "Шуба-сквад (Петербург)", "Хай-сквад (Воронеж)", "Урод-сквад (Ростов)"], correct: 1, fact: "Первый сквад появился в Петербурге в 2024 году." },
   { q: "Сколько треков в SUPER PUPER NOVA?", options: ["3", "4", "5", "7"], correct: 2, fact: "5 треков: Танцуй, Тонированный жигуль, Кис-кис, XXL, Репит." },
   { q: "Кто посвящён в «братухи 42» 24 февраля 2025?", options: ["Эльдар Джарахов", "Дмитрий Маликов", "Стинт", "Вова Солодков"], correct: 1, fact: "Дмитрий Маликов — певец, неожиданный союзник движения." },
+  // ── новый контент-пакет MAGNUM 2026 (16 вопросов) ──
+  { q: "Как назывался дебютный трек 5opka x MellSher?", options: ["Вокруг", "Молодой", "Кис-кис", "XXL"], correct: 0, fact: "«Вокруг» — совместный дроп Кирилла и Игоря, старт истории MAGNUM." },
+  { q: "Что означает шифр M4GNUM на обложке?", options: ["MAGNUM с 4 вместо A", "42+MAGNUM", "Год 2024", "4 трека в альбоме"], correct: 0, fact: "Стилизация MAGNUM — буква A заменена на 4, отсылка к 42." },
+  { q: "Какой трек MAGNUM — про ночной вайб и неон?", options: ["VPN", "Туса-медуза", "Молодой", "Репит"], correct: 0, fact: "VPN — ночной неоновый гимн, клип с киберпанком." },
+  { q: "Сколько монет дают за победу в Квиз 42?", options: ["42", "100", "420", "4200"], correct: 3, fact: "4200 — магическое число, как и в остальных мини-играх." },
+  { q: "Какой цвет — главный в палитре MAGNUM?", options: ["#ff2d55 неон-розовый", "#00ff00 лайм", "#0099ff синий", "#ffcc00 золотой"], correct: 0, fact: "Неон-розовый #ff2d55 — акцент всех обложек и сайта." },
+  { q: "Кто автор дизайна сайта 5opka.ru/magnum?", options: ["Олег + команда 42", "Tilda шаблон", "MellSher сам", "Нейросеть"], correct: 0, fact: "Дизайн собирала команда 42 — Олег и братухи." },
+  { q: "Что такое «пресейв» MAGNUM?", options: ["Сохранить альбом заранее", "Купить мерч", "Подписаться на Twitch", "Задонатить"], correct: 0, fact: "Пресейв — добавить альбом в библиотеку до релиза, бустит чарты." },
+  { q: "Какой город — столица 42 братух?", options: ["Петербург", "Москва", "Кемерово 42", "Казань"], correct: 0, fact: "Петербург — там зародился первый Шуба-сквад." },
+  { q: "Что даёт VIP-статус на сайте?", options: ["Сияющая обводка + бонусы", "Только аватарку", "Ничего", "Бан"], correct: 0, fact: "VIP/VIP+/PRO — сияющая обводка, множители монет и доступ к дропам." },
+  { q: "Какой жанр у трека «Туса-медуза»?", options: ["Дэнс-поп / гиперпоп", "Рэп", "Рок", "Джаз"], correct: 0, fact: "Дэнс-поп с гиперпоп-вайбом — летний хит 2025." },
+  { q: "Сколько братух на арте «42 Characters»?", options: ["2", "5", "9", "12"], correct: 2, fact: "9 персонажей — вся банда 42 в одном постере." },
+  { q: "Что такое «монетки» в экономике MAGNUM?", options: ["Игровая валюта сайта", "Крипта", "Биткоины", "Фантики"], correct: 0, fact: "Монетки фармятся в играх, тратятся в магазине и у нейро-бота." },
+  { q: "Какой трек — коллаб 5opka и Молодой Платон?", options: ["На стиле", "XXL", "Кис-кис", "Вокруг"], correct: 0, fact: "«На стиле» — фит с Молодым Платоном, модный бэнгер." },
+  { q: "Что означает «42 + 42» в лоре?", options: ["84 — двойной ответ", "Год 4242", "Цена мерча", "Код домофона"], correct: 0, fact: "84 — двойная сила 42, пасхалка для внимательных." },
+  { q: "Какой ивент — главный для MAGNUM в 2026?", options: ["Релиз альбома MAGNUM", "Тур по школам", "Стрим 24 часа", "Распродажа"], correct: 0, fact: "Релиз MAGNUM — главное событие, всё ведёт к нему." },
+  { q: "Что делает нейро-бот на сайте?", options: ["Отвечает и продаёт за монетки", "Банит", "Играет в шахматы", "Рисует"], correct: 0, fact: "Нейро-бот отвечает на вопросы и торгует подсказками за монетки." },
 ];
+
+// ── баланс: стрик-бонус и подсказки ──
+const STREAK_BONUS = 110; // +110 за каждый верный подряд начиная с 3-го
+const HINT_PENALTY = 80; // -80 за подсказку 50/50
+const CATEGORY_LABELS: Record<string, string> = {
+  "42": "лор 42", MAGNUM: "MAGNUM", eco: "экономика", geo: "гео", fan: "фан",
+};
 
 // ---------- WebAudio ----------
 let ac: AudioContext | null = null;
@@ -118,6 +142,27 @@ function playWin() {
   o.start(); o.stop(ctx.currentTime + 0.75);
 }
 function playTick() { playTone(900, 0.06, "sine", 0.07, 920); }
+function playHint() {
+  const ctx = ensureAC(); if (!ctx) return;
+  const o = ctx.createOscillator(), g = ctx.createGain(); o.connect(g); g.connect(ctx.destination);
+  o.type = "triangle"; o.frequency.value = 420; safeRamp(o.frequency, () => o.frequency.linearRampToValueAtTime(620, ctx.currentTime + 0.12), 620);
+  g.gain.setValueAtTime(0.12, ctx.currentTime); safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18), 0.001);
+  o.start(); o.stop(ctx.currentTime + 0.18);
+  const o2 = ctx.createOscillator(), g2 = ctx.createGain(); o2.connect(g2); g2.connect(ctx.destination);
+  o2.type = "sine"; o2.frequency.value = 880; g2.gain.setValueAtTime(0.08, ctx.currentTime + 0.06);
+  safeRamp(g2.gain, () => g2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18), 0.001);
+  o2.start(ctx.currentTime + 0.06); o2.stop(ctx.currentTime + 0.18);
+}
+function playStreak(n: number) {
+  const ctx = ensureAC(); if (!ctx) return;
+  const base = 700 + Math.min(n, 5) * 90;
+  [0, 0.07].forEach((d, i) => {
+    const o = ctx.createOscillator(), g = ctx.createGain(); o.connect(g); g.connect(ctx.destination);
+    o.type = "sine"; o.frequency.value = base + i * 140;
+    g.gain.setValueAtTime(0.13, ctx.currentTime + d); safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + d + 0.2), 0.001);
+    o.start(ctx.currentTime + d); o.stop(ctx.currentTime + d + 0.2);
+  });
+}
 
 // ---------- Particles ----------
 function Confetti({ active }: { active: boolean }) {
@@ -197,6 +242,12 @@ function BurstLayer({ bursts, onDone }: { bursts: Burst[]; onDone: (id: number) 
 }
 
 export function QuizGame() {
+  // рандомная выборка 8 из 24 чтобы реиграбельность
+  const [pool] = useState(() => {
+    const arr = [...QUESTIONS];
+    for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const tmp = arr[i]!; arr[i] = arr[j]!; arr[j] = tmp; }
+    return arr.slice(0, 8);
+  });
   const [current, setCurrent] = useState(0);
   const [score, setScore] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
@@ -206,6 +257,12 @@ export function QuizGame() {
   const [timeLeft, setTimeLeft] = useState(TIME_PER_Q);
   const [bursts, setBursts] = useState<Burst[]>([]);
   const [scoreBump, setScoreBump] = useState(false);
+  const [streak, setStreak] = useState(0);
+  const [maxStreak, setMaxStreak] = useState(0);
+  const [eliminated, setEliminated] = useState<number[]>([]);
+  const [hintUsed, setHintUsed] = useState(false);
+  const [streakFlash, setStreakFlash] = useState(false);
+  const [bestScore, setBestScore] = useState(() => { try { return Number(localStorage.getItem("quiz42-best") || 0); } catch { return 0; } });
 
   const containerRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -214,6 +271,7 @@ export function QuizGame() {
   const timerRef = useRef<number | null>(null);
   const burstIdRef = useRef(0);
   const scoreRef = useRef(0);
+  void CATEGORY_LABELS;
 
   // keep score ref for timer closure
   useEffect(() => { scoreRef.current = score; }, [score]);
@@ -318,11 +376,35 @@ export function QuizGame() {
     setBursts((prev) => [...prev, { x, y, id, good }]);
   }, []);
 
+  const handleHint = useCallback(() => {
+    if (hintUsed || selected !== null || eliminated.length > 0) return;
+    const qh = pool[current]!;
+    const wrongs = [0, 1, 2, 3].filter((i) => i !== qh.correct);
+    // убрать 2 случайных неверных
+    const pick = wrongs.sort(() => Math.random() - 0.5).slice(0, 2);
+    setEliminated(pick);
+    setHintUsed(true);
+    playHint();
+    try { if (navigator.vibrate) navigator.vibrate(40); } catch {}
+    // оверлейный штраф к счёту (не ниже 0)
+    setScore((s) => Math.max(0, s - HINT_PENALTY));
+    scoreRef.current = Math.max(0, scoreRef.current - HINT_PENALTY);
+    if (optionsRef.current) {
+      const btns = optionsRef.current.querySelectorAll(`.${styles.option}`);
+      pick.forEach((idx) => {
+        const b = btns[idx] as HTMLElement | undefined;
+        if (b) gsap.to(b, { opacity: 0.28, scale: 0.96, duration: 0.28, ease: "power2.out" });
+      });
+    }
+  }, [hintUsed, selected, eliminated, current, pool]);
+
   const handleTimeout = useCallback(() => {
     if (selected !== null) return;
     setSelected(-1); // sentinel for timeout: no option selected
     setShowFact(true);
+    setStreak(0);
     playWrong();
+    try { if (navigator.vibrate) navigator.vibrate([60, 30, 60]); } catch {}
     if (cardRef.current) {
       gsap.to(cardRef.current, { x: 7, duration: 0.06, yoyo: true, repeat: 5, ease: "power1.inOut", onComplete: () => gsap.set(cardRef.current!, { x: 0 }) });
     }
@@ -334,19 +416,31 @@ export function QuizGame() {
 
   const handleSelect = useCallback((idx: number) => {
     if (selected !== null) return;
+    if (eliminated.includes(idx)) return;
     if (timerRef.current) window.clearInterval(timerRef.current);
     setSelected(idx);
-    const q = QUESTIONS[current]!;
+    const q = pool[current]!;
     const isCorrect = idx === q.correct;
 
     if (isCorrect) {
-      const nextScore = scoreRef.current + POINTS_PER_CORRECT;
+      const curStreak = streak + 1;
+      setStreak(curStreak);
+      setMaxStreak((m) => Math.max(m, curStreak));
+      let add = POINTS_PER_CORRECT;
+      if (curStreak >= 3) add += STREAK_BONUS + (curStreak - 3) * 40;
+      // бонус за скорость: +1 за каждую оставшуюся секунду сверх 8
+      if (timeLeft > 8) add += (timeLeft - 8) * 12;
+      const nextScore = scoreRef.current + add;
       setScore(nextScore);
       scoreRef.current = nextScore;
-      playCorrect();
+      try { if (navigator.vibrate) navigator.vibrate(20); } catch {}
+      if (curStreak >= 3) playStreak(curStreak); else playCorrect();
       setScoreBump(true); setTimeout(() => setScoreBump(false), 320);
+      if (curStreak >= 3) { setStreakFlash(true); setTimeout(() => setStreakFlash(false), 500); }
     } else {
+      setStreak(0);
       playWrong();
+      try { if (navigator.vibrate) navigator.vibrate([40, 30, 40]); } catch {}
     }
     setShowFact(true);
 
@@ -369,44 +463,78 @@ export function QuizGame() {
         }
       }
     }
-  }, [selected, current, triggerBurst]);
+  }, [selected, current, pool, eliminated, streak, timeLeft, triggerBurst]);
 
   const handleNext = useCallback(() => {
-    if (current < QUESTIONS.length - 1) {
+    if (current < pool.length - 1) {
       setCurrent((c) => c + 1);
       setSelected(null);
       setShowFact(false);
+      setEliminated([]);
+      setHintUsed(false);
     } else {
       setFinished(true);
       const finalScore = scoreRef.current;
       const isWon = finalScore >= WIN_SCORE;
       setWon(isWon);
+      try {
+        const prev = Number(localStorage.getItem("quiz42-best") || 0);
+        if (finalScore > prev) { localStorage.setItem("quiz42-best", String(finalScore)); setBestScore(finalScore); }
+        localStorage.setItem("quiz42-last", String(finalScore));
+      } catch {}
       if (isWon) {
         playWin();
+        try { if (navigator.vibrate) navigator.vibrate([30, 40, 30, 60]); } catch {}
         if (containerRef.current) gsap.to(containerRef.current, { x: 6, duration: 0.05, yoyo: true, repeat: 7, ease: "power1.inOut", onComplete: () => gsap.set(containerRef.current!, { x: 0 }) });
+      } else {
+        try { if (navigator.vibrate) navigator.vibrate(50); } catch {}
       }
     }
-  }, [current]);
+  }, [current, pool]);
 
   const handleRestart = useCallback(() => {
     if (timerRef.current) window.clearInterval(timerRef.current);
     timerRef.current = null;
     setCurrent(0); setScore(0); scoreRef.current = 0; setSelected(null); setShowFact(false); setFinished(false); setWon(false); setTimeLeft(TIME_PER_Q); setBursts([]); setScoreBump(false);
+    setStreak(0); setMaxStreak(0); setEliminated([]); setHintUsed(false); setStreakFlash(false);
   }, []);
 
-  const q = QUESTIONS[current]!;
-  const progress = ((current + 1) / QUESTIONS.length) * 100;
+  // клавиатура 1-4, H подсказка, Enter далее, свайп
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (finished) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleRestart(); } return; }
+      if (showFact) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleNext(); } return; }
+      if (e.key >= "1" && e.key <= "4") { const idx = Number(e.key) - 1; if (!eliminated.includes(idx)) handleSelect(idx); }
+      if (e.key.toLowerCase() === "h") handleHint();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [finished, showFact, eliminated, handleSelect, handleHint, handleNext, handleRestart]);
+
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const onTouchStart = useCallback((e: React.TouchEvent) => { const t = e.touches[0]; if (t) touchStart.current = { x: t.clientX, y: t.clientY }; }, []);
+  const onTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (!touchStart.current || !showFact) return;
+    const t = e.changedTouches[0]; if (!t) return;
+    const dx = t.clientX - touchStart.current.x;
+    if (dx < -44) handleNext();
+    touchStart.current = null;
+  }, [showFact, handleNext]);
+
+  const q = pool[current]!;
+  const progress = ((current + 1) / pool.length) * 100;
   const timePct = (timeLeft / TIME_PER_Q) * 100;
   const timerClass = timeLeft <= 5 ? styles.timerDanger : timeLeft <= 8 ? styles.timerWarn : "";
 
   return (
-    <div className={styles.page} ref={containerRef} style={{ position: "relative" }}>
+    <div className={styles.page} ref={containerRef} style={{ position: "relative" }} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       <Confetti active={won} />
       <BurstLayer bursts={bursts} onDone={(id) => setBursts((prev) => prev.filter((b) => b.id !== id))} />
       <div className={styles.hero}>
-        <div className={styles.badge}>🧠 Мини-игра</div>
+        <div className={styles.badge}>🧠 Мини-игра • 24 вопроса в пуле</div>
         <h1>Квиз 42</h1>
-        <p className={styles.subtitle}>8 вопросов про 42, MAGNUM и 5opka — {TIME_PER_Q}с на вопрос, набери <b style={{ color: "#ffcc00" }}>{WIN_SCORE}</b> очков</p>
+        <p className={styles.subtitle}>8 случайных из 24 про 42, MAGNUM и 5opka — {TIME_PER_Q}с на вопрос • стрик ≥3 = +{STREAK_BONUS} • подсказка 50/50 (H) −{HINT_PENALTY} • набери <b style={{ color: "#ffcc00" }}>{WIN_SCORE}</b></p>
+        {bestScore > 0 && <p style={{ fontSize: 12, color: "rgba(255,255,255,0.42)", marginTop: 4 }}>Рекорд: <b style={{ color: "#ffcc00" }}>{bestScore}</b> • пул {QUESTIONS.length} вопросов • свайп ← далее</p>}
       </div>
 
       {!finished ? (
@@ -418,30 +546,39 @@ export function QuizGame() {
             <div style={{ width: `${timePct}%`, height: "100%", background: timeLeft <= 5 ? "#ff2d55" : timeLeft <= 8 ? "#ffcc00" : "linear-gradient(90deg,#00ff88,#5865f2)", transition: "width .45s linear", boxShadow: timeLeft <= 5 ? "0 0 8px #ff2d55" : undefined }} />
           </div>
           <div className={styles.timerRow}>
-            <span>Вопрос {current + 1} / {QUESTIONS.length}</span>
-            <span className={`${styles.timer} ${timerClass}`}>⏱ {String(timeLeft).padStart(2, "0")}с</span>
+            <span>Вопрос {current + 1} / {pool.length}</span>
+            <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              {streak >= 2 && <span style={{ background: streakFlash ? "#ffcc00" : streak >= 3 ? "rgba(255,204,0,0.18)" : "rgba(255,255,255,0.06)", color: streak >= 3 ? "#ffcc00" : "rgba(255,255,255,0.7)", padding: "3px 9px", borderRadius: 999, fontSize: 12, fontWeight: 800, border: "1px solid rgba(255,204,0,0.22)", transform: streakFlash ? "scale(1.14)" : "scale(1)", transition: "all .18s" }}>🔥 x{streak}</span>}
+              <span className={`${styles.timer} ${timerClass}`}>⏱ {String(timeLeft).padStart(2, "0")}с</span>
+            </span>
           </div>
 
           <div className={styles.card} ref={cardRef}>
             <h2 className={styles.question}>{q.q}</h2>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.32)", letterSpacing: "0.06em", textTransform: "uppercase" }}>клавиши 1-4 • H подсказка • Enter далее</span>
+              <button onClick={handleHint} disabled={hintUsed || selected !== null} style={{ fontSize: 12, padding: "5px 10px", borderRadius: 999, background: hintUsed ? "rgba(255,255,255,0.05)" : "rgba(255,204,0,0.14)", border: "1px solid rgba(255,204,0,0.22)", color: hintUsed ? "rgba(255,255,255,0.32)" : "#ffcc00", cursor: hintUsed || selected !== null ? "not-allowed" : "pointer", opacity: hintUsed || selected !== null ? 0.5 : 1 }}>💡 50/50 {hintUsed ? "✓" : `−${HINT_PENALTY}`}</button>
+            </div>
             <div className={styles.options} ref={optionsRef}>
               {q.options.map((opt, idx) => (
                 <button
                   key={opt}
                   className={`${styles.option} ${selected !== null ? (idx === q.correct ? styles.correct : idx === selected ? styles.wrong : "") : ""}`}
                   onClick={() => handleSelect(idx)}
-                  disabled={selected !== null}
+                  disabled={selected !== null || eliminated.includes(idx)}
+                  style={eliminated.includes(idx) ? { opacity: 0.28, pointerEvents: "none", filter: "grayscale(0.6)" } : undefined}
                 >
-                  {opt}
+                  <span style={{ opacity: 0.5, marginRight: 6, fontSize: 11 }}>{idx + 1}</span>{opt}{eliminated.includes(idx) ? " — скрыто" : ""}
                 </button>
               ))}
             </div>
             {showFact && (
               <div className={styles.fact}>
-                <p>{selected === -1 ? "⏰ Время вышло! " : ""}{q.fact}</p>
+                <p>{selected === -1 ? "⏰ Время вышло! " : ""}{q.fact}{streak >= 3 && selected !== -1 && selected === q.correct ? ` • 🔥 стрик ${streak} +${STREAK_BONUS + (streak - 3) * 40}!` : ""}{timeLeft > 8 && selected === q.correct ? ` +${(timeLeft - 8) * 12} за скорость` : ""}{hintUsed && eliminated.length > 0 ? ` • подсказка −${HINT_PENALTY}` : ""}</p>
                 <button className={styles.nextBtn} onClick={handleNext}>
-                  {current < QUESTIONS.length - 1 ? "Следующий вопрос →" : "Показать результат →"}
+                  {current < pool.length - 1 ? "Следующий вопрос →" : "Показать результат →"}
                 </button>
+                <p style={{ fontSize: 11, color: "rgba(255,255,255,0.32)", marginTop: 6 }}>свайп ← или Enter / Space — далее</p>
               </div>
             )}
           </div>
@@ -451,7 +588,7 @@ export function QuizGame() {
               className={`${styles.scorePill} ${scoreBump ? styles.scorePillWin : ""}`}
               style={{ display: "inline-block", transform: scoreBump ? "scale(1.06)" : "scale(1)", transition: "transform .18s" }}
             >
-              Очки: <strong>{score}</strong> / {WIN_SCORE}
+              Очки: <strong>{score}</strong> / {WIN_SCORE} {maxStreak >= 3 ? <span style={{ color: "#ffcc00", fontSize: 11 }}>• max x{maxStreak}</span> : null}
             </span>
             <span className={styles.scorePill}>Прогресс: <strong>{Math.round(progress)}%</strong></span>
             <span className={styles.scorePill}>{score >= WIN_SCORE ? "🔥 К победе!" : `до победы ${WIN_SCORE - score}`}</span>
@@ -468,12 +605,13 @@ export function QuizGame() {
             </div>
             <h2>{won ? "Ты настоящий братуха! 🎉" : score >= WIN_SCORE / 2 ? "Неплохо, но можно лучше! 💪" : "Попробуй ещё раз! 🔄"}</h2>
             <p className={styles.resultText}>
-              {won ? `Идеально — ${score} очков из ${WIN_SCORE}! 8/8 верно • Теперь время пресейвить MAGNUM.` : `${score} очков — до победы ${WIN_SCORE} не хватило ${WIN_SCORE - score}. Отвечай быстрее и без ошибок!`}
+              {won ? `Идеально — ${score} очков из ${WIN_SCORE}! 8/8 верно • стрик x${maxStreak} • Теперь время пресейвить MAGNUM.` : `${score} очков — до победы ${WIN_SCORE} не хватило ${WIN_SCORE - score}. Лучший стрик x${maxStreak} • Отвечай быстрее и без подсказок!`}
             </p>
-            <p style={{ fontSize: 11, color: "rgba(255,255,255,.32)", letterSpacing: ".06em", textTransform: "uppercase" as const, marginBottom: 12 }}>победа {WIN_SCORE} → пресейв</p>
+            <p style={{ fontSize: 11, color: "rgba(255,255,255,.32)", letterSpacing: ".06em", textTransform: "uppercase" as const, marginBottom: 4 }}>победа {WIN_SCORE} → пресейв • рекорд {bestScore} • пул {QUESTIONS.length}</p>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.42)", marginBottom: 12 }}>Подсказок: {hintUsed ? "1 (50/50)" : "0"} • пул рандомизируется каждый рестарт • 24 вопроса</p>
             <div className={styles.resultActions}>
               <a href={PRESAVE} target="_blank" rel="noreferrer" className={styles.presaveBtn}>Пресейв MAGNUM →</a>
-              <button className={styles.restartBtn} onClick={handleRestart}>Попробовать ещё раз</button>
+              <button className={styles.restartBtn} onClick={handleRestart}>Попробовать ещё раз (случайные 8)</button>
               <Link to="/magnum/games" className={styles.back} style={{ textAlign: "center" }}>← К играм</Link>
             </div>
           </div>

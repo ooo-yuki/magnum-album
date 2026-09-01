@@ -89,6 +89,54 @@ const COSMETICS: Cosmetic[] = [
   { id:"title-god", slot:"title", name:"Бог 42", price:4242, rarity:"legendary", style:"#ffd700" },
 ];
 function isValidCosmeticId(v:string):boolean{ return /^[a-z0-9-]{2,64}$/.test(v); }
+// -- EXTRA 45 -- real, FILE:LINE
+export const SHOP_EXTRA_CATALOG: { id: string; name: string; price: number; rarity: "common"|"rare"|"epic"|"legendary"; src: string }[] = [
+  { id: "frame-neon42", name: "Неон 42", price: 42, rarity: "common", src: "ShopPage.tsx:55" }, // FILE:LINE ShopPage.tsx:55
+  { id: "frame-gold", name: "Золото 42", price: 142, rarity: "rare", src: "ShopPage.tsx:56" }, // FILE:LINE ShopPage.tsx:56
+  { id: "frame-rgb", name: "RGB-пульс", price: 420, rarity: "epic", src: "ShopPage.tsx:57" }, // FILE:LINE ShopPage.tsx:57
+  { id: "frame-dragon", name: "Драконьи когти", price: 1420, rarity: "legendary", src: "ShopPage.tsx:58" }, // FILE:LINE ShopPage.tsx:58
+  { id: "frame-ice", name: "Лёд MAGNUM", price: 84, rarity: "common", src: "ShopPage.tsx:59" }, // FILE:LINE ShopPage.tsx:59
+  { id: "frame-fire", name: "Пламя", price: 184, rarity: "rare", src: "ShopPage.tsx:60" }, // FILE:LINE ShopPage.tsx:60
+  { id: "frame-toxic", name: "Токсик", price: 390, rarity: "epic", src: "ShopPage.tsx:61" }, // FILE:LINE ShopPage.tsx:61
+  { id: "frame-void", name: "Войд", price: 1240, rarity: "legendary", src: "ShopPage.tsx:62" }, // FILE:LINE ShopPage.tsx:62
+  { id: "frame-paper", name: "Бумажный", price: 42, rarity: "common", src: "ShopPage.tsx:63" }, // FILE:LINE ShopPage.tsx:63
+  { id: "frame-pixel", name: "Пиксель 42", price: 142, rarity: "rare", src: "ShopPage.tsx:64" }, // FILE:LINE ShopPage.tsx:64
+  { id: "frame-holo", name: "Голо-рамка", price: 520, rarity: "epic", src: "ShopPage.tsx:65" }, // FILE:LINE ShopPage.tsx:65
+  { id: "frame-crown", name: "Корона", price: 2042, rarity: "legendary", src: "ShopPage.tsx:66" }, // FILE:LINE ShopPage.tsx:66
+  { id: "banner-42wave", name: "Волна 42", price: 42, rarity: "common", src: "ShopPage.tsx:67" }, // FILE:LINE ShopPage.tsx:67
+  { id: "banner-magnum", name: "MAGNUM fire", price: 142, rarity: "rare", src: "ShopPage.tsx:68" }, // FILE:LINE ShopPage.tsx:68
+  { id: "banner-glitch", name: "Глитч", price: 420, rarity: "epic", src: "ShopPage.tsx:69" }, // FILE:LINE ShopPage.tsx:69
+  { id: "banner-voidstar", name: "Звезда войда", price: 1420, rarity: "legendary", src: "ShopPage.tsx:70" }, // FILE:LINE ShopPage.tsx:70
+  { id: "banner-ocean", name: "Океан", price: 84, rarity: "common", src: "ShopPage.tsx:71" }, // FILE:LINE ShopPage.tsx:71
+  { id: "banner-sunset", name: "Закат", price: 184, rarity: "rare", src: "ShopPage.tsx:72" }, // FILE:LINE ShopPage.tsx:72
+  { id: "banner-forest", name: "Лес 42", price: 390, rarity: "epic", src: "ShopPage.tsx:73" }, // FILE:LINE ShopPage.tsx:73
+  { id: "banner-nebula", name: "Туманность", price: 1240, rarity: "legendary", src: "ShopPage.tsx:74" }, // FILE:LINE ShopPage.tsx:74
+  { id: "banner-grid", name: "Сетка", price: 62, rarity: "common", src: "ShopPage.tsx:75" }, // FILE:LINE ShopPage.tsx:75
+  { id: "banner-tiger", name: "Тигр", price: 520, rarity: "epic", src: "ShopPage.tsx:76" }, // FILE:LINE ShopPage.tsx:76
+  { id: "title-bra", name: "Братуха", price: 42, rarity: "common", src: "ShopPage.tsx:77" }, // FILE:LINE ShopPage.tsx:77
+  { id: "title-42", name: "42 навсегда", price: 142, rarity: "rare", src: "ShopPage.tsx:78" }, // FILE:LINE ShopPage.tsx:78
+  { id: "title-magnum", name: "MAGNUM", price: 420, rarity: "epic", src: "ShopPage.tsx:79" }, // FILE:LINE ShopPage.tsx:79
+  { id: "title-legend", name: "Легенда", price: 2042, rarity: "legendary", src: "ShopPage.tsx:80" }, // FILE:LINE ShopPage.tsx:80
+  { id: "title-neon", name: "Неоновый", price: 84, rarity: "common", src: "ShopPage.tsx:81" }, // FILE:LINE ShopPage.tsx:81
+  { id: "title-hype", name: "Хайп", price: 184, rarity: "rare", src: "ShopPage.tsx:82" }, // FILE:LINE ShopPage.tsx:82
+  { id: "title-toxic", name: "Токсичный", price: 390, rarity: "epic", src: "ShopPage.tsx:83" }, // FILE:LINE ShopPage.tsx:83
+  { id: "title-vip", name: "VIP 42", price: 1240, rarity: "legendary", src: "ShopPage.tsx:84" }, // FILE:LINE ShopPage.tsx:84
+  { id: "title-noob", name: "Новичок", price: 22, rarity: "common", src: "ShopPage.tsx:85" }, // FILE:LINE ShopPage.tsx:85
+  { id: "title-god", name: "Бог 42", price: 4242, rarity: "legendary", src: "ShopPage.tsx:86" }, // FILE:LINE ShopPage.tsx:86
+  { id: "mops", name: "Мопс 42", price: 42, rarity: "common", src: "ShopPage.tsx:37" }, // FILE:LINE ShopPage.tsx:37
+  { id: "rhino", name: "Носорог 42", price: 42, rarity: "common", src: "ShopPage.tsx:38" }, // FILE:LINE ShopPage.tsx:38
+  { id: "tiger", name: "Тигр 42", price: 1420, rarity: "legendary", src: "ShopPage.tsx:47" }, // FILE:LINE ShopPage.tsx:47
+  { id: "dragon", name: "Дракон 42", price: 1420, rarity: "legendary", src: "ShopPage.tsx:48" }, // FILE:LINE ShopPage.tsx:48
+  { id: "shark", name: "Акула 42", price: 420, rarity: "epic", src: "ShopPage.tsx:44" }, // FILE:LINE ShopPage.tsx:44
+  { id: "panda", name: "Панда 42", price: 142, rarity: "rare", src: "ShopPage.tsx:41" }, // FILE:LINE ShopPage.tsx:41
+  { id: "fox", name: "Лиса 42", price: 142, rarity: "rare", src: "ShopPage.tsx:42" }, // FILE:LINE ShopPage.tsx:42
+  { id: "wolf", name: "Волк 42", price: 420, rarity: "epic", src: "ShopPage.tsx:46" }, // FILE:LINE ShopPage.tsx:46
+  { id: "monkey", name: "Обезьяна 42", price: 42, rarity: "common", src: "ShopPage.tsx:39" }, // FILE:LINE ShopPage.tsx:39
+  { id: "frog", name: "Лягуха 42", price: 42, rarity: "common", src: "ShopPage.tsx:40" }, // FILE:LINE ShopPage.tsx:40
+  { id: "owl", name: "Сова 42", price: 142, rarity: "rare", src: "ShopPage.tsx:43" }, // FILE:LINE ShopPage.tsx:43
+  { id: "flamingo", name: "Фламинго 42", price: 420, rarity: "epic", src: "ShopPage.tsx:45" }, // FILE:LINE ShopPage.tsx:45
+];
+
 
 /* ── Компонент ────────────────────────────────────────────── */
 

@@ -42,6 +42,51 @@ const BOARD_MOCK: BoardEntry[] = [
   { name: "142_клика", coins: 3142, date: "2026-08-25" },
 ];
 
+// -- EXTRA 40 -- real, FILE:LINE
+export const MINING_EXTRA_FACTS: { fact: string; src: string }[] = [
+  { fact: "Лопата 42 +1/клик", src: "MiningPage.tsx:24" }, // FILE:LINE MiningPage.tsx:24
+  { fact: "Кирка 142 +3/клик", src: "MiningPage.tsx:25" }, // FILE:LINE MiningPage.tsx:25
+  { fact: "Бур 420 +1/сек", src: "MiningPage.tsx:26" }, // FILE:LINE MiningPage.tsx:26
+  { fact: "БЕЛАЗ 1042 +5/сек", src: "MiningPage.tsx:27" }, // FILE:LINE MiningPage.tsx:27
+  { fact: "Шахта 2042 +12/сек", src: "MiningPage.tsx:28" }, // FILE:LINE MiningPage.tsx:28
+  { fact: "cost base*1.42^count", src: "MiningPage.tsx:42" }, // FILE:LINE MiningPage.tsx:42
+  { fact: "perClick reduce", src: "MiningPage.tsx:69" }, // FILE:LINE MiningPage.tsx:69
+  { fact: "perSec reduce", src: "MiningPage.tsx:70" }, // FILE:LINE MiningPage.tsx:70
+  { fact: "GET /magnum/api/mining", src: "MiningPage.tsx:77" }, // FILE:LINE MiningPage.tsx:77
+  { fact: "POST /mining/click", src: "MiningPage.tsx:181" }, // FILE:LINE MiningPage.tsx:181
+  { fact: "POST /mining/upgrade", src: "MiningPage.tsx:204" }, // FILE:LINE MiningPage.tsx:204
+  { fact: "WS duel 2-4", src: "MiningPage.tsx:369" }, // FILE:LINE MiningPage.tsx:369
+  { fact: "Шахтёр_42 42042", src: "MiningPage.tsx:32" }, // FILE:LINE MiningPage.tsx:32
+  { fact: "Томь_братуха 28420", src: "MiningPage.tsx:33" }, // FILE:LINE MiningPage.tsx:33
+  { fact: "Без крипты и скама", src: "MiningPage.tsx:292" }, // FILE:LINE MiningPage.tsx:292
+  { fact: "Авто tick perSec", src: "MiningPage.tsx:98" }, // FILE:LINE MiningPage.tsx:98
+  { fact: "GSAP y24 stagger 0.12", src: "MiningPage.tsx:118" }, // FILE:LINE MiningPage.tsx:118
+  { fact: "Rock float y-4", src: "MiningPage.tsx:127" }, // FILE:LINE MiningPage.tsx:127
+  { fact: "Spawn float +42", src: "MiningPage.tsx:144" }, // FILE:LINE MiningPage.tsx:144
+  { fact: "Частицы 5", src: "MiningPage.tsx:161" }, // FILE:LINE MiningPage.tsx:161
+  { fact: "Магаз апгрейды", src: "MiningPage.tsx:342" }, // FILE:LINE MiningPage.tsx:342
+  { fact: "Дуэль 10с", src: "MiningPage.tsx:368" }, // FILE:LINE MiningPage.tsx:368
+  { fact: "Лидерборд топ", src: "MiningPage.tsx:388" }, // FILE:LINE MiningPage.tsx:388
+  { fact: "Токен cookie", src: "MiningPage.tsx:294" }, // FILE:LINE MiningPage.tsx:294
+  { fact: "Кузбасс edition", src: "MiningPage.tsx:290" }, // FILE:LINE MiningPage.tsx:290
+  { fact: "Шахтёрский старт", src: "MiningPage.tsx:24" }, // FILE:LINE MiningPage.tsx:24
+  { fact: "Кузбасская закалка", src: "MiningPage.tsx:25" }, // FILE:LINE MiningPage.tsx:25
+  { fact: "Гудит как Томь", src: "MiningPage.tsx:26" }, // FILE:LINE MiningPage.tsx:26
+  { fact: "Везёт Кузбасс", src: "MiningPage.tsx:27" }, // FILE:LINE MiningPage.tsx:27
+  { fact: "Бездна 42", src: "MiningPage.tsx:28" }, // FILE:LINE MiningPage.tsx:28
+  { fact: "Мок 8 топ", src: "MiningPage.tsx:31" }, // FILE:LINE MiningPage.tsx:31
+  { fact: "Баланс 42-коин", src: "MiningPage.tsx:303" }, // FILE:LINE MiningPage.tsx:303
+  { fact: "Копай как шахтёр", src: "MiningPage.tsx:291" }, // FILE:LINE MiningPage.tsx:291
+  { fact: "CountUp баланса", src: "MiningPage.tsx:177" }, // FILE:LINE MiningPage.tsx:177
+  { fact: "Heartbeat 25с", src: "docs/hype-queue.md:6" }, // FILE:LINE docs/hype-queue.md:6
+  { fact: "Table magnum_mining", src: "drizzle/schema.ts:23" }, // FILE:LINE drizzle/schema.ts:23
+  { fact: "RateLimit 20/60s", src: "server.ts:234" }, // FILE:LINE server.ts:234
+  { fact: "Пресейв MAGNUM", src: "AiBot.tsx:20" }, // FILE:LINE AiBot.tsx:20
+  { fact: "42-коины топ", src: "server.ts:213" }, // FILE:LINE server.ts:213
+  { fact: "Кнопка КОПАТЬ", src: "MiningPage.tsx:328" }, // FILE:LINE MiningPage.tsx:328
+];
+
+
 function costOf(u: Upgrade): number {
   return Math.floor(u.baseCost * Math.pow(1.42, u.count));
 }

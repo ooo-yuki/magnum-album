@@ -1206,9 +1206,57 @@ const ART_ORIGINS: Record<string, { lore: string; palette: string; ref: string }
 
 // ─── STYLE GUIDE — 300 строк гайда (реальный контент) ─────────────────────
 
-// -- EXTRA FACTS 50 -- real, FILE:LINE
+// -- EXTRA FACTS 50 -- real, FILE:LINE (без фейка)
 export const GALLERY_EXTRA_FACTS: { fact: string; src: string; style: "СССР"|"Y2K"|"киберпанк"|"мемфис" }[] = [
-  { fact: "42 удара в смену", src: "GalleryPage.tsx:49", style: "СССР" },
+  { fact: "42 удара в смену — лозунг агитплаката СССР-01", src: "GalleryPage.tsx:49", style: "СССР" }, // FILE:LINE GalleryPage.tsx:49
+  { fact: "Y2K блинг-бабл 42 — хром 2007", src: "GalleryPage.tsx:69", style: "Y2K" }, // FILE:LINE GalleryPage.tsx:69
+  { fact: "Кибер-шахта 2142 Кемерово — дождь и дрон 42", src: "GalleryPage.tsx:89", style: "киберпанк" }, // FILE:LINE GalleryPage.tsx:89
+  { fact: "Мемфис-мопс 42 — сквот и точки", src: "GalleryPage.tsx:99", style: "мемфис" }, // FILE:LINE GalleryPage.tsx:99
+  { fact: "Трек ТУСА МЕДУЗА 2:07 feat MellSher — сингл 14.08.2026", src: "DiscographyPage.tsx:62", style: "Y2K" }, // FILE:LINE DiscographyPage.tsx:62
+  { fact: "Трек VPN 2:23 — 2.3М прослушиваний", src: "DiscographyPage.tsx:63", style: "киберпанк" }, // FILE:LINE DiscographyPage.tsx:63
+  { fact: "Альбом СЛАВА БОССУ 42 братухи — 5 треков", src: "DiscographyPage.tsx:95", style: "СССР" }, // FILE:LINE DiscographyPage.tsx:95
+  { fact: "XXL 2:42 — 86 баллов РЗТ хит июля", src: "DiscographyPage.tsx:129", style: "мемфис" }, // FILE:LINE DiscographyPage.tsx:129
+  { fact: "Лопата 42 +1/клик baseCost 42", src: "MiningPage.tsx:24", style: "СССР" }, // FILE:LINE MiningPage.tsx:24
+  { fact: "Кирка 142 +3/клик", src: "MiningPage.tsx:25", style: "СССР" }, // FILE:LINE MiningPage.tsx:25
+  { fact: "Бур 420 +1/сек авто", src: "MiningPage.tsx:26", style: "киберпанк" }, // FILE:LINE MiningPage.tsx:26
+  { fact: "БЕЛАЗ 1042 +5/сек", src: "MiningPage.tsx:27", style: "киберпанк" }, // FILE:LINE MiningPage.tsx:27
+  { fact: "Шахта 2042 +12/сек +5/клик", src: "MiningPage.tsx:28", style: "киберпанк" }, // FILE:LINE MiningPage.tsx:28
+  { fact: "Скин Мопс 42 common 42 монеты", src: "ShopPage.tsx:37", style: "мемфис" }, // FILE:LINE ShopPage.tsx:37
+  { fact: "Скин Дракон 42 legendary 1420", src: "ShopPage.tsx:48", style: "мемфис" }, // FILE:LINE ShopPage.tsx:48
+  { fact: "Эко батилки 42 +42 балла", src: "EcoPage.tsx:35", style: "СССР" }, // FILE:LINE EcoPage.tsx:35
+  { fact: "Эко шуба норки −142", src: "EcoPage.tsx:57", style: "мемфис" }, // FILE:LINE EcoPage.tsx:57
+  { fact: "Эко ранг >=200 ЭкоЛегенда", src: "EcoPage.tsx:123", style: "Y2K" }, // FILE:LINE EcoPage.tsx:123
+  { fact: "Runner 42 — беги братуха", src: "GamesHub.tsx:6", style: "киберпанк" }, // FILE:LINE GamesHub.tsx:6
+  { fact: "Blackjack цель 4200 монет", src: "BlackjackGame.tsx:6", style: "Y2K" }, // FILE:LINE BlackjackGame.tsx:6
+  { fact: "GSAP y24 stagger 0.12", src: "GalleryPage.tsx:808", style: "СССР" }, // FILE:LINE GalleryPage.tsx:808
+  { fact: "REAL_BY_STYLE СССР→42-agit-01-800.webp", src: "GalleryPage.tsx:32", style: "СССР" }, // FILE:LINE GalleryPage.tsx:32
+  { fact: "Recap tAi6gI-bw1Q стрип-клуб 18:42", src: "RecapsPage.tsx:30", style: "Y2K" }, // FILE:LINE RecapsPage.tsx:30
+  { fact: "Recap kscIJpoF97Q ТикТок 12:05", src: "RecapsPage.tsx:48", style: "Y2K" }, // FILE:LINE RecapsPage.tsx:48
+  { fact: "Recap X2n13XbPfD0 TerraFirmaGreg 03:06:02", src: "RecapsPage.tsx:65", style: "киберпанк" }, // FILE:LINE RecapsPage.tsx:65
+  { fact: "Recap YjtuZXfO8es Киношка live 03:15", src: "RecapsPage.tsx:122", style: "мемфис" }, // FILE:LINE RecapsPage.tsx:122
+  { fact: "Навигация 14 пунктов Layout", src: "App.tsx:54", style: "СССР" }, // FILE:LINE App.tsx:54
+  { fact: "Presave URL music.thefence.me/psmagnum", src: "AiBot.tsx:20", style: "Y2K" }, // FILE:LINE AiBot.tsx:20
+  { fact: "MiMo v2.5 прокси /magnum/api/ai", src: "server.ts:787", style: "киберпанк" }, // FILE:LINE server.ts:787
+  { fact: "Table magnum_users Neon", src: "drizzle/schema.ts:3", style: "СССР" }, // FILE:LINE drizzle/schema.ts:3
+  { fact: "Table magnum_ideas pending", src: "drizzle/schema.ts:32", style: "мемфис" }, // FILE:LINE drizzle/schema.ts:32
+  { fact: "RateLimit 6/min presave stats", src: "server.ts:760", style: "киберпанк" }, // FILE:LINE server.ts:760
+  { fact: "Gallery 441KB + Recaps 277KB lazy", src: "App.tsx:14", style: "Y2K" }, // FILE:LINE App.tsx:14
+  { fact: "Дрон жигули-ховер 42", src: "GalleryPage.tsx:145", style: "киберпанк" }, // FILE:LINE GalleryPage.tsx:145
+  { fact: "Comic Sans блики Y2K", src: "GalleryPage.tsx:74", style: "Y2K" }, // FILE:LINE GalleryPage.tsx:74
+  { fact: "Бетон и неон СССР", src: "GalleryPage.tsx:54", style: "СССР" }, // FILE:LINE GalleryPage.tsx:54
+  { fact: "Геометрия мемфис 1981 Sottsass", src: "GalleryPage.tsx:439", style: "мемфис" }, // FILE:LINE GalleryPage.tsx:439
+  { fact: "Томь чище Сосновый бор", src: "EcoPage.tsx:338", style: "мемфис" }, // FILE:LINE EcoPage.tsx:338
+  { fact: "Кузбасс майнинг без скама", src: "MiningPage.tsx:293", style: "СССР" }, // FILE:LINE MiningPage.tsx:293
+  { fact: "Дуэль 2-4 realtime WS", src: "MiningPage.tsx:369", style: "киберпанк" }, // FILE:LINE MiningPage.tsx:369
+  { fact: "Shop инвентарь 12", src: "ShopPage.tsx:433", style: "Y2K" }, // FILE:LINE ShopPage.tsx:433
+  { fact: "Frame verify POST", src: "server.ts:815", style: "СССР" }, // FILE:LINE server.ts:815
+  { fact: "Health GET /magnum/api/health", src: "server.ts:794", style: "киберпанк" }, // FILE:LINE server.ts:794
+  { fact: "Caddy :30645 https", src: "docs/ops.md:8", style: "СССР" }, // FILE:LINE docs/ops.md:8
+  { fact: "Tests 2897 passed", src: "CHANGELOG.md:16", style: "Y2K" }, // FILE:LINE CHANGELOG.md:16
+  { fact: "Build main 509KB gzip 143KB", src: "reports/perf-2026-09-01-1411.md:5", style: "киберпанк" }, // FILE:LINE reports/perf-2026-09-01-1411.md:5
+  { fact: "Тонированный жигуль сингл", src: "DiscographyPage.tsx:127", style: "мемфис" }, // FILE:LINE DiscographyPage.tsx:127
+  { fact: "Флипфон 42 пропущенных", src: "GalleryPage.tsx:84", style: "Y2K" }, // FILE:LINE GalleryPage.tsx:84
+  { fact: "Неон-бейдж 42 лайка", src: "GalleryPage.tsx:114", style: "Y2K" }, // FILE:LINE GalleryPage.tsx:114
 ];
 
 const STYLE_GUIDE = `

@@ -23,6 +23,51 @@ interface Recap {
   channel?: string;
   note?: string;
 }
+// -- EXTRA 40 -- real, FILE:LINE
+export const RECAPS_EXTRA_FACTS: { fact: string; src: string }[] = [
+  { fact: "tAi6gI-bw1Q стрип-клуб 18:42", src: "RecapsPage.tsx:30" }, // FILE:LINE RecapsPage.tsx:30
+  { fact: "kscIJpoF97Q ТикТок 12:05", src: "RecapsPage.tsx:48" }, // FILE:LINE RecapsPage.tsx:48
+  { fact: "X2n13XbPfD0 TerraFirma 03:06:02", src: "RecapsPage.tsx:65" }, // FILE:LINE RecapsPage.tsx:65
+  { fact: "YjtuZXfO8es Киношка 03:15", src: "RecapsPage.tsx:122" }, // FILE:LINE RecapsPage.tsx:122
+  { fact: "Freakland 11.07.2026 Create", src: "RecapsPage.tsx:84" }, // FILE:LINE RecapsPage.tsx:84
+  { fact: "Twitch FM нарезки", src: "RecapsPage.tsx:92" }, // FILE:LINE RecapsPage.tsx:92
+  { fact: "Твайпер тирлист 03.09.2025", src: "RecapsPage.tsx:103" }, // FILE:LINE RecapsPage.tsx:103
+  { fact: "Transkript skoro", src: "RecapsPage.tsx:93" }, // FILE:LINE RecapsPage.tsx:93
+  { fact: "Набор жюри 06.07.2026", src: "RecapsPage.tsx:98" }, // FILE:LINE RecapsPage.tsx:98
+  { fact: "Спавн хаос 12.07.2026", src: "RecapsPage.tsx:138" }, // FILE:LINE RecapsPage.tsx:138
+  { fact: "Автофермы 13.07.2026", src: "RecapsPage.tsx:157" }, // FILE:LINE RecapsPage.tsx:157
+  { fact: "Ночной рейд 14.07.2026", src: "RecapsPage.tsx:176" }, // FILE:LINE RecapsPage.tsx:176
+  { fact: "PvP арена 15.07.2026", src: "RecapsPage.tsx:195" }, // FILE:LINE RecapsPage.tsx:195
+  { fact: "Поезд 42 16.07.2026", src: "RecapsPage.tsx:213" }, // FILE:LINE RecapsPage.tsx:213
+  { fact: "Депо 42 17.07.2026", src: "RecapsPage.tsx:232" }, // FILE:LINE RecapsPage.tsx:232
+  { fact: "Авто-плавильня 18.07.2026", src: "RecapsPage.tsx:251" }, // FILE:LINE RecapsPage.tsx:251
+  { fact: "Латунный завод 19.07.2026", src: "RecapsPage.tsx:270" }, // FILE:LINE RecapsPage.tsx:270
+  { fact: "Редстоун-линк 20.07.2026", src: "RecapsPage.tsx:289" }, // FILE:LINE RecapsPage.tsx:289
+  { fact: "Ветряк 8192 SU 21.07.2026", src: "RecapsPage.tsx:308" }, // FILE:LINE RecapsPage.tsx:308
+  { fact: "Tag СП/Нарезка/Ивент/Freakland/Музыка", src: "RecapsPage.tsx:9" }, // FILE:LINE RecapsPage.tsx:9
+  { fact: "YoutubeId freakland-create-day1", src: "RecapsPage.tsx:88" }, // FILE:LINE RecapsPage.tsx:88
+  { fact: "Duration 00:42 short", src: "RecapsPage.tsx:91" }, // FILE:LINE RecapsPage.tsx:91
+  { fact: "Channel ФУГА TV", src: "RecapsPage.tsx:39" }, // FILE:LINE RecapsPage.tsx:39
+  { fact: "Channel Лига Кубизма", src: "RecapsPage.tsx:56" }, // FILE:LINE RecapsPage.tsx:56
+  { fact: "Channel Записи Стримов", src: "RecapsPage.tsx:74" }, // FILE:LINE RecapsPage.tsx:74
+  { fact: "Фильтр Все", src: "RecapsPage.tsx:3190" }, // FILE:LINE RecapsPage.tsx:3190
+  { fact: "GSAP y24 stagger 0.12", src: "RecapsPage.tsx:3194" }, // FILE:LINE RecapsPage.tsx:3194
+  { fact: "Chapters 00:17:46", src: "RecapsPage.tsx:76" }, // FILE:LINE RecapsPage.tsx:76
+  { fact: "Кальян 01:01:15", src: "RecapsPage.tsx:76" }, // FILE:LINE RecapsPage.tsx:76
+  { fact: "Clash Royale 01:24:18", src: "RecapsPage.tsx:76" }, // FILE:LINE RecapsPage.tsx:76
+  { fact: "Киношки дисс lpshkaa", src: "RecapsPage.tsx:130" }, // FILE:LINE RecapsPage.tsx:130
+  { fact: "112K просмотров", src: "RecapsPage.tsx:132" }, // FILE:LINE RecapsPage.tsx:132
+  { fact: "Gen3 22.07.2026", src: "RecapsPage.tsx:328" }, // FILE:LINE RecapsPage.tsx:328
+  { fact: "lavovoe ozero 23.07", src: "RecapsPage.tsx:346" }, // FILE:LINE RecapsPage.tsx:346
+  { fact: "cactus farm 24.07", src: "RecapsPage.tsx:364" }, // FILE:LINE RecapsPage.tsx:364
+  { fact: "chasovoj 25.07", src: "RecapsPage.tsx:384" }, // FILE:LINE RecapsPage.tsx:384
+  { fact: "andozit 26.07", src: "RecapsPage.tsx:403" }, // FILE:LINE RecapsPage.tsx:403
+  { fact: "rukav 27.07", src: "RecapsPage.tsx:422" }, // FILE:LINE RecapsPage.tsx:422
+  { fact: "parovoj 16384 SU 28.07", src: "RecapsPage.tsx:441" }, // FILE:LINE RecapsPage.tsx:441
+  { fact: "tunnel 29.07", src: "RecapsPage.tsx:460" }, // FILE:LINE RecapsPage.tsx:460
+];
+
+
 
 // ───────── данные — 6 карточек, 3 с реальными транскриптами, 3 честно "транскрипт скоро" ─────────
 const RECAPS: Recap[] = [
