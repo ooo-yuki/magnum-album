@@ -29,6 +29,79 @@ const LS_BALANCE = "blackjack42-balance";
 const LS_BEST = "blackjack42-best";
 const MIN_BET = 10;
 
+// ── Контент-массивы 42 / MAGNUM — 50+ строк лора ──
+const LORE_TIPS: string[] = [
+  "42 — ответ на главный вопрос жизни, вселенной и всего такого. Ставь на 42!",
+  "МАGNUM — альбом 5opka: ТУСА МЕДУЗА, VPN, 42 и ещё 9 треков.",
+  "БЛЭКДЖЕК 42 платит 3:2 — как в Вегасе, только с вайбом Братишкино.",
+  "Дилер стоит на soft 17 — помни, у него нет эмоций, только математика.",
+  "Дабл — шанс удвоить ставку, когда чуешь 21. Рискни на 10 или 11!",
+  "Стрик x3 даёт +10% к выплате — катай без поражений и фармь быстрее.",
+  "4200 монет = Открытка 42 — дойди до цели и забери пресейв MAGNUM!",
+  "Фишка 42 — счастливая: ставь 42 и лови блэкджек на 42-й раздаче!",
+  "Холдем и Блэкджек — братья: блефуй дилера, как блефуешь чат.",
+  "Нажми H — ещё карту, S — хватит, D — дабл, N — новая раздача.",
+  "Свайп влево — хит, вправо — стенд. Играй одной рукой на мобиле!",
+  "Перебор — главный враг. Стой на 17+, бери на 11- — база стратегия.",
+];
+
+const STREAK_TIERS = [
+  { streak: 1, label: "Старт", mult: 1.0, color: "rgba(255,255,255,0.5)" },
+  { streak: 2, label: "Разогрев", mult: 1.05, color: "#ffcc00" },
+  { streak: 3, label: "На кураже", mult: 1.10, color: "#ff9500" },
+  { streak: 5, label: "Гений 42", mult: 1.18, color: "#ff2d55" },
+  { streak: 7, label: "MAGNUM", mult: 1.28, color: "#00ff88" },
+  { streak: 10, label: "ЛЕГЕНДА", mult: 1.42, color: "#5865f2" },
+] as const;
+
+const ACHIEVEMENTS = [
+  { id: "first_win", title: "Первый куш", desc: "Выиграй первую раздачу", icon: "🃏" },
+  { id: "blackjack", title: "БЛЭКДЖЕК 42", desc: "Собери блэкджек", icon: "♠️" },
+  { id: "streak3", title: "На кураже x3", desc: "3 победы подряд", icon: "🔥" },
+  { id: "streak5", title: "Гений 42 x5", desc: "5 побед подряд", icon: "⚡" },
+  { id: "double_win", title: "Дабл-мастер", desc: "Выиграй даблом", icon: "💎" },
+  { id: "balance2k", title: "Катка 2K", desc: "Баланс 2000+", icon: "💰" },
+  { id: "balance42", title: "Открытка 42", desc: "Достигни 4200", icon: "🎉" },
+  { id: "ten_wins", title: "Десятка", desc: "10 побед всего", icon: "🏆" },
+  { id: "no_bust10", title: "Холодная голова", desc: "10 раздач без перебора", icon: "🧊" },
+  { id: "comeback", title: "Камбэк", desc: "Победи после 0 монет (ресет 200)", icon: "🚀" },
+  { id: "perfect21", title: "21 из 2", desc: "Собери 21 тремя картами", icon: "✨" },
+  { id: "dealer_bust5", title: "Дилер горит", desc: "5 бюстов дилера", icon: "💥" },
+] as const;
+
+const STRATEGY_HINTS: Record<string, string> = {
+  "5-8": "Бери всегда — мало для стопа.",
+  "9": "Дабл vs 3-6, иначе бери.",
+  "10": "Дабл vs 2-9, иначе бери.",
+  "11": "Дабл vs любого, кроме туза дилера.",
+  "12": "Стой vs 4-6, иначе бери (рискуй!).",
+  "13-16": "Стой vs 2-6, бери vs 7-A.",
+  "17+": "Стой всегда — не гори.",
+  "soft13-15": "Бери — soft рука, не сгоришь.",
+  "soft16-18": "Стой vs 2-6, иначе бери/дабл.",
+  "pairA8": "Сплит A и 8 всегда (в MAGNUM — дабл на 11!).",
+};
+
+function getStreakMult(streak: number): number {
+  let m = 1;
+  for (const t of STREAK_TIERS) if (streak >= t.streak) m = t.mult;
+  return m;
+}
+function getStrategyHint(player: Card[], dealerUp: Card | undefined): string {
+  if (!dealerUp || player.length === 0) return "Сделай ставку и раздавай!";
+  const pv = handValue(player);
+  const hasAce = player.some((c) => c.rank === "A" && c.value === 11);
+  const soft = hasAce && pv <= 21 && pv >= 13;
+  if (soft) {
+    if (pv <= 15) return STRATEGY_HINTS["soft13-15"]!;
+    return STRATEGY_HINTS["soft16-18"]!;
+  }
+  if (pv <= 8) return STRATEGY_HINTS["5-8"]!;
+  if (pv >= 17) return STRATEGY_HINTS["17+"]!;
+  if (pv >= 13 && pv <= 16) return STRATEGY_HINTS["13-16"]!;
+  return STRATEGY_HINTS[String(pv)] ?? "Бери карту — математика за хит.";
+}
+
 type Suit = "♠" | "♥" | "♦" | "♣";
 type Rank = "A" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" | "J" | "Q" | "K";
 interface Card { suit: Suit; rank: Rank; value: number; id: string; hidden?: boolean }
@@ -182,9 +255,73 @@ export function BlackjackGame(){
   const [showWin,setShowWin]=useState(false);
   const [dealt,setDealt]=useState(false);
   const winCheckedRef=useRef(false);
+  // ── стрик / статистика / конфетти / подсказки ──
+  const [streak,setStreak]=useState(0);
+  const [bestStreak,setBestStreak]=useState(0);
+  const [wins,setWins]=useState(0);
+  const [losses,setLosses]=useState(0);
+  const [pushes,setPushes]=useState(0);
+  const [bjCount,setBjCount]=useState(0);
+  const [dealerBusts,setDealerBusts]=useState(0);
+  const [tipIdx,setTipIdx]=useState(0);
+  const confettiRef=useRef<HTMLCanvasElement>(null);
+  const animConfettiRef=useRef(0);
+  const touchStartRef=useRef<{x:number;y:number}|null>(null);
+  const cardRowRef=useRef<HTMLDivElement>(null);
+  const noBustStreakRef=useRef(0);
 
   // persist balance
   useEffect(()=>{ try{ localStorage.setItem(LS_BALANCE,String(balance)); }catch{} const nb=Math.max(best,balance); if(nb!==best){ setBest(nb); try{localStorage.setItem(LS_BEST,String(nb));}catch{}} },[balance,best]);
+
+  // rotating tip
+  useEffect(()=>{ const id=setInterval(()=>setTipIdx(i=> (i+1)%LORE_TIPS.length), 7000); return ()=>clearInterval(id); },[]);
+
+  // haptics
+  function haptic(ms:number){ try{ if("vibrate" in navigator) navigator.vibrate(ms); }catch{} }
+  function hapticWin(){ haptic(40); setTimeout(()=>haptic(30),80); setTimeout(()=>haptic(50),180); }
+
+  // confetti canvas (WebAudio уже есть — добавим канвас-частицы)
+  const spawnConfetti=useCallback((intense=false)=>{
+    const c=confettiRef.current; if(!c) return;
+    const ctx=c.getContext("2d"); if(!ctx) return;
+    const rect=c.getBoundingClientRect();
+    const dpr=window.devicePixelRatio||1;
+    c.width=rect.width*dpr; c.height=rect.height*dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    const colors=["#ff2d55","#ffcc00","#00ff88","#5865f2","#fff"];
+    const parts:{x:number;y:number;vx:number;vy:number;rot:number;vr:number;color:string;life:number}[]=[];
+    const n=intense? 82: 38;
+    for(let i=0;i<n;i++) parts.push({x:rect.width/2+(Math.random()-0.5)*120, y:18, vx:(Math.random()-0.5)*10, vy:Math.random()* -7 -2, rot:Math.random()*360, vr:(Math.random()-0.5)*12, color:colors[i%colors.length]!, life:1});
+    cancelAnimationFrame(animConfettiRef.current);
+    let frame=0;
+    const draw=()=>{
+      frame++; ctx.clearRect(0,0,rect.width,rect.height);
+      let alive=0;
+      for(const p of parts){
+        if(p.life<=0) continue;
+        p.x+=p.vx; p.y+=p.vy; p.vy+=0.28; p.vx*=0.99; p.rot+=p.vr; p.life-=0.008;
+        if(p.life<=0) continue; alive++;
+        ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot*Math.PI/180); ctx.globalAlpha=Math.max(0,p.life);
+        ctx.fillStyle=p.color; ctx.fillRect(-4,-6,8,12); ctx.restore();
+      }
+      if(alive>0 && frame<220) animConfettiRef.current=requestAnimationFrame(draw);
+      else ctx.clearRect(0,0,rect.width,rect.height);
+    };
+    draw();
+  },[]);
+
+  function playChip(){
+    const ctx=ensureAC(); if(!ctx) return;
+    const o=ctx.createOscillator(); const g=ctx.createGain(); o.connect(g); g.connect(ctx.destination);
+    o.type="sine"; o.frequency.value=620; safeRamp(o.frequency,()=>o.frequency.linearRampToValueAtTime(880, ctx.currentTime+0.05),880);
+    g.gain.setValueAtTime(0.09, ctx.currentTime); safeRamp(g.gain,()=>g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+0.09),0.001);
+    o.start(); o.stop(ctx.currentTime+0.1);
+  }
+  function playStreak(lvl:number){
+    const ctx=ensureAC(); if(!ctx) return;
+    const base=440+lvl*70;
+    [0,0.07,0.14].forEach((d,i)=>{ const o=ctx.createOscillator(); const g=ctx.createGain(); o.connect(g); g.connect(ctx.destination); o.type="triangle"; o.frequency.value=base+i*90; g.gain.setValueAtTime(0.11, ctx.currentTime+d); safeRamp(g.gain,()=>g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+d+0.25),0.001); o.start(ctx.currentTime+d); o.stop(ctx.currentTime+d+0.28); });
+  }
   // victory check
   useEffect(()=>{
     if(balance>=GOAL && !winCheckedRef.current){
@@ -249,6 +386,10 @@ export function BlackjackGame(){
       shakeWin(pageRef.current);
       setHistory(h=> [`BLACKJACK +${win}`,...h].slice(0,8));
       playBlackjack();
+      // стрик + статистика BJ
+      { const mult=getStreakMult(streak+1); const bonus=Math.floor(win*(mult-1)); if(bonus>0) setBalance(b=>b+bonus);
+        setWins(v=>v+1); setBjCount(v=>v+1); noBustStreakRef.current++;
+        setStreak(s=>{const ns=s+1; setBestStreak(bs=>Math.max(bs,ns)); if(ns>=3) spawnConfetti(ns>=5); if(ns>=2) playStreak(ns); hapticWin(); return ns;}); }
     } else if(dj){
       // peek dealer BJ - instant lose (rare)
       setDealer(dlFull);
@@ -277,7 +418,7 @@ export function BlackjackGame(){
       setBalance(b=>Math.max(0,b-bet));
       setMsg(`Перебор ${handValue(np)} — сгорел!`);
       setHistory(h=> [`BUST ${handValue(np)} -${bet}`,...h].slice(0,8));
-      playBust();
+      playBust(); haptic(80); setLosses(v=>v+1); setStreak(0); noBustStreakRef.current=0;
     } else if(handValue(np)===21){
       // auto stand on 21
       setMsg("21 — стоим!");
@@ -314,7 +455,7 @@ export function BlackjackGame(){
         setBalance(b=>b+bet);
         msgLocal=`Дилер сгорел (${dv}) — победа +${bet}!`;
         setHistory(h=> [`WIN vs bust +${bet}`,...h].slice(0,8));
-        playWinSound(); shakeWin(pageRef.current);
+        playWinSound(); shakeWin(pageRef.current); { const mult=getStreakMult(streak+1); const bonus=Math.floor(bet*(mult-1)); if(bonus>0){ setBalance(b=>b+bonus); msgLocal+=` +бонус ${bonus}`; } setWins(v=>v+1); setDealerBusts(v=>v+1); noBustStreakRef.current++; setStreak(s=>{const ns=s+1; setBestStreak(bs=>Math.max(bs,ns)); if(ns>=3) spawnConfetti(ns>=5); if(ns>=2) playStreak(ns); hapticWin(); return ns;}); }
       } else if(dv>pv){
         setResult("lose");
         setBalance(b=>Math.max(0,b-bet));
