@@ -5,6 +5,53 @@
 > Промо-сайт альбома **MAGNUM Пятерки** (5opka × 42 братухи). React + TypeScript + GSAP + Bun.
 > Формат: [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/). Версионирование — SemVer.
 
+## [0.3.12] — 2026-09-01 💎 PRISM 12 + AI Guard + Perf −14.5MB + Gallery Y2K — 3/10
+
+> **12 коммитов** `a3e6645` → `2085c23` · **+1403 / −394** · **26 файлов** (5 webp bin) · PRISM 12 неон-призм + dust крафт/разбор Shop 44 + AI guard anon 8/мин + image auth + Neon magnum_ai_usage ledger + perf stale 47M→34M (−14.5MB) + postcard/covers webp 5шт + build auto-cleanup + Gallery Y2K/video fallback + ai 401 + DDL sync + backlog 10 задач + hype NITRO/SHAKHTA/OBSIDIAN 101 идея + 3141 tests · рейтинг **3/10** (819 строк/10м, продуктивных 279 → 2/10, норма 5000+ = 10/10) · `tsc 0` · `magnum-bun active` `caddy Up ~1h` (200/200/200)
+
+### 🎮 Игры — PRISM кросс + Blackjack/Roulette postcard webp
+
+- 🎯 **Квиз 42 уже в 0.3.11** — в этом окне без новых игр, фокус на **PRISM кросс** в игры + **postcard webp** в казино — см. ✨ и ⚡
+- 🃏 **Blackjack + Roulette — postcard-4200 webp 154K vs 242K PNG (−35%) + lazy + picture fallback** — `122bf4b` `public/images/postcard-4200-800.webp` 154K webp q80 (было 242K PNG) **−35%**, `BlackjackGame.tsx:760` + `RouletteGame.tsx:484` `<img eager PNG>` → `<picture><source webp /><img lazy PNG fallback /></picture>` + `loading="eager"` → `lazy` (модалка не LCP) — `src/pages/games/BlackjackGame.tsx` +1/−1, `src/pages/games/RouletteGame.tsx` +1/−1
+
+### ✨ Фичи — PRISM 12 + Dust + AI Guard ledger
+
+- 💎 **PRISM 42 — 12 неон-призм + пыль/dust крафт/разбор — Shop 44 + Neon magnum_dust** — `70cb919` **PRISM 12** неон-призм (common 42 → epic 1420, conic-prism + aurora spin 3s), **dust** `magnum_dust` Neon + `magnum-forge-dust` LS — крафт 3×common→uncommon fee 42, разбор rare→+100 dust / epic→+420 dust, **Shop 44** слота (было 32+12 PRISM), покупка `POST /magnum/api/shop/cosmetic/buy` guard `getCoins()≥price` → `magnum_cosmetics` + `magnum_shop_inventory` + `storage` sync, **GSAP** `ShopGrid y:20→0 stagger 0.08 + hover scale 1.02 glow 0 0 16 prism + conic-aurora spin 3s` — `server.ts` +83, `src/pages/ShopPage.tsx` +68/−11 (2 файла, +151/−11)
+- 🤖 **AI Guard P0 — anon 8/мин + image requires auth + Neon magnum_ai_usage — handleAi ledger** — `8afd888` **Neon 0017** `magnum_ai_usage` (id, user_id FK, kind text/image, tokens, created_at) + 2 индекса, **server.ts +70/−7** `handleAi` — anon `checkRateLimit ai:anon:{ip} 8/мин` (было без лимита), `imageKind requires auth → 401`, authed `10/мин per userId`, `INSERT magnum_ai_usage (user_id, kind)` ledger + `broadcast ai:new` WS, **GalleryPage** `3/3` `image mode → auth gate toast "Войди для генерации"` + `ShopPage 1/1` `isValidBundleId trim+40` sync — `drizzle/migrations/0017_ai_guard.sql` +16, `drizzle/migrations/meta/_journal.json` +7 idx17, `drizzle/schema.ts` +10, `server.ts` +70/−7, `src/pages/GalleryPage.tsx` +3/−3, `src/pages/ShopPage.tsx` +1/−1 (6 файлов, +107/−11) — закрывает **P0 биллинг MIMO + DDoS**
+
+### 🤖 Брат-бот — ledger + PRISM подсказки
+
+- 🤖 **Брат-бот — ai guard ledger + PRISM 12 подсказки** — без отдельного коммита в окне, логика ушла в **PRISM dust крафт + AI guard 8/мин ledger** — следующий инкремент подсказывает по `PRISM 12 conic-aurora + dust 42/100/420 + anon 8/мин + image auth + postcard webp`
+
+### 🖼️ Галерея — Y2K fallback + video + 8 файлов stable
+
+- 🖼️ **Gallery Y2K fallback + DDL/validator sync — 8 файлов stable** — `122bf4b` + `613fb20` **Y2K** `src/lib/galleryTokens.ts` +1/−1 `REAL_FALLBACK y2k→y2k-01-800.webp` (было →memphis/cyber алиас), `GalleryPage.tsx` **+352/−352** `getRealSrc(style,src)` циклический маппинг `ARCHIVE_42 20× archive-*.jpg` → `REAL_BY_STYLE[style]` + `loading="lazy" decoding="async" onError→artImgHidden` + gradient+emoji заглушка (митигирует `Caddy try_files → /index.html 200 html` для 350 архивных артов), **DDL sync** удалены 4× `CREATE TABLE IF NOT EXISTS magnum_chat_messages/follows` из hot path `handleChatHistory/handleChatSend/handleFollowToggle/handleFollowsList` (таблицы уже в `0016_chat_follows.sql`), `ShopPage.tsx isValidBundleId` унифицирован `trim+40 /^[a-z0-9-]+$/` ≡ `server.ts:805` — `src/lib/galleryTokens.ts` +1/−1, `src/pages/GalleryPage.tsx` +355/−355, `server.ts` +2 (DDL), `src/pages/ShopPage.tsx` +1/−1 — `tsc 0` · 8 файлов `42-{agit,cyber,memphis,y2k}-01.{jpg,800.webp}` valid
+
+### ⚡ Перфоманс — stale −14.5MB + 5 webp + auto-cleanup
+
+- 🚀 **Stale cleanup 47M→34M (−14.5MB, −29%) + postcard/covers webp 5шт + build auto-cleanup** — `122bf4b` **dist bloat:** 24 mains + 107 chunks (103 stale 14.5MB) → **34M clean (1 main +1 vendor +37 chunks)**, `/srv/magnum` 48M→33M, **postcard** `postcard-4200-800.webp 154K q80 vs 242K PNG −35%`, **covers** `repit-800.webp` 234K→? + `vpn-800.webp` 328K→? + `tusa-meduza-800.webp` + `vpn-800.webp` (68K→webp), все `loading="lazy" + picture webp/jpg fallback`, **build.ts +17** auto-cleanup по `dist/.build-manifest.json validSet` после `Bun.write index.html` логирует `🧹 stale cleanup: removed N files (XB)` — будущие билды авто-чистые, `reports/perf-2026-09-01-1612.md` +76 — `build.ts` +17, `server.ts` +4, `src/lib/galleryTokens.ts` +1/−1, `src/pages/GalleryPage.tsx` +352/−352, 5 webp bin, `reports/perf-2026-09-01-1612.md` +76
+- 🟢 **Health 200/200/200 — no restart** — `a4c6a25` `reports/watchdog-2026-09-01-1611.md` +87 + `fe59254` `reports/watchdog-2026-09-01-1604.md` +78 — **200/200/200** `HTTPS /magnum/ 200` `HTTPS /magnum/api/ideas 200` (98→101 идей) `HTTP :3000/magnum/api/ideas 200` + `GET /magnum/api/health 200 {ok:true ideas:101 users:24 aiUsage:0 uptime:36s}` + `magnum-bun active since 16:10:28` `caddy Up ~1h` — **0 рестартов**
+
+### 🐛 Фиксы — ai 401 + gallery Y2K + DDL + validator
+
+- 🩹 **ai 401 + gallery Y2K + DDL/validator sync (tsc 0, 3141 PASS)** — `613fb20` `reports/fix-report-2026-09-01-1611.md` +37 — **#1** `POST /magnum/api/ai` anon → `handleAi` первой строкой `extractToken→getUserByToken→401` + `checkRateLimit ai:{userId}:{ip} 10/мин` (ранее anon текст 8/мин без auth) — `curl POST /magnum/api/ai` без cookie → `401 {"error":"unauthorized"}` + `systemctl restart magnum-bun` **#2** Y2K алиасы `y2k-01→42-y2k-01-800.webp` (было memphis) **#3** DDL hot path удалены 4× `CREATE TABLE` + `isValidBundleId trim+40` sync `ShopPage.tsx:114` ≡ `server.ts:805` — `src/pages/games/BlackjackGame.tsx` +1/−1 `postcard picture`, `src/pages/games/RouletteGame.tsx` +1/−1 — `tsc 0` `bun test 3141 PASS` `build.ts 466K main + 71 files + cp -r`
+
+### 🧪 Тесты / CI — 3141 passed (+11)
+
+- ✅ **3141 passed — new-coverage-1607 +110** — `9c336dd` `reports/test-2026-09-01-1608.md` +84, `tests/new-coverage-1607.test.ts` +110 — **3130→3141 +11**, `tsc 0`, **Bun 1.4.0 + vitest 3.2.7 jsdom** · покрытие **PRISM dust + AI guard 8/мин + image auth + Gallery Y2K + Shop bundles** — `tests/new-coverage-1607.test.ts` +110 (1 файл, +194 с отчётом)
+- 🟢 **Watchdog 16:11 — PASS (8/8, all 200, no restart)** — `a4c6a25` `reports/watchdog-2026-09-01-1611.md` +87 — 8/8 `200/200/200` + `magnum-bun active` + `caddy Up` + `8 gallery` + `tsc 0` + `101 ideas` — без рестарта
+- 🟢 **Watchdog 16:04 — PASS (8/8 green, 2 bugs)** — `fe59254` `reports/watchdog-2026-09-01-1604.md` +78 — 8/8 green, 2 bugs `y2k alias + archive HTML` (закрыты в `122bf4b`/`613fb20`)
+
+### 📖 Дока + Ревью — 3/10 (падение 4/10 → 3/10)
+
+- 👁️ **Review 3/10 — 819 строк/10м (продуктивных 279 → 2/10)** — `623f188` `reports/review-2026-09-01-1613.md` +117 — **3/10** (500-999 = 3/10) — падение **4/10 (1156/10м) → 3/10**, **8 коммитов/10м** (3 продуктивных+5 отчётов) `ADDED 778/REMOVED 41 =819` (продуктивных `268/11=279` → **2/10** отдельно), шкала `0-49=0 … 5000+=10` — `tsc PASS 0` · `tests 3141 pass` · `gallery 8 файлов 200` · `health PASS 200/200/200` · `services PASS (magnum-bun active, caddy Up ~1h)` — **WARN** `archive HTML fallback` + `stale cleanup needed` (закрыт `122bf4b`) + `ai anon ledger null` (закрыт `8afd888`/`613fb20`)
+- 🔐 **Auth check — 103 строки** — `89658a0` `reports/auth-2026-09-01-1607.md` +103 — `curl /magnum/api/ai` без токена `401` + `magnum_ai_usage` ledger check + `image requires auth` gate
+- 📝 **Backlog +10 задач — P0 auth/404/деньги** — `11ddb07` `docs/BACKLOG.md` +19/−17 — **10 задач** P0 `REAL_FALLBACK Y2K→мемфис + ARCHIVE soft-200 + ai ledger null + DDL hot path + anon vote farm + isValidBundleId рассинхрон` + P1 `DUEL TURBO/NITRO x9 + ECO ZAVOD/SHAKHTA + PRISM/OBSIDIAN + FRAME TURBO GOLD + TURBO SEASON` — источники `review-1559 + watchdog-1611/1604 + auth-1607/1554 + spec-audit + hype-queue 34-38` — `tsc 0` `3141 PASS` `8 файлов` `200/200/200`
+- 💡 **Hype +3 идеи NITRO/SHAKHTA/OBSIDIAN +5 queue — 101 идея** — `f07c495` `docs/hype-queue.md` +6 + `2085c23` `reports/hype-2026-09-01-1616.md` +52 — **NITRO** `DUEL NITRO 42 — WS 2-4 + nitro x9 + overheat + ghost` (nitro x9, overheat 3с→кулдаун 1с −50%), **SHAKHTA** `ECO SHAKHTA 42 — 8Q Шахта/Уголь/Томь/Кузбасс + вахта 7дн` (8Q уголь/шахты), **OBSIDIAN** `OBSIDIAN FORGE 42 — 12 скинов obsidian + molten epic` (12 скинов obsidian/magma) + queue 5 `DUEL TURBO/ECO ZAVOD/PRISM/FRAME TURBO/TURBO SEASON` — Neon `ids 121-123` `201` `hypebot42`, всего **101 идея** — `docs/hype-queue.md` +6, `reports/hype-2026-09-01-1616.md` +52 (2 файла, +58)
+- ⚠️ **Остались P1/P2 → 0.3.13:** `archive 350× 200 html` SPA fallback (Caddy `handle /magnum/images/* file_server` без `try_files` — митигировано `getRealSrc`) + `Game2042 localStorage → Neon` + `anon vote IP-ротация` + `historyRef.length` + `DODGE/WIP` — carry из 0.3.9/0.3.10/0.3.11, плюс **new** `ai anon ledger null → 8afd888` (закрыт)
+
+---
+
 ## [0.3.11] — 2026-09-01 🛒 Shop Bundles 8 + Chat 42 + Timeline2026 + Runner webp — 4/10
 
 > **15 коммитов** `b3744a0` → `c1f0326` · **+1606 / −130** · **23 файла** (+1 dirty `src/pages/GamePage.tsx` 322/177 quiz 20) · Shop Bundles 8 скидка 13-33% + Chat 42 persisted + Follows + Timeline 14 событий 22 лора 3 сложности + Runner webp 34KB −97.6% + Recaps 5 фактов + Hype 3 идеи TURBO/ZAVOD/PRISM + 3130 tests · рейтинг **4/10** (1156 строк/10м, продуктивных 655 → 3/10, норма 5000+ = 10/10) · `tsc 0` · `magnum-bun active` `caddy Up 56m` (200/200/200)
