@@ -39,7 +39,7 @@ export const GSAP_PRESETS = {
 // Re-export helper: getRealSrc — fixes archive soft-404 (P0/P1-1)
 export const REAL_BY_STYLE_FALLBACK: Record<string,string> = {
   "СССР": "/magnum/images/gallery-42/42-agit-01-800.webp",
-  "Y2K": "/magnum/images/gallery-42/42-memphis-01-800.webp",
+  "Y2K": "/magnum/images/gallery-42/42-y2k-01-800.webp",
   "киберпанк": "/magnum/images/gallery-42/42-cyber-01-800.webp",
   "мемфис": "/magnum/images/gallery-42/42-memphis-01-800.webp",
 };

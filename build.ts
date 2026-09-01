@@ -1743,6 +1743,23 @@ for (const css of cssFiles) {
 }
 await Bun.write("./dist/index.html", output);
 console.log(`\n📄 dist/index.html written (${fmtBytes(output.length)}, ${output.split("\n").length} lines)`);
+// stale cleanup: remove old hashed mains/chunks not in current build outputs (prevents 48M bloat)
+{
+  const validSet = new Set(outputs.map(o => basename(o.path)));
+  validSet.add("index.html"); validSet.add(".build-manifest.json"); validSet.add("sitemap.xml"); validSet.add("robots.txt");
+  try {
+    const all = await readdir("./dist");
+    let stale = 0, staleBytes = 0;
+    for (const f of all) {
+      if ((f.startsWith("main-") || f.startsWith("chunk-") || f.startsWith("vendor-")) && !validSet.has(f)) {
+        const p = join("./dist", f);
+        try { const s = await stat(p); if (s.isFile()) { staleBytes += s.size; stale++; await Bun.$`rm -f ${p}`.quiet(); } } catch {}
+      }
+    }
+    if (stale) console.log(`  🧹 stale cleanup: removed ${stale} old hashed files (${fmtBytes(staleBytes)})`);
+    else console.log(`  🧹 stale cleanup: 0 stale (clean)`);
+  } catch (e) { console.warn("  ⚠ stale cleanup failed:", e); }
+}
 const sitemapResult = await syncSitemap();
 await validateSitemapFile(SITE.sitemapDist);
 await validateSitemapFile(SITE.sitemapPublic);

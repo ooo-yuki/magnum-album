@@ -2669,6 +2669,10 @@ const server = Bun.serve<WSData>({
         if (await f.exists()) {
           return new Response(f, { headers: { "Content-Type": guessContentType(clean) } });
         }
+        // P0 fix: /magnum/images/* must return 404 not SPA fallback (avoid soft-200 HTML for missing gallery images)
+        if (clean.startsWith("images/") || clean.startsWith("magnum/images/")) {
+          return new Response("Not found", { status: 404, headers: { "Content-Type": "text/plain" } });
+        }
       }
       const index = Bun.file(import.meta.dir + "/dist/index.html");
       if (await index.exists()) return new Response(index, { headers: { "Content-Type": "text/html; charset=utf-8" } });
