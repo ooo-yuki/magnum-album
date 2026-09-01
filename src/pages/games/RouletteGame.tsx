@@ -481,7 +481,7 @@ export function RouletteGame(){
             <h2>РУЛЕТКА 42 — ПОБЕДА!</h2>
             <p>Баланс {balance} · 4200 достигнуто. Твоя открытка ждёт.</p>
             <div className={styles.postcard}>MAGNUM — 42<br/><span>Спасибо, что сыграл. Забери пресейв и открытку.</span></div>
-            <img src="/magnum/images/postcard-4200.png" alt="Открытка 42 — 4200 монет" className={styles.postcardImg} width={560} height={373} loading="eager" decoding="async" />
+            <picture><source srcSet="/magnum/images/postcard-4200-800.webp" type="image/webp" /><img src="/magnum/images/postcard-4200.png" alt="Открытка 42 — 4200 монет" className={styles.postcardImg} width={560} height={373} loading="lazy" decoding="async" /></picture>
             <a href={PRESAVE} target="_blank" rel="noreferrer" className={styles.presaveBtn}>Открыть https://music.thefence.me/psmagnum</a>
             <div className={styles.modalActions}>
               <button className={styles.ghostBtn} onClick={()=>setShowModal(false)}>Продолжить играть</button>

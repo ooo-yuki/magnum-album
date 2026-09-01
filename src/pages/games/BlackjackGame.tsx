@@ -757,7 +757,7 @@ export function BlackjackGame(){
           <div className={styles.modalCard}>
             <div className={styles.modalIcon}>🎉</div>
             <h2>Открытка 42</h2>
-            <img src="/magnum/images/postcard-4200.png" alt="Открытка 42 — 4200 монет" className={styles.postcardImg} width={560} height={373} loading="eager" decoding="async" />
+            <picture><source srcSet="/magnum/images/postcard-4200-800.webp" type="image/webp" /><img src="/magnum/images/postcard-4200.png" alt="Открытка 42 — 4200 монет" className={styles.postcardImg} width={560} height={373} loading="lazy" decoding="async" /></picture>
             <p>Братуха, ты нафармил <strong>{balance}</strong> монет!</p>
             <p className={styles.winSub}>Цель {GOAL} достигнута — казино 42 повержено!</p>
             <div className={styles.modalStats}><span>Баланс {balance} ◉</span><span>Рекорд {best} ◉</span></div>
