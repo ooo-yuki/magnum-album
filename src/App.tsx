@@ -1,3 +1,5 @@
+// MAGNUM App — perf: 14 games code-split via React.lazy + Suspense
+// Fallback: GameFallback; vendor chunk split in build.ts
 import { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Layout } from "./components/Layout";
