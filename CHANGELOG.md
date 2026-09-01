@@ -9,19 +9,42 @@
 
 ### 🎮 Игры
 
+- 🐍 **Snake 42** — 14-я мини-игра: canvas-змейка с WASD/тач/свайп, WebAudio, победа при длине 42, 12 новых тестов
+- 🧱 **Stack42** — комбо ×2 множитель (3 perfect → ×2 очков/частиц/звука), MEGA 5× + хил ширины, баланс: мягкий старт 1.85 / рост 0.14 + потолок 6.2, окно perfect 7px
 - ⌨️ **Скоропечатание 42** (TypingGame) — 12 фраз MAGNUM 2026, WPM-трекинг, кнопка пресейва в конце
+
+### 🤖 БРАТ-БОТ
+
+- 📺 **RecapsPage** — лента пересказов Freakland/СП/нарезки (6 карточек, фильтры, транскрипты) + `/magnum/recaps` роут + 5 идей в Neon
+
+### 🖼️ Открытка / Галерея
+
+- 🖼️ **Галерея** — реальная 42-agit-01 (3.4MB) заменяет моковый ковёр
 
 ### ✨ Фичи
 
+- 🛒 **Магазин / Эко / Рамка** — Neon-эндпоинты shop/eco/frame
+- 📊 **Рейтинг пресейва** — реальный Neon-рейтинг, трекер кликов `magnum_presave_clicks`
+- 🔐 **AuthStatus в шапке** — Neon `me`-эндпоинт, без localStorage, 826KB
 - 💡 **Ideas 42** — голосование за идеи через Neon (`magnum_ideas`), форма отправки, навигация расширена до 10 пунктов
 - ⛏️ **Майнинг 42-коинов** — ироничный GSAP-кликер: лопата 42 / кирка 142, авто-майнинг, лидерборд в localStorage
 - 📊 **Рейтинг пресейва** — топ-20 братух (8K клипов / 200K просмотров), эмодзи-аватары, проверка через БРАТ-БОТ
 - 🛒 **Магазин / Эко / Майнинг** — все эндпоинты перенесены на `/magnum/api/*`, баланс теперь серверный (убран localStorage)
 - 🏠 **Главная + навигация** — 14 пунктов меню, 4 RGB промо-баннера + popup (закрытие через `magnum-banner-closed`), GamesHub очищен до мини-игр
+- ⛏️💡🎮 **Mining + Ideas + WebSocket** — `magnum_mining` (user_id, balance, upgrades jsonb), `/magnum/api/ideas` GET/POST/vote, `/magnum/api/mining` GET/click/upgrade, WS `/magnum/api/ws` 2-4 duel realtime broadcast, `magnum_leaderboard`, без localStorage
 
 ### ⚡ Перфоманс
 
+- ✨ **GSAP entrance** — stagger 0.12, y 24→0, hover RGB glow, reduced-motion fallback, context cleanup — HomePage PromoBanners, GalleryPage header/cards, IdeasPage header/form/cards
 - 🔄 Рефакторинг фронта: coins/shop/eco/mining → серверные API-маршруты, отказ от клиентского localStorage для баланса
+
+### 🐛 Фиксы
+
+- 🚫 **Ideas/Рейтинг** — убраны фейки, только реальные зарегистрированные (Neon 0/0/0 пусто → «стань первым»)
+
+### 📖 Документация
+
+- 📝 **README** — продакшн уровень 000 (Live/Presave бейджи, стек, Neon, кроны 24/7, структура)
 
 ---
 
