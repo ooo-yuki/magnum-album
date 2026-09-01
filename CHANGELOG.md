@@ -7,10 +7,11 @@
 
 ## [0.3.3] — 2026-09-01 🎰 Vault 42 + Quiz/Stack MAGNUM + GSAP 0.12 — 10/10
 
-> **21 коммит** `fea3f6e` → `5c9f8ff` · **+2739 / −2705** · **43 файла** · Vault лимиток + Quiz 24Q + Stack лор 5 пуль + GSAP 0.12 + P2 10k · рейтинг 10/10
+> **22 коммита** `fea3f6e` → `9c53ad5` · **+2888 / −2708** · **46 файлов** · Vault лимиток + Quiz 24Q + Stack/Snake лор + GSAP 0.12 + P2 10k · рейтинг 10/10
 
-### 🎮 Игры — Quiz 42 + Stack42 MAGNUM
+### 🎮 Игры — Quiz 42 + Stack42 + Snake42 комбо
 
+- 🐍 **Snake42 комбо xN — цепочка <1.8с** — `9c53ad5` цепочка **<1.8с +25 бонус/уровень**, капа **x12**, `WebAudio playCombo pitch`, шейк `6+0.9*N`, `GSAP back.out burst`, `floating COMBO xN` + `bonusBar` — `src/pages/games/Snake42Game.tsx` +58/−3, `src/pages/games/Snake42Game.module.css` +4, `tests/snake42-combo.test.ts` +90
 - ❓ **Quiz 42 — 24 вопроса + стрик xN** — `d52faab` пул **24Q**, стрик `×N`, **50/50** подсказка, **speed-бонус**, haptics, `keyboard 1-4/H` + `свайп`, `localStorage` рекорд — `src/pages/games/QuizGame.tsx` +159/−21, `tests/gallery-gsap-build-1421.test.ts` +174, GSAP на 5 страницах (`Eco/Gallery/Mining/Recaps/Shop` +34…+50)
 - 🧱 **Stack42 MAGNUM 2026 — 5 пуль лора** — `5317cce` **5 пуль** лора MAGNUM, `pause P/R`, `coins` начисление, `canvas labels` пуль — `src/pages/games/Stack42Game.tsx` (в батче `6c78b31` +87/−29, `drizzle/migrations/0006_daily_transactions_votes.sql` +37, `src/pages/GalleryPage.tsx` +6)
 
