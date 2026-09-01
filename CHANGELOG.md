@@ -5,6 +5,36 @@
 > Промо-сайт альбома **MAGNUM Пятерки** (5opka × 42 братухи). React + TypeScript + GSAP + Bun.
 > Формат: [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/). Версионирование — SemVer.
 
+## [0.3.15] — 2026-09-01 🧊 GLACIER VAULT 12 + DUEL MAGMA 42 + Health 500 + Subs 42703 — 3/10
+
+> **4 коммита** `552ecc3` → `6fbf866` · **+873 / −53** · **19 файлов** · GLACIER VAULT 12 glacier скинов + frost epic 1420 + dust (magnum_dust, magnum_subscriptions) + DuelMagma 42 ×204L + Health честный 500 (follows/ai_usage 42P01 → 500) + Subs 42703 `ends_at/started_at/id` + §16 5 фактов + 3 recaps · рейтинг **3/10** (873 строки/30м, норма 5000+ = 10/10) · `tsc 0` · `magnum-bun` `caddy` (200)
+
+### 🎮 Игры — DUEL MAGMA 42 + GLACIER VAULT 12
+
+- 🌋 **DUEL MAGMA 42 — WS 2-4 + magma x10 + lava-spike 2× + ghost + overheat 3.5с + wager 42/142/420 + ELO + season 7d** — `552ecc3` + `14b423d` **DuelMagma** `src/pages/games/DuelMagma.tsx` +204L (MAGMA x10, lava-spike 2×, ghost replay, overheat 3.5с, magma <0.15с +8% капа x10), **DUEL42 API** 3 роута `GET /duel42/leaderboard` season 7d `magnum_leaderboard game=duel42` + `GET /duel42/elo` `magnum_duel42_elo 1000±42/−12` + `POST /duel42/wager` `0/42/142/420` + `magnum_coins −wager` + `magnum_transactions duel42_wager_hold` + room `wager` sync, **WS MAGMA** `server.ts` +209/−? `DuelRoom magma/lastClickAt/heldMaxSince/suspect/overheatUntil/heartbeat/clickCounts` + `findOrCreateRoomABCD ABCD` code + `heartbeat 25s ping` + `persist duel+duel42 dual-insert` + `settle wager×2 win / draw возврат + ELO 42/0/−12` + `lobby:create ABCD` — `server.ts` +209, `src/lib/ws.ts` +92, `src/lib/duelMagma.ts` +78, `src/pages/games/DuelMagma.module.css` +18 — hype 124-126 → реализация
+- 🧊 **GLACIER VAULT 42 — 12 glacier скинов + frost epic 1420 + dust крафт** — `14b423d` **GLACIER 12** glacier скины `#e0faff→#06b6d4` (common 42 → epic 1420 frost spin 3s), **Neon** `magnum_dust` + `magnum_subscriptions` + `verified −42` dust, **Shop 42** +12 GLACIER (было 32+12 PRISM → 44), покупка `POST /shop/cosmetic/buy` guard `getCoins()≥price` → `magnum_cosmetics` + `magnum_shop_inventory`, **GSAP** `ShopGrid y:20→0 stagger 0.08 + hover scale 1.02 glacier glow + frost spin 3s` — `server.ts` +109, `src/pages/ShopPage.tsx` +62/−? (6 файлов, +473/−28)
+
+### ✨ Фичи — Health 500 + Follows 401 + Subs 42703
+
+- 🩺 **Health честный 500 — follows/ai_usage 42P01 → 500 (P0 drift без маскировки)** — `552ecc3` **до:** `try/catch → warnings[] drift` маскировал `42P01 undefined_table` → `200 ok`, **после:** `const followsRes = await sql\`SELECT count(*) FROM magnum_follows\`` + `ai_usage` **без try/catch** → `42P01` честно `500 db error` (не 200), `healthWarnings` оставлены для остальных 5 таблиц (`mining_exchanges/idea_comments/reports/moderation_log/chat_messages`), `GET /magnum/api/health` теперь **фейлит честно** при отсутствии `magnum_follows`/`magnum_ai_usage` — `server.ts` +4/−7 (health 2163-2194)
+- 🔒 **Follows 401 route — `migrate follows+ai_usage` + auth guard** — `552ecc3` `src/lib/ws.ts` +92 (MAGMA WS client), `server.ts` `handleFollows` + `handleFollowToggle` теперь `extractToken→401` (был anon drift), **WS** `roomPublic wager` + `suspect` флаг — `server.ts` +209, `src/lib/ws.ts` +92
+- 🗄️ **Subs 42703 — `magnum_subscriptions` `ends_at/started_at/id` (P0)** — `6fbf866` **до:** старая таблица 4-col `user_id PK tier expires_at created_at` → `SELECT tier WHERE ends_at IS NULL → 42703 undefined_column`, **после:** `drizzle/migrations/0018_subscriptions_ends_at.sql` +14 `ALTER TABLE ADD COLUMN IF NOT EXISTS id serial + started_at timestamp + ends_at timestamp` + `backfill ends_at FROM expires_at` + 2 индекса, `server.ts` +4 `ensureSubscriptionTable` ALTER guards для существующих БД, **верифицировано:** `SELECT tier WHERE ends_at IS NULL ok`, `duel_seasons.ends_at exists`, `journal 42703 0 in last 5m`, `health 200` — `drizzle/migrations/0018_subscriptions_ends_at.sql` +14, `drizzle/migrations/meta/_journal.json` idx18, `server.ts` +4
+
+### 📚 Контент — §16 5 фактов + 3 recaps
+
+- 📖 **§16 — 5 фактов + 3 recaps честно transcript:false** — `2b4bb8a` **research.md +12** `§16` `StreamsCharts 28,545 пик 31K/Affiliate 80ч контент/МИД 86,6% 6 границ 3 хребта/Кузбасс 190M лес 4817k га/MellSher 135k 414-22.04/CLAY Gigsty 03.04` + **RecapsPage +56** `3 recaps` `transcript:false` (без фейк-транскрипта) — `research.md` +12, `src/pages/RecapsPage.tsx` +56, `reports/data-2026-09-01-1700.md` +29 (3 файла, +97)
+
+### 🐛 Фиксы — 42703 + health 500
+
+- 🩹 **42703 `ends_at` — закрыт** — см. 🗄️ выше — `6fbf866` `magnum_subscriptions` 42703 → 0, `tsc 0` (dirty `server.ts`/`ShopPage.tsx`/`GalleryPage.tsx` без влияния на health)
+- 🩹 **health 500 честный — 42P01 drift не маскируется** — см. 🩺 выше — `552ecc3` `magnum_follows`/`magnum_ai_usage` теперь 500 вместо 200+warnings (честный fail)
+
+### ⚠️ Остались P0/P1 → 0.3.16
+
+- ⚠️ `server.ts M` + `src/App.tsx M` + `ShopPage.module.css M` + 5× `M src/components/*` + `VipActivatedPopup.tsx ??` + `duelVolcano ??` (12 dirty `+873/−53` не закоммичены полностью — `duelVolcano` 4 файла untracked) + `catch {} 6 мест` + `GalleryPage _REAL_BY_STYLE_FALLBACK_INLINE дубль galleryTokens` — carry → 0.3.16
+
+---
+
 ## [0.3.14] — 2026-09-01 🔒 Auth 401 Fixed + No-LS + Perf Lazy + Gallery webp — 1/10
 
 > **12 коммитов** `353acdc` → `621ff37` · **+846 / −58** · **14 файлов** (+4 dirty `new-coverage-14xx` 8 строк) · Auth `frame/status` 15/15 **401** починен (PII leak закрыт) + **No localStorage** 3 файла (AiBot/PromoPopup/HomePage Neon-only) + **Perf lazy** 4 чанка `466→435K (−31K)` + vendor split + purge 46 stale + **Gallery webp-only** 7× `42-*-800.webp` 67-133K (jpg 3.4M исключён, LCP −3с) + health `warnings[]` drift + inventory null guard + 96-test 1644 + backlog 2×10 + hype 3× MAGMA/PLAST/GLACIER + 3154 tests · рейтинг **1/10** (544 строки/10м, продуктивных 187 → 0/10, норма 5000+ = 10/10) · `tsc 0` · `magnum-bun active` `caddy Up 2h` (200/200)
