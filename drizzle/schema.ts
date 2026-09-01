@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, boolean, jsonb } from "drizzle-orm/pg-core";
 
 export const magnumIdeas = pgTable("magnum_ideas", {
   id: serial("id").primaryKey(),
@@ -6,6 +6,7 @@ export const magnumIdeas = pgTable("magnum_ideas", {
   description: text("description"),
   votes: integer("votes").default(0),
   status: text("status").default("pending"),
+  userId: integer("user_id").references(() => magnumUsers.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -37,4 +38,33 @@ export const magnumFrames = pgTable("magnum_frames", {
   userId: text("user_id"),
   verified: boolean("verified"),
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const magnumUsers = pgTable("magnum_users", {
+  id: serial("id").primaryKey(),
+  username: text("username").notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const magnumSessions = pgTable("magnum_sessions", {
+  token: text("token").primaryKey(),
+  userId: integer("user_id").references(() => magnumUsers.id),
+  expiresAt: timestamp("expires_at"),
+});
+
+export const magnumCoins = pgTable("magnum_coins", {
+  userId: integer("user_id")
+    .primaryKey()
+    .references(() => magnumUsers.id),
+  balance: integer("balance").default(1000),
+});
+
+export const magnumMining = pgTable("magnum_mining", {
+  userId: integer("user_id")
+    .primaryKey()
+    .references(() => magnumUsers.id),
+  balance: integer("balance").default(0).notNull(),
+  upgrades: jsonb("upgrades").default([]).notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });

@@ -13,7 +13,7 @@ export function IdeasPage() {
 
   const load = async () => {
     try {
-      const r = await fetch("/magnum/api/ideas");
+      const r = await fetch("/magnum/api/ideas", { credentials: "include" });
       if (!r.ok) throw new Error(String(r.status));
       const data = (await r.json()) as { ideas: Idea[] };
       setIdeas(data.ideas || []);
@@ -31,7 +31,7 @@ export function IdeasPage() {
 
   const vote = async (id: number) => {
     try {
-      const r = await fetch(`/magnum/api/ideas/${id}/vote`, { method: "POST" });
+      const r = await fetch(`/magnum/api/ideas/${id}/vote`, { method: "POST", credentials: "include" });
       if (!r.ok) throw new Error();
       setIdeas((prev) => prev.map((x) => (x.id === id ? { ...x, votes: x.votes + 1 } : x)));
     } catch { setMsg("Голос не засчитан — войди в аккаунт"); setTimeout(() => setMsg(""), 2000); }
@@ -41,7 +41,7 @@ export function IdeasPage() {
     if (!title.trim() || title.trim().length < 4) { setMsg("Название минимум 4 символа"); return; }
     setSubmitting(true);
     try {
-      const r = await fetch("/magnum/api/ideas", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: title.trim(), description: desc.trim() }) });
+      const r = await fetch("/magnum/api/ideas", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: title.trim(), description: desc.trim() }) });
       if (!r.ok) throw new Error(await r.text());
       setTitle(""); setDesc(""); setMsg("Идея улетела в Neon ✅"); await load();
     } catch (e) { setMsg(String(e).slice(0, 120)); }
