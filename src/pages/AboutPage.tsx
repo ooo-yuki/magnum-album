@@ -6,7 +6,7 @@ import styles from "./About42Page.module.css";
 gsap.registerPlugin(ScrollTrigger);
 
 // About42 — GSAP 24/7: y24 stagger 0.12, parallax, hover RGB, reduced-motion gate, cleanup
-export function About42Page() {
+export function AboutPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
   const bigNumberRef = useRef<HTMLDivElement>(null);
@@ -372,3 +372,5 @@ export function About42Page() {
     </div>
   );
 }
+// alias for router that still imports About42Page
+export const About42PageAlias = AboutPage;

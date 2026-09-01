@@ -1,0 +1,435 @@
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Link } from "react-router-dom";
+import gsap from "gsap";
+import styles from "./QuizGame.module.css";
+
+const PRESAVE = "https://music.thefence.me/psmagnum";
+const WIN_SCORE = 4200;
+const POINTS_PER_CORRECT = 525; // 525*8 = 4200
+const TIME_PER_Q = 15;
+
+interface Question {
+  q: string;
+  options: string[];
+  correct: number;
+  fact: string;
+}
+
+const QUESTIONS: Question[] = [
+  { q: "Что означает число 42?", options: ["Ответ на главный вопрос жизни", "Код региона Кемеровской области", "Количество треков в альбоме", "День рождения Пятерки"], correct: 0, fact: "Из «Автостопом по Галактике» — суперкомпьютер назвал 42 ответом на всё." },
+  { q: "Как расшифровывается CLAY?", options: ["Cool Life And Youth", "Clowns Laugh At You", "Create Love Always Yours", "Club Level All Year"], correct: 1, fact: "Пасхалка, которую Кирилл прятал в конце видео 10 лет." },
+  { q: "Сколько баллов получил трек XXL на РЗТ?", options: ["73", "80", "86", "92"], correct: 2, fact: "Один из самых высокооценённых треков в истории РЗТ." },
+  { q: "Какой жест символизирует 42?", options: ["Кулак с двумя пальцами", "4 пальца на одной руке + 2 на другой", "V-знак дважды", "Палец вверх"], correct: 1, fact: "4 + 2 = 42. Просто и понятно." },
+  { q: "Как зовут MellSher?", options: ["Игорь Шерстюк", "Игорь Меллшер", "Кирилл Баранов", "Игорь Солодков"], correct: 0, fact: "Игорь Николаевич Шерстюк — полное имя." },
+  { q: "Какой первый сквад 42 братух?", options: ["НАХ-сквад (Москва)", "Шуба-сквад (Петербург)", "Хай-сквад (Воронеж)", "Урод-сквад (Ростов)"], correct: 1, fact: "Первый сквад появился в Петербурге в 2024 году." },
+  { q: "Сколько треков в SUPER PUPER NOVA?", options: ["3", "4", "5", "7"], correct: 2, fact: "5 треков: Танцуй, Тонированный жигуль, Кис-кис, XXL, Репит." },
+  { q: "Кто посвящён в «братухи 42» 24 февраля 2025?", options: ["Эльдар Джарахов", "Дмитрий Маликов", "Стинт", "Вова Солодков"], correct: 1, fact: "Дмитрий Маликов — певец, неожиданный союзник движения." },
+];
+
+// ---------- WebAudio ----------
+let ac: AudioContext | null = null;
+function ensureAC(): AudioContext | null {
+  if (!ac) {
+    try {
+      const Ctx = (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext);
+      ac = new Ctx();
+    } catch { return null; }
+  }
+  if (ac && ac.state === "suspended") void ac.resume();
+  return ac;
+}
+function safeRamp(param: AudioParam, fn: () => void, fallback: number) {
+  try { fn(); } catch { param.value = fallback; }
+}
+function playTone(freq: number, dur: number, type: OscillatorType, gain: number, slideTo?: number) {
+  const ctx = ensureAC(); if (!ctx) return;
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.connect(g); g.connect(ctx.destination);
+  o.type = type; o.frequency.value = freq;
+  if (slideTo !== undefined) safeRamp(o.frequency, () => o.frequency.linearRampToValueAtTime(slideTo, ctx.currentTime + dur * 0.7), slideTo);
+  g.gain.setValueAtTime(gain, ctx.currentTime);
+  safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur), 0.001);
+  o.start(); o.stop(ctx.currentTime + dur);
+}
+function playQuestion() { playTone(520, 0.14, "sine", 0.13, 680); }
+function playCorrect() {
+  const ctx = ensureAC(); if (!ctx) return;
+  [0, 0.11].forEach((d, i) => {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type = "sine"; o.frequency.value = i === 0 ? 660 : 880;
+    safeRamp(o.frequency, () => o.frequency.linearRampToValueAtTime(i === 0 ? 760 : 1060, ctx.currentTime + d + 0.09), 1060);
+    g.gain.setValueAtTime(0.16, ctx.currentTime + d);
+    safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + d + 0.24), 0.001);
+    o.start(ctx.currentTime + d); o.stop(ctx.currentTime + d + 0.24);
+  });
+}
+function playWrong() {
+  const ctx = ensureAC(); if (!ctx) return;
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.connect(g); g.connect(ctx.destination);
+  o.type = "square"; o.frequency.value = 190;
+  safeRamp(o.frequency, () => o.frequency.linearRampToValueAtTime(115, ctx.currentTime + 0.22), 115);
+  g.gain.setValueAtTime(0.13, ctx.currentTime);
+  safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.28), 0.001);
+  o.start(); o.stop(ctx.currentTime + 0.28);
+  const o2 = ctx.createOscillator(), g2 = ctx.createGain();
+  o2.connect(g2); g2.connect(ctx.destination);
+  o2.type = "square"; o2.frequency.value = 120;
+  g2.gain.setValueAtTime(0.09, ctx.currentTime + 0.08);
+  safeRamp(g2.gain, () => g2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2), 0.001);
+  o2.start(ctx.currentTime + 0.08); o2.stop(ctx.currentTime + 0.2);
+}
+function playWin() {
+  const ctx = ensureAC(); if (!ctx) return;
+  [0, 0.14, 0.28, 0.42, 0.6].forEach((d, i) => {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type = i % 2 === 0 ? "sine" : "triangle"; o.frequency.value = 440 + i * 110;
+    g.gain.setValueAtTime(0.15, ctx.currentTime + d);
+    safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + d + 0.48), 0.001);
+    o.start(ctx.currentTime + d); o.stop(ctx.currentTime + d + 0.5);
+  });
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.connect(g); g.connect(ctx.destination);
+  o.type = "sine"; o.frequency.value = 110;
+  g.gain.setValueAtTime(0.2, ctx.currentTime);
+  safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.7), 0.001);
+  o.start(); o.stop(ctx.currentTime + 0.75);
+}
+function playTick() { playTone(900, 0.06, "sine", 0.07, 920); }
+
+// ---------- Particles ----------
+function Confetti({ active }: { active: boolean }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    if (!active || !ref.current) return;
+    const canvas = ref.current; const ctx = canvas.getContext("2d")!;
+    const upd = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
+    upd();
+    const colors = ["#ff2d55", "#ffcc00", "#00ff88", "#5865f2", "#fff"];
+    type P = { x: number; y: number; vx: number; vy: number; r: number; c: string; rot: number; vr: number };
+    const parts: P[] = Array.from({ length: 180 }, () => ({
+      x: Math.random() * canvas.width, y: -20 - Math.random() * 420,
+      vx: (Math.random() - 0.5) * 9, vy: 2 + Math.random() * 7,
+      r: 5 + Math.random() * 7, c: colors[Math.floor(Math.random() * colors.length)]!, rot: Math.random() * Math.PI * 2, vr: (Math.random() - 0.5) * 0.36
+    }));
+    let raf = 0;
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      let alive = 0;
+      for (const p of parts) {
+        p.x += p.vx; p.y += p.vy; p.vy += 0.09; p.rot += p.vr; p.vx *= 0.992;
+        if (p.y < canvas.height + 30) alive++;
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+        ctx.fillStyle = p.c; ctx.globalAlpha = Math.max(0, 1 - (p.y / canvas.height) * 0.22);
+        ctx.fillRect(-p.r / 2, -p.r / 2, p.r, p.r * 0.6); ctx.restore();
+      }
+      if (alive > 0) raf = requestAnimationFrame(draw);
+    };
+    raf = requestAnimationFrame(draw);
+    window.addEventListener("resize", upd);
+    return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", upd); };
+  }, [active]);
+  if (!active) return null;
+  return <canvas ref={ref} style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 500 }} />;
+}
+
+type Burst = { x: number; y: number; id: number; good: boolean };
+function BurstLayer({ bursts, onDone }: { bursts: Burst[]; onDone: (id: number) => void }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    if (bursts.length === 0) return;
+    const canvas = ref.current!; const ctx = canvas.getContext("2d")!;
+    const upd = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
+    upd(); window.addEventListener("resize", upd);
+    type P2 = { x: number; y: number; vx: number; vy: number; r: number; life: number; c: string };
+    const all: P2[] = [];
+    for (const b of bursts) {
+      const col = b.good ? ["#00ff88", "#ffcc00", "#fff"] : ["#ff2d55", "#ff7a00", "#fff"];
+      for (let i = 0; i < 18; i++) {
+        const ang = (Math.PI * 2 * i) / 18 + Math.random() * 0.35;
+        const sp = 2.5 + Math.random() * 7;
+        all.push({ x: b.x, y: b.y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp - Math.random() * 1.8, r: 3 + Math.random() * 4, life: 1, c: col[Math.floor(Math.random() * col.length)]! });
+      }
+    }
+    let raf = 0;
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      let any = false;
+      for (const p of all) {
+        if (p.life <= 0) continue;
+        p.x += p.vx; p.y += p.vy; p.vy += 0.26; p.vx *= 0.985; p.life -= 0.022;
+        if (p.life > 0) any = true;
+        ctx.globalAlpha = Math.max(0, p.life);
+        ctx.fillStyle = p.c;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      if (any) raf = requestAnimationFrame(draw);
+      else bursts.forEach((b) => onDone(b.id));
+    };
+    raf = requestAnimationFrame(draw);
+    return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", upd); };
+  }, [bursts, onDone]);
+  if (bursts.length === 0) return null;
+  return <canvas ref={ref} style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 200 }} />;
+}
+
+export function QuizGame() {
+  const [current, setCurrent] = useState(0);
+  const [score, setScore] = useState(0);
+  const [selected, setSelected] = useState<number | null>(null);
+  const [showFact, setShowFact] = useState(false);
+  const [finished, setFinished] = useState(false);
+  const [won, setWon] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(TIME_PER_Q);
+  const [bursts, setBursts] = useState<Burst[]>([]);
+  const [scoreBump, setScoreBump] = useState(false);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const optionsRef = useRef<HTMLDivElement>(null);
+  const resultRef = useRef<HTMLDivElement>(null);
+  const timerRef = useRef<number | null>(null);
+  const burstIdRef = useRef(0);
+  const scoreRef = useRef(0);
+
+  // keep score ref for timer closure
+  useEffect(() => { scoreRef.current = score; }, [score]);
+
+  // intro stagger
+  useEffect(() => {
+    if (!containerRef.current) return;
+    gsap.from(`.${styles.hero} > *`, { y: 22, opacity: 0, stagger: 0.08, duration: 0.6, ease: "power2.out" });
+  }, []);
+
+  // question entrance + sound
+  useEffect(() => {
+    if (finished) return;
+    playQuestion();
+    if (!optionsRef.current) return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduced) return;
+    const btns = optionsRef.current.querySelectorAll(`.${styles.option}`);
+    gsap.set(btns, { x: -14, opacity: 0 });
+    gsap.to(btns, { x: 0, opacity: 1, stagger: 0.05, duration: 0.32, ease: "power2.out", delay: 0.08 });
+    if (cardRef.current) gsap.fromTo(cardRef.current, { scale: 0.98, opacity: 0.7 }, { scale: 1, opacity: 1, duration: 0.32, ease: "power2.out" });
+  }, [current, finished]);
+
+  // result animation
+  useEffect(() => {
+    if (!finished || !resultRef.current) return;
+    const ctx = gsap.context(() => {
+      const card = resultRef.current?.querySelector(`.${styles.resultCard}`);
+      if (!card) return;
+      gsap.set(card, { scale: 0.88, y: 24, opacity: 0 });
+      gsap.to(card, { scale: 1, y: 0, opacity: 1, duration: 0.58, ease: "back.out(1.6)" });
+      if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        gsap.to(card, { boxShadow: "0 0 28px rgba(255,45,85,.26), 0 0 64px rgba(88,101,242,.14)", duration: 1.7, repeat: -1, yoyo: true, ease: "sine.inOut", delay: 0.6 });
+      }
+      const ch = (card as HTMLElement).children;
+      gsap.set(ch, { y: 14, opacity: 0 });
+      gsap.to(ch, { y: 0, opacity: 1, stagger: 0.09, duration: 0.44, ease: "power2.out", delay: 0.18 });
+    }, resultRef);
+    return () => ctx.revert();
+  }, [finished]);
+
+  // timer 15s per question
+  useEffect(() => {
+    if (finished || showFact) {
+      if (timerRef.current) window.clearInterval(timerRef.current);
+      timerRef.current = null;
+      return;
+    }
+    setTimeLeft(TIME_PER_Q);
+    if (timerRef.current) window.clearInterval(timerRef.current);
+    timerRef.current = window.setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          // time out -> auto wrong
+          if (timerRef.current) window.clearInterval(timerRef.current);
+          // defer to avoid setState during render
+          setTimeout(() => handleTimeout(), 0);
+          return 0;
+        }
+        if (prev <= 6) playTick();
+        return prev - 1;
+      });
+    }, 1000);
+    return () => { if (timerRef.current) window.clearInterval(timerRef.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current, finished, showFact]);
+
+  const triggerBurst = useCallback((el: HTMLElement | null, good: boolean) => {
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const x = r.left + r.width / 2, y = r.top + r.height / 2;
+    const id = ++burstIdRef.current;
+    setBursts((prev) => [...prev, { x, y, id, good }]);
+  }, []);
+
+  const handleTimeout = useCallback(() => {
+    if (selected !== null) return;
+    setSelected(-1); // sentinel for timeout: no option selected
+    setShowFact(true);
+    playWrong();
+    if (cardRef.current) {
+      gsap.to(cardRef.current, { x: 7, duration: 0.06, yoyo: true, repeat: 5, ease: "power1.inOut", onComplete: () => gsap.set(cardRef.current!, { x: 0 }) });
+    }
+    if (optionsRef.current) {
+      const btns = optionsRef.current.querySelectorAll(`.${styles.option}`);
+      gsap.to(btns, { x: 3, duration: 0.05, yoyo: true, repeat: 3, ease: "power1.inOut", onComplete: () => gsap.set(btns as unknown as HTMLElement, { x: 0 }) });
+    }
+  }, [selected]);
+
+  const handleSelect = useCallback((idx: number) => {
+    if (selected !== null) return;
+    if (timerRef.current) window.clearInterval(timerRef.current);
+    setSelected(idx);
+    const q = QUESTIONS[current]!;
+    const isCorrect = idx === q.correct;
+
+    if (isCorrect) {
+      const nextScore = scoreRef.current + POINTS_PER_CORRECT;
+      setScore(nextScore);
+      scoreRef.current = nextScore;
+      playCorrect();
+      setScoreBump(true); setTimeout(() => setScoreBump(false), 320);
+    } else {
+      playWrong();
+    }
+    setShowFact(true);
+
+    // anim feedback
+    if (optionsRef.current) {
+      const btns = optionsRef.current.querySelectorAll(`.${styles.option}`);
+      const btn = btns[idx] as HTMLElement | undefined;
+      if (btn) {
+        gsap.to(btn, { scale: 1.03, duration: 0.12, yoyo: true, repeat: 1, ease: "power2.out" });
+        if (isCorrect) {
+          gsap.to(btn, { boxShadow: "0 0 18px rgba(0,255,136,.45)", duration: 0.35 });
+          triggerBurst(btn, true);
+        } else {
+          gsap.to(btn, { x: -6, duration: 0.07, yoyo: true, repeat: 3, ease: "power1.inOut", onComplete: () => gsap.set(btn, { x: 0 }) });
+          if (cardRef.current) gsap.to(cardRef.current, { x: 6, duration: 0.06, yoyo: true, repeat: 4, ease: "power1.inOut", onComplete: () => gsap.set(cardRef.current!, { x: 0 }) });
+          triggerBurst(btn, false);
+          // also highlight correct
+          const correctBtn = btns[q.correct] as HTMLElement | undefined;
+          if (correctBtn) gsap.to(correctBtn, { boxShadow: "0 0 14px rgba(0,255,136,.32)", duration: 0.4 });
+        }
+      }
+    }
+  }, [selected, current, triggerBurst]);
+
+  const handleNext = useCallback(() => {
+    if (current < QUESTIONS.length - 1) {
+      setCurrent((c) => c + 1);
+      setSelected(null);
+      setShowFact(false);
+    } else {
+      setFinished(true);
+      const finalScore = scoreRef.current;
+      const isWon = finalScore >= WIN_SCORE;
+      setWon(isWon);
+      if (isWon) {
+        playWin();
+        if (containerRef.current) gsap.to(containerRef.current, { x: 6, duration: 0.05, yoyo: true, repeat: 7, ease: "power1.inOut", onComplete: () => gsap.set(containerRef.current!, { x: 0 }) });
+      }
+    }
+  }, [current]);
+
+  const handleRestart = useCallback(() => {
+    if (timerRef.current) window.clearInterval(timerRef.current);
+    timerRef.current = null;
+    setCurrent(0); setScore(0); scoreRef.current = 0; setSelected(null); setShowFact(false); setFinished(false); setWon(false); setTimeLeft(TIME_PER_Q); setBursts([]); setScoreBump(false);
+  }, []);
+
+  const q = QUESTIONS[current]!;
+  const progress = ((current + 1) / QUESTIONS.length) * 100;
+  const timePct = (timeLeft / TIME_PER_Q) * 100;
+  const timerClass = timeLeft <= 5 ? styles.timerDanger : timeLeft <= 8 ? styles.timerWarn : "";
+
+  return (
+    <div className={styles.page} ref={containerRef} style={{ position: "relative" }}>
+      <Confetti active={won} />
+      <BurstLayer bursts={bursts} onDone={(id) => setBursts((prev) => prev.filter((b) => b.id !== id))} />
+      <div className={styles.hero}>
+        <div className={styles.badge}>🧠 Мини-игра</div>
+        <h1>Квиз 42</h1>
+        <p className={styles.subtitle}>8 вопросов про 42, MAGNUM и 5opka — {TIME_PER_Q}с на вопрос, набери <b style={{ color: "#ffcc00" }}>{WIN_SCORE}</b> очков</p>
+      </div>
+
+      {!finished ? (
+        <div className={styles.gameArea}>
+          <div className={styles.progressBar}>
+            <div className={styles.progressFill} style={{ width: `${progress}%`, background: won ? "linear-gradient(90deg,#00ff88,#ffcc00)" : undefined }} />
+          </div>
+          <div style={{ height: 4, background: "rgba(255,255,255,.06)", borderRadius: 999, overflow: "hidden", marginBottom: 12, border: "1px solid rgba(255,255,255,.05)" }}>
+            <div style={{ width: `${timePct}%`, height: "100%", background: timeLeft <= 5 ? "#ff2d55" : timeLeft <= 8 ? "#ffcc00" : "linear-gradient(90deg,#00ff88,#5865f2)", transition: "width .45s linear", boxShadow: timeLeft <= 5 ? "0 0 8px #ff2d55" : undefined }} />
+          </div>
+          <div className={styles.timerRow}>
+            <span>Вопрос {current + 1} / {QUESTIONS.length}</span>
+            <span className={`${styles.timer} ${timerClass}`}>⏱ {String(timeLeft).padStart(2, "0")}с</span>
+          </div>
+
+          <div className={styles.card} ref={cardRef}>
+            <h2 className={styles.question}>{q.q}</h2>
+            <div className={styles.options} ref={optionsRef}>
+              {q.options.map((opt, idx) => (
+                <button
+                  key={opt}
+                  className={`${styles.option} ${selected !== null ? (idx === q.correct ? styles.correct : idx === selected ? styles.wrong : "") : ""}`}
+                  onClick={() => handleSelect(idx)}
+                  disabled={selected !== null}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+            {showFact && (
+              <div className={styles.fact}>
+                <p>{selected === -1 ? "⏰ Время вышло! " : ""}{q.fact}</p>
+                <button className={styles.nextBtn} onClick={handleNext}>
+                  {current < QUESTIONS.length - 1 ? "Следующий вопрос →" : "Показать результат →"}
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className={styles.scoreRow}>
+            <span
+              className={`${styles.scorePill} ${scoreBump ? styles.scorePillWin : ""}`}
+              style={{ display: "inline-block", transform: scoreBump ? "scale(1.06)" : "scale(1)", transition: "transform .18s" }}
+            >
+              Очки: <strong>{score}</strong> / {WIN_SCORE}
+            </span>
+            <span className={styles.scorePill}>Прогресс: <strong>{Math.round(progress)}%</strong></span>
+            <span className={styles.scorePill}>{score >= WIN_SCORE ? "🔥 К победе!" : `до победы ${WIN_SCORE - score}`}</span>
+          </div>
+          <div style={{ textAlign: "center", marginTop: 14 }}>
+            <Link to="/magnum/games" className={styles.back}>← К играм</Link>
+          </div>
+        </div>
+      ) : (
+        <div className={styles.result} ref={resultRef}>
+          <div className={styles.resultCard} style={{ boxShadow: won ? "0 0 32px rgba(0,255,136,.22)" : undefined, borderColor: won ? "rgba(0,255,136,.16)" : undefined }}>
+            <div className={styles.resultScore} style={{ background: won ? "linear-gradient(90deg,#00ff88,#ffcc00)" : undefined, WebkitBackgroundClip: won ? "text" as const : undefined, WebkitTextFillColor: won ? "transparent" as const : undefined }}>
+              {score} / {WIN_SCORE}
+            </div>
+            <h2>{won ? "Ты настоящий братуха! 🎉" : score >= WIN_SCORE / 2 ? "Неплохо, но можно лучше! 💪" : "Попробуй ещё раз! 🔄"}</h2>
+            <p className={styles.resultText}>
+              {won ? `Идеально — ${score} очков из ${WIN_SCORE}! 8/8 верно • Теперь время пресейвить MAGNUM.` : `${score} очков — до победы ${WIN_SCORE} не хватило ${WIN_SCORE - score}. Отвечай быстрее и без ошибок!`}
+            </p>
+            <p style={{ fontSize: 11, color: "rgba(255,255,255,.32)", letterSpacing: ".06em", textTransform: "uppercase" as const, marginBottom: 12 }}>победа {WIN_SCORE} → пресейв</p>
+            <div className={styles.resultActions}>
+              <a href={PRESAVE} target="_blank" rel="noreferrer" className={styles.presaveBtn}>Пресейв MAGNUM →</a>
+              <button className={styles.restartBtn} onClick={handleRestart}>Попробовать ещё раз</button>
+              <Link to="/magnum/games" className={styles.back} style={{ textAlign: "center" }}>← К играм</Link>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
