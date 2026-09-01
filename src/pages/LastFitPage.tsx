@@ -1,13 +1,19 @@
 import { useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import styles from "./LastFit.module.css";
+
+gsap.registerPlugin(ScrollTrigger);
 
 export function LastFitPage() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const cardsRef = useRef<HTMLDivElement>(null);
+  const changesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const ctx = gsap.context(() => {
       gsap.set(`.${styles.hero} > *`, { y: 30, opacity: 0 });
@@ -29,6 +35,43 @@ export function LastFitPage() {
         duration: 0.8,
         delay: 0.6,
       });
+
+      // scroll-triggered staggered reveal on cards
+      if (!reducedMotion && cardsRef.current) {
+        const cards = cardsRef.current.querySelectorAll(`.${styles.card}`);
+        gsap.set(cards, { y: 32, opacity: 0, scale: 0.95 });
+        gsap.to(cards, {
+          scrollTrigger: {
+            trigger: cardsRef.current,
+            start: "top 85%",
+            toggleActions: "play none none none",
+          },
+          y: 0,
+          opacity: 1,
+          scale: 1,
+          stagger: 0.12,
+          duration: 0.6,
+          ease: "back.out(1.4)",
+        });
+      }
+
+      // scroll-triggered staggered reveal on change items
+      if (!reducedMotion && changesRef.current) {
+        const items = changesRef.current.querySelectorAll(`.${styles.change}`);
+        gsap.set(items, { x: -24, opacity: 0 });
+        gsap.to(items, {
+          scrollTrigger: {
+            trigger: changesRef.current,
+            start: "top 85%",
+            toggleActions: "play none none none",
+          },
+          x: 0,
+          opacity: 1,
+          stagger: 0.08,
+          duration: 0.5,
+          ease: "power2.out",
+        });
+      }
     }, containerRef);
 
     return () => ctx.revert();
@@ -59,7 +102,7 @@ export function LastFitPage() {
 
       <div className={styles.section}>
         <h2>Причина</h2>
-        <div className={styles.cards}>
+        <div className={styles.cards} ref={cardsRef}>
           <div className={styles.card}>
             <div className={styles.cardIcon}>🎵</div>
             <h3>Сольный путь</h3>
@@ -92,7 +135,7 @@ export function LastFitPage() {
 
       <div className={styles.section}>
         <h2>Что изменится</h2>
-        <div className={styles.changes}>
+        <div className={styles.changes} ref={changesRef}>
           <div className={styles.change}>
             <span className={styles.check}>✓</span>
             <p>Все существующие треки останутся на площадках</p>
