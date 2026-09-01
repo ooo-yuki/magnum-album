@@ -7,7 +7,38 @@
 
 ## [0.3.0] — 2026-09-01
 
-> **8 коммитов** с `8c241b3` (13:44 UTC) → `2866803` (13:55 UTC) · **+1 938 / −241** · **26 файлов** · инкремент Roulette + Auth + GSAP + Gallery
+> **22 коммита** с `8c241b3` (13:44 UTC) → `004e660` (14:11 UTC) · **+3541 / −350** · **26+ файлов** · инкремент 2042 MAGNUM + Rhythm v3 + API пресеты + lazy −51% + 2897 тестов, рейтинг 6/10
+
+### 🔥 Инкремент 14:01–14:12 — 14 коммитов (с `459c489` → `004e660`)
+
+#### 🎮 Игры — 2042 MAGNUM + Rhythm v3
+- **2042 MAGNUM upgrade** — `4e18115` **TILE_LORE×12** (мемы 42: «Кузбасс», «ТУСА», «CLAY»…), **WebAudio** slide/bump/chord, **GSAP** board/merge/confetti, streak + прогресс до 2042, управление **WASD/H/CtrlZ** (undo/history), `src/pages/games/Game2042.tsx` +273/−77, `src/App.tsx` +44 — 2048 теперь с лором MAGNUM
+- **Rhythm v3 — пауза + хинты** — `4f93a34` `Space/P/Esc` пауза (`pausedTime` вычитается, canvas замирает), `missStreak≥3` хинт «бей раньше», `success` сбрасывает streak, `pausedTime` фикс, `src/pages/games/RhythmGame.tsx` +32/−9, `tests/rhythm-enhanced.test.ts` +14
+
+#### ✨ Фичи — Пресейв/Mining/Coin + Идеи
+- **API пресеты и топы** — `fcb3c92` `server.ts` +81: `GET /magnum/api/presave/stats` + `POST /magnum/api/mining/collect` + `GET /magnum/api/mining/top` + `GET /magnum/api/coins/top` + `GET /magnum/api/health`, rate-limit + валидация — экономика теперь с серверным топом
+- **Hype +3 идеи** — `459c489` +66: `DUEL LOBBY 2-4` (WebSocket арена wager 0/42/142/420, код ABCD, heartbeat 25с), `ЭКО-РЕЙТИНГ v2 — босс Кузбасса 7дн` (8Q квиз Томь/42, conic-gradient бейдж), `LIMITED DROP 42` (6 скинов/72ч тираж 42, FOMO-таймер) — `docs/hype-queue.md` +16, `reports/hype-2026-09-01-1401.md` +50, очередь 8
+
+#### ⚡ Перфоманс — lazy 9 heavy pages −51%
+- **Lazy 9 страниц** — `4dde858` `src/App.tsx` 9 heavy pages → `React.lazy` + `Suspense`: **Gallery 441KB + Recaps 277KB** вынесены из main, **main 1037→509KB (−51%)**, gzip **206→143KB (−31%)**, stale `dist 53→29MB (−45%)`, chunks 55→69 (+9), `tsc 0`, `reports/perf-2026-09-01-1411.md` +105 — LCP теперь лёгкий
+
+#### 🔐 Auth / Neon
+- **Auth check** — `bb74e56` `reports/auth-2026-09-01-1411.md` +188: проверка Neon `magnum_users/sessions`, gate WS 401 без токена держится
+- **API validation** — `fcb3c92` rate-limit + validation для presave/mining/coins, `drizzle/migrations/meta/_journal.json` +7 — анти-абуз на сервере
+
+#### 🧪 Тесты / CI
+- **2897 passed** — `ae93589` **2897 passed (16 файлов, +29 `new-coverage-1410`)**, `tsc 0`, vitest `reports/test-2026-09-01-1410.md` +118, `tests/new-coverage-1410.test.ts` +157 — покрытие 2897
+- **2868 passed** — `2dee8ef` **2868 passed (15/15, tsc 0)** +12 `gallery/api/games`, `tests/gallery-api-games.test.ts` +120, `reports/test-2026-09-01-1403.md` +99, `drizzle/migrations/meta/_journal.json` +7
+- **watchdog 14:11** — `cc3ec55` ✅ **OK all 200, 6 gallery**, no restart (WS anon + vote bypass) — `reports/watchdog-2026-09-01-1411.md` +85
+- **watchdog 14:02** — `1ae5526` ✅ **OK all 200, 6 gallery, 2862 tests**, no restart — `reports/watchdog-2026-09-01-1402.md` +62
+- **health 14:06** — `76bfdf8` **OK (local 200, ext FAIL hairpin / 200 via resolve)** — `reports/health-2026-09-01-1406.md` +58
+- **review 6/10** — `3e8b412` rating **6/10** 🟡 `reports/review-2026-09-01-1409.md` +77 — скачок с 2/10, осталось добить архивные 42 картинки
+- **review 2/10** — `edb467c` rating **2/10** 🔴 `reports/review-2026-09-01-1408.md` +84 — окно 10м, низкая активность
+
+#### 📖 Дока
+- **README keeper** — `004e660` +16/−14 `README.md`: **Tests 2897**, 2042/Roulette/Mining/Presave updates, **11 Neon tables**, lazy chunks **510KB** — инвестор видит актуальный стек без чтения кода
+
+---
 
 ### 🔥 Инкремент 13:51–13:55 — 8 коммитов (с `8c241b3` → `2866803`)
 
