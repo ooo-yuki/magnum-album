@@ -5,6 +5,42 @@
 > Промо-сайт альбома **MAGNUM Пятерки** (5opka × 42 братухи). React + TypeScript + GSAP + Bun.
 > Формат: [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/). Версионирование — SemVer.
 
+## [0.3.5] — 2026-09-01 🧠 Memory FEVER + Rhythm FEVER 5 пуль — 3/10
+
+> **5 коммитов** `9a2c9f4` → `8f852ef` · **+615 / −97** · **5 файлов** · Memory 4×12 THEMES + Rhythm FEVER x2 6с — дозакрытие 9a2c9f4 + 4 новых · рейтинг 3/10 (стабильно) · `9a2c9f4` пропущен в 0.3.4 — учтён здесь
+
+### 🎮 Игры — Memory 42 FEVER + Rhythm MAGNUM FEVER
+
+- 🧠 **Memory 42 — THEMES 4×12 + DIFFICULTY 3 + combo FEVER x5** — `8f852ef` **4 темы ×12 карточек** (MAGNUM/42/Братухи/5opka), **3 сложности** (4×3/4×4/6×6), **combo FEVER x5** — 5 подряд x2 очки, **хинты 3×** (подсветка пары), **свайп ↔/↑** + **стрелки+Enter** управление, **WebAudio fever/hint** звуки + **GSAP win** конфетти, **localStorage best** рекорд — `src/pages/games/MemoryGame.tsx` +275/−76 (351 строка, 1 файл)
+- 🥁 **Rhythm 42 — MAGNUM FEVER 5 пуль ×2 6с + 5 треков** — `9a2c9f4` **5 perfect подряд → MAGNUM FEVER** (5 пуль заряжены): **x2 очки 6с**, золотая аура/пульс, **FEVER x2 бейдж** в HUD, частицы, expiry-таймер, сброс на miss · **3→5 треков** (ТУСА МЕДУЗА, VPN, CLAY СЛАВА БОССУ, 42, MAGNUM 5 пуль — каждая пуля альбома) · **fix GSAP nesting** — `useEffect` вынесен из `keydown` (hooks nesting баг), `tsc 0`, `canvas deps +fever` — `src/pages/games/RhythmGame.tsx` +62/−21, `tests/rhythm-fever.test.ts` +95 (2 файла, +158/−21)
+
+### 🧪 Тесты / CI — 3017 passed, tsc 0
+
+- ✅ **Watchdog OK 200/200/200** — `29e2edf` `reports/watchdog-2026-09-01-1451.md` +82 — **200/200/200 active/Up, 8 gallery, 3017 tests, 2 bugs** — без рестарта (`magnum-bun active`, `magnum-caddy Up ~1h`, 25 файлов тестов)
+- 👁️ **Review 3/10** — `fc13b72` `reports/review-2026-09-01-1449.md` +93 — **3/10** (1487 строк/10м: `ce981dc` 260 промокоды + `3ed1a4a` 405 тестов), стабильно с 14:36 (1442→1487), пик — промокоды + покрытие
+
+### 🔐 Auth / Neon — gate держится, WS 🔴 открыт
+
+- 🔐 **Auth check 14:51** — `e33042f` `reports/auth-2026-09-01-1451.md` +165 — **4/4 защищённых 401** (`/auth/me`, `/coins`, `/shop/inventory`, `WS curl 426`), публичные 200 — gate держится; **🔴 WS raw socket без токена → 101** `room Братуха_643` — 3-й прогон подряд, требует `server.ts` проверки токена до `upgrade`
+
+### 🖼️ Галерея — 8 файлов (WARN dup/y2k)
+
+- 🖼️ **8 файлов — WARN gallery-y2k + gallery-dup** — `29e2edf` watchdog **8 файлов** `42-{agit,cyber,memphis,y2k}-01.{800.webp,jpg}` (12M, webp 67-133K valid), `tsc 0` · индексы `y2k→memphis/cyber` (§ BUG-2) + **archive 350×200 html** (SPA fallback маскирует 404) без рестарта
+
+### 🤖 БРАТ-БОТ
+
+- 🤖 без изменений в окне — бот стабилен, задачи ушли в **Memory/Rhythm FEVER** (след. инкремент — подсказки по **Vault + промокодам + FEVER**)
+
+### 🐛 Известные баги → след. инкремент
+
+- ⚠️ **TOCTOU `server.ts:1278-1297`** — `handlePromoRedeem` 5 SQL без `BEGIN` + `magnum_promo_redemptions` без `UNIQUE(user_id,code)` — гонка `uses > max_uses` + двойное начисление (watchdog 14:44 BUG-1, review 14:49 §2)
+- ⚠️ **Gallery `GalleryPage.tsx:39-43` + `galleryTokens.ts:42`** — `y2k-01/02→memphis`, `y2k-03→cyber`, `42-y2k-01.jpg ≡ 42-memphis-01.jpg` один PNG под двумя именами + `.jpg` содержит PNG (BUG-2, review 14:49 §1)
+- ⚠️ **Gallery 350× HTML ghost** — `archive-СССР-001.jpg → 200 text/html 8446B` (index.html) — SPA fallback на `/magnum/images/*` льёт 350×HTML, ломает кэш/LCP (review 14:49 §3) + **localStorage 45 вхождений** vs Neon ТЗ (§ BUG-1 watchdog)
+- ⚠️ **WS anon `server.ts:/magnum/api/ws`** — raw socket без токена → `101 Switching Protocols` (auth 14:51 🔴) — 3-й прогон, нужен `verify token before upgrade`
+- 👁️ **Review 3/10** — `fc13b72` спад с **10/10 → 3/10** (норма после всплеска 22 коммитов 0.3.3, требует 5000+ строк/10м для 10/10)
+
+---
+
 ## [0.3.4] — 2026-09-01 🎲 Blackjack Казино + Ачивки 10 + Промокоды — 3/10
 
 > **14 коммитов** `a7706c6` → `c146a7f` · **+1991 / −33** · **23 файла** · Blackjack x10 Легенда + 10 ачивок + 5 промокодов + Vault prod + 47→38M · рейтинг 3/10
