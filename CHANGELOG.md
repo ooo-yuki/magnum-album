@@ -5,6 +5,65 @@
 > Промо-сайт альбома **MAGNUM Пятерки** (5opka × 42 братухи). React + TypeScript + GSAP + Bun.
 > Формат: [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/). Версионирование — SemVer.
 
+## [0.3.6] — 2026-09-01 🔒 WS-фикс + 2042 Daily/FLOAT + Scoring Neon — 3/10
+
+> **14 коммитов** `3f1314a` → `c8b93fb` · **+1582 / −101** · **22 файла** (+`f3e0446` changelog) · 2042 Daily Challenge + FLOAT +X pop + unified Neon scoring + WS 401 fix + lazy 528→472KB · рейтинг 3/10 → 3/10 (стабильно, 853 строки/10м)
+
+### 🎮 Игры — 2042 Daily Challenge + FLOAT +X
+
+- 🧩 **2042 — DAILY CHALLENGE + share + эффективность + submit** — `3dcd532` **DAILY CHALLENGE** `seededBoard mulberry32` + `dailySeed()` + `DAILY_KEY` + `Neon POST /magnum/api/games/submit` + **Web Share API + clipboard** дубль + **HUD эффективность** (очки/ход) + **TILE_LORE 2026** (ТУСА МЕДУЗА 14.08 / VPN / CLAY 03.04 / 5 пуль — каждая пуля альбома) · **fix nested useEffect confetti** — вынесен из `keydown` — `src/pages/games/Game2042.tsx` +81/−47, `tests/game2042-fix.test.ts` +65 (2 файла, +146/−47)
+- ✨ **2042 — FLOAT +X pop + haptics + spawn GSAP + 42 pulse** — `ed478b2` **floats state + floatIdRef** — `+X` поп-ап над плиткой при merge/slide, **navigator.vibrate** (merge 30ms / slide 10ms), **requestAnimationFrame spawnIdx + GSAP back.out 0.26** появление новой плитки, **42 boxShadow pulse** + **floatUp keyframes** (0.9s ease-out), `presave→win` intact — `src/pages/games/Game2042.tsx` +27/−1, `src/pages/games/Game2042.module.css` +2 (2 файла, +29/−1)
+- 🎯 **Unified scoring + referrals + duel history (Neon)** — `3f1314a` **4 эндпоинта** `POST /magnum/api/games/submit` + `GET /games/top` + `GET /games/my` + `POST /referral/redeem` + `GET /referral/code` + `GET /duel/history` + **Neon** `magnum_game_scores / referrals / duel_history` + `vault persist` — `drizzle/migrations/0010_game_scores_referrals.sql` +42, `drizzle/schema.ts` +29, `server.ts` +164/−1, `drizzle/migrations/meta/_journal.json` +36/−1 (4 файла, +271/−2)
+
+### ✨ Фичи — GSAP + Hype + Referrals
+
+- 🎨 **GSAP AuthStatus entrance+neon+modal + Layout + PageTransition** — `01e5536` **AuthStatus** `gsap.context` entrance (y:−8, opacity, `back.out 0.6`) + **neon boxShadow pulse** + **modal scale/back.out** + `prefers-reduced-motion` gate + `ctx.revert()` · **Layout** context harden · **PageTransition** white-screen fix (`800ms failsafe` + `opacity 0→1`) — `src/components/AuthStatus.tsx` +67/−10, `src/components/Layout.tsx` +21/−11, `src/components/PageTransition.tsx` +12/−7 (3 файла, +100/−28)
+- 💡 **Hype +3 идеи — DUEL CHAIN x5 + ECO REKA + FRAME VERIFIED** — `2c24480` **DUEL CHAIN** (x5 комбо-дуэли), **ECO REKA** (река экосистемы), **FRAME VERIFIED** (проверенная рамка) — `docs/hype-queue.md` +7/−1, `reports/hype-2026-09-01-1501.md` +52 (2 файла, +59/−1)
+
+### ⚡ Перфоманс — 528→472KB + stale cleanup
+
+- 🚀 **Lazy 5 eager pages — 528KB → 472KB (−56KB, −10.6%)** — `5d785d0` **About42 / Track / LastFit / Game / GamesHub** (`src/App.tsx` +15/−13) переведены в `React.lazy(() => import(...))` + `Suspense fallback` · **stale dist cleanup** `main-*.js` 8→1 (`dist 42M→38M`, `/srv 43M→38M`) · **Bun.build 1.59s** · `tsc 0`, `68 chunks` — `reports/perf-2026-09-01-1501.md` +117 (2 файла, +132/−13)
+- 🟢 **Health OK — 200/200/200 + obscura active** — `9cf9928` `reports/health-2026-09-01-1501.md` +61 — **4 роута 200 9106B** (`/`, `/games`, `/42`, `/discography` — SPA fallback), **Caddy + Bun + TLS** OK, `obscura active Chrome/145`, `index.html 9106B ETag dl42iytr344m70y`, `external --resolve 127.0.0.1 → 200`
+- 🟢 **Watchdog OK — 200/200/200 active Up** — `fd132a4` `reports/watchdog-2026-09-01-1459.md` +103 — `magnum-bun active`, `magnum-caddy Up`, **8 gallery, 3017 tests**, health resilient, `tsc 0` — без рестарта
+- 🟢 **Watchdog 15:06 — OK, 2 бага daily+undo** — `c8b93fb` `reports/watchdog-2026-09-01-1506.md` +93 — **200/200/200 active/Up 7min**, `8 файлов 12M` (4×jpg 2.4-3.4M + 4×800.webp 67-133K), `tsc 0`, ⚠️ `DAILY_KEY void` dead code + `historyRef.length` не триггерит ре-рендер — P1/P2 к фиксу
+
+### 🐛 Фиксы — WS auth bypass закрыт
+
+- 🔒 **WS 401 без токена — закрыт auth bypass (raw socket 101→401)** — `26cc8b3` **до:** raw `Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==` без токена → `101 Switching Protocols` (`room Братуха_643`) — 3 прогона подряд · **после:** `extractToken(req)` до `upgrade` → `401 Unauthorized` (curl + raw socket + `?token=fake123` все 401) — `server.ts` +6/−9 (1 файл, фикс P0, auth 15:03 ✅)
+- 🩹 **Fix nested useEffect confetti** — `3dcd532` + `eb2d654` — `useEffect` вынесен из `keydown` (hooks nesting баг `React hooks called conditionally`) + `TILE_LORE` 12 значений (ТУСА/МЕДУЗА/VPN/CLAY 5 пуль) — `tests/game2042-fix.test.ts` +65, `tests/new-coverage-1515.test.ts` +120
+
+### 🖼️ Галерея — 8 файлов (WARN y2k/dup, archive SPA)
+
+- 🖼️ **8 файлов — WARN y2k→memphis/cyber + dup + archive 200 html** — `fd132a4` + `c8b93fb` watchdog **8 файлов** `42-{agit,cyber,memphis,y2k}-01.{jpg,800.webp}` (12M, webp 67-133K valid), `tsc 0` · `REAL_BY_STYLE`/`REAL_FALLBACK` указывают на существующие файлы, `check-list 6→8` устарел — WARN; **archive 210× `archive-СССР-001.jpg` → 200 text/html 8446B** (SPA `try_files` маскирует 404, `onError` fallback на `REAL_BY_STYLE`) — без рестарта
+
+### 🤖 Брат-бот — стабилен, задачи в 2042/скоринге
+
+- 🤖 без изменений в окне — бот стабилен, задачи ушли в **2042 Daily/FLOAT + unified scoring + referrals** (след. инкремент — подсказки по **Vault + промокодам + FEVER + Daily топ**)
+
+### 🧪 Тесты / CI — 3035 passed
+
+- ✅ **3035 passed (fix nested useEffect +12 TILE_LORE/economy/health)** — `eb2d654` `reports/test-2026-09-01-1505.md` +93, `tests/new-coverage-1515.test.ts` +120, `tests/game2042-fix.test.ts` +11 — **3017→3035 +18**, 25 файлов, `TILE_LORE 2026` + `economy/health` + confetti fix
+
+### 🔐 Auth / Neon — gate держится, WS 🔴→🟢
+
+- 🔐 **Auth check 15:03 — 22/22 401 gate, WS 101→401 FIXED** — `3f2e16c` `reports/auth-2026-09-01-1503.md` +185 — **4/4 защищённых 401** (`/auth/me`, `/coins`, `/shop/inventory`, `WS curl 426`) + **16 доп. 401** (`/shop/state`, `/shop/equipped`, `/cosmetic/inventory`, `/transactions`, `/mining`, `/shop/buy`, `/frame/verify`, `/profile`, `/achievements`, `/daily/status`, `/notifications`, `/games/my`, `/games/submit`, `/ideas/bookmarks`, `/promo/redeem`, `/referral/redeem`) + **публичные 200** (`/coins/top`, `/ideas`, `/eco/leaderboard`, `/shop/catalog`, `/achievements/catalog`, `/games/top`) · **WS raw socket без токена → 401** ✅ (было 101) — **предыдущий критичный (WS аноним 101) — ПОФИКШЕН** · фронт `AuthStatus.tsx` Войти/Регистрация + модалка + `credentials:include` OK
+
+### 📖 Дока + Ревью — 3/10 → след. инкремент
+
+- 👁️ **Review 6/10 → 3/10** — `d113ea9` `reports/review-2026-09-01-1455.md` +93 — **6/10** (2992 строки/20м) → `0763723` `reports/review-2026-09-01-1503.md` +80 — **3/10** (853 строки/10м: `800 added/53 removed` → `493 added/51 removed` за чистые 10м) — падение: нет крупных фичей, только `perf+gsap+fix+отчёты`, `tsc 0`, `3017 pass`, `8 галерея`, `health 200`, `magnum-bun active` — **WARN** `archive 200 html` + `Memory localStorage` + `ws fix неполон` + `Game2042 daily seed` — требует **5000+ строк/10м для 10/10**
+- 📝 **Changelog investor update** — `f3e0446` `CHANGELOG.md` +36 — инвестор-апдейт 0.3.4 (Blackjack + ачивки + промокоды) перед 0.3.6
+- 💡 **Hype-queue 3 идеи** — `2c24480` `docs/hype-queue.md` +7/−1 — очередь идей пополнена (DUEL CHAIN x5 — комбо-дуэли, ECO REKA — река экосистемы, FRAME VERIFIED — проверенная рамка) + `reports/hype-2026-09-01-1501.md` +52
+
+### 🐛 Известные баги → след. инкремент
+
+- ⚠️ **P1 DAILY_KEY dead code** — `src/pages/games/Game2042.tsx:411` `const DAILY_KEY = "2042-daily"; void DAILY_KEY;` — ключ нигде не `getItem/setItem` и не уходит в `magnum_daily_claims`/`magnum_game_scores` — UI «одна попытка в день — топ в рейтинг MAGNUM» не ограничена, можно спамить `POST /games/submit` + `restart()` делает `dailySeed()+moves+score` — ломает детерминизм доски дня (watchdog 15:06 BUG-1)
+- ⚠️ **P2 historyRef.length не триггерит ре-рендер** — `src/pages/games/Game2042.tsx:277 + :636` `historyRef.current.length` в JSX `disabled`/`(0/6)` — `useRef` mutable не вызывает ре-рендер, счётчик обновится только при следующем `setGrid/setScore` (watchdog 15:06 BUG-2)
+- ⚠️ **TOCTOU `server.ts:1278-1297`** — `handlePromoRedeem` 5 SQL без `BEGIN` + `magnum_promo_redemptions` без `UNIQUE(user_id,code)` — гонка `uses > max_uses` (review 15:03 §)
+- ⚠️ **Gallery `GalleryPage.tsx:39-43` + `galleryTokens.ts:42`** — `y2k-01/02→memphis`, `y2k-03→cyber`, `42-y2k-01.jpg ≡ 42-memphis-01.jpg` + `.jpg` содержит PNG + **archive 210× 200 html** (SPA fallback, review 15:03 §1)
+- ⚠️ **Memory `MemoryGame.tsx:293,494`** — `localStorage "memory42-best"` вместо `Neon magnum_game_scores` + `POST /games/submit` как у 2042 (review 15:03 §2) + **localStorage 45 вхождений** vs ТЗ «all state in Neon»
+
+---
+
 ## [0.3.5] — 2026-09-01 🧠 Memory FEVER + Rhythm FEVER 5 пуль — 3/10
 
 > **5 коммитов** `9a2c9f4` → `8f852ef` · **+615 / −97** · **5 файлов** · Memory 4×12 THEMES + Rhythm FEVER x2 6с — дозакрытие 9a2c9f4 + 4 новых · рейтинг 3/10 (стабильно) · `9a2c9f4` пропущен в 0.3.4 — учтён здесь
