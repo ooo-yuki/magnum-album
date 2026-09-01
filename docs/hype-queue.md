@@ -13,4 +13,10 @@
 | 7 | SHOP PREVIEW 42 — модалка 200px + InventoryBar скролл | P2 | 42/142/420/1420 catalog 12 | 12 скинов common 42 → epic 1420 CSS-градиенты + эмодзи 48px, бейдж rare фиолет/epic золото, `SkinCard` + `EquippedFrame` glow, `storage` sync вкладок | queued 14:00 |
 | 8 | PRESAVE FOMO BANNER — липкий таймер до релиза | P2 | +42 за клик PRESAVE | `release.ts` дата + `23:59:59` countdown `y:-20→0` GSAP, LS `magnum-presave-banner:{dismissed}` , после релиза → «Слушать MAGNUM» | queued 14:00 |
 
-> Источник: `docs/hype-features.md` §1-4 + §7.12-7.14. Следующее пополнение — 2026-09-01 14:15.
+| 9 | SHOP VAULT 42 — 12 скинов каталог | P0 | 42/142/420/1420 (common/uncommon/rare/epic) | `COSMETICS_CATALOG` 12: clay-73-brown 142, meduza-holo rare 420, gold-42-conic epic 1420 `conic-gold spin 3s`, `magnum_cosmetics(slot frame/banner/title)` + `magnum_shop_inventory`, GSAP stagger y20 0.08 + shimmer epic + confetti 80 | queued 14:21 |
+| 10 | FRAME VERIFIED GOLD — рамка через БРАТ-БОТ vision | P0 | бесплатно verified | `POST /magnum/api/ai` mimo-v2.5 → «засчитан»/«легенда» без «не вижу» → `magnum_frames`, LS `magnum-frame-verified=1`, `conic-gold spin 3s` + `shadow 0 0 16 gold`, GSAP scale spring + glow pulse 2s | queued 14:21 |
+| 11 | DUEL ROYALE 42 — WS лобби 2-4 + сезон 7дн | P1 | wager 0/42/142/420 win +wager*2 +42 ELO | `Bun.serve ws /magnum/api/ws` ABCD join→ready→10с, CPS>20 suspect, heartbeat 25с, `magnum_leaderboard(game=duel42)` season crown топ-3, GSAP y24 stagger 0.12 shake x±6 confetti 160 | queued 14:21 |
+| 12 | ECO CHALLENGE 8Q — Томь/Кузбасс + MAGNUM 8K/200K | P1 | 42/142/420 +1420 босс 8/8 | 8Q Томь/42/Кузбасс/эко + VPN 28.04 CLAY 73 NOVA 80/86, `magnum-eco-challenge:{weekId,streak}` streak 7дн, freeze 420, GSAP y18 stagger 0.1 + conic badge spring | queued 14:21 |
+| 13 | VAULT ROTATION 42 — недельный дроп + аукцион | P2 | 142/420/1420 | 3 скина/неделю тираж 42 `LEFT 12/42` + `FomoTimer 7д` pulse 1.04, sold-out → аукцион +42 bid, `magnum-limited:{dropId,endsAt}` LS + сервер `magnum_limited_drops` | queued 14:21 |
+
+> Источник: `docs/hype-features.md` §1-4 + §7.12-7.14. Следующее пополнение — 2026-09-01 14:36.
