@@ -308,3 +308,15 @@
 5. **«ТУСА МЕДУЗА»** — сингл 14.08.2026, 5opka+MellSher+Вова Солодков, 02:07, поп, Deezer/Audset/YouTube-клип — источник Deezer album/1053805132 + audset.ru/track/44448868 — куда: дискография/игра «Ритм 42»/галерея.
 
 *Проверено 2026-09-01 14:15 UTC — без выдумок, все URL в reports/data-2026-09-01-1415.md*
+
+---
+
+## 12. Дайджест 2026-09-01 — 5 новых фактов (data-scout 14:46 UTC)
+
+1. **Twitch-масштаб** — SullyGnome 1,021,365 фолловеров, SocialBlade 1,008,991 (15.06.2026), +11,369 за 30д; 116 ч стримов/30д, средний онлайн 6,459, пик 22,069 — старт 23.09.2021, 134 игры, 172 фолл./час — источники sullygnome.com/channel/5opka + socialblade.com/twitch/user/5opka + twitchmetrics.net/c/32155044-5opka — куда: прессвол/Leaderboard42.
+2. **SLAY 23/24** — двукратный «Человек-мем года» 2023 и 2024, премия учреждена 2023 Buster/Metacorp/Winline, 2024 обошёл sasavot/zubarefff/stariy_bog, церемония 07.12.2024 Москва, пик 370K — источники metaratings + cyber.sports.ru + championat.com — куда: прессвол/Викторина42.
+3. **Freakland Create** — спин-офф 5opka x Cacto0o, NeoForge 1.21.1, Create+Aeronautics+Big Cannons, 42+ модов, анонс 26.06.2026 Telegram @freakland, жюри 5opka/VIPSSS/iray3n/MrEka 06.07.2026 — источники modpackindex.com/modpack/157844/freakland-create2 + telegraphyx.ru/channels/t/freakland — куда: Recaps Freakland/Create42.
+4. **CLAY 03.04.2026** — Clowns Laugh At You (10-летняя пасхалка), 5 треков: СЛАВА БОССУ/Дай мне всё/Слишком много ставок/Пожарники/Ебанутый, продюсер Drumedy (6-й релиз) — источник taverna.gg/streaming/news/5opka-raskryl-trek-list-novogo-alboma-clay + РЗТ 73 — куда: дискография/Ритм42.
+5. **Кузбасс-демография** — 2,527,219 чел. 01.01.2025 (−20,465 за год, −64,7K за 4 года), Кемерово 542,928/Новокузнецк ~528K/Прокопьевск 170,4K, антилидеры Калтан −4.1% — источники 4s-info.ru 01.04.2025 + ngs42.ru 02.04.2025 + sibmedia.ru — куда: География42/Кемерово42.
+
+*Проверено 2026-09-01 14:46 UTC — без выдумок, все URL в reports/data-2026-09-01-1446.md*
