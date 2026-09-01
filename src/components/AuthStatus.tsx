@@ -79,15 +79,45 @@ export function AuthStatus() {
   }, []);
 
   useEffect(() => {
-    if (!me) return;
-    fetch("/magnum/api/shop/subscriptions", { credentials: "include" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j) => {
-        const t = (j?.active ?? j?.tier) as string | null | undefined;
+    if (!me) { setTier(null); return; }
+    const ac = new AbortController();
+    (async () => {
+      try {
+        const r = await fetch("/magnum/api/shop/subscriptions", { credentials: "include", signal: ac.signal });
+        if (!r.ok) {
+          // fallback: derive tier from cosmetic inventory if subscriptions not yet synced
+          const inv = await fetch("/magnum/api/shop/cosmetic/inventory", { credentials: "include", signal: ac.signal });
+          if (inv.ok) {
+            const j = await inv.json() as { inventory?: Array<{ cosmeticId?: string; cosmetic_id?: string }>; items?: Array<{ cosmeticId?: string; cosmetic_id?: string }> };
+            const ids = new Set((j.inventory ?? j.items ?? []).map(x => String(x.cosmeticId ?? x.cosmetic_id ?? "")));
+            if (ids.has("title-god") || ids.has("frame-crown")) setTier("pro");
+            else if ([...ids].some(id => id.startsWith("title-prism-") || id.startsWith("frame-prism-")) && (ids.has("title-vip") || ids.has("frame-void"))) setTier("vip+");
+            else if (ids.has("title-vip") || ids.has("title-prism-legend")) setTier("vip");
+            else setTier(null);
+            return;
+          }
+          setTier(null); return;
+        }
+        let j: unknown = null;
+        try { j = await r.json(); } catch { const txt = await r.text().catch(() => ""); try { j = JSON.parse(txt); } catch { j = null; } }
+        const obj = j as { tier?: string; active?: string; subscription?: string } | null;
+        const t = (obj?.tier ?? obj?.active ?? obj?.subscription) as string | null | undefined;
         if (t && typeof t === "string") setTier(t);
-      })
-      .catch(() => {});
+        else setTier(null);
+      } catch (e) {
+        if ((e as Error)?.name === "AbortError") return;
+        console.warn("[AuthStatus tier] failed", e);
+      }
+    })();
+    return () => ac.abort();
   }, [me]);
+
+  // P1 #4: магнум:need-auth → открыть модалку логина (ShopPage/MiningPage диспатчат при 401)
+  useEffect(() => {
+    const onNeedAuth = () => setShowModal((prev) => prev ?? "login");
+    window.addEventListener("magnum:need-auth" as unknown as string, onNeedAuth as EventListener);
+    return () => window.removeEventListener("magnum:need-auth" as unknown as string, onNeedAuth as EventListener);
+  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();

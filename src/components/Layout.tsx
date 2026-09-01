@@ -182,7 +182,7 @@ export function Layout() {
               </div>
             </div>
             <a
-              href="https://music.yandex.ru/artist/7544304"
+              href="https://music.thefence.me/psmagnum"
               target="_blank"
               rel="noopener noreferrer"
               className={styles.drawerCta}

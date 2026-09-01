@@ -125,7 +125,7 @@ async function handleRegister(req: Request): Promise<Response> {
   }
   try {
     await sql`INSERT INTO magnum_mining (user_id, balance, upgrades) VALUES (${userId}, 0, '[]'::jsonb) ON CONFLICT (user_id) DO NOTHING`;
-  } catch {}
+  } catch (e) { console.error("[register] mining insert failed", e); }
 
   const token = crypto.randomUUID();
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
@@ -299,7 +299,7 @@ async function handleIdeasVote(req: Request, idStr: string): Promise<Response> {
   if (!checkRateLimit(`ideas:vote:${ip}:${id}`, 12, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
   const token = extractToken(req);
   let authed: { id: number; username: string } | null = null;
-  if (token) { try { authed = await getUserByToken(token); } catch {} }
+  if (token) { try { authed = await getUserByToken(token); } catch (e) { console.error("[ideas vote] getUserByToken failed", e); } }
   try {
     const sql = getSql();
     // authed: dedup via magnum_idea_votes
@@ -862,7 +862,7 @@ async function handleFrameStatus(req: Request): Promise<Response> {
     const sql = getSql();
     const token = extractToken(req);
     let user: { id: number; username: string } | null = null;
-    if (token) { try { user = await getUserByToken(token); } catch {} }
+    if (token) { try { user = await getUserByToken(token); } catch (e) { console.error("[frame status] getUserByToken failed", e); } }
     if (user) {
       const rows = await sql`SELECT f.id, u.username, f.verified, f.created_at, s.skin_id as avatar FROM magnum_frames f LEFT JOIN magnum_users u ON u.id = f.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id = f.user_id AND s.equipped = true WHERE f.user_id = ${user.id} ORDER BY f.created_at DESC LIMIT 50`;
       const frames = rows.map((r: unknown) => {
@@ -905,7 +905,7 @@ async function handleEcoLeaderboard(): Promise<Response> {
 async function handleEcoSubmit(req: Request): Promise<Response> {
   const token = extractToken(req);
   let authedUser: { id: number; username: string } | null = null;
-  if (token) { try { authedUser = await getUserByToken(token); } catch {} }
+  if (token) { try { authedUser = await getUserByToken(token); } catch (e) { console.error("[eco submit] getUserByToken failed", e); } }
   let body: { player?: string; name?: string; username?: string; score?: number; rank?: string };
   try {
     body = (await req.json()) as typeof body;
@@ -926,17 +926,8 @@ async function handleEcoSubmit(req: Request): Promise<Response> {
       return Response.json({ error: "db error" }, { status: 500 });
     }
   }
-  // anonymous fallback (keep backwards compat) — but require player
-  const player = typeof body.player === "string" ? body.player.trim().slice(0, 32) : typeof body.name === "string" ? body.name.trim().slice(0, 32) : typeof body.username === "string" ? body.username.trim().slice(0, 32) : "";
-  if (!player || player.length < 2) return Response.json({ error: "player required" }, { status: 400 });
-  try {
-    const sql = getSql();
-    const rows = await sql`INSERT INTO magnum_eco_results (player, score, rank) VALUES (${player}, ${Math.round(score)}, ${rank}) RETURNING *`;
-    return Response.json({ ok: true, entry: rows[0] }, { status: 201 });
-  } catch (e) {
-    console.error("[eco submit] failed", e);
-    return Response.json({ error: "db error" }, { status: 500 });
-  }
+  // no anonymous — leaderboard only for authed users (no fake players)
+  return Response.json({ error: "unauthorized — войди, братуха" }, { status: 401 });
 }
 
 // ---- Eco Rating 0-10 (magnum_eco_ratings) ----
@@ -1562,7 +1553,7 @@ async function handlePresaveClick(req: Request): Promise<Response> {
   if (url.length > 300 || url.includes("<") || url.includes("\"")) return Response.json({ error: "invalid url" }, { status: 400 });
   const token = extractToken(req);
   let userId: number | null = null;
-  if (token) { try { const u = await getUserByToken(token); if (u) userId = u.id; } catch {} }
+  if (token) { try { const u = await getUserByToken(token); if (u) userId = u.id; } catch (e) { console.error("[presave] getUserByToken failed", e); } }
   try {
     const sql = getSql();
     await sql`INSERT INTO magnum_presave_clicks (user_id, url, ip, created_at) VALUES (${userId}, ${url}, ${ip}, now())`;
@@ -1582,7 +1573,7 @@ async function handlePresaveStats(req: Request): Promise<Response> {
     const topRows = await sql`SELECT url, count(*)::int as c FROM magnum_presave_clicks GROUP BY url ORDER BY c DESC LIMIT 5`;
     const token = extractToken(req);
     let myClicks: number | null = null;
-    if (token) { try { const u = await getUserByToken(token); if (u) { const mine = await sql`SELECT count(*)::int as c FROM magnum_presave_clicks WHERE user_id = ${u.id}`; myClicks = Number((mine[0] as { c: number }).c); } } catch {} }
+    if (token) { try { const u = await getUserByToken(token); if (u) { const mine = await sql`SELECT count(*)::int as c FROM magnum_presave_clicks WHERE user_id = ${u.id}`; myClicks = Number((mine[0] as { c: number }).c); } } catch (e) { console.error("[bandlink] getUserByToken failed", e); } }
     return Response.json({
       total: Number((totalRows[0] as { c: number }).c),
       last24h: Number((dayRows[0] as { c: number }).c),
@@ -1616,7 +1607,7 @@ async function handleBandlink(): Promise<Response> {
     const ok = res.ok && !html.includes("This page could not be found") && !html.includes("404");
     const sql = getSql();
     let presaveCount = 0;
-    try { const r = await sql`SELECT count(*)::int as c FROM magnum_presave_clicks`; presaveCount = Number((r[0] as { c: number }).c); } catch {}
+    try { const r = await sql`SELECT count(*)::int as c FROM magnum_presave_clicks`; presaveCount = Number((r[0] as { c: number }).c); } catch (e) { console.error("[presave count] failed", e); }
     return Response.json({ ok, status: res.status, title: ogTitle, image: ogImage, description: ogDesc, hasPresave, services, presaveCount, url });
   } catch (e) {
     return Response.json({ ok: false, title: "5opka, MellSher - Magnum | BandLink", image: null, description: null, hasPresave: false, services: {}, presaveCount: 0, url, error: String(e).slice(0, 200) });
@@ -1760,7 +1751,7 @@ async function handleReferralRedeem(req: Request): Promise<Response> {
     await sql`UPDATE magnum_coins SET balance = balance + ${reward} WHERE user_id=${inviterId}`;
     await sql`INSERT INTO magnum_transactions (user_id, amount, reason, meta) VALUES (${user.id}, ${reward}, 'referral_in', ${JSON.stringify({ code: raw, inviter: inviterId })}::jsonb)`;
     await sql`INSERT INTO magnum_transactions (user_id, amount, reason, meta) VALUES (${inviterId}, ${reward}, 'referral_bonus', ${JSON.stringify({ invited: user.id, code: raw })}::jsonb)`;
-    try { await ensureNotification(inviterId, "Реферал 42!", `Братуха ${user.username} активировал твой код +${reward} монет`, "referral"); } catch {}
+    try { await ensureNotification(inviterId, "Реферал 42!", `Братуха ${user.username} активировал твой код +${reward} монет`, "referral"); } catch (e) { console.error("[referral notify] failed", e); }
     const upd = await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
     return Response.json({ ok: true, reward, balance: Number((upd[0] as {balance:number}).balance), inviterId });
   } catch (e) {
@@ -1876,7 +1867,7 @@ async function handleFollowToggle(req: Request): Promise<Response> {
       return Response.json({ ok: true, following: false, target: name });
     }
     await sql`INSERT INTO magnum_follows (follower_id, following_id) VALUES (${user.id}, ${targetId})`;
-    try { await ensureNotification(targetId, `Новый фолловер 42`, `Братуха ${user.username} подписался на тебя`, "follow"); } catch {}
+    try { await ensureNotification(targetId, `Новый фолловер 42`, `Братуха ${user.username} подписался на тебя`, "follow"); } catch (e) { console.error("[follow notify] failed", e); }
     return Response.json({ ok: true, following: true, target: name });
   } catch (e) { console.error("[follow toggle] failed", e); return Response.json({ error: "db error" }, { status: 500 }); }
 }
@@ -2156,13 +2147,13 @@ async function handleHealth(): Promise<Response> {
       sql`SELECT count(*)::int as c FROM magnum_duel_history`,
     ]);
     let exchangesCount = 0; let commentsCount = 0; let reportsCount = 0; let modLogCount = 0; let chatCount = 0; let followsCount = 0; let aiUsageCount = 0;
-    try { const r = await sql`SELECT count(*)::int as c FROM magnum_mining_exchanges`; exchangesCount = Number((r[0] as {c:number}).c); } catch {}
-    try { const r = await sql`SELECT count(*)::int as c FROM magnum_idea_comments`; commentsCount = Number((r[0] as {c:number}).c); } catch {}
-    try { const r = await sql`SELECT count(*)::int as c FROM magnum_reports`; reportsCount = Number((r[0] as {c:number}).c); } catch {}
-    try { const r = await sql`SELECT count(*)::int as c FROM magnum_moderation_log`; modLogCount = Number((r[0] as {c:number}).c); } catch {}
-    try { const r = await sql`SELECT count(*)::int as c FROM magnum_chat_messages`; chatCount = Number((r[0] as {c:number}).c); } catch {}
-    try { const r = await sql`SELECT count(*)::int as c FROM magnum_follows`; followsCount = Number((r[0] as {c:number}).c); } catch {}
-    try { const r = await sql`SELECT count(*)::int as c FROM magnum_ai_usage`; aiUsageCount = Number((r[0] as {c:number}).c); } catch {}
+    try { const r = await sql`SELECT count(*)::int as c FROM magnum_mining_exchanges`; exchangesCount = Number((r[0] as {c:number}).c); } catch (e) { console.error("[health] mining_exchanges count failed", e); }
+    try { const r = await sql`SELECT count(*)::int as c FROM magnum_idea_comments`; commentsCount = Number((r[0] as {c:number}).c); } catch (e) { console.error("[health] idea_comments count failed", e); }
+    try { const r = await sql`SELECT count(*)::int as c FROM magnum_reports`; reportsCount = Number((r[0] as {c:number}).c); } catch (e) { console.error("[health] reports count failed", e); }
+    try { const r = await sql`SELECT count(*)::int as c FROM magnum_moderation_log`; modLogCount = Number((r[0] as {c:number}).c); } catch (e) { console.error("[health] mod_log count failed", e); }
+    try { const r = await sql`SELECT count(*)::int as c FROM magnum_chat_messages`; chatCount = Number((r[0] as {c:number}).c); } catch (e) { console.error("[health] chat_messages count failed", e); }
+    try { const r = await sql`SELECT count(*)::int as c FROM magnum_follows`; followsCount = Number((r[0] as {c:number}).c); } catch (e) { console.error("[health] follows count failed", e); }
+    try { const r = await sql`SELECT count(*)::int as c FROM magnum_ai_usage`; aiUsageCount = Number((r[0] as {c:number}).c); } catch (e) { console.error("[health] ai_usage count failed", e); }
     return Response.json({
       ok: true,
       ts: new Date().toISOString(),
@@ -2228,45 +2219,44 @@ async function handleAi(req: Request): Promise<Response> {
   if (req.method !== "POST") {
     return Response.json({ error: "POST only" }, { status: 405 });
   }
-  // 🔴 auth-gate: все /ai требуют токен — иначе anon жжёт XIAOMI_API_KEY (auth-2026-09-01-1607)
-  const rawToken = extractToken(req);
-  if (!rawToken) return Response.json({ error: "unauthorized" }, { status: 401 });
-  let aiUser: { id: number; username: string } | null = null;
-  try { aiUser = await getUserByToken(rawToken); } catch {}
-  if (!aiUser) return Response.json({ error: "unauthorized" }, { status: 401 });
-  const ip = getClientIp(req);
-  if (!checkRateLimit(`ai:${aiUser.id}:${ip}`, 10, 60_000)) {
-    return Response.json({ error: "rate limited — попробуй через минуту, братуха", retryAfterSec: 60 }, { status: 429 });
-  }
   const apiKey = process.env.XIAOMI_API_KEY;
   if (!apiKey) {
     return Response.json({ error: "XIAOMI_API_KEY not configured on server" }, { status: 500 });
   }
-
   let body: { text?: string; image?: string; history?: { role: string; content: string }[] };
   try {
     body = (await req.json()) as typeof body;
   } catch {
     return Response.json({ error: "Invalid JSON" }, { status: 400 });
   }
-
   const userText = typeof body.text === "string" ? body.text.slice(0, 2000) : "";
   const imageDataUrl = extractDataUrl(body.image);
-
   if (!userText && !imageDataUrl) {
     return Response.json({ error: "text or image required" }, { status: 400 });
   }
-  // доп. лимит для image — дороже, отдельный бакет 12/мин per user/ip
-  if (imageDataUrl && !checkRateLimit(`ai:image:${aiUser.id}:${ip}`, 12, 60_000)) {
-    return Response.json({ error: "image rate limited — 12/мин", retryAfterSec: 60 }, { status: 429 });
+  const rawToken = extractToken(req);
+  let aiUser: { id: number; username: string } | null = null;
+  if (rawToken) { try { aiUser = await getUserByToken(rawToken); } catch (e) { console.error("[ai] getUserByToken failed", e); } }
+  const ip = getClientIp(req);
+  if (imageDataUrl && !aiUser) return Response.json({ error: "unauthorized — image requires login" }, { status: 401 });
+  if (aiUser) {
+    if (!checkRateLimit(`ai:${aiUser.id}:${ip}`, 10, 60_000)) {
+      return Response.json({ error: "rate limited — попробуй через минуту, братуха", retryAfterSec: 60 }, { status: 429 });
+    }
+    if (imageDataUrl && !checkRateLimit(`ai:image:${aiUser.id}:${ip}`, 12, 60_000)) {
+      return Response.json({ error: "image rate limited — 12/мин", retryAfterSec: 60 }, { status: 429 });
+    }
+  } else {
+    if (!checkRateLimit(`ai:anon:${ip}`, 8, 60_000)) {
+      return Response.json({ error: "rate limited — 8/мин для гостей, войди для 10/мин", retryAfterSec: 60 }, { status: 429 });
+    }
   }
+
   // Neon ledger: fire-and-forget, не блокирует прокси, но сохраняет аудит трат
   const ledgerPromise = (async () => {
     try {
       const sql = getSql();
-      // P0 #2: aiUser.id safe — auth-gate guarantees non-null; fallback to null if race (schema allows NULL)
-      const uid: number | null = (aiUser as { id: number } | null)?.id ?? null;
-      if (uid == null) return;
+      const uid: number | null = aiUser?.id ?? null;
       await sql`INSERT INTO magnum_ai_usage (user_id, ip, has_image, model, tokens_requested) VALUES (${uid}, ${ip}, ${imageDataUrl ? true : false}, ${MIMO_MODEL}, 400)`;
     } catch (e) {
       // таблица может отсутствовать до применения миграции — молча игнор, есть in-memory rateLimit
@@ -2328,11 +2318,11 @@ async function handleAi(req: Request): Promise<Response> {
     const dt = Date.now() - t0;
     console.log(`[ai-proxy] ok ${dt}ms ip=${ip} user=${aiUser?.username ?? "anon"} image=${!!imageDataUrl} tokens=${data.usage?.total_tokens ?? "?"}`);
     // дождаться ledger чтобы не терять аудит при быстром выходе (но не дольше 300мс)
-    try { await Promise.race([ledgerPromise, new Promise(r => setTimeout(r, 300))]); } catch {}
+    try { await Promise.race([ledgerPromise, new Promise(r => setTimeout(r, 300))]); } catch (e) { console.error("[ai ledger await] failed", e); }
     return Response.json({ text });
   } catch (e) {
     console.error("[ai-proxy] fetch failed:", e, `ip=${ip} user=${aiUser?.username ?? "anon"}`);
-    try { await Promise.race([ledgerPromise, new Promise(r => setTimeout(r, 300))]); } catch {}
+    try { await Promise.race([ledgerPromise, new Promise(r => setTimeout(r, 300))]); } catch (e) { console.error("[ai ledger await] failed", e); }
     return Response.json({ error: "Upstream unreachable" }, { status: 502 });
   }
 }
@@ -2417,7 +2407,7 @@ function roomPublic(room: DuelRoom) {
 function broadcast(room: DuelRoom, payload: unknown) {
   const msg = JSON.stringify(payload);
   for (const ws of room.players) {
-    try { ws.send(msg); } catch {}
+    try { ws.send(msg); } catch (e) { console.error("[ws broadcast] send failed", e); }
   }
 }
 
@@ -2509,7 +2499,7 @@ const server = Bun.serve<WSData>({
       const token = extractToken(req);
       if (!token) return Response.json({ error: "unauthorized — войди, братуха" }, { status: 401 });
       let user: { id: number; username: string } | null = null;
-      try { user = await getUserByToken(token); } catch {}
+      try { user = await getUserByToken(token); } catch (e) { console.error("[ws] getUserByToken failed", e); }
       if (!user) return Response.json({ error: "unauthorized — войди, братуха" }, { status: 401 });
       const ok = server.upgrade(req, { data: { id: String(user.id), username: user.username, roomId: null } });
       if (ok) return undefined as unknown as Response;
@@ -2765,7 +2755,7 @@ const server = Bun.serve<WSData>({
       wsReady.delete(ws);
       wsClickTimes.delete(ws.data.id);
       wsChatTimes.delete(ws.data.id);
-      try { ws.unsubscribe(roomId); } catch {}
+      try { ws.unsubscribe(roomId); } catch (e) { console.error("[ws unsubscribe] failed", e); }
       if (room.players.size === 0) {
         if (room.timer) clearTimeout(room.timer);
         rooms.delete(roomId);
