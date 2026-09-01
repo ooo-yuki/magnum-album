@@ -37,12 +37,18 @@ export function Layout() {
 
   const openAiBot = () => window.dispatchEvent(new CustomEvent("open-aibot"));
 
-  // close on route change + nav-indicator-gsap pulse
+  // close on route change + nav-indicator-gsap pulse (gsap.context + reduced-motion gate)
   useEffect(() => {
     setMenuOpen(false);
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const active = document.querySelector(`.${'active'}`) as HTMLElement | null;
-    if (active) gsap.fromTo(active, { scale: 0.96 }, { scale: 1, duration: 0.4, ease: "back.out(1.6)", overwrite: "auto" });
+    const ctx = gsap.context(() => {
+      const active = document.querySelector(`.${'active'}`) as HTMLElement | null;
+      if (active) {
+        gsap.set(active, { scale: 0.96 });
+        gsap.to(active, { scale: 1, duration: 0.4, ease: "back.out(1.6)", overwrite: "auto" });
+      }
+    });
+    return () => ctx.revert();
   }, [location.pathname]);
 
   // lock scroll when open
@@ -59,20 +65,24 @@ export function Layout() {
     return () => window.removeEventListener("keydown", onKey);
   }, [menuOpen]);
 
-  // drawer animation
+  // drawer animation — gsap.context + reduced-motion + set()/to() (white-screen safe)
   useEffect(() => {
     if (!drawerRef.current || !backdropRef.current) return;
-    if (menuOpen) {
+    if (!menuOpen) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const ctx = gsap.context(() => {
+      if (!drawerRef.current || !backdropRef.current) return;
       gsap.set(drawerRef.current, { xPercent: 100 });
       gsap.set(backdropRef.current, { opacity: 0 });
       gsap.to(backdropRef.current, { opacity: 1, duration: 0.24, ease: "power2.out" });
       gsap.to(drawerRef.current, { xPercent: 0, duration: 0.42, ease: "power3.out" });
-      gsap.fromTo(
-        drawerRef.current.querySelectorAll(`.${styles.drawerLink}`),
-        { x: 18, opacity: 0 },
-        { x: 0, opacity: 1, stagger: 0.04, duration: 0.38, ease: "power2.out", delay: 0.12 }
-      );
-    }
+      const links = drawerRef.current!.querySelectorAll(`.${styles.drawerLink}`);
+      if (links.length) {
+        gsap.set(links, { x: 18, opacity: 0 });
+        gsap.to(links, { x: 0, opacity: 1, stagger: 0.04, duration: 0.38, ease: "power2.out", delay: 0.12 });
+      }
+    }, drawerRef);
+    return () => ctx.revert();
   }, [menuOpen]);
 
   const closeWithAnimation = () => {

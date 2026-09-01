@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import gsap from "gsap";
 import styles from "./AuthStatus.module.css";
 
 type Me = { id: number; username: string } | null;
@@ -11,6 +12,55 @@ export function AuthStatus() {
   const [form, setForm] = useState({ username: "", password: "" });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const wrapRef = useRef<HTMLSpanElement>(null);
+  const modalRef = useRef<HTMLFormElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
+
+  // GSAP 24/7: entrance y24 stagger 0.08 + reduced-motion gate + context cleanup
+  useEffect(() => {
+    if (!wrapRef.current) return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const ctx = gsap.context(() => {
+      const els = wrapRef.current?.children ? Array.from(wrapRef.current.children) as Element[] : [];
+      if (!els.length) return;
+      if (reduced) {
+        gsap.set(els, { y: 0, opacity: 1, clearProps: "transform" });
+        return;
+      }
+      gsap.set(els, { y: 12, opacity: 0 });
+      gsap.to(els, { y: 0, opacity: 1, duration: 0.45, stagger: 0.08, ease: "power3.out", overwrite: "auto" });
+    }, wrapRef);
+    return () => ctx.revert();
+  }, [loading, me]);
+
+  // GSAP: modal entrance scale 0.96→1 + overlay fade, hover RGB-neon
+  useEffect(() => {
+    if (!showModal || !overlayRef.current || !modalRef.current) return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduced) return;
+    const ctx = gsap.context(() => {
+      gsap.set(overlayRef.current, { opacity: 0 });
+      gsap.set(modalRef.current, { scale: 0.96, y: 12, opacity: 0 });
+      gsap.to(overlayRef.current, { opacity: 1, duration: 0.24, ease: "power2.out" });
+      gsap.to(modalRef.current, { scale: 1, y: 0, opacity: 1, duration: 0.38, ease: "back.out(1.6)", delay: 0.08 });
+      const inputs = modalRef.current?.querySelectorAll(`.${styles.input}`) ?? [];
+      if (inputs.length) {
+        gsap.set(inputs, { y: 8, opacity: 0 });
+        gsap.to(inputs, { y: 0, opacity: 1, duration: 0.3, stagger: 0.06, ease: "power2.out", delay: 0.18 });
+      }
+    }, overlayRef);
+    return () => ctx.revert();
+  }, [showModal]);
+
+  // GSAP hover RGB-неон for auth buttons
+  const onBtnEnter = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    gsap.to(e.currentTarget, { scale: 1.04, boxShadow: "0 0 14px rgba(255,45,85,0.35), 0 0 28px rgba(255,45,85,0.15)", duration: 0.22, ease: "power2.out", overwrite: "auto" });
+  };
+  const onBtnLeave = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    gsap.to(e.currentTarget, { scale: 1, boxShadow: "0 0 0 rgba(255,45,85,0)", duration: 0.28, ease: "power2.out", overwrite: "auto" });
+  };
 
   async function refresh() {
     try {
@@ -58,6 +108,13 @@ export function AuthStatus() {
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) { setError((j as { error?: string }).error || "ошибка"); return; }
+      // close with GSAP exit before unmount
+      if (overlayRef.current && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        await new Promise<void>((res) => {
+          gsap.to(modalRef.current, { scale: 0.96, opacity: 0, duration: 0.18, ease: "power2.in" });
+          gsap.to(overlayRef.current, { opacity: 0, duration: 0.18, ease: "power2.in", onComplete: () => res() });
+        });
+      }
       setShowModal(null);
       setForm({ username: "", password: "" });
       await refresh();
@@ -83,28 +140,28 @@ export function AuthStatus() {
     const glowClass = tier ? ` ${styles.glow} ${tier === "vip" ? styles.glowVip : tier === "vip+" ? styles.glowVipPlus : styles.glowPro}` : "";
     const title = tier ? `VIP ${tier.toUpperCase()} активен` : undefined;
     return (
-      <span className={styles.meWrap}>
+      <span className={styles.meWrap} ref={wrapRef}>
         <span className={styles.me + glowClass} title={title}>@{me.username} ✓{tier ? ` · ${tier.toUpperCase()}` : ""}</span>
-        <button type="button" className={styles.logout} onClick={logout} aria-label="Выйти">×</button>
+        <button type="button" className={styles.logout} onClick={logout} aria-label="Выйти" onMouseEnter={onBtnEnter} onMouseLeave={onBtnLeave}>×</button>
       </span>
     );
   }
   return (
     <>
-      <span className={styles.authBtns}>
-        <button type="button" className={styles.login} onClick={() => setShowModal("login")}>Войти</button>
-        <button type="button" className={styles.register} onClick={() => setShowModal("register")}>Регистрация</button>
+      <span className={styles.authBtns} ref={wrapRef}>
+        <button type="button" className={styles.login} onClick={() => setShowModal("login")} onMouseEnter={onBtnEnter} onMouseLeave={onBtnLeave}>Войти</button>
+        <button type="button" className={styles.register} onClick={() => setShowModal("register")} onMouseEnter={onBtnEnter} onMouseLeave={onBtnLeave}>Регистрация</button>
       </span>
       {showModal && (
-        <div className={styles.overlay} role="dialog" aria-modal="true" onClick={() => setShowModal(null)}>
-          <form className={styles.modal} onSubmit={submit} onClick={(ev) => ev.stopPropagation()}>
+        <div ref={overlayRef} className={styles.overlay} role="dialog" aria-modal="true" onClick={() => setShowModal(null)}>
+          <form ref={modalRef} className={styles.modal} onSubmit={submit} onClick={(ev) => ev.stopPropagation()}>
             <h3 className={styles.modalTitle}>{showModal === "register" ? "Регистрация 42" : "Вход"}</h3>
             <input className={styles.input} placeholder="логин (3-32)" value={form.username} onChange={(ev) => setForm((p) => ({ ...p, username: ev.target.value }))} maxLength={32} autoFocus />
             <input className={styles.input} placeholder="пароль (3+)" type="password" value={form.password} onChange={(ev) => setForm((p) => ({ ...p, password: ev.target.value }))} />
             {error && <span className={styles.error}>{error}</span>}
             <div className={styles.modalActions}>
-              <button type="submit" className={styles.submit} disabled={busy}>{busy ? "…" : showModal === "register" ? "Создать" : "Войти"}</button>
-              <button type="button" className={styles.cancel} onClick={() => setShowModal(null)}>Отмена</button>
+              <button type="submit" className={styles.submit} disabled={busy} onMouseEnter={onBtnEnter} onMouseLeave={onBtnLeave}>{busy ? "…" : showModal === "register" ? "Создать" : "Войти"}</button>
+              <button type="button" className={styles.cancel} onClick={() => setShowModal(null)} onMouseEnter={onBtnEnter} onMouseLeave={onBtnLeave}>Отмена</button>
             </div>
             <span className={styles.hint}>Без логина мультиплеер и магазин закрыты — войди, братуха</span>
           </form>
