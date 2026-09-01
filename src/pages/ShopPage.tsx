@@ -5,6 +5,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import styles from "./ShopPage.module.css";
 import { getCoins, subscribe } from "../lib/coins";
+import { AuthStatus } from "../components/AuthStatus";
 gsap.registerPlugin(ScrollTrigger);
 const RGB_GLOW="0 12px 36px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,45,85,0.22), 0 0 28px rgba(255,45,85,0.22), 0 0 28px rgba(0,255,136,0.14), 0 0 32px rgba(255,204,0,0.10)";
 
@@ -191,6 +192,21 @@ export function ShopPage() {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const toastId = useRef(0);
   const shownCoins = useRef(getCoins());
+  const [me, setMe] = useState<{ id: number; username: string } | null>(null);
+
+  useEffect(() => {
+    fetch("/magnum/api/auth/me", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => setMe(j?.user ?? null))
+      .catch(() => setMe(null));
+    const onAuth = () => fetch("/magnum/api/auth/me", { credentials: "include" }).then((r) => (r.ok ? r.json() : null)).then((j) => setMe(j?.user ?? null)).catch(() => {});
+    window.addEventListener("magnum:auth" as unknown as string, onAuth as EventListener);
+    window.addEventListener("magnum:need-auth" as unknown as string, onAuth as EventListener);
+    return () => {
+      window.removeEventListener("magnum:auth" as unknown as string, onAuth as EventListener);
+      window.removeEventListener("magnum:need-auth" as unknown as string, onAuth as EventListener);
+    };
+  }, []);
 
   /* подписка на единый кошелёк (polling 2с внутри coins.ts) */
   useEffect(() => {

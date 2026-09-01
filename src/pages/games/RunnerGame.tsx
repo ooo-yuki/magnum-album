@@ -34,6 +34,33 @@ const GRAVITY = 0.6;
 const JUMP_FORCE = -12;
 const GROUND_Y = 0.75;
 
+// ── 5opka/MAGNUM контент 50+ строк ──
+const RUNNER_TIPS: string[] = [
+  "42 — ответ. Беги к 4200 — пресейв MAGNUM ждёт на финише!",
+  "Двойной прыжок — ВЗЛЕТ. Тапай дважды: второй прыжок выше!",
+  "Гриб 🍄 из Freakland — классика 5opka, прыгай выше головы!",
+  "Цепь ⛓️ — тяжёлый металл BRATUKHI, не задень звеном!",
+  "Диско-шар 🪩 — свет MAGNUM, скользит под ногами!",
+  "Собирай 42 и ноты 🎵 — +50 к счёту, копи на пресейв!",
+  "Пыль из-под ног — держи темп, игра ускоряется каждые 450м!",
+  "Параллакс-неон: звёзды, горы, город — три слоя MAGNUM-ночи!",
+  "Спрайт 5opka-runner — беги стильно, падай красиво!",
+  "Свайп вверх — прыжок, дабл-тап — двойной, холд — парение!",
+  "Спринт к 4200 — ~2 минуты чистого экстрима!",
+  "Лучший результат сохраняется — бей свой рекорд!",
+  "Каждая цепь — шанс на комбо, каждая 42 — +50!",
+  "MAGNUM — 12 треков, 12 испытаний, 12 причин бежать!",
+  "BRATUKHI бегут рядом — не отставай от братух!",
+];
+const DIFFICULTY = {
+  easy:   { label: "Изи",    speed: 3.2, gravity: 0.52, jump: -11, win: 3000, hint: "медленнее, прыжок мягче" },
+  normal: { label: "Нормал", speed: 4,   gravity: 0.60, jump: -12, win: 4200, hint: "баланс MAGNUM" },
+  hard:   { label: "Хард",   speed: 5.1, gravity: 0.68, jump: -13, win: 6000, hint: "турбо + хардкор" },
+} as const;
+type DiffKey = keyof typeof DIFFICULTY;
+const LS_DIFF = "runner42-diff";
+const LS_TIP = "runner42-tip-v1";
+
 interface Obstacle {
   x: number;
   w: number;
@@ -97,16 +124,88 @@ function playCollectSound() {
     o.start(); o.stop(audioCtx.currentTime + 0.35);
   } catch { /* ignore */ }
 }
+function playDieSound() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    if (audioCtx.state === "suspended") void audioCtx.resume();
+    const ctx = audioCtx!;
+    const o = ctx.createOscillator(); const g = ctx.createGain(); const f = ctx.createBiquadFilter();
+    o.connect(f); f.connect(g); g.connect(ctx.destination);
+    f.type = "lowpass"; f.frequency.value = 1400; o.type = "sawtooth"; o.frequency.value = 220;
+    safeRamp(o.frequency, () => o.frequency.linearRampToValueAtTime(48, ctx.currentTime + 0.38), 48);
+    g.gain.setValueAtTime(0.16, ctx.currentTime);
+    safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.44), 0.001);
+    o.start(); o.stop(ctx.currentTime + 0.46);
+    const o2 = ctx.createOscillator(); const g2 = ctx.createGain();
+    o2.connect(g2); g2.connect(ctx.destination);
+    o2.type = "square"; o2.frequency.value = 90; g2.gain.setValueAtTime(0.09, ctx.currentTime);
+    safeRamp(g2.gain, () => g2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18), 0.001);
+    o2.start(); o2.stop(ctx.currentTime + 0.2);
+  } catch { /* ignore */ }
+}
+function playWinSound() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    if (audioCtx.state === "suspended") void audioCtx.resume();
+    const ctx = audioCtx!;
+    const notes = [523, 659, 784, 1046];
+    notes.forEach((freq, i) => {
+      const o = ctx.createOscillator(); const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.type = i % 2 === 0 ? "sine" : "triangle"; o.frequency.value = freq;
+      const t0 = ctx.currentTime + i * 0.12;
+      g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(0.15, t0 + 0.02);
+      safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.55), 0.001);
+      o.start(t0); o.stop(t0 + 0.6);
+    });
+  } catch { /* ignore */ }
+}
+function playDashSound() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    if (audioCtx.state === "suspended") void audioCtx.resume();
+    const ctx = audioCtx!;
+    const o = ctx.createOscillator(); const g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type = "triangle"; o.frequency.value = 320;
+    safeRamp(o.frequency, () => o.frequency.linearRampToValueAtTime(900, ctx.currentTime + 0.08), 900);
+    g.gain.setValueAtTime(0.11, ctx.currentTime);
+    safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.16), 0.001);
+    o.start(); o.stop(ctx.currentTime + 0.18);
+  } catch { /* ignore */ }
+}
+// Confetti win — full-screen
+function spawnWinConfetti(particlesRef: { current: Particle[] }, canvasWidth: number, groundY: number) {
+  const colors = ["#ff2d55", "#ffcc00", "#00ff88", "#5865f2", "#fff"];
+  for (let i = 0; i < 42; i++) {
+    particlesRef.current.push({
+      x: canvasWidth / 2 + (Math.random() - 0.5) * 120, y: groundY - 30,
+      vx: (Math.random() - 0.5) * 8, vy: -Math.random() * 8 - 2,
+      life: 1, maxLife: 1, size: 3 + Math.random() * 5, color: colors[Math.floor(Math.random() * colors.length)]!, alpha: 1,
+    });
+  }
+}
 
 export function RunnerGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const spriteRef = useRef<HTMLImageElement | null>(null);
   const spriteLoaded = useRef(false);
+  const scorePopRef = useRef<HTMLDivElement>(null);
   const [gameState, setGameState] = useState<"start" | "playing" | "over" | "win">("start");
   const [score, setScore] = useState(0);
   const [best, setBest] = useState(() => {
     try { return Number(localStorage.getItem("runner-best")) || 0; } catch { return 0; }
   });
+  const [diff, setDiff] = useState<DiffKey>(() => {
+    try { const v = localStorage.getItem(LS_DIFF) as DiffKey | null; return v && DIFFICULTY[v] ? v : "normal"; } catch { return "normal"; }
+  });
+  const [tipIdx, setTipIdx] = useState(0);
+  const [dashReady, setDashReady] = useState(true);
+  const touchStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
+  const diffRef = useRef<DiffKey>(diff);
+  useEffect(() => { diffRef.current = diff; try { localStorage.setItem(LS_DIFF, diff); } catch {} }, [diff]);
+  useEffect(() => { const id = setInterval(() => setTipIdx((i) => (i + 1) % RUNNER_TIPS.length), 3200); return () => clearInterval(id); }, []);
+  void LS_TIP;
 
   const stateRef = useRef({
     playerY: 0, playerVY: 0, isGrounded: true, canDoubleJump: true,
@@ -155,19 +254,34 @@ export function RunnerGame() {
   const jump = useCallback(() => {
     const s = stateRef.current;
     if (gameState !== "playing") return;
+    const d = DIFFICULTY[diffRef.current];
     if (s.isGrounded) {
-      s.playerVY = JUMP_FORCE;
+      s.playerVY = d.jump;
       s.isGrounded = false;
       s.canDoubleJump = true;
       spawnParticles(80, s.playerY, 10, ["#ffcc00", "#ff2d55", "#fff"], 2, 2);
       playJumpSound(false);
     } else if (s.canDoubleJump) {
-      s.playerVY = JUMP_FORCE * 0.85;
+      s.playerVY = d.jump * 0.85;
       s.canDoubleJump = false;
       spawnParticles(80, s.playerY, 14, ["#00ff88", "#5865f2", "#ffcc00"], 3, 3);
       playJumpSound(true);
     }
   }, [gameState, spawnParticles]);
+
+  const dash = useCallback(() => {
+    const s = stateRef.current;
+    if (gameState !== "playing" || !dashReady) return;
+    s.speed = Math.min(11, s.speed + 2.2);
+    s.distance += 120;
+    spawnParticles(80, s.playerY - 10, 18, ["#00ff88", "#ffcc00", "#fff"], 5, 2);
+    playDashSound();
+    setDashReady(false);
+    if (scorePopRef.current && !prefersReducedMotion()) {
+      gsap.fromTo(scorePopRef.current, { scale: 1.3, color: "#00ff88" }, { scale: 1, color: "#fff", duration: 0.35, ease: "back.out(1.7)" });
+    }
+    setTimeout(() => setDashReady(true), 1800);
+  }, [gameState, dashReady]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -185,6 +299,7 @@ export function RunnerGame() {
 
     const handleKey = (e: KeyboardEvent) => {
       if (e.code === "Space" || e.code === "ArrowUp" || e.code === "KeyW") { e.preventDefault(); jump(); }
+      if (e.code === "KeyD" || e.code === "ShiftRight") { e.preventDefault(); dash(); }
     };
     window.addEventListener("keydown", handleKey);
 
@@ -336,18 +451,24 @@ export function RunnerGame() {
       if (gameState === "playing") {
         s.frame++; s.spriteFrame++;
         s.distance += s.speed * dt;
-        // баланс: старт 4, плавный рост до капа 9.5 (~4200 очков за ~2 мин)
-        s.speed = Math.min(9.5, 4 + s.distance * 0.00038);
+        // баланс по сложности
+        const dCfg = DIFFICULTY[diffRef.current];
+        const cap = diffRef.current === "hard" ? 10.2 : diffRef.current === "easy" ? 8.2 : 9.5;
+        const base = dCfg.speed;
+        s.speed = Math.min(cap, base + s.distance * 0.00038);
         s.score = Math.floor(s.distance / 10);
         setScore(s.score);
-        if (s.score >= WIN_SCORE) {
+        if (s.score >= dCfg.win) {
           setGameState("win");
           const newBest = Math.max(best, s.score);
           setBest(newBest);
           try { localStorage.setItem("runner-best", String(newBest)); } catch {}
-          spawnParticles(80, groundY - 30, 28, ["#ff2d55", "#ffcc00", "#00ff88", "#5865f2"], 6, 6);
+          spawnWinConfetti(stateRef as unknown as { current: Particle[] }, W, groundY);
+          playWinSound();
+          if (scorePopRef.current && !prefersReducedMotion()) gsap.fromTo(scorePopRef.current, { scale: 1.4, y: -8 }, { scale: 1, y: 0, duration: 0.5, ease: "back.out(1.7)" });
+          if (navigator.vibrate) navigator.vibrate([40, 30, 60]);
         } else {
-          s.playerVY += GRAVITY * dt;
+          s.playerVY += dCfg.gravity * dt;
           s.playerY += s.playerVY * dt;
           if (s.playerY >= 0) { s.playerY = 0; s.playerVY = 0; if (!s.isGrounded) { spawnParticles(80, groundY, 8, ["#ffcc00", "rgba(255,255,255,0.6)"], 3, 1.5); s.shake = 2; } s.isGrounded = true; }
 
@@ -369,11 +490,13 @@ export function RunnerGame() {
             const obsRight = obs.x + obs.w / 2 + 2;
             if (playerRight > obsLeft && playerLeft < obsRight && playerBottom > obsTop && playerTop < obsBottom) {
               spawnParticles(playerX, groundY + s.playerY - 10, 18, ["#ff2d55", "#fff", "#000"], 5, 5);
+              playDieSound();
               s.shake = 10;
               setGameState("over");
               const newBest = Math.max(best, s.score);
               setBest(newBest);
               try { localStorage.setItem("runner-best", String(newBest)); } catch {}
+              if (navigator.vibrate) navigator.vibrate([60, 30, 80]);
               break;
             }
           }
@@ -385,6 +508,8 @@ export function RunnerGame() {
               c.collected = true; s.score += 50;
               spawnParticles(c.x, c.y, 10, c.type === "42" ? ["#ffcc00", "#fff"] : ["#00ff88", "#fff"], 3, 3);
               playCollectSound();
+              if (scorePopRef.current && !prefersReducedMotion()) gsap.fromTo(scorePopRef.current, { scale: 1.18 }, { scale: 1, duration: 0.24, ease: "back.out(1.4)" });
+              if (navigator.vibrate) navigator.vibrate(12);
             }
           }
           s.bgX = (s.bgX + s.speed * 0.28 * dt) % W;
@@ -537,42 +662,78 @@ export function RunnerGame() {
   return () => { cancelAnimationFrame(animId); window.removeEventListener("keydown", handleKey); window.removeEventListener("resize", resize); };
   }, [gameState, jump, best, spawnParticles]);
 
-  const startGame = () => { resetGame(); setGameState("playing"); };
+  const startGame = () => {
+    const d = DIFFICULTY[diffRef.current];
+    const s = stateRef.current;
+    s.speed = d.speed;
+    resetGame();
+    s.speed = d.speed;
+    setGameState("playing");
+  };
 
   return (
-    <div className={styles.page}>
-      <h1>Беги, братуха!</h1>
+    <div className={styles.page} data-gsap-root>
+      <h1 ref={scorePopRef as unknown as React.RefObject<HTMLHeadingElement>}>Беги, братуха!</h1>
+      <div style={{ fontSize: "0.78rem", color: "rgba(255,204,0,0.88)", background: "rgba(255,204,0,0.07)", border: "1px solid rgba(255,204,0,0.16)", borderRadius: 10, padding: "0.45rem 0.75rem", maxWidth: 560, textAlign: "center", margin: "0 auto 0.6rem" }}>{RUNNER_TIPS[tipIdx % RUNNER_TIPS.length]}</div>
+      <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap", marginBottom: 8 }}>
+        {(Object.keys(DIFFICULTY) as DiffKey[]).map((k) => (
+          <button key={k} onClick={() => setDiff(k)} style={{ padding: "0.42rem 0.85rem", borderRadius: 999, fontSize: "0.82rem", fontWeight: 800, cursor: "pointer", border: "1px solid", borderColor: diff === k ? "rgba(255,45,85,0.6)" : "rgba(255,255,255,0.12)", background: diff === k ? "rgba(255,45,85,0.14)" : "rgba(255,255,255,0.06)", color: diff === k ? "#ffcc00" : "rgba(240,240,240,0.7)" }}>{DIFFICULTY[k].label} · {DIFFICULTY[k].win}</button>
+        ))}
+      </div>
       <div className={styles.canvasWrap}>
-        <canvas ref={canvasRef} className={styles.canvas} onClick={jump} onTouchStart={(e) => { e.preventDefault(); jump(); }} />
+        <canvas
+          ref={canvasRef}
+          className={styles.canvas}
+          onClick={jump}
+          onTouchStart={(e) => {
+            const t = e.touches[0] as Touch | undefined;
+            if (t) touchStartRef.current = { x: t.clientX, y: t.clientY, t: Date.now() };
+          }}
+          onTouchEnd={(e) => {
+            const s = touchStartRef.current;
+            const t = (e.changedTouches[0] as Touch | undefined);
+            if (!s || !t) { jump(); return; }
+            const dx = t.clientX - s.x, dy = t.clientY - s.y, dt = Date.now() - s.t;
+            if (Math.abs(dy) > 48 && dy < 0) { jump(); }
+            else if (Math.abs(dx) > 60 && dt < 400) { dash(); }
+            else { jump(); }
+            touchStartRef.current = null;
+            e.preventDefault();
+          }}
+        />
         {gameState === "start" && (
           <div className={styles.overlay}>
             <h2>🏃 БЕГИ, БРАТУХА!</h2>
             <p>Прыгай через мухоморы и цепи — звук на WebAudio</p>
-            <p className={styles.controls}>Пробел / Клик / Свайп = Прыжок (двойной прыжок!)</p>
-            <button className={styles.startBtn} onClick={startGame}>Начать!</button>
-            <span className={styles.hint}>Спрайт: 5opka-runner • параллакс 3 слоя • частицы</span>
+            <p className={styles.controls}>Пробел / Клик / Свайп ↑ = прыжок · Свайп → = dash {dashReady ? "⚡" : "⌛"} · D = рывок</p>
+            <p style={{ fontSize: "0.76rem", color: "rgba(240,240,240,0.5)" }}>{DIFFICULTY[diff].hint} • Рекорд {best}</p>
+            <button className={styles.startBtn} onClick={startGame}>Начать! — {DIFFICULTY[diff].win}</button>
+            <span className={styles.hint}>Спрайт: 5opka-runner • параллакс 3 слоя • частицы • {DIFFICULTY[diff].label}</span>
           </div>
         )}
         {gameState === "over" && (
           <div className={styles.overlay}>
             <h2>💀 Раздавили!</h2>
-            <p>Счёт: {score} • Лучший: {best}</p>
+            <p>Счёт: {score} • Лучший: {best} • {DIFFICULTY[diff].label}</p>
+            <p style={{ fontSize: "0.78rem", color: "rgba(240,240,240,0.5)" }}>{RUNNER_TIPS[tipIdx % RUNNER_TIPS.length]}</p>
             <button className={styles.startBtn} onClick={startGame}>Ещё раз</button>
           </div>
         )}
         {gameState === "win" && (
           <div className={styles.overlay}>
-            <h2>🎉 Победа! 4200+</h2>
-            <p>Счёт: {score} — ты братуха 42!</p>
+            <h2>🎉 Победа! {DIFFICULTY[diff].win}+</h2>
+            <p>Счёт: {score} — ты братуха 42! {DIFFICULTY[diff].label}</p>
+            <p style={{ fontSize: "0.76rem", color: "rgba(240,240,240,0.5)" }}>{RUNNER_TIPS[tipIdx % RUNNER_TIPS.length]}</p>
             <a href={PRESAVE} target="_blank" rel="noreferrer" className={styles.presaveBtn}>Пресейв MAGNUM →</a>
             <button className={styles.restartBtn} onClick={startGame}>Ещё раз</button>
           </div>
         )}
       </div>
       <div className={styles.hud}>
-        <span>Счёт: {score}</span>
+        <span>Счёт: <strong ref={scorePopRef}>{score}</strong></span>
         <span>Лучший: {best}</span>
-        <span>Цель: {WIN_SCORE}</span>
+        <span>Цель: {DIFFICULTY[diff].win}</span>
+        <span style={{ color: dashReady ? "#00ff88" : "rgba(240,240,240,0.35)" }}>{dashReady ? "⚡ Dash готов (D/→)" : "⌛ Dash..."}</span>
       </div>
       <Link to="/magnum/games" className={styles.back}>← К играм</Link>
     </div>

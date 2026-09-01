@@ -368,13 +368,20 @@ export function Game2042() {
     }
   }, [state, keepPlaying, best, bestTile, moves]);
 
-  // board entrance GSAP
+  // board entrance GSAP — context cleanup prevents white screen on unmount
   useEffect(() => {
-    if (!boardRef.current) return;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduced) return;
-    gsap.from(boardRef.current, { y: 18, opacity: 0, scale: 0.97, duration: 0.55, ease: "power3.out" });
-    gsap.from(boardRef.current.querySelectorAll(`.${styles.tile}`), { scale: 0.8, opacity: 0, stagger: 0.014, duration: 0.32, ease: "back.out(1.4)", delay: 0.12 });
+    const board = boardRef.current;
+    if (!board) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      gsap.set(board, { clearProps: "all", opacity: 1, y: 0, scale: 1 });
+      gsap.set(board.querySelectorAll(`.${styles.tile}`), { clearProps: "all", opacity: 1, scale: 1 });
+      return;
+    }
+    const ctx = gsap.context(() => {
+      gsap.from(board, { y: 18, opacity: 0, scale: 0.97, duration: 0.55, ease: "power3.out" });
+      gsap.from(board.querySelectorAll(`.${styles.tile}`), { scale: 0.8, opacity: 0, stagger: 0.014, duration: 0.32, ease: "back.out(1.4)", delay: 0.12 });
+    }, boardRef);
+    return () => ctx.revert();
   }, []);
 
   // confetti animation loop — fixed: no nested useEffect

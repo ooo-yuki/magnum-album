@@ -65,30 +65,22 @@ export function Marquee() {
 
   useEffect(() => {
     if (!trackRef.current) return;
-    // respect reduced motion — show static list instead of infinite scroll
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-
-    // measure one set's width, then tween from 0 to -half
     const track = trackRef.current;
-    const half = track.scrollWidth / 2;
-
-    const tween = gsap.to(track, {
-      x: -half,
-      duration: 32,
-      ease: "none",
-      repeat: -1,
-    });
-
-    // pause on hover for readability
-    const pause = () => tween.pause();
-    const resume = () => tween.resume();
-    track.addEventListener("mouseenter", pause);
-    track.addEventListener("mouseleave", resume);
-
+    let pause: () => void = () => {};
+    let resume: () => void = () => {};
+    const ctx = gsap.context(() => {
+      const half = track.scrollWidth / 2;
+      const tween = gsap.to(track, { x: -half, duration: 32, ease: "none", repeat: -1 });
+      pause = () => tween.pause();
+      resume = () => tween.resume();
+      track.addEventListener("mouseenter", pause);
+      track.addEventListener("mouseleave", resume);
+    }, trackRef);
     return () => {
-      tween.kill();
       track.removeEventListener("mouseenter", pause);
       track.removeEventListener("mouseleave", resume);
+      ctx.revert();
     };
   }, []);
 
