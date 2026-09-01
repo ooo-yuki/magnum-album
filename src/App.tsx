@@ -31,6 +31,7 @@ const Game2042 = lazy(() => import("./pages/games/Game2042").then(m => ({ defaul
 const Flappy42Game = lazy(() => import("./pages/games/Flappy42Game").then(m => ({ default: m.Flappy42Game })));
 const TypingGame = lazy(() => import("./pages/games/TypingGame").then(m => ({ default: m.TypingGame })));
 const Snake42Game = lazy(() => import("./pages/games/Snake42Game").then(m => ({ default: m.Snake42Game })));
+const Dodge42Game = lazy(() => import("./pages/games/Dodge42Game").then(m => ({ default: m.Dodge42Game })));
 
 function GameFallback() {
   return <div style={{ padding: "4rem 2rem", textAlign: "center", color: "#ff2d55" }}>Загрузка игры… 🎮</div>;
@@ -62,6 +63,7 @@ export default function App() {
           <Route path="games/flappy" element={<Suspense fallback={<GameFallback />}><Flappy42Game /></Suspense>} />
           <Route path="games/typing" element={<Suspense fallback={<GameFallback />}><TypingGame /></Suspense>} />
           <Route path="games/snake" element={<Suspense fallback={<GameFallback />}><Snake42Game /></Suspense>} />
+          <Route path="games/dodge" element={<Suspense fallback={<GameFallback />}><Dodge42Game /></Suspense>} />
           <Route path="games/quiz" element={<GamePage />} />
           <Route path="shop" element={<ShopPage />} />
           <Route path="eco" element={<EcoPage />} />
