@@ -254,15 +254,156 @@ async function handleIdeasVote(req: Request, idStr: string): Promise<Response> {
   }
 }
 
-// ---- Frame handlers (magnum_frames) ----
-async function handleFrameStatus(): Promise<Response> {
+// ---- Shop handlers (magnum_shop_inventory) ----
+const SHOP_PRICES: Record<string, number> = {
+  "skin-common": 42,
+  "skin-rare": 142,
+  "skin-epic": 420,
+  "skin-legendary": 1420,
+  "skin_42": 42,
+  "skin_142": 142,
+  "skin_420": 420,
+  "skin_1420": 1420,
+  "basic": 42,
+  "rare": 142,
+  "epic": 420,
+  "legendary": 1420,
+  "42": 42,
+  "142": 142,
+  "420": 420,
+  "1420": 1420,
+};
+
+function getSkinPrice(skinId: string): number | null {
+  if (SHOP_PRICES[skinId] != null) return SHOP_PRICES[skinId];
+  // fallback pattern: infer by substring
+  if (skinId.includes("1420") || skinId.includes("legendary")) return 1420;
+  if (skinId.includes("420") || skinId.includes("epic")) return 420;
+  if (skinId.includes("142") || skinId.includes("rare")) return 142;
+  if (skinId.includes("42") || skinId.includes("common") || skinId.includes("basic")) return 42;
+  // generic fallback 42 for any custom skin
+  return 42;
+}
+
+async function handleShopBuy(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  let body: { skinId?: string; skin_id?: string; id?: string };
+  try { body = (await req.json()) as typeof body; } catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
+  const skinId = typeof body.skinId === "string" ? body.skinId.trim() : typeof body.skin_id === "string" ? body.skin_id.trim() : typeof body.id === "string" ? body.id.trim() : "";
+  if (!skinId) return Response.json({ error: "skinId required" }, { status: 400 });
+  const price = getSkinPrice(skinId);
+  if (price == null) return Response.json({ error: "unknown skin" }, { status: 400 });
   try {
     const sql = getSql();
-    const rows = await sql`SELECT f.id, COALESCE(u.username, f.user_id) as username, f.verified, f.created_at, f.user_id as raw_user_id FROM magnum_frames f LEFT JOIN magnum_users u ON u.id::text = f.user_id ORDER BY f.created_at DESC LIMIT 50`;
+    const exists = await sql`SELECT id FROM magnum_shop_inventory WHERE user_id = ${user.id} AND skin_id = ${skinId} LIMIT 1`;
+    if (exists.length > 0) return Response.json({ error: "already owned", skinId }, { status: 409 });
+    const coins = await sql`SELECT balance FROM magnum_coins WHERE user_id = ${user.id} LIMIT 1`;
+    let balance = 0;
+    if (coins.length === 0) {
+      await sql`INSERT INTO magnum_coins (user_id, balance) VALUES (${user.id}, 1000) ON CONFLICT (user_id) DO NOTHING`;
+      balance = 1000;
+    } else {
+      balance = Number((coins[0] as { balance: number }).balance);
+    }
+    if (balance < price) return Response.json({ error: "not enough coins", price, balance, required: price }, { status: 402 });
+    await sql`UPDATE magnum_coins SET balance = balance - ${price} WHERE user_id = ${user.id}`;
+    const updated = await sql`SELECT balance FROM magnum_coins WHERE user_id = ${user.id} LIMIT 1`;
+    const newBalance = Number((updated[0] as { balance: number }).balance);
+    await sql`INSERT INTO magnum_shop_inventory (user_id, skin_id, purchased_at, equipped) VALUES (${user.id}, ${skinId}, now(), false)`;
+    return Response.json({ ok: true, skinId, price, balance: newBalance });
+  } catch (e) {
+    console.error("[shop buy] failed", e);
+    return Response.json({ error: "db error" }, { status: 500 });
+  }
+}
+
+async function handleShopEquip(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  let body: { skinId?: string; skin_id?: string; id?: string };
+  try { body = (await req.json()) as typeof body; } catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
+  const skinId = typeof body.skinId === "string" ? body.skinId.trim() : typeof body.skin_id === "string" ? body.skin_id.trim() : typeof body.id === "string" ? body.id.trim() : "";
+  if (!skinId) return Response.json({ error: "skinId required" }, { status: 400 });
+  try {
+    const sql = getSql();
+    const owned = await sql`SELECT id FROM magnum_shop_inventory WHERE user_id = ${user.id} AND skin_id = ${skinId} LIMIT 1`;
+    if (owned.length === 0) return Response.json({ error: "not owned", skinId }, { status: 404 });
+    await sql`UPDATE magnum_shop_inventory SET equipped = false WHERE user_id = ${user.id}`;
+    await sql`UPDATE magnum_shop_inventory SET equipped = true WHERE user_id = ${user.id} AND skin_id = ${skinId}`;
+    const inv = await sql`SELECT skin_id, equipped, purchased_at FROM magnum_shop_inventory WHERE user_id = ${user.id} ORDER BY purchased_at ASC`;
+    return Response.json({ ok: true, equipped: skinId, inventory: inv.map((r: unknown) => {
+      const x = r as { skin_id: string; equipped: boolean; purchased_at: string };
+      return { skinId: String(x.skin_id), skin_id: String(x.skin_id), equipped: Boolean(x.equipped), purchased_at: x.purchased_at };
+    }) });
+  } catch (e) {
+    console.error("[shop equip] failed", e);
+    return Response.json({ error: "db error" }, { status: 500 });
+  }
+}
+
+async function handleShopInventory(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  try {
+    const sql = getSql();
+    const rows = await sql`SELECT id, skin_id, equipped, purchased_at FROM magnum_shop_inventory WHERE user_id = ${user.id} ORDER BY purchased_at ASC`;
+    const inventory = rows.map((r: unknown) => {
+      const x = r as { id: number; skin_id: string; equipped: boolean; purchased_at: string };
+      return { id: Number(x.id), skinId: String(x.skin_id), skin_id: String(x.skin_id), equipped: Boolean(x.equipped), purchased_at: x.purchased_at };
+    });
+    return Response.json({ inventory, items: inventory });
+  } catch (e) {
+    console.error("[shop inventory] failed", e);
+    return Response.json({ error: "db error" }, { status: 500 });
+  }
+}
+
+// ---- Frame handlers (magnum_frames) ----
+async function handleFrameVerify(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  let body: { verified?: boolean };
+  try { body = (await req.json()) as typeof body; } catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
+  const verified = Boolean(body.verified);
+  try {
+    const sql = getSql();
+    const rows = await sql`INSERT INTO magnum_frames (user_id, verified, created_at) VALUES (${user.id}, ${verified}, now()) RETURNING *`;
+    return Response.json({ ok: true, frame: rows[0], verified });
+  } catch (e) {
+    console.error("[frame verify] failed", e);
+    return Response.json({ error: "db error" }, { status: 500 });
+  }
+}
+
+async function handleFrameStatus(req: Request): Promise<Response> {
+  try {
+    const sql = getSql();
+    const token = extractToken(req);
+    let user: { id: number; username: string } | null = null;
+    if (token) { try { user = await getUserByToken(token); } catch {} }
+    if (user) {
+      const rows = await sql`SELECT f.id, u.username, f.verified, f.created_at FROM magnum_frames f LEFT JOIN magnum_users u ON u.id = f.user_id WHERE f.user_id = ${user.id} ORDER BY f.created_at DESC LIMIT 50`;
+      const frames = rows.map((r: unknown) => {
+        const x = r as { id: number; username: string; verified: boolean | null; created_at: string };
+        return { id: Number(x.id), username: String(x.username || user!.username), verified: Boolean(x.verified), status: x.verified ? "verified" : "pending", created_at: x.created_at };
+      });
+      const verified = frames.filter(f => f.verified).length;
+      return Response.json({ frames, total: frames.length, verified, pending: frames.length - verified, user: user.username });
+    }
+    const rows = await sql`SELECT f.id, COALESCE(u.username, 'Братуха') as username, f.verified, f.created_at, f.user_id as raw_user_id FROM magnum_frames f LEFT JOIN magnum_users u ON u.id = f.user_id ORDER BY f.created_at DESC LIMIT 50`;
     const total = rows.length;
     const verified = rows.filter((r: unknown) => (r as { verified: boolean }).verified === true).length;
     const frames = rows.map((r: unknown) => {
-      const x = r as { id: number; username: string; verified: boolean | null; created_at: string; raw_user_id: string };
+      const x = r as { id: number; username: string; verified: boolean | null; created_at: string; raw_user_id: number };
       return { id: Number(x.id), username: String(x.username || "Братуха"), verified: Boolean(x.verified), status: x.verified ? "verified" : "pending", created_at: x.created_at };
     });
     return Response.json({ frames, total, verified, pending: total - verified });
@@ -276,7 +417,7 @@ async function handleFrameStatus(): Promise<Response> {
 async function handleEcoLeaderboard(): Promise<Response> {
   try {
     const sql = getSql();
-    const rows = await sql`SELECT player, score, rank, created_at FROM magnum_eco_results ORDER BY score DESC, created_at ASC LIMIT 50`;
+    const rows = await sql`SELECT COALESCE(u.username, r.player, 'Братуха') as player, r.score, r.rank, r.created_at FROM magnum_eco_results r LEFT JOIN magnum_users u ON u.id = r.user_id ORDER BY r.score DESC, r.created_at ASC LIMIT 50`;
     const leaderboard = rows.map((r: unknown) => {
       const x = r as { player: string; score: number; rank: string; created_at: string };
       return { player: String(x.player), username: String(x.player), score: Number(x.score), rank: String(x.rank), status: String(x.rank || "pending"), created_at: x.created_at };
@@ -289,17 +430,32 @@ async function handleEcoLeaderboard(): Promise<Response> {
 }
 
 async function handleEcoSubmit(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  let authedUser: { id: number; username: string } | null = null;
+  if (token) { try { authedUser = await getUserByToken(token); } catch {} }
   let body: { player?: string; name?: string; username?: string; score?: number; rank?: string };
   try {
     body = (await req.json()) as typeof body;
   } catch {
     return Response.json({ error: "Invalid JSON" }, { status: 400 });
   }
-  const player = typeof body.player === "string" ? body.player.trim().slice(0, 32) : typeof body.name === "string" ? body.name.trim().slice(0, 32) : typeof body.username === "string" ? body.username.trim().slice(0, 32) : "";
   const score = Number(body.score);
   const rank = typeof body.rank === "string" ? body.rank.trim().slice(0, 32) : "pending";
-  if (!player || player.length < 2) return Response.json({ error: "player required" }, { status: 400 });
   if (!Number.isFinite(score)) return Response.json({ error: "score required" }, { status: 400 });
+  // if auth required and no user, allow anonymous with player field but prefer auth
+  if (authedUser) {
+    try {
+      const sql = getSql();
+      const rows = await sql`INSERT INTO magnum_eco_results (user_id, player, score, rank) VALUES (${authedUser.id}, ${authedUser.username}, ${Math.round(score)}, ${rank}) RETURNING *`;
+      return Response.json({ ok: true, entry: rows[0] }, { status: 201 });
+    } catch (e) {
+      console.error("[eco submit auth] failed", e);
+      return Response.json({ error: "db error" }, { status: 500 });
+    }
+  }
+  // anonymous fallback (keep backwards compat) — but require player
+  const player = typeof body.player === "string" ? body.player.trim().slice(0, 32) : typeof body.name === "string" ? body.name.trim().slice(0, 32) : typeof body.username === "string" ? body.username.trim().slice(0, 32) : "";
+  if (!player || player.length < 2) return Response.json({ error: "player required" }, { status: 400 });
   try {
     const sql = getSql();
     const rows = await sql`INSERT INTO magnum_eco_results (player, score, rank) VALUES (${player}, ${Math.round(score)}, ${rank}) RETURNING *`;
@@ -655,10 +811,16 @@ const server = Bun.serve<WSData>({
     }
 
     // frame status (rating)
-    if (url.pathname === "/magnum/api/frame/status" && req.method === "GET") return handleFrameStatus();
+    if (url.pathname === "/magnum/api/frame/status" && req.method === "GET") return handleFrameStatus(req);
+    if (url.pathname === "/magnum/api/frame/verify" && req.method === "POST") return handleFrameVerify(req);
     // eco leaderboard
     if (url.pathname === "/magnum/api/eco/leaderboard" && req.method === "GET") return handleEcoLeaderboard();
     if (url.pathname === "/magnum/api/eco/submit" && req.method === "POST") return handleEcoSubmit(req);
+
+    // shop
+    if (url.pathname === "/magnum/api/shop/buy" && req.method === "POST") return handleShopBuy(req);
+    if (url.pathname === "/magnum/api/shop/equip" && req.method === "POST") return handleShopEquip(req);
+    if (url.pathname === "/magnum/api/shop/inventory" && req.method === "GET") return handleShopInventory(req);
 
     // mining
     if (url.pathname === "/magnum/api/mining" && req.method === "GET") return handleMiningGet(req);
