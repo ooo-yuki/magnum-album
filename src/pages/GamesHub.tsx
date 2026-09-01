@@ -119,12 +119,12 @@ export function GamesHub() {
             <p>12 скинов 42 — COMMON → LEGENDARY за magnum-coins</p>
             <span className={styles.hypeCta}>В магазин →</span>
           </Link>
-          <div className={`${styles.card} ${styles.hypeCard} ${styles.hypeCardSoon}`} aria-disabled="true">
+          <Link to="/magnum/eco" className={`${styles.card} ${styles.hypeCard}`}>
             <span className={styles.icon}>🌿</span>
             <strong>Эко-рейтинг</strong>
-            <p>Скоро — твой вклад в зелёный движ 42</p>
-            <span className={styles.hypeBadge}>soon</span>
-          </div>
+            <p>8 вопросов — проверь, насколько ты ЭкоЛегенда 42</p>
+            <span className={styles.hypeCta}>Пройти →</span>
+          </Link>
           <div className={`${styles.card} ${styles.hypeCard} ${styles.hypeCardSoon}`} aria-disabled="true">
             <span className={styles.icon}>🖼️</span>
             <strong>Фреймы</strong>

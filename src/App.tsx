@@ -20,6 +20,7 @@ import { RouletteGame } from "./pages/games/RouletteGame";
 import { Game2042 } from "./pages/games/Game2042";
 import { Flappy42Game } from "./pages/games/Flappy42Game";
 import { ShopPage } from "./pages/ShopPage";
+import { EcoPage } from "./pages/EcoPage";
 
 export default function App() {
   return (
@@ -47,6 +48,7 @@ export default function App() {
           <Route path="games/flappy" element={<Flappy42Game />} />
           <Route path="games/quiz" element={<GamePage />} />
           <Route path="shop" element={<ShopPage />} />
+          <Route path="eco" element={<EcoPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
