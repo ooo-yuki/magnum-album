@@ -148,6 +148,13 @@
       "when": 1788300020000,
       "tag": "0020_presave_variant",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1788300021000,
+      "tag": "0021_gacha_pity",
+      "breakpoints": true
     }
   ]
 }
