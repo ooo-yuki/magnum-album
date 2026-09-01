@@ -18,6 +18,7 @@ const GAMES = [
   { to: "/magnum/games/flappy", icon: "🐦", title: "FLAPPY 42", desc: "Пролети 42 трубы — тапай и лети!" },
   { to: "/magnum/games/typing", icon: "⌨️", title: "Скоропечатание", desc: "Печатай фразы MAGNUM — набери 42 WPM" },
   { to: "/magnum/games/snake", icon: "🐍", title: "Змейка 42", desc: "Стрелками или свайпом — вырасти до 42!" },
+  { to: "/magnum/games/dodge", icon: "💥", title: "5 ПУЛЬ", desc: "Уклоняйся 42с — 5 цветных пуль атакуют!" },
 ];
 
 export function GamesHub() {
