@@ -5,6 +5,63 @@
 > Промо-сайт альбома **MAGNUM Пятерки** (5opka × 42 братухи). React + TypeScript + GSAP + Bun.
 > Формат: [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/). Версионирование — SemVer.
 
+## [0.3.8] — 2026-09-01 🦩 Flappy 42 + Rhythm MAGNUM FEVER + Presave 40 фактов + BandLink — 6/10
+
+> **8 коммитов** `91a9702` → `2c3f39b` · **+1250 / −58** · **21 файл** · Flappy 3 сложности×5 скинов + Rhythm 5 пуль FEVER + Presave 40 фактов/30 FAQ/BandLink proxy/reports moderation + LCP high + content-visibility · рейтинг **6/10** (2293 строк/20м, норма 5000+ = 10/10) · `tsc 0` · `magnum-bun active` `caddy Up`
+
+### 🎮 Игры — Flappy 42 (3 сложности×5 скинов) + Rhythm MAGNUM 5 пуль
+
+- 🦩 **Flappy 42 — 3 сложности + 5 скинов + пауза + GSAP score pop** — `91a9702` **DIFFICULTIES 3×** (norm/hard/turbo — скорость труб 1.8→3.2, gap 150→110, coinMul 1→2) + **BIRD_SKINS 5×** (classic/magnum/vpn/meduza/void — цвет/трейл) + **пауза P/Esc** (canvas freeze + overlay) + **GSAP score pop** (`scale 1→1.3 back.out 0.22` на +1) + **haptics** 15ms труба/30ms coin — трудный баланс — `src/pages/games/Flappy42Game.tsx` +158/−45, `src/pages/games/Flappy42Game.module.css` +1 (2 файла, +159/−45)
+- 🥁 **Rhythm 42 — MAGNUM FEVER 5 пуль + 5 треков (uncommitted→коммит)** — `b50293b` **5 perfect подряд → MAGNUM FEVER x2 6с** (золотая аура/пульс, FEVER x2 бейдж, частицы, expiry-таймер, сброс на miss) + **tips ротация 3.2с** + **best/tut** + **fix GSAP nesting** — `src/pages/games/RhythmGame.tsx` +84, `tests/rhythm-magnum-5pul.test.ts` +43 (2 файла, +127) — в работе было uncommitted, залёг в watchdog-коммит 15:22
+- 🏆 **Rating Neon real — health + routes** — `2c3f39b` **health** `reports/moderationLog` счётчики + **6 роутов** `POST /magnum/api/reports` + `GET /reports` + `POST /ideas/:id/status` + `GET /moderation/log` + `GET /profile/:name` + `GET /search` — `server.ts` +16/−1 (1 файл)
+- 📰 **Recaps честно transcript:false + §13 био** — `262ea8d` **+3 recaps честно** `transcript:false` (без фейк-транскрипта) + **§13 био** (ДГТУ/Кемерово 1701/ВРП-Томь/донабор 15-16.07/гимн 42×Маликов +5 фактов) — `src/pages/RecapsPage.tsx` +57, `research.md` +12, `reports/data-2026-09-01-1520.md` +29 (3 файла, +98)
+
+### ✨ Фичи — Presave 40 фактов + 30 FAQ + BandLink proxy + Reports Moderation
+
+- 🎵 **Presave 40 фактов + 30 FAQ + BandLink proxy + moderation Neon** — `057221a` **PresaveRatingPage 40 фактов** (MAGNUM 2026 — 5 пуль/42/ТУСА/Кемерово/гимн) + **30 FAQ** (пресейв/магазин/игры) + **GSAP y24 stagger 0.12** entrance + **BandLink proxy** `/magnum/api/bandlink` (CORS обход) + **reports/moderation Neon** `magnum_reports` + `magnum_moderation_log` + валидаторы — `drizzle/migrations/0013_reports_moderation.sql` +33, `drizzle/schema.ts` +21, `server.ts` +125, `src/pages/PresaveRatingPage.tsx` +95/−9, `index.html` +2/−1, `src/components/Singles.tsx` +2/−1, `src/styles/global.css` +3, `reports/perf-2026-09-01-1524.md` +61 (8 файлов, +342/−11)
+- 💡 **Hype +3 идеи (103-105 blitz/tayga/anod) +5 queue** — `b433f0c` **blitz** (блиц-дуэль 42с) + **tayga** (тайга-экспедиция) + **anod** (анодирование обводки) + queue 5 — `docs/hype-queue.md` +6/−1, `reports/hype-2026-09-01-1517.md` +52 (2 файла, +58/−1)
+
+### 🤖 БРАТ-БОТ — стабилен
+
+- 🤖 без изменений в окне — бот стабилен, задачи ушли в **Flappy/Rhythm FEVER + Presave 40 фактов + BandLink** (след. инкремент — подсказки по **Vault + промокодам + FEVER + BandLink/FAQ**)
+
+### 🖼️ Галерея — 8 файлов (WARN y2k/dup + archive HTML)
+
+- 🖼️ **8 файлов — WARN y2k→memphis + archive 210× HTML-fallback** — `b50293b` watchdog **8 файлов** `42-{agit,cyber,memphis,y2k}-01.{jpg,800.webp}` (12M, webp 67-133K valid), `tsc 0` · `REAL_BY_STYLE`/`REAL_FALLBACK` (`y2k→memphis/cyber` (§ BUG review 15:18 п.1) + **archive 210× 200 html** SPA fallback — без рестарта (`magnum-bun active`, `caddy Up`))
+
+### ⚡ Перфоманс — LCP high + content-visibility
+
+- 🚀 **LCP preload high + Singles eager + content-visibility** — `057221a` + `reports/perf-2026-09-01-1524.md` **LCP `tusa-meduza.jpg` preload `fetchpriority=high`** + **Singles 1-я карточка `eager/high`** (2-я `lazy/low`) + **`content-visibility: auto` for #singles/#about/#discography/#press/#news** (`contain-intrinsic-size 0 600px`) — below-fold paint откладывается, FCP/LCP −~200мс · **dist 35.32→35.81MB +0.49MB (content)**, **main 472→471K −1K**, `tsc 0`, `Bun.build 1.45s 70 files`, 37 extra chunks — `index.html` +2/−1, `src/components/Singles.tsx` +2/−1, `src/styles/global.css` +3, `reports/perf-2026-09-01-1524.md` +61
+- 🟢 **Health стабилен** — perf отчёт `curl /magnum/ 200` + `curl /magnum/api/ideas 200` + `magnum-bun active` + `tsc 0` — без рестарта
+
+### 🧪 Тесты / CI — 3071 passed → 3050/3051 (1 fail flappy)
+
+- ✅ **3071 passed (30 файлов, 9424 expects)** — `00d63ef` `reports/test-2026-09-01-1522.md` +120, `tests/new-coverage-1522.test.ts` +148 — **3051→3071 +20**, `tsc 0`, **Bun 1.4.0 + vitest 3.2.7 jsdom** · покрытие **presave/rhythm/bandlink/reports moderation**
+- ⚠️ **1 fail — flappy42 renders play button** — review 15:18: `flappy42: component renders > renders play button` [1.20ms] · селектор ждёт `[data-testid="play"]`, в `Flappy42Game.tsx` кнопка без testid — P2 к фиксу (добавить `data-testid="flappy-play"`)
+- 🟢 **Watchdog 15:22 — OK 200/200/200 active/Up** — `b50293b` `reports/watchdog-2026-09-01-1522.md` +90 — **200/200/200**, `magnum-bun active`, `magnum-caddy Up`, **8 gallery**, `tsc 0`, **1 fail flappy** — без рестарта
+
+### 🔐 Auth / Neon — gate держится, +2 таблицы (0013)
+
+- 🗄️ **Neon — +2 таблицы (0013 reports+moderation)** — `057221a` `magnum_reports` (id, reporter_id, target_type, target_id, reason, status) + `magnum_moderation_log` (moderator_id, action, target) · **итого 28 таблиц** (было 26) — `drizzle/migrations/0013_reports_moderation.sql` +33, `drizzle/schema.ts` +21, `drizzle/migrations/meta/_journal.json` idx 13
+- 🔐 **Health counts +4 роутов** — `2c3f39b` `server.ts` +16/−1 — `reports/moderationLog` в `/health` + 6 роутов (`/reports`, `/ideas/:id/status`, `/moderation/log`, `/profile/:name`, `/search`)
+
+### 📖 Дока + Ревью — 6/10 (рост с 2/10)
+
+- 👁️ **Review 6/10 — 2293 строк/20м (2180 added)** — `76ae4bd` `reports/review-2026-09-01-1518.md` +92 — **6/10** (2000-2999 = 6/10) — рост **2/10 → 6/10**, **22 коммита/20м (12 продуктивных+10 отчётов)**, **285/45 uncommitted → закоммичены в 91a9702+b50293b**, `tsc PASS` · `tests FAIL 3050/3051` · `gallery WARN` · `health PASS` · `services PASS` — **WARN** `archive HTML fallback` + `localStorage flappy/rhythm vs Neon` + `y2k alias`
+- 📊 **Data +5 фактов (§13) +3 recaps** — `262ea8d` `reports/data-2026-09-01-1520.md` +29 — **био ДГТУ/Кемерово 1701/ВРП-Томь/донабор 15-16.07/гимн 42×Маликов** честно `transcript:false`
+- 💡 **Hype 103-105** — `b433f0c` `reports/hype-2026-09-01-1517.md` +52 — blitz/tayga/anod + queue 5
+
+### 🐛 Известные баги → след. инкремент (0.3.9)
+
+- ⚠️ **P1 archive 210× HTML-fallback** — `GalleryPage.tsx:181` `ARCHIVE_42` 210 записей без файлов — `curl 200 size 9238` SPA `index.html` вместо 404 → `<img>` broken — нужен `onError fallback REAL_BY_STYLE` или `dist/archive-*.jpg` (review 15:18 п.3)
+- ⚠️ **P1 y2k alias** — `GalleryPage.tsx:39-43` + `galleryTokens.ts:42` — `y2k-01→memphis`, `y2k-02→memphis`, `y2k-03→cyber`, `42-y2k-01.jpg ≡ 42-memphis-01.jpg` — Y2K-арт 67K/2.4M недоступен (review 15:18 п.1)
+- ⚠️ **P2 Flappy localStorage vs Neon** — `Flappy42Game.tsx:166/293` `flappy42-diff/skin/best` в `localStorage` вместо `magnum_game_scores` + `coinMul` не уходит в `POST /games/submit` — инкогнито = сброс (review 15:18 п.2) + **1 fail** `renders play button` без `data-testid`
+- ⚠️ **P2 Rhythm localStorage** — `RhythmGame.tsx:301/310` `rhythm42-best/tut` + `fetch presave/click` без `credentials` — та же Neon-миграция нужна (review 15:18 п.3)
+- ⚠️ **P2 DAILY_KEY void + historyRef** — `Game2042.tsx:411` `void DAILY_KEY` + `:277+636` `historyRef.length` не триггерит ре-рендер — carry из 0.3.6/0.3.7
+- ⚠️ **P2 TOCTOU `server.ts:1278-1297`** — `handlePromoRedeem` 5 SQL без `BEGIN` + нет `UNIQUE(user_id,code)` — гонка `uses > max_uses` — carry из 0.3.6
+
+---
+
 ## [0.3.7] — 2026-09-01 ⛏️ Mining Exchange 10:1 + Eco Rating 0-10 + Idea Comments — 2/10
 
 > **8 коммитов** `2c53379` → `26dd77e` · **+840 / −14** · **14 файлов** · Mining 10:1 + Eco 0-10 (11 tiers) + idea comments + presave leaderboard + 3051 tests · рейтинг **2/10** (1031 строк/10м, норма 5000+ = 10/10) · `tsc 0` · `magnum-bun active` `caddy Up`
