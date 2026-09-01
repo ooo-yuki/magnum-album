@@ -14,6 +14,8 @@ const GAMES = [
   { to: "/magnum/games/stack", icon: "🧱", title: "Стопка 42", desc: "Строй башню — 15 этажей до победы" },
   { to: "/magnum/games/blackjack", icon: "♠️", title: "БЛЭКДЖЕК 42", desc: "Собери 21 — нафарми 4200 монет" },
   { to: "/magnum/games/roulette", icon: "🎰", title: "РУЛЕТКА 42", desc: "Европейская 0-36 · собери 4200 монет" },
+  { to: "/magnum/games/2042", icon: "🧩", title: "ПАЗЛ 2042", desc: "2048-головоломка — собери 42!" },
+  { to: "/magnum/games/flappy", icon: "🐦", title: "FLAPPY 42", desc: "Пролети 42 трубы — тапай и лети!" },
 ];
 
 export function GamesHub() {

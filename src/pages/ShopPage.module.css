@@ -1,0 +1,528 @@
+/* MAGNUM · Магазин скинов 42 — RGB-неон, дерзкий мемный стиль */
+
+.shop {
+  --c-red: #ff2d55;
+  --c-yellow: #ffcc00;
+  --c-green: #00ff88;
+  --c-bg: #0a0a0a;
+  --c-card: #121216;
+  --c-card2: #17171d;
+  --c-line: #23232b;
+  --c-text: #f2f2f2;
+  --c-dim: #9aa4b2;
+
+  min-height: 100vh;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 48px 24px 80px;
+  color: var(--c-text);
+  background:
+    radial-gradient(900px 420px at 15% -10%, rgba(255, 45, 85, 0.08), transparent 60%),
+    radial-gradient(800px 400px at 85% 0%, rgba(255, 204, 0, 0.06), transparent 60%),
+    var(--c-bg);
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+/* ── шапка ─────────────────────────────────────────────── */
+
+.header {
+  text-align: center;
+  margin-bottom: 36px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 6px 14px;
+  border: 1px solid var(--c-red);
+  border-radius: 999px;
+  color: var(--c-red);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  box-shadow: 0 0 18px rgba(255, 45, 85, 0.25);
+}
+
+.title {
+  margin: 14px 0 6px;
+  font-size: clamp(34px, 6vw, 58px);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  background: linear-gradient(90deg, var(--c-red), var(--c-yellow), var(--c-green));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.subtitle {
+  margin: 0 0 18px;
+  color: var(--c-dim);
+  font-size: 15px;
+}
+
+.coinsRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 22px;
+  border: 1px solid var(--c-line);
+  border-radius: 999px;
+  background: var(--c-card);
+  box-shadow: 0 0 24px rgba(255, 204, 0, 0.12);
+}
+
+.coinIcon {
+  font-size: 22px;
+}
+
+.coinsValue {
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--c-yellow);
+  font-variant-numeric: tabular-nums;
+  display: inline-block;
+  min-width: 64px;
+  transform-origin: center;
+}
+
+.coinsLabel {
+  color: var(--c-dim);
+  font-size: 14px;
+}
+
+/* ── тосты ─────────────────────────────────────────────── */
+
+.toasts {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(92vw, 480px);
+}
+
+.toast {
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  backdrop-filter: blur(8px);
+  animation: toastIn 0.3s ease;
+}
+
+.toastOk {
+  border: 1px solid var(--c-green);
+  background: rgba(0, 255, 136, 0.1);
+  color: var(--c-green);
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.18);
+}
+
+.toastErr {
+  border: 1px solid var(--c-red);
+  background: rgba(255, 45, 85, 0.12);
+  color: #ff8fa7;
+  box-shadow: 0 0 20px rgba(255, 45, 85, 0.25);
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── сетап + инвентарь ─────────────────────────────────── */
+
+.setup {
+  display: grid;
+  grid-template-columns: minmax(220px, 300px) 1fr;
+  gap: 20px;
+  align-items: start;
+  margin-bottom: 40px;
+}
+
+.avatarSlot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 22px;
+  border: 1px solid var(--c-line);
+  border-radius: 18px;
+  background: var(--c-card);
+}
+
+.avatarFace {
+  position: relative;
+  width: 128px;
+  height: 128px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 3px solid var(--c-line);
+  box-shadow: 0 0 24px rgba(255, 255, 255, 0.08);
+}
+
+.avatarFace[data-rarity="common"],
+.avatarFace[data-rarity="rare"],
+.avatarFace[data-rarity="epic"],
+.avatarFace[data-rarity="legendary"] {
+  border-color: var(--c-line);
+}
+
+.avatarEmpty {
+  background: #1a1a20;
+  border-style: dashed;
+}
+
+.avatarEmoji {
+  font-size: 64px;
+  line-height: 1;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5));
+}
+
+.slotLabel {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--c-text);
+  text-align: center;
+}
+
+.btnGhost {
+  padding: 8px 16px;
+  border: 1px solid var(--c-line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--c-dim);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btnGhost:hover {
+  border-color: var(--c-red);
+  color: var(--c-red);
+}
+
+.inventory {
+  padding: 22px;
+  border: 1px solid var(--c-line);
+  border-radius: 18px;
+  background: var(--c-card);
+}
+
+.invTitle {
+  margin: 0 0 14px;
+  font-size: 18px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.invCount {
+  color: var(--c-yellow);
+  margin-left: 8px;
+}
+
+.invEmpty {
+  margin: 0;
+  color: var(--c-dim);
+  font-size: 14px;
+}
+
+.invGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 10px;
+}
+
+.invItem {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 6px 10px;
+  border: 1px solid var(--c-line);
+  border-radius: 12px;
+  background: var(--c-card2);
+  color: var(--c-text);
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.invItem:hover {
+  transform: translateY(-2px);
+  border-color: var(--rc, var(--c-dim));
+}
+
+.invItemActive {
+  border-color: var(--c-green);
+  box-shadow: 0 0 14px rgba(0, 255, 136, 0.25);
+}
+
+.invEmoji {
+  font-size: 30px;
+  line-height: 1;
+}
+
+.invName {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--c-dim);
+  text-align: center;
+}
+
+.invOn {
+  position: absolute;
+  top: -8px;
+  right: -6px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--c-green);
+  color: #04140c;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+/* ── сетка магазина ────────────────────────────────────── */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 18px;
+  margin-bottom: 40px;
+}
+
+.card {
+  --rc: var(--c-dim);   /* цвет редкости */
+  --rg: var(--c-dim);   /* цвет RGB-рамки */
+
+  position: relative;
+  border-radius: 18px;
+  padding: 2px;                          /* место под RGB-рамку */
+  background:
+    linear-gradient(var(--c-card), var(--c-card)) padding-box,
+    linear-gradient(135deg, var(--rg), transparent 40%, transparent 60%, var(--rg)) border-box;
+  border: 2px solid transparent;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5), 0 0 24px color-mix(in srgb, var(--rg) 35%, transparent);
+}
+
+.card[data-rarity="legendary"] {
+  animation: rgbShift 4s linear infinite;
+}
+
+.card[data-rarity="epic"] {
+  animation: rgbShift 6s linear infinite;
+}
+
+@keyframes rgbShift {
+  0%   { --rg: #ff2d55; }
+  25%  { --rg: #ffcc00; }
+  50%  { --rg: #00ff88; }
+  75%  { --rg: #00c2ff; }
+  100% { --rg: #ff2d55; }
+}
+
+.cardGlow {
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  background: radial-gradient(320px 160px at 50% 0%, color-mix(in srgb, var(--rg) 22%, transparent), transparent 70%);
+}
+
+.card:hover .cardGlow {
+  opacity: 1;
+}
+
+.cardFace {
+  height: 150px;
+  border-radius: 16px 16px 0 0;
+  display: grid;
+  place-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.cardFace::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent 45%);
+  pointer-events: none;
+}
+
+.cardEmoji {
+  font-size: 76px;
+  line-height: 1;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.55));
+  transition: transform 0.25s ease;
+}
+
+.card:hover .cardEmoji {
+  transform: scale(1.12) rotate(-4deg);
+}
+
+.cardBody {
+  padding: 14px 16px 16px;
+  background: var(--c-card2);
+  border-radius: 0 0 16px 16px;
+}
+
+.cardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.cardName {
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.rarityTag {
+  padding: 3px 9px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.cardTag {
+  margin: 0 0 14px;
+  font-size: 12.5px;
+  color: var(--c-dim);
+  min-height: 32px;
+}
+
+/* ── кнопки ────────────────────────────────────────────── */
+
+.btnBuy {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px solid var(--c-yellow);
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(255, 204, 0, 0.18), rgba(255, 45, 85, 0.14));
+  color: var(--c-yellow);
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btnBuy:hover {
+  background: linear-gradient(135deg, rgba(255, 204, 0, 0.32), rgba(255, 45, 85, 0.26));
+  box-shadow: 0 0 22px rgba(255, 204, 0, 0.3);
+  transform: translateY(-1px);
+}
+
+.btnBuy:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.btnLocked {
+  border-color: var(--c-red);
+  background: rgba(255, 45, 85, 0.08);
+  color: #ff8fa7;
+  opacity: 0.85;
+}
+
+.btnLocked:hover {
+  background: rgba(255, 45, 85, 0.16);
+  box-shadow: 0 0 18px rgba(255, 45, 85, 0.25);
+}
+
+.btnWear {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px solid var(--c-green);
+  border-radius: 12px;
+  background: rgba(0, 255, 136, 0.1);
+  color: var(--c-green);
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btnWear:hover {
+  background: rgba(0, 255, 136, 0.2);
+  box-shadow: 0 0 18px rgba(0, 255, 136, 0.28);
+}
+
+/* ── футер ─────────────────────────────────────────────── */
+
+.footer {
+  text-align: center;
+  padding: 26px 20px;
+  border: 1px dashed var(--c-line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.footerText {
+  margin: 0;
+  color: var(--c-dim);
+  font-size: 15px;
+}
+
+.footerLink {
+  color: var(--c-red);
+  font-weight: 800;
+  text-decoration: none;
+  border-bottom: 1px dashed var(--c-red);
+}
+
+.footerLink:hover {
+  color: var(--c-yellow);
+  border-bottom-color: var(--c-yellow);
+}
+
+/* ── адаптив ───────────────────────────────────────────── */
+
+@media (max-width: 820px) {
+  .setup {
+    grid-template-columns: 1fr;
+  }
+
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 12px;
+  }
+
+  .cardFace {
+    height: 120px;
+  }
+
+  .cardEmoji {
+    font-size: 56px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card[data-rarity="legendary"],
+  .card[data-rarity="epic"] {
+    animation: none;
+  }
+
+  .toast {
+    animation: none;
+  }
+}

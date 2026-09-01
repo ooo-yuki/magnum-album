@@ -30,8 +30,12 @@ describe("smoke: routes рендерятся", () => {
     // also check that rhythm/stack routes exist in App (import check)
     const { RhythmGame } = await import("../src/pages/games/RhythmGame");
     const { Stack42Game } = await import("../src/pages/games/Stack42Game");
+    const { Game2042 } = await import("../src/pages/games/Game2042");
+    const { Flappy42Game } = await import("../src/pages/games/Flappy42Game");
     expect(RhythmGame).toBeDefined();
     expect(Stack42Game).toBeDefined();
+    expect(Game2042).toBeDefined();
+    expect(Flappy42Game).toBeDefined();
   });
 });
 
@@ -78,10 +82,11 @@ describe("smoke: GamesHub 6+ игр", () => {
   it("рендерит минимум 6 игр", () => {
     render(React.createElement(MemoryRouter, null, React.createElement(GamesHub)));
     const links = screen.getAllByRole("link");
-    expect(links.length).toBeGreaterThanOrEqual(7);
+    expect(links.length).toBeGreaterThanOrEqual(8);
     expect(screen.getByText("Беги, братуха!")).toBeInTheDocument();
     expect(screen.getByText("Матч 42")).toBeInTheDocument();
     expect(screen.getByText("Квиз")).toBeInTheDocument();
+    expect(screen.getByText("ПАЗЛ 2042")).toBeInTheDocument();
   });
 });
 
