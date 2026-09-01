@@ -218,12 +218,20 @@ export function RunnerGame() {
     spriteFrame: 0,
   });
 
-  // load sprite
+  // load sprite — perf: 800px webp 34KB vs 1.4M png (97.6% saving), png fallback
   useEffect(() => {
     const img = new Image();
-    img.src = "/magnum/images/5opka-runner.png";
+    // @ts-ignore — fetchPriority hint for LCP sprite (supported in modern browsers)
+    img.fetchPriority = "low";
+    img.decoding = "async";
+    img.src = "/magnum/images/5opka-runner-800.webp";
     img.onload = () => { spriteRef.current = img; spriteLoaded.current = true; };
-    img.onerror = () => { spriteLoaded.current = false; };
+    img.onerror = () => {
+      const fb = new Image();
+      fb.src = "/magnum/images/5opka-runner.png";
+      fb.onload = () => { spriteRef.current = fb; spriteLoaded.current = true; };
+      fb.onerror = () => { spriteLoaded.current = false; };
+    };
   }, []);
 
   const resetGame = useCallback(() => {
