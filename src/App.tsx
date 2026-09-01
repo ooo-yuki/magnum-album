@@ -20,6 +20,7 @@ import { RouletteGame } from "./pages/games/RouletteGame";
 import { Game2042 } from "./pages/games/Game2042";
 import { Flappy42Game } from "./pages/games/Flappy42Game";
 import { TypingGame } from "./pages/games/TypingGame";
+import { Snake42Game } from "./pages/games/Snake42Game";
 import { ShopPage } from "./pages/ShopPage";
 import { EcoPage } from "./pages/EcoPage";
 import { GalleryPage } from "./pages/GalleryPage";
@@ -53,6 +54,7 @@ export default function App() {
           <Route path="games/2042" element={<Game2042 />} />
           <Route path="games/flappy" element={<Flappy42Game />} />
           <Route path="games/typing" element={<TypingGame />} />
+          <Route path="games/snake" element={<Snake42Game />} />
           <Route path="games/quiz" element={<GamePage />} />
           <Route path="shop" element={<ShopPage />} />
           <Route path="eco" element={<EcoPage />} />

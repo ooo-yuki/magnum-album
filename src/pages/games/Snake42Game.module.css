@@ -1,0 +1,26 @@
+.page { padding-top: 5rem; min-height: 100vh; text-align: center; }
+.page h1 { font-size: 2.2rem; font-weight: 900; background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 0.3rem; }
+.sub { color: rgba(240,240,240,0.5); margin-bottom: 1.5rem; font-size: 0.95rem; }
+.menu { max-width: 360px; margin: 0 auto; }
+.rules { text-align: left; background: rgba(255,255,255,0.04); border-radius: 14px; padding: 1.2rem 1.4rem; margin-bottom: 1.5rem; border: 1px solid rgba(255,255,255,0.08); }
+.rules p { color: rgba(240,240,240,0.7); font-size: 0.9rem; margin: 0.4rem 0; }
+.playBtn { padding: 0.7rem 1.5rem; border-radius: 100px; background: var(--accent); color: #fff; font-weight: 600; box-shadow: 0 0 20px rgba(255,45,85,0.4); cursor: pointer; border: none; font-size: 1rem; }
+.hint { color: rgba(240,240,240,0.4); font-size: 0.8rem; margin-top: 0.8rem; }
+.back { display: inline-block; padding: 0.6rem 1.2rem; border-radius: 100px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); font-size: 0.85rem; color: rgba(240,240,240,0.6); margin-top: 1rem; }
+.gameArea { max-width: 420px; margin: 0 auto; }
+.hud { display: flex; justify-content: center; gap: 2rem; margin-bottom: 0.8rem; }
+.stat { text-align: center; }
+.stat span { display: block; font-size: 0.7rem; color: rgba(240,240,240,0.4); text-transform: uppercase; letter-spacing: 0.1em; }
+.stat strong { font-size: 1.4rem; font-weight: 900; }
+.progress { height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; margin-bottom: 1rem; overflow: hidden; }
+.fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s; }
+.canvasWrap { display: flex; justify-content: center; margin-bottom: 1rem; touch-action: none; }
+.canvas { border-radius: 14px; border: 1px solid rgba(255,255,255,0.1); }
+.navRow { display: flex; justify-content: center; gap: 0.8rem; margin-top: 0.8rem; }
+.restartBtn { padding: 0.6rem 1.4rem; border-radius: 100px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); font-size: 0.85rem; color: rgba(240,240,240,0.7); cursor: pointer; }
+.backInline { display: inline-block; padding: 0.6rem 1.2rem; border-radius: 100px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); font-size: 0.85rem; color: rgba(240,240,240,0.6); }
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.75); display: flex; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(6px); }
+.modalCard { background: #1a1a2e; border: 1px solid rgba(255,255,255,0.12); border-radius: 18px; padding: 2.5rem 2rem; text-align: center; max-width: 360px; }
+.modalCard h2 { font-size: 1.6rem; margin-bottom: 0.5rem; }
+.modalCard p { color: rgba(240,240,240,0.6); margin-bottom: 1.2rem; }
+.presaveBtn { display: inline-block; padding: 0.8rem 1.5rem; border-radius: 100px; background: var(--accent); color: #fff; font-weight: 600; box-shadow: 0 0 20px rgba(255,45,85,0.4); margin-bottom: 0.8rem; }
