@@ -29,10 +29,12 @@ type Review = {
 };
 
 const REVIEWS: Review[] = [
+  { source: "БИО-ПАСПОРТ 42", logo: "БИО", score: "05.04", max: ".1996", verdict: "Кирилл Баранов", quote: "Кирилл Александрович Баранов, Ростов-на-Дону, школа №65 (2014) → ДГТУ антикризис (4 курс, не окончил) → YouTube 27.01.2011 «Боб хавальник» → Twitch с 2016 5opka • мем «42 братуха!» • источники Wikipedia + twitch-news.ru/5opka + aboutan.ru", album: "БИО-ПАСПОРТ", year: "1996–2026", color: "#ffcc00" },
   { source: "РЗТ", logo: "РЗТ", score: "6.53", max: "/10", verdict: "Золотой", quote: "Дебют, который зацепил — сыро, но честно. Мерси и Глаза львицы уже классика.", album: "SUPERNOVA", year: "2024", color: "#ffcc00" },
   { source: "РЗТ", logo: "РЗТ", score: "80", max: "/100", verdict: "Хит", quote: "Прорыв года. XXL разрывает чарты, Репит — гимн сквадов.", album: "SUPER PUPER NOVA", year: "2025", color: "#ff2d55" },
   { source: "РЗТ", logo: "РЗТ", score: "86", max: "/100", verdict: "Топ", quote: "XXL — отдельный феномен. Трек, который носят на шевронах.", album: "XXL (сингл)", year: "2025", color: "#00ff88" },
   { source: "РЗТ", logo: "РЗТ", score: "73", max: "/100", verdict: "Крепко", quote: "Сольный уровень доказан. 81 рецензия — Пятерка держит планку без фитов.", album: "CLAY", year: "2026", color: "#5865f2" },
+  { source: "SLAY 2025", logo: "SLAY", score: "×3", max: "", verdict: "03.12.2025", quote: "Аудитория года + Minecraft-стример года + Трек года XXL (5opka & MellSher) — 3 статуэтки SLAY 2025, 03.12.2025.", album: "SLAY 2025×3", year: "2025", color: "#ffcc00" },
   { source: "Яндекс Музыка", logo: "ЯМ", score: "400K+", max: "", verdict: "Слушателей", quote: "400K+ ежемесячно. От детсада до фанаток Анны Асти — плейлист на всех.", album: "MAGNUM", year: "2026", color: "#ffcc00" },
   { source: "Twitch", logo: "TW", score: "923K", max: "", verdict: "Фолловеров", quote: "Пик 28K онлайна. Стримы — где родилось 42 и родится MAGNUM тур.", album: "LIVE", year: "2026", color: "#9147ff" },
 ];
@@ -177,7 +179,7 @@ export function PressWall() {
       <div className={styles.header} ref={headerRef}>
         <span className={styles.badge}>Пресса • Цифры • Факты</span>
         <h2 className={styles.title}>Нас слушают. Нас оценивают.</h2>
-        <p className={styles.subtitle}>РЗТ, чарты, Twitch — без фейков, только реальные цифры из research.md</p>
+        <p className={styles.subtitle}>БИО-паспорт 05.04.1996 + РЗТ, чарты, Twitch и SLAY 2025×3 — без фейков, только реальные цифры из data 18:23 §2 (био 05.04.1996 Ростов №65 ДГТУ YT 27.01.2011) + research.md §17.1–17.2</p>
       </div>
       <div className={styles.grid}>
         {REVIEWS.map((r, i) => (
@@ -191,7 +193,7 @@ export function PressWall() {
               <span className={styles.verdict}>{r.verdict}</span>
             </div>
             <p className={styles.quote}>“{r.quote}”</p>
-            <div className={styles.bar} aria-hidden><span style={{ width: r.score.includes("K") ? "92%" : `${Math.min(100, parseInt(r.score) * 1.1)}%`, background: r.color }} /></div>
+            <div className={styles.bar} aria-hidden><span style={{ width: (r.score.includes("K") || r.score.includes("×")) ? "92%" : `${Math.min(100, parseInt(r.score) * 1.1)}%`, background: r.color }} /></div>
             <span className={styles.source}>{r.source}</span>
           </div>
         ))}

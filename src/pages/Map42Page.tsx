@@ -351,6 +351,22 @@ export function Map42Page(){
           <a href="/magnum/mining">→ Майнинг Кузбасса</a>
           <label style={{ cursor:"pointer", fontSize:12, fontWeight:700, color:"#78dcff", border:"1px solid rgba(120,220,255,.22)", padding:"6px 10px", borderRadius:999, background:"rgba(120,220,255,.06)" }}>📸 Фото-отчёт БРАТ-БОТ vision — засчитать посещение<input type="file" accept="image/*" onChange={handleVerifyVision} style={{ display:"none" }} /></label>
         </div>
+        {/* FACT FreakLand 18:23 — карта СП / Create42 — press.bungee.host/kakoi-aipi + t.me/mcFreakLand — reports/data-2026-09-01-1823.md §3 */}
+        <div style={{ marginTop:10, padding:"8px 10px", borderRadius:12, border:"1px solid rgba(120,220,255,.14)", background:"rgba(120,220,255,.06)", display:"flex", gap:8, flexWrap:"wrap", alignItems:"center", fontSize:12, lineHeight:1.4 }}>
+          <span style={{ fontWeight:800, color:"#78dcff" }}>🟦 СП • FreakLand приватка 5opka</span>
+          <span style={{ color:"rgba(255,255,255,.85)" }}>IP <code style={{ background:"rgba(255,255,255,.08)", padding:"1px 6px", borderRadius:6 }}>freakland.spworlds.org</code> • <a href="https://t.me/mcFreakLand" target="_blank" rel="noopener noreferrer" style={{ color:"#78dcff" }}>@mcFreakLand 29 832</a> • онлайн ~18 пик 35 (лето 2026)</span>
+          <span style={{ color:"rgba(255,255,255,.65)" }}>Create NeoForge 1.21.1 — 42+ модов (Create+Aeronautics+Big Cannons) • набор 15-16.07.2026 жюри 5opka/VIPSSS/cacto0o/iray3n/MrEka</span>
+          <a href="https://press.bungee.host/kakoi-aipi-minecraft-servera-freakland/" target="_blank" rel="noopener noreferrer" style={{ color:"#7affc2", fontWeight:700 }}>press.bungee.host →</a>
+          <a href="/magnum/recaps" style={{ color:"#ffcc00", fontWeight:700 }}>→ Recaps Freakland</a>
+        </div>
+        {/* FACT Кузбасс код 42 18:23 §4 — 95 725 км² 2 527 219 чел 2025 плотность 26.4 Кемерово СФО 26.01.1943 ордена Ленина 1967/1970 ВРП 1883.8 млрд 21-е — About42/География42/Карта 42 */}
+        <div style={{ marginTop:10, padding:"8px 10px", borderRadius:12, border:"1px solid rgba(122,255,194,.18)", background:"rgba(122,255,194,.07)", display:"flex", gap:8, flexWrap:"wrap", alignItems:"center", fontSize:12, lineHeight:1.4 }}>
+          <span style={{ fontWeight:800, color:"#7affc2" }}>🗺️ Кузбасс — код 42</span>
+          <span style={{ color:"rgba(255,255,255,.88)" }}>95 725 км² (34-е) • 2 527 219 чел. 2025 (17-е) • плотность 26,4 • Кемерово • СФО • 26.01.1943 • ордена Ленина 1967 / 1970 • ВРП 1883,8 млрд (21-е) • RU-KEM • ОКАТО 32</span>
+          <a href="https://ru.wikipedia.org/wiki/%D0%9A%D0%B5%D0%BC%D0%B5%D1%80%D0%BE%D0%B2%D1%81%D0%BA%D0%B0%D1%8F_%D0%BE%D0%B1%D0%BB%D0%B0%D1%81%D1%82%D1%8C" target="_blank" rel="noopener noreferrer" style={{ color:"#78dcff", fontWeight:700 }}>Wikipedia →</a>
+          <a href="https://www.consultant.ru/document/cons_doc_LAW_174188/e86450c622ff078214b604d61f45251f34addf47b" target="_blank" rel="noopener noreferrer" style={{ color:"#78dcff" }}>consultant.ru 42 →</a>
+          <a href="/magnum/42#geografia42" style={{ color:"#ffcc00", fontWeight:700 }}>→ География 42</a>
+        </div>
         {verifyMsg && <div style={{ marginTop:8, fontSize:12, color:"rgba(120,220,255,.9)" }}>{verifyMsg}</div>}
       </header>
 

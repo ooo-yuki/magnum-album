@@ -2340,6 +2340,16 @@ useEffect(() => {
         <span style={{opacity:0.75}}>честно: дежавю каждые ~{Math.ceil(GALLERY_HONEST.totalIds / GALLERY_HONEST.uniqueSrc)} карточек → расширяем</span>
       </div>
 
+      {/* §5 Лор MAGNUM 42: мем 42 братуха субкультура 5opka Spotify-био + трек 42 feat 6055 02.2025 2.2M+ Везде сорок два братуха код 42 Кузбасса эстер-эпиг */}
+      <div className={styles.honestBanner} data-testid="gallery-lore42" aria-label="Лор 42 братуха" style={{ background: "rgba(255,45,85,0.08)", borderColor: "rgba(255,45,85,0.22)", flexWrap: "wrap" }}>
+        <span>🎵 <strong>«Везде сорок два, братуха!»</strong> — трек <em>42 feat 6055</em> (02.2025 · 2.2M+) · рефрен закрепил мем как субкультуру</span>
+        <span aria-hidden>·</span>
+        <span>Spotify-био 5opka: «42 братуха» — субкультура · код 42 = Кемеровская область RU-KEM — эстер-эпиг MAGNUM</span>
+        <a href="https://open.spotify.com/artist/6hSwHa5Se498WfUj6zf4WN" target="_blank" rel="noreferrer" style={{ color: "#ffcc00", textDecoration: "underline" }}>Spotify →</a>
+        <a href="https://risazatvorchestvo.com/track/42" target="_blank" rel="noreferrer" style={{ color: "#ffcc00", textDecoration: "underline" }}>Трек «42» →</a>
+        <a href="https://ru.wikipedia.org/wiki/%D0%9A%D0%BE%D0%B4%D1%8B_%D1%81%D1%83%D0%B1%D1%8A%D0%B5%D0%BA%D1%82%D0%BE%D0%B2_%D0%A0%D0%BE%D1%81%D1%81%D0%B8%D0%B9%D1%81%D0%BA%D0%BE%D0%B9_%D0%A4%D0%B5%D0%B4%D0%B5%D1%80%D0%B0%D1%86%D0%B8%D0%B8" target="_blank" rel="noreferrer" style={{ color: "#ffcc00", textDecoration: "underline" }}>Код 42 →</a>
+      </div>
+
       {/* ── статы ── */}
       <div className={styles.stats} aria-label="Статистика галереи">
         <div className={styles.stat}>

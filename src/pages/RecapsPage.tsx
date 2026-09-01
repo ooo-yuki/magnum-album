@@ -103,8 +103,28 @@ export const RECAPS_FAQ_EXTRA: { q: string; a: string; src: string }[] = [
 
 
 
-// ───────── данные — 6 карточек, 3 с реальными транскриптами, 3 честно "транскрипт скоро" ─────────
+// ───────── данные — 6 карточек + FreakLand facts 18:23 честно — FreakLand IP/онлайн/Create42 ─────────
+// FACT 2026-09-01 18:23 §3: IP freakland.spworlds.org, @mcFreakLand 29832, онлайн ~18 пик 35 лето 2026, Create NeoForge 1.21.1 42+ модов, набор 15-16.07.2026 жюри 5opka/VIPSSS/cacto0o/iray3n/MrEka — press.bungee.host/kakoi-aipi + t.me/mcFreakLand + telegraphyx.ru/channels/t/freakland — reports/data-2026-09-01-1823.md §3 + research.md §17.3
 const RECAPS: Recap[] = [
+  {
+    id: "recap-freakland-facts-1823",
+    title: "FreakLand — приватка 5opka: IP freakland.spworlds.org, онлайн 18/35, Create 1.21.1 42+ модов",
+    date: "2026-07-06",
+    tag: "Freakland",
+    tag2: "Ивент",
+    youtubeId: "freakland-facts-1823",
+    youtubeUrl: "https://press.bungee.host/kakoi-aipi-minecraft-servera-freakland/",
+    transcript: false,
+    duration: "00:42",
+    channel: "FreakLand • press.bungee.host / @mcFreakLand",
+    note: "факт-справка 18:23 — источники ниже",
+    paragraphs: [
+      "Факт 18:23 — приватный Minecraft-сервер 5opka FreakLand: IP freakland.spworlds.org (лицензия, отбор фриков), Telegram @mcFreakLand 29 832 подписчика + TeleGraphyx 26.4k, онлайн летом 2026 ~18 средний / пик 35.",
+      "Спин-офф FreakLand Create: NeoForge 1.21.1, Create + Aeronautics + Big Cannons, 42+ модов — анонс 26.06.2026. Набор 15-16.07.2026: 15.07 отбор на СПм и 16.07 на СП (яма в центре, живая очередь, правила как на СП) + «кружочки Telegram» (детальная премодерация).",
+      "Жюри отбора 06.07.2026: 5opka / VIPSSS / cacto0o / iray3n / MrEka. Критерий из анонса — «если менее завозной чем Пугачёва/Ксепом/Пупус/Косоглазый — не трать время». Танки/самолёты/вертолёты — в анонсе «FreakLand create!».",
+      "Источники: press.bungee.host/kakoi-aipi-minecraft-servera-freakland (IP + онлайн 18/35) • t.me/mcFreakLand (29 832) • telegraphyx.ru/channels/t/freakland (набор + жюри 06.07.2026) • freakland.egorrko.ru (мониторинг) • reports/data-2026-09-01-1823.md §3 и research.md §17.3 — куда: Recaps Freakland / Create42 / карта СП / Идеи 42.",
+    ],
+  },
   {
     id: "recap-strip-morgen",
     title: "НЕ МОРГЕНШТЕРН позвал Пятёрку в стрип-клуб ради рекламы альбома",

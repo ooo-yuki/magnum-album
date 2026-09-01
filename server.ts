@@ -637,8 +637,8 @@ async function handleShopUnequip(req: Request): Promise<Response> {
   }
 }
 
-// ---- Cosmetics shop — единый источник src/lib/cosmetics.ts (80 предметов, VOLCANO 12 gold #ff5722) ----
-import { GLACIER_CATALOG, GLACIER_IDS, isGlacierCosmetic, PRISM_CATALOG, PRISM_IDS, isPrismCosmetic, CRYSTAL_CATALOG, CRYSTAL_IDS, isCrystalCosmetic, VOLCANO_CATALOG, VOLCANO_IDS, isVolcanoCosmetic } from "./src/lib/cosmetics.ts";
+// ---- Cosmetics shop — единый источник src/lib/cosmetics.ts (92 предмета, VOLCANO 12 + OBSIDIAN 12 molten) ----
+import { GLACIER_CATALOG, GLACIER_IDS, isGlacierCosmetic, PRISM_CATALOG, PRISM_IDS, isPrismCosmetic, CRYSTAL_CATALOG, CRYSTAL_IDS, isCrystalCosmetic, VOLCANO_CATALOG, VOLCANO_IDS, isVolcanoCosmetic, OBSIDIAN_CATALOG, OBSIDIAN_IDS, isObsidianCosmetic } from "./src/lib/cosmetics.ts";
 export type CosmeticSlot = "frame" | "banner" | "title";
 export type CosmeticItem = { id: string; slot: CosmeticSlot; name: string; price: number; rarity: "common"|"rare"|"epic"|"legendary"; style: string };
 export const COSMETICS_CATALOG: CosmeticItem[] = [
@@ -726,6 +726,19 @@ export const COSMETICS_CATALOG: CosmeticItem[] = [
   { id: "frame-volcano-gold-spin", slot: "frame", name: "Вулкан Голд Спин", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#ff5722,#ffcc00,#ffd700,#ff5722)" },
   { id: "banner-volcano-gold", slot: "banner", name: "Голд Вулкан", price: 1420, rarity: "legendary", style: "linear-gradient(90deg,#ff5722,#ffd700)" },
   { id: "title-volcano-gold", slot: "title", name: "Вулкан Голд", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#ff5722,#ffcc00,#ffd700,#ff5722)" },
+  // ── OBSIDIAN FORGE 42 — 12 obsidian: coal-dust 42 mine-shaft 142 meduza-obsidian 420 gold-obsidian-spin epic 1420 spin 3s molten ──
+  { id: "frame-obsidian-coal", slot: "frame", name: "Обсидиан Уголь", price: 42, rarity: "common", style: "2px solid #1a1a1a" },
+  { id: "banner-obsidian-dust", slot: "banner", name: "Угольная Пыль", price: 42, rarity: "common", style: "linear-gradient(90deg,#0a0a0a,#2b1a0a)" },
+  { id: "title-obsidian-coal", slot: "title", name: "Угольный", price: 42, rarity: "common", style: "#1a1a1a" },
+  { id: "frame-obsidian-shaft", slot: "frame", name: "Шахта Обсидиан", price: 142, rarity: "rare", style: "3px solid #4a2510" },
+  { id: "banner-obsidian-shaft", slot: "banner", name: "Шахта", price: 142, rarity: "rare", style: "linear-gradient(90deg,#1a0a00,#ff4500)" },
+  { id: "title-obsidian-shaft", slot: "title", name: "Шахтёр 42", price: 142, rarity: "rare", style: "#8b3a00" },
+  { id: "frame-meduza-obsidian", slot: "frame", name: "Медуза Обсидиан", price: 420, rarity: "epic", style: "conic-gradient(from 0deg,#1a1a1a,#ff4500,#ff8c00,#1a1a1a)" },
+  { id: "banner-meduza-obsidian", slot: "banner", name: "Медуза Расплав", price: 420, rarity: "epic", style: "linear-gradient(90deg,#1a1a1a,#ff5722)" },
+  { id: "title-meduza-obsidian", slot: "title", name: "Расплавленный", price: 420, rarity: "epic", style: "#ff5722" },
+  { id: "frame-gold-obsidian-spin", slot: "frame", name: "Голд Обсидиан Спин", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#1a1a1a,#ff4500,#ffcc00,#ffd700,#1a1a1a)" },
+  { id: "banner-obsidian-gold", slot: "banner", name: "Золото Обсидиана", price: 1420, rarity: "legendary", style: "linear-gradient(90deg,#1a1a1a,#ffcc00)" },
+  { id: "title-obsidian-gold", slot: "title", name: "Обсидиан Голд", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#ff4500,#ffcc00,#ffd700,#ff4500)" },
 ];
 function getCosmeticPrice(id: string): number | null { return COSMETICS_CATALOG.find(c=>c.id===id)?.price ?? null; }
 function getCosmeticSlot(id: string): CosmeticSlot | null { return COSMETICS_CATALOG.find(c=>c.id===id)?.slot ?? null; }
@@ -967,6 +980,15 @@ function volcanoDismantleReward(item: CosmeticItem): number {
   }
   return crystalDismantleReward(item);
 }
+function obsidianDismantleReward(item: CosmeticItem): number {
+  if (isObsidianCosmetic(item.id)) {
+    if (item.rarity==="legendary") return 420;
+    if (item.rarity==="epic") return 100;
+    if (item.rarity==="rare") return 42;
+    return 14;
+  }
+  return volcanoDismantleReward(item);
+}
 async function ensureSubscriptionTable(): Promise<void> {
   if (!process.env.DATABASE_URL && !process.env.DATABASE_URL_UNPOOLED) return;
   const sql = getSql();
@@ -1014,7 +1036,7 @@ async function handleDismantle(req:Request):Promise<Response>{
   const sql=getSql();
   const owned=await sql`SELECT id FROM magnum_cosmetics WHERE user_id=${user.id} AND cosmetic_id=${raw} LIMIT 1`;
   if(owned.length===0) return Response.json({error:"not owned",cosmeticId:raw},{status:404});
-  const reward=crystalDismantleReward(item);
+  const reward=obsidianDismantleReward(item);
   await sql`DELETE FROM magnum_cosmetics WHERE user_id=${user.id} AND cosmetic_id=${raw}`;
   await sql`INSERT INTO magnum_dust (user_id,balance) VALUES (${user.id},${reward}) ON CONFLICT (user_id) DO UPDATE SET balance=magnum_dust.balance+${reward}, updated_at=now()`;
   await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${reward},'dismantle',${JSON.stringify({cosmeticId:raw,reward})}::jsonb)`;
@@ -1165,6 +1187,40 @@ async function handleVolcanoCraft(req: Request): Promise<Response> {
   const newBal=Number((upd[0] as {balance:number}).balance);
   const inv=await sql`SELECT cosmetic_id FROM magnum_cosmetics WHERE user_id=${user.id} ORDER BY purchased_at ASC`;
   return Response.json({ ok:true, crafted:raw, slot:target.slot, cost:42, balance:newBal, consumed:ownedCommons.slice(0,3), inventory:(inv as {cosmetic_id:string}[]).map(r=>r.cosmetic_id) });
+}
+
+async function handleObsidianCatalog(): Promise<Response> {
+  return Response.json({ catalog: OBSIDIAN_CATALOG, count: OBSIDIAN_CATALOG.length, dustCosts: { common:42, rare:142, epic:420, legendary:1420 } });
+}
+async function handleObsidianCraft(req: Request): Promise<Response> {
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
+  const user=await getUserByToken(token); if(!user) return Response.json({error:"unauthorized"},{status:401});
+  const ip=getClientIp(req); if(!checkRateLimit(`shop:obsidian-craft:${user.id}:${ip}`,12,60_000)) return Response.json({error:"rate limited"},{status:429});
+  let body:{ targetId?:string; cosmeticId?:string; id?:string }; try{ body=(await req.json()) as typeof body;}catch{ return Response.json({error:"Invalid JSON"},{status:400});}
+  const raw=validateCosmeticId(body.targetId??body.cosmeticId??body.id??""); if(!raw) return Response.json({error:"targetId required"},{status:400});
+  const target=COSMETICS_CATALOG.find(c=>c.id===raw); if(!target) return Response.json({error:"unknown cosmetic",cosmeticId:raw},{status:400});
+  if(!isObsidianCosmetic(raw)) return Response.json({error:"only obsidian craft allowed",cosmeticId:raw},{status:400});
+  if(target.rarity!=="rare") return Response.json({error:"only uncommon (142) craftable via 3x common",cosmeticId:raw},{status:400});
+  await ensureDustTable();
+  const sql=getSql();
+  const ex=await sql`SELECT id FROM magnum_cosmetics WHERE user_id=${user.id} AND cosmetic_id=${raw} LIMIT 1`;
+  if(ex.length>0) return Response.json({error:"already owned",cosmeticId:raw},{status:409});
+  const allRows = await sql`SELECT cosmetic_id FROM magnum_cosmetics WHERE user_id=${user.id}`;
+  const ownedIds = new Set((allRows as {cosmetic_id:string}[]).map(r=>r.cosmetic_id));
+  const commonObsidianIds = OBSIDIAN_CATALOG.filter(c=>c.rarity==="common").map(c=>c.id);
+  const ownedCommons = commonObsidianIds.filter(id=>ownedIds.has(id));
+  if(ownedCommons.length < 3) return Response.json({error:"need 3 common obsidian skins",owned:ownedCommons.length,required:3},{status:402});
+  const coins=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+  let bal=coins.length? Number((coins[0] as {balance:number}).balance):0;
+  if(bal < 42) return Response.json({error:"not enough coins",required:42,balance:bal},{status:402});
+  await sql`UPDATE magnum_coins SET balance=balance-42 WHERE user_id=${user.id}`;
+  for(let i=0;i<3;i++){ const cid=ownedCommons[i]!; await sql`DELETE FROM magnum_cosmetics WHERE user_id=${user.id} AND cosmetic_id=${cid}`; }
+  await sql`INSERT INTO magnum_cosmetics (user_id,cosmetic_id,slot,equipped,purchased_at) VALUES (${user.id},${raw},${target.slot},false,now())`;
+  await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${-42},'obsidian_craft',${JSON.stringify({target:raw, consumed:ownedCommons.slice(0,3)})}::jsonb)`;
+  const upd2=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+  const newBal2=Number((upd2[0] as {balance:number}).balance);
+  const inv=await sql`SELECT cosmetic_id FROM magnum_cosmetics WHERE user_id=${user.id} ORDER BY purchased_at ASC`;
+  return Response.json({ ok:true, crafted:raw, slot:target.slot, cost:42, balance:newBal2, consumed:ownedCommons.slice(0,3), inventory:(inv as {cosmetic_id:string}[]).map(r=>r.cosmetic_id) });
 }
 
 
@@ -2720,8 +2776,8 @@ async function handleDuelInviteCreate(req: Request): Promise<Response> {
   let body:{to?:unknown;username?:unknown;roomId?:unknown;wager?:unknown}; try{ body=(await req.json()) as typeof body; }catch{ return Response.json({error:"Invalid JSON"},{status:400}); }
   const toName=typeof body.to==="string"?body.to.trim():typeof body.username==="string"?body.username.trim():""; if(!toName||toName.length<2) return Response.json({error:"to username required"},{status:400});
   if(toName.toLowerCase()===user.username.toLowerCase()) return Response.json({error:"cannot invite self"},{status:400});
-  const rawWager=Number(body.wager ?? 0); const wager=Number.isFinite(rawWager)?Math.max(0,Math.min(1420,Math.floor(rawWager))):0;
-  if(wager>0 && ![0,42,142,420,1420].includes(wager)) return Response.json({error:"wager must be 0/42/142/420/1420"},{status:400});
+  const rawWager=Number(body.wager ?? 0); const wager=Number.isFinite(rawWager)?Math.max(0,Math.min(420,Math.floor(rawWager))):0;
+  if(wager>0 && ![0,42,142,420].includes(wager)) return Response.json({error:"wager must be 0/42/142/420"},{status:400});
   const roomId=typeof body.roomId==="string"?body.roomId.trim().slice(0,64):[...rooms.keys()][0]||`room-${Date.now().toString(36)}`;
   try{ const sql=getSql(); await sql`CREATE TABLE IF NOT EXISTS magnum_duel_invites (id serial PRIMARY KEY, from_user_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, to_user_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, room_id text NOT NULL, status text DEFAULT 'pending' NOT NULL, created_at timestamp DEFAULT now() NOT NULL)`;
     if(wager>0){ const cr=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`; const bal=cr.length?Number((cr[0] as {balance:number}).balance):0; if(bal<wager) return Response.json({error:"not enough coins for wager",required:wager,balance:bal},{status:402}); await sql`UPDATE magnum_coins SET balance=balance-${wager} WHERE user_id=${user.id}`; await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${-wager},'duel_wager_hold',${JSON.stringify({wager,roomId,to:toName})}::jsonb)`; }
@@ -3817,6 +3873,7 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/shop/glacier" && req.method === "GET") return handleGlacierCatalog();
     if (url.pathname === "/magnum/api/shop/crystal" && req.method === "GET") return handleCrystalCatalog();
     if (url.pathname === "/magnum/api/shop/volcano" && req.method === "GET") return handleVolcanoCatalog();
+    if (url.pathname === "/magnum/api/shop/obsidian" && req.method === "GET") return handleObsidianCatalog();
     if (url.pathname === "/magnum/api/shop/dust" && req.method === "GET") return handleDustGet(req);
     if (url.pathname === "/magnum/api/shop/dismantle" && req.method === "POST") return handleDismantle(req);
     if (url.pathname === "/magnum/api/shop/craft" && req.method === "POST") return handlePrismCraft(req);
@@ -3824,6 +3881,7 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/shop/glacier/craft" && req.method === "POST") return handleGlacierCraft(req);
     if (url.pathname === "/magnum/api/shop/crystal/craft" && req.method === "POST") return handleCrystalCraft(req);
     if (url.pathname === "/magnum/api/shop/volcano/craft" && req.method === "POST") return handleVolcanoCraft(req);
+    if (url.pathname === "/magnum/api/shop/obsidian/craft" && req.method === "POST") return handleObsidianCraft(req);
     if (url.pathname === "/magnum/api/shop/forge" && req.method === "POST") return handleGlacierCraft(req);
 
     // mining
@@ -3991,39 +4049,41 @@ const server = Bun.serve<WSData>({
       // re-parse for room-bound messages already have msg
       if (msg.type === "click") {
         if (room.state !== "playing") return;
-        if (!wsRateOk(ws.data.id)) { room.suspect.add(ws); broadcast(room,{type:"suspect", from:ws.data.username, toast:"братуха, ты вулкан? 🌋"}); return; }
-        // overheat cooldown 1.5s (volcano spec)
+        if (!wsRateOk(ws.data.id)) { room.suspect.add(ws); broadcast(room,{type:"suspect", from:ws.data.username, toast:"братуха, газуй мягче — nitro перегрев 🔥"}); return; }
+        // nitro overheat 3с -> 1с кулдаун -50% (NITRO 42 spec) + ghost-nitro trail
         const ohUntil = room.overheatUntil.get(ws) ?? 0;
         if (Date.now() < ohUntil) return;
-        // CPS>20 or >165/10s suspect + ban round, not in leaderboard
+        // CPS>20 suspect throttle 30/сек heartbeat 25с — anti-cheat
         const now = Date.now();
         const arr = room.clickCounts.get(ws) ?? [];
         const fresh = arr.filter(t=> now - t < 1000);
         fresh.push(now); room.clickCounts.set(ws, fresh);
         const total10 = (room.clickCounts.get(ws) ?? []).filter(t=> now - t < 10000).length;
-        if (fresh.length>20 || total10>165) { room.suspect.add(ws); broadcast(room,{type:"suspect", from:ws.data.username, cps:fresh.length, toast:"братуха, ты вулкан? 🌋"}); }
-        // volcano logic <0.12s +7% cap x11 (1.07..1.77), eruption 2.5x next click, overheat 4s->1.5s -65%
+        if (fresh.length>20 || total10>165) { room.suspect.add(ws); broadcast(room,{type:"suspect", from:ws.data.username, cps:fresh.length, ghost:true, toast:"братуха, ты nitro-призрак? 👻"}); }
+        // NITRO 42 logic: nitro <0.18с +9% капа x9 (1.0..1.72), overheat 3с удержания x9 -> 1с кулдаун -50%
         const last = room.lastClickAt.get(ws) ?? 0;
         const dt = last? now - last : 999;
-        let volcano = room.volcano.get(ws) ?? room.magma.get(ws) ?? 0;
-        if (dt < 120) volcano = Math.min(11, volcano+1); else volcano = 1;
-        room.volcano.set(ws, volcano); room.magma.set(ws, volcano); room.lastClickAt.set(ws, now);
+        let nitro = room.volcano.get(ws) ?? room.magma.get(ws) ?? 0;
+        if (dt < 180) nitro = Math.min(9, nitro+1); else nitro = 1;
+        room.volcano.set(ws, nitro); room.magma.set(ws, nitro); (room as unknown as { nitro: Map<unknown,number> }).nitro?.set?.(ws,nitro); room.lastClickAt.set(ws, now);
         let held = room.heldMaxSince.get(ws) ?? null;
-        if (volcano>=11) { if(held===null) held=now; } else held=null;
+        if (nitro>=9) { if(held===null) held=now; } else held=null;
         room.heldMaxSince.set(ws, held);
         const heldMs = held!==null? now - held : 0;
-        const overheat = heldMs >= 4000;
+        const overheat = heldMs >= 3000;
         let cur = room.scores.get(ws) ?? 0;
-        let mult = volcano<=1?1:Math.min(1.77, 1+(volcano-1)*0.07);
+        let mult = nitro<=1?1:Math.min(1.72, 1+(nitro-1)*0.09);
         let add = 1*mult;
-        const eruptionReady = room.eruptionPending.get(ws)===true;
-        if (eruptionReady) { add *= 2.5; room.eruptionPending.set(ws,false); }
-        const eruption = volcano>=11 && !eruptionReady;
-        if (eruption) room.eruptionPending.set(ws,true);
-        if (overheat) { add = cur*0.35 - cur; room.overheatUntil.set(ws, now+1500); room.heldMaxSince.set(ws,null); room.eruptionPending.set(ws,false); broadcast(room,{type:"overheat", from:ws.data.username}); }
+        // ghost-nitro pending: at x9 next click triggers ghost trail? use eruptionPending as nitro-burst
+        const nitroBurstReady = room.eruptionPending.get(ws)===true;
+        if (nitroBurstReady) { add *= 1.5; room.eruptionPending.set(ws,false); }
+        const nitroBurst = nitro>=9 && !nitroBurstReady;
+        if (nitroBurst) room.eruptionPending.set(ws,true);
+        const ghostTrail = nitro>=6 || room.suspect.has(ws);
+        if (overheat) { add = cur*0.5 - cur; room.overheatUntil.set(ws, now+1000); room.heldMaxSince.set(ws,null); room.eruptionPending.set(ws,false); broadcast(room,{type:"overheat", from:ws.data.username, ghost:true}); }
         cur = Math.max(0, cur + add);
         room.scores.set(ws, cur);
-        broadcast(room, { type: "tick", from:ws.data.username, magma:volcano, volcano, score:cur, eruption, eruptionPending: room.eruptionPending.get(ws)??false, overheat, lavaSpike: eruption });
+        broadcast(room, { type: "tick", from:ws.data.username, nitro, magma:nitro, volcano:nitro, score:cur, nitroBurst, eruption:nitroBurst, eruptionPending: room.eruptionPending.get(ws)??false, overheat, ghostTrail, ghost:ghostTrail, lavaSpike: nitroBurst });
         broadcast(room, { type: "scores", room: roomPublic(room) });
       } else if (msg.type === "ping") { try{ ws.send(JSON.stringify({type:"pong"})); }catch{} return;
       } else if (msg.type === "pong") { return;
@@ -4059,7 +4119,8 @@ const server = Bun.serve<WSData>({
         const on = Boolean((msg as {on?:unknown}).on);
         broadcast(room, { type: "typing", from: ws.data.username, on });
       } else if (msg.type === "wager") {
-        const wager = Math.max(0, Math.min(1420, Math.floor(Number((msg as {wager?:unknown}).wager ?? 0))));
+        const wager = Math.max(0, Math.min(420, Math.floor(Number((msg as {wager?:unknown}).wager ?? 0))));
+        if(![0,42,142,420].includes(wager)) return;
         broadcast(room, { type: "wager", from: ws.data.username, wager });
       } else if (msg.type === "emote") {
         const emo = String((msg as {emoji?:unknown}).emoji ?? (msg as {emote?:unknown}).emote ?? "🔥").slice(0,4);

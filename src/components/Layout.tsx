@@ -13,6 +13,7 @@ import { AuthStatus } from "./AuthStatus";
 import { PromoPopup } from "./PromoPopup";
 import { VipActivatedPopup } from "./VipActivatedPopup";
 import { DailyStreakPopup } from "./DailyStreakPopup";
+import { FunnelActivationNudge } from "./FunnelActivationNudge";
 import { usePresaveTracker } from "../lib/presaveTracker";
 import { StickyPresaveBar } from "./StickyPresaveBar";
 import { ExitIntentPresave } from "./ExitIntentPresave";
@@ -223,6 +224,7 @@ export function Layout() {
       <PromoPopup />
       <VipActivatedPopup />
       <DailyStreakPopup />
+      <FunnelActivationNudge />
       {(location.pathname === "/magnum" || location.pathname === "/magnum/") && <StickyPresaveBar />}
       {(location.pathname === "/magnum" || location.pathname === "/magnum/") && <ExitIntentPresave />}
     </>

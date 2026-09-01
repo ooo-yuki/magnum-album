@@ -83,19 +83,25 @@ interface Song {
   duration: number;
   patternSeed: number;
 }
-// MAGNUM 2026 — 5 пуль = 5 треков (Туса Медуза 14.08, VPN, +3 тизера MAGNUM)
+// MAGNUM 2026 — 5 пуль = 5 треков (Туса Медуза 14.08, VPN, +3 тизера MAGNUM) + бонус XXL — Трек года SLAY 2025 + 42 feat 6055 02.2025 Везде сорок два братуха
 const SONGS: Song[] = [
   { name: "ТУСА МЕДУЗА 🪼", bpm: 128, duration: 45, patternSeed: 42 },
   { name: "VPN 🔒", bpm: 142, duration: 40, patternSeed: 7 },
+  { name: "XXL 🏆 Трек года SLAY 2025 (03.12.2025)", bpm: 132, duration: 42, patternSeed: 2025 },
   { name: "CLAY — СЛАВА БОССУ 🧱", bpm: 118, duration: 42, patternSeed: 73 },
-  { name: "42 ✌️", bpm: 135, duration: 44, patternSeed: 42 },
+  { name: "42 feat 6055 — «Везде сорок два, братуха!» (02.2025 · 2.2M+)", bpm: 135, duration: 44, patternSeed: 42 },
   { name: "MAGNUM — 5 пуль ●", bpm: 108, duration: 50, patternSeed: 99 },
 ];
-// MAGNUM 2026 — лор-цитаты 5 пуль (крутятся в меню + подсказки)
+// MAGNUM 2026 — лор-цитаты 5 пуль + SLAY 2025 + §5 42 братуха субкультура Spotify-био код 42 эстер-эпиг (крутятся в меню + подсказки)
 const RHYTHM_TIPS: string[] = [
   "5 треков — 5 пуль. MAGNUM = последний аккорд 5opka × MellSher перед соло-главой.",
+  "§5 Лор 42: «Везде сорок два, братуха!» — рефрен трека 42 feat 6055 (02.2025 · 2.2M+), мем 5opka закреплён в Spotify-био как субкультура.",
+  "Код 42 = Кемеровская область RU-KEM — в лоре MAGNUM это эстер-эпиг: 42 не просто мем, а код региона на карте РФ.",
+  "Трек 42 — 5opka × 6055 (02.2025): клип с 42-братухами в шубах/цепях/мухоморах · Spotify-био + cybersport.ru мем 42 → играй эту пулю!",
   "ТУСА МЕДУЗА 14.08 — 8K+ клипов TikTok, 200K просмотров. Первая пуля уже в чартах!",
   "VPN — второй сингл MAGNUM, 2:23 дежавю-попа. Слышал на РЗТ?",
+  "SLAY 2025 03.12.2025 — 5opka ×3: Аудитория года, Minecraft-стример года, Трек года XXL feat MellSher (03.12.2025).",
+  "XXL — 86 РЗТ и Трек года SLAY 2025. Играй эту пулю на харде — окна 55 мс!",
   "CLAY: 5 треков, 81 рецензия РЗТ. Пасхалка Clowns Laugh At You спрятана в конце видео.",
   "DRUMEDY + The Fence — продакшн и лейбл всей эры MAGNUM. 5 пуль заряжены!",
   "923K на Twitch, пик 28K онлайна — тур MAGNUM скоро, следи в t.me/NE_5OPKA",
@@ -104,10 +110,9 @@ const RHYTHM_TIPS: string[] = [
   "Хард — окна уже: Perfect 55 мс. Почувствуй себя на сцене MAGNUM тура!",
   "Легко — окна шире (95 мс). Набей руку и забирай FEVER x2!",
 ];
-const LS_BEST = "rhythm42-best";
-const LS_BEST_DIFF = "rhythm42-best-diff";
-const LS_TUT = "rhythm42-tut-v1";
-const LS_MUTED = "rhythm42-muted";
+// progress → Neon magnum_game_scores; LS-UI-only below (SPEC §7.1)
+const LS_TUT = "rhythm42-tut-v1"; // LS-UI-only: tutorial dismissed
+const LS_MUTED = "rhythm42-muted"; // LS-UI-only: mute pref
 // ─────────────────────────────────────────────────────────────
 // 2026 ХРОНОЛОГИЯ MAGNUM — 5 пуль
 // ТУСА МЕДУЗА 14.08 (8K TikTok) → VPN (РЗТ) → CLAY 03.04 (81 рецензия)
@@ -223,7 +228,7 @@ export function RhythmGame() {
   const [showTut, setShowTut] = useState(false);
   // v2026.09.01 — judgement tape + mute + share (5 пуль хронология)
   const [judgeTape, setJudgeTape] = useState<Judgement[]>([]);
-  const [muted, setMuted] = useState(() => { try { return localStorage.getItem("rhythm42-muted")==="1"; } catch { return false; } });
+  const [muted, setMuted] = useState(() => { try { return localStorage.getItem("rhythm42-muted")==="1"; } catch { return false; } }); // LS-UI-only
   const [shareMsg, setShareMsg] = useState("");
 
   const statsRef = useRef({ score: 0, combo: 0, maxCombo: 0, perfect: 0, good: 0, miss: 0, total: 0 });
@@ -246,7 +251,7 @@ export function RhythmGame() {
   const animRef = useRef(0);
   const canvasSizeRef = useRef({ w: 600, h: 560 });
   const mutedRef = useRef(muted);
-  useEffect(() => { mutedRef.current = muted; try { localStorage.setItem("rhythm42-muted", muted ? "1":"0"); } catch {} }, [muted]);
+  useEffect(() => { mutedRef.current = muted; try { localStorage.setItem("rhythm42-muted", muted ? "1":"0"); } catch {} }, [muted]); // LS-UI-only
 
   const hitNote = useCallback((lane: number, nowMs: number) => {
     const d = DIFFICULTY[diff];
@@ -338,24 +343,16 @@ export function RhythmGame() {
     else if (state === "paused") { pausedTimeRef.current += performance.now() - pauseStartRef.current; setState("playing"); }
   }, [state]);
 
-  // best + tut + tip rotation
+  // best (Neon) + tut (LS-UI-only) + tip rotation
   useEffect(() => {
-    try {
-      const v = parseInt(localStorage.getItem(LS_BEST) || "0", 10);
-      if (!Number.isNaN(v)) setBest(v);
-      if (!localStorage.getItem(LS_TUT)) setShowTut(true);
-    } catch {}
+    fetch("/magnum/api/games/my",{credentials:"include"}).then(r=>r.ok?r.json():null).then(j=>{ const arr=j?.scores as {game:string;score:number}[]|undefined; if(!arr) return; let m=0; for(const s of arr) if(s.game==="rhythm"&&s.score>m) m=s.score; if(m) setBest(m); }).catch(()=>{});
+    try { if (!localStorage.getItem(LS_TUT)) setShowTut(true); } catch {} // LS-UI-only
     const id = setInterval(() => setTipIdx((i) => (i + 1) % RHYTHM_TIPS.length), 3200);
     return () => clearInterval(id);
   }, []);
   useEffect(() => {
     if (state !== "win" && state !== "fail") return;
-    try {
-      if (statsRef.current.score > best) {
-        localStorage.setItem(LS_BEST, String(statsRef.current.score));
-        setBest(statsRef.current.score);
-      }
-    } catch {}
+    if (statsRef.current.score > best) { setBest(statsRef.current.score); void fetch("/magnum/api/games/submit",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({game:"rhythm",score:statsRef.current.score})}).catch(()=>{}); }
     if (state === "win") {
       fetch("/magnum/api/presave/click", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: PRESAVE, ts: Date.now(), src: "rhythm_win" }) }).catch(() => {});
     }
@@ -636,7 +633,7 @@ export function RhythmGame() {
           {showTut && (
             <div style={{ fontSize: "0.82rem", background: "rgba(0,255,136,0.08)", border: "1px solid rgba(0,255,136,0.18)", borderRadius: 12, padding: "0.65rem 0.85rem", maxWidth: 520, textAlign: "left", lineHeight: 1.45 }}>
               <b>Как играть:</b> D F J K или тапай дорожки • жми в момент пересечения линии • 5 Perfect подряд = FEVER x2 на 6с (5 пуль!) • P/Space — пауза
-              <button onClick={() => { setShowTut(false); try { localStorage.setItem(LS_TUT, "1"); } catch {} }} style={{ marginLeft: 8, padding: "0.2rem 0.6rem", borderRadius: 999, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(240,240,240,0.7)", fontSize: "0.75rem", cursor: "pointer" }}>Понятно ✕</button>
+              <button onClick={() => { setShowTut(false); try { localStorage.setItem(LS_TUT, "1"); } catch {} /* LS-UI-only */ }} style={{ marginLeft: 8, padding: "0.2rem 0.6rem", borderRadius: 999, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(240,240,240,0.7)", fontSize: "0.75rem", cursor: "pointer" }}>Понятно ✕</button>
             </div>
           )}
           <div className={styles.songs}>
@@ -647,6 +644,12 @@ export function RhythmGame() {
               </button>
             ))}
           </div>
+          {songIdx === 4 && (
+            <div style={{ fontSize: "0.78rem", color: "rgba(240,240,240,0.82)", background: "rgba(255,45,85,0.07)", border: "1px solid rgba(255,45,85,0.18)", borderRadius: 12, padding: "0.65rem 0.85rem", maxWidth: 520, textAlign: "left", lineHeight: 1.45 }}>
+              <b>§5 Лор 42:</b> трек <em>42 feat 6055</em> (02.2025 · 2.2M+) — рефрен <em>«Везде сорок два, братуха!»</em>. Мем 5opka закреплён в <a href="https://open.spotify.com/artist/6hSwHa5Se498WfUj6zf4WN" target="_blank" rel="noreferrer" style={{ color: "#ffcc00", textDecoration: "underline" }}>Spotify-био</a> как субкультура. Код 42 = Кемеровская область (RU-KEM) — эстер-эпиг MAGNUM.{" "}
+              <a href="https://risazatvorchestvo.com/track/42" target="_blank" rel="noreferrer" style={{ color: "#ffcc00", textDecoration: "underline" }}>РЗТ →</a> · <a href="https://www.cybersport.ru/tags/strimery/5opka-kirill-baranov-biografiya-karera-mem-42-bratukha-i-skandaly" target="_blank" rel="noreferrer" style={{ color: "#ffcc00", textDecoration: "underline" }}>cybersport мем 42 →</a>
+            </div>
+          )}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
             {(Object.keys(DIFFICULTY) as DiffKey[]).map((k) => (
               <button key={k} onClick={() => setDiff(k)} style={{ padding: "0.45rem 0.9rem", borderRadius: 999, fontSize: "0.82rem", fontWeight: 800, cursor: "pointer", border: "1px solid", borderColor: diff === k ? "rgba(255,45,85,0.6)" : "rgba(255,255,255,0.12)", background: diff === k ? "rgba(255,45,85,0.14)" : "rgba(255,255,255,0.06)", color: diff === k ? "#ffcc00" : "rgba(240,240,240,0.7)" }}>{DIFFICULTY[k].label} · {DIFFICULTY[k].win}</button>

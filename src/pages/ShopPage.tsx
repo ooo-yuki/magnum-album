@@ -6,7 +6,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import styles from "./ShopPage.module.css";
 import { getCoins, subscribe } from "../lib/coins";
 import { AuthStatus } from "../components/AuthStatus";
-import { GLACIER_CATALOG, GLACIER, GLACIER_IDS_SET, GLACIER_IDS, PRISM_CATALOG, PRISM_IDS_SET, PRISM_IDS, CRYSTAL_CATALOG, CRYSTAL_IDS_SET, CRYSTAL_IDS, VOLCANO_CATALOG, VOLCANO_IDS_SET, VOLCANO_IDS, COSMETICS_CATALOG } from "../lib/cosmetics";
+import { GLACIER_CATALOG, GLACIER, GLACIER_IDS_SET, GLACIER_IDS, PRISM_CATALOG, PRISM_IDS_SET, PRISM_IDS, CRYSTAL_CATALOG, CRYSTAL_IDS_SET, CRYSTAL_IDS, VOLCANO_CATALOG, VOLCANO_IDS_SET, VOLCANO_IDS, OBSIDIAN_CATALOG, OBSIDIAN_IDS_SET, OBSIDIAN_IDS, COSMETICS_CATALOG } from "../lib/cosmetics";
 gsap.registerPlugin(ScrollTrigger);
 const RGB_GLOW="0 12px 36px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,45,85,0.22), 0 0 28px rgba(255,45,85,0.22), 0 0 28px rgba(0,255,136,0.14), 0 0 32px rgba(255,204,0,0.10)";
 
@@ -122,12 +122,25 @@ const COSMETICS: Cosmetic[] = [
   { id:"frame-meduza-crystal", slot:"frame", name:"Медуза Кристалл", price:420, rarity:"epic", style:"conic-gradient(from 0deg,#a8e8ff,#38bdf8,#e8f8ff,#a8e8ff)" },
   { id:"banner-vpn-quartz", slot:"banner", name:"ВПН Кварц", price:420, rarity:"epic", style:"linear-gradient(90deg,#e8f8ff,#38bdf8)" },
   { id:"title-nova-crystal", slot:"title", name:"Нова Кристалл", price:420, rarity:"epic", style:"conic-gradient(from 90deg,#7c3aed,#38bdf8)" },
-  { id:"frame-gold-crystal-spin", slot:"frame", name:"Голд Кристалл Спин", price:1420, rarity:"legendary", style:"conic-gradient(from 0deg,#e8f8ff,#38bdf8,#ffd700,#e8f8ff)" },
-  { id:"banner-diamond-quartz", slot:"banner", name:"Даймонд Кварц", price:1420, rarity:"legendary", style:"linear-gradient(90deg,#e8f8ff,#ffffff)" },
-  { id:"title-rgb-crystal", slot:"title", name:"РГБ Кристалл", price:1420, rarity:"legendary", style:"conic-gradient(from 0deg,#a8e8ff,#ff44cc,#00ffcc,#a8e8ff)" },
+  { id: "frame-gold-crystal-spin", slot: "frame", name: "Голд Кристалл Спин", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#e8f8ff,#38bdf8,#ffd700,#e8f8ff)" },
+  { id: "banner-diamond-quartz", slot: "banner", name: "Даймонд Кварц", price: 1420, rarity: "legendary", style: "linear-gradient(90deg,#e8f8ff,#ffffff)" },
+  { id: "title-rgb-crystal", slot: "title", name: "РГБ Кристалл", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#a8e8ff,#ff44cc,#00ffcc,#a8e8ff)" },
+  // ── OBSIDIAN FORGE 42 — 12 obsidian coal-dust 42 mine-shaft 142 meduza-obsidian 420 gold-obsidian-spin epic 1420 spin 3s molten ──
+  { id: "frame-obsidian-coal", slot: "frame", name: "Обсидиан Уголь", price: 42, rarity: "common", style: "2px solid #1a1a1a" },
+  { id: "banner-obsidian-dust", slot: "banner", name: "Угольная Пыль", price: 42, rarity: "common", style: "linear-gradient(90deg,#0a0a0a,#2b1a0a)" },
+  { id: "title-obsidian-coal", slot: "title", name: "Угольный", price: 42, rarity: "common", style: "#1a1a1a" },
+  { id: "frame-obsidian-shaft", slot: "frame", name: "Шахта Обсидиан", price: 142, rarity: "rare", style: "3px solid #4a2510" },
+  { id: "banner-obsidian-shaft", slot: "banner", name: "Шахта", price: 142, rarity: "rare", style: "linear-gradient(90deg,#1a0a00,#ff4500)" },
+  { id: "title-obsidian-shaft", slot: "title", name: "Шахтёр 42", price: 142, rarity: "rare", style: "#8b3a00" },
+  { id: "frame-meduza-obsidian", slot: "frame", name: "Медуза Обсидиан", price: 420, rarity: "epic", style: "conic-gradient(from 0deg,#1a1a1a,#ff4500,#ff8c00,#1a1a1a)" },
+  { id: "banner-meduza-obsidian", slot: "banner", name: "Медуза Расплав", price: 420, rarity: "epic", style: "linear-gradient(90deg,#1a1a1a,#ff5722)" },
+  { id: "title-meduza-obsidian", slot: "title", name: "Расплавленный", price: 420, rarity: "epic", style: "#ff5722" },
+  { id: "frame-gold-obsidian-spin", slot: "frame", name: "Голд Обсидиан Спин", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#1a1a1a,#ff4500,#ffcc00,#ffd700,#1a1a1a)" },
+  { id: "banner-obsidian-gold", slot: "banner", name: "Золото Обсидиана", price: 1420, rarity: "legendary", style: "linear-gradient(90deg,#1a1a1a,#ffcc00)" },
+  { id: "title-obsidian-gold", slot: "title", name: "Обсидиан Голд", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#ff4500,#ffcc00,#ffd700,#ff4500)" },
 ];
-// GLACIER/PRISM/CRYSTAL — единый источник ../lib/cosmetics (12/12/12) — drift fixed, local COSMETICS kept 68 for backwards compat
-export { GLACIER_CATALOG, GLACIER, GLACIER_IDS_SET, GLACIER_IDS, PRISM_CATALOG, PRISM_IDS_SET, CRYSTAL_CATALOG, CRYSTAL_IDS_SET };
+// GLACIER/PRISM/CRYSTAL/VOLCANO/OBSIDIAN — единый источник ../lib/cosmetics (12×5) — drift fixed, local COSMETICS kept 80 for backwards compat
+export { GLACIER_CATALOG, GLACIER, GLACIER_IDS_SET, GLACIER_IDS, PRISM_CATALOG, PRISM_IDS_SET, CRYSTAL_CATALOG, CRYSTAL_IDS_SET, VOLCANO_CATALOG, VOLCANO_IDS_SET, OBSIDIAN_CATALOG, OBSIDIAN_IDS_SET };
 export const PRISM_FAQ: {q:string;a:string;src:string}[]=[
   {q:"Призм сколько?",a:"12",src:"ShopPage.tsx:PRISM_CATALOG 12"},
   {q:"Пыль за разбор?",a:"14/42/142/420",src:"server.ts:prismDismantleReward"},
@@ -278,8 +291,8 @@ export function ShopPage() {
   const [equipped, setEquipped] = useState<string | null>(null);
   const [cosOwned, setCosOwned] = useState<string[]>([]);
   const [cosEquipped, setCosEquipped] = useState<Record<string,string>>({});
-  const [cosTab, setCosTab] = useState<"all"|CosmeticSlot|"prism"|"glacier"|"crystal"|"volcano">("all");
-  const filteredCosmetics = useMemo(()=> cosTab==="all"? COSMETICS : cosTab==="prism"? COSMETICS.filter(x=>x.id.includes("prism")) : cosTab==="glacier"? COSMETICS.filter(x=>GLACIER_IDS_SET.has(x.id)) : cosTab==="crystal"? COSMETICS.filter(x=>CRYSTAL_IDS_SET.has(x.id)) : cosTab==="volcano"? COSMETICS.filter(x=>VOLCANO_IDS_SET.has(x.id)) : COSMETICS.filter(x=>x.slot===cosTab), [cosTab]);
+  const [cosTab, setCosTab] = useState<"all"|CosmeticSlot|"prism"|"glacier"|"crystal"|"volcano"|"obsidian">("all");
+  const filteredCosmetics = useMemo(()=> cosTab==="all"? COSMETICS : cosTab==="prism"? COSMETICS.filter(x=>x.id.includes("prism")) : cosTab==="glacier"? COSMETICS.filter(x=>GLACIER_IDS_SET.has(x.id)) : cosTab==="crystal"? COSMETICS.filter(x=>CRYSTAL_IDS_SET.has(x.id)) : cosTab==="volcano"? COSMETICS.filter(x=>VOLCANO_IDS_SET.has(x.id)) : cosTab==="obsidian"? COSMETICS.filter(x=>OBSIDIAN_IDS_SET.has(x.id)) : COSMETICS.filter(x=>x.slot===cosTab), [cosTab]);
   const [dust, setDust] = useState(0);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const toastId = useRef(0);
@@ -423,15 +436,17 @@ export function ShopPage() {
     return () => ctx.revert();
   }, []);
 
-  /* hover RGB — chromatic lift */
+  /* hover RGB — chromatic lift + molten obsidian + volcano eruption */
   const onCardEnter = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const isCrystal = (e.currentTarget as HTMLElement).dataset.crystal==="1";
+    const isVolcano = (e.currentTarget as HTMLElement).dataset.volcano==="1";
+    const isObsidian = (e.currentTarget as HTMLElement).dataset.obsidian==="1";
     gsap.to(e.currentTarget, {
       y: -4,
       scale: 1.02,
-      boxShadow: isCrystal ? "0 0 16px #38bdf8, 0 12px 32px rgba(0,0,0,0.45)" : "0 12px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,45,85,0.20), 0 0 22px rgba(255,45,85,0.20), 0 0 22px rgba(0,255,136,0.12), 0 0 28px rgba(255,204,0,0.10)",
-      borderColor: isCrystal ? "rgba(56,189,248,0.55)" : "rgba(255,45,85,0.35)",
+      boxShadow: isObsidian ? "0 12px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,69,0,0.25), 0 0 22px rgba(255,69,0,0.28), 0 0 28px rgba(255,204,0,0.14)" : isCrystal ? "0 0 16px #38bdf8, 0 12px 32px rgba(0,0,0,0.45)" : isVolcano ? "0 0 16px #ff5722, 0 12px 32px rgba(0,0,0,0.45)" : "0 12px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,45,85,0.20), 0 0 22px rgba(255,45,85,0.20), 0 0 22px rgba(0,255,136,0.12), 0 0 28px rgba(255,204,0,0.10)",
+      borderColor: isObsidian ? "rgba(255,69,0,0.35)" : isCrystal ? "rgba(56,189,248,0.55)" : isVolcano ? "rgba(255,87,34,0.45)" : "rgba(255,45,85,0.35)",
       duration: 0.28,
       ease: "power2.out",
       overwrite: true,
@@ -714,6 +729,34 @@ export function ShopPage() {
         const tick=()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); let alive=false; for(const p of parts){ if(p.life<=0) continue; alive=true; p.x+=p.vx; p.y+=p.vy; p.vy+=0.25; p.life-=p.decay; ctx.globalAlpha=Math.max(0,p.life); ctx.fillStyle='#ff5722'; ctx.beginPath(); ctx.arc(p.x,p.y,3,0,Math.PI*2); ctx.fill(); } if(alive) requestAnimationFrame(tick); else canvas.remove(); }; tick();
       }catch{}
       pushToast("ok",`Скрафчено ${co.name} за 42 · 3×common 🌋 eruption`);
+    }catch{ pushToast("err","Сеть упала"); }
+  };
+  const craftObsidian = async (co: Cosmetic) => {
+    if(!me){ pushToast("err","Войди — нужен логин для крафта"); window.dispatchEvent(new CustomEvent("magnum:need-auth")); return; }
+    if(!OBSIDIAN_IDS_SET.has(co.id)){ pushToast("err","Только OBSIDIAN крафт"); return; }
+    if(co.rarity!=="rare"){ pushToast("err","OBSIDIAN крафт только для uncommon (142) — собери 3×common ⛏️"); return; }
+    try{
+      const r=await fetch("/magnum/api/shop/obsidian/craft",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({targetId:co.id})});
+      const d=await r.json().catch(()=>({})) as {balance?:number;error?:string;consumed?:string[];inventory?:string[]};
+      if(!r.ok){ pushToast("err", String((d as any).error||"Крафт не прошёл")); return; }
+      if(typeof (d as any).balance==="number") setCoins((d as any).balance);
+      const invIds = ((d as any).inventory as string[])||[];
+      if(invIds.length) setCosOwned(invIds);
+      else setCosOwned(v=>{ const toRemove=((d as any).consumed as string[])||[]; const filtered=v.filter(x=>!toRemove.includes(x)); return [...filtered, co.id]; });
+      // OBSIDIAN FORGE 42 — molten epic 1420 spin 3s + forge spring + confetti 80 #ff4500
+      try{
+        const el=document.querySelector('[data-forge-reveal]') as HTMLElement;
+        if(el && !window.matchMedia("(prefers-reduced-motion: reduce)").matches){
+          const gs=(await import("gsap")).default;
+          gs.fromTo(el,{scale:0,rotation:5,opacity:0},{scale:1,rotation:0,opacity:1,duration:0.5,ease:"back.out(1.7)"});
+          gs.to(el,{boxShadow:"0 0 16px #ff4500, 0 0 28px rgba(255,69,0,0.45)",duration:0.35,yoyo:true,repeat:1});
+          gs.to(el,{scale:1.04,duration:0.35,yoyo:true,repeat:1,delay:0.5});
+        }
+        const canvas=document.createElement('canvas'); canvas.style.position='fixed'; canvas.style.inset='0'; canvas.style.pointerEvents='none'; canvas.width=window.innerWidth; canvas.height=window.innerHeight; document.body.appendChild(canvas);
+        const ctx=canvas.getContext('2d')!; const parts=Array.from({length:80},()=>({x:window.innerWidth/2,y:window.innerHeight/2,vx:(Math.random()-0.5)*12,vy:(Math.random()-0.5)*12-4,life:1,decay:0.015+Math.random()*0.01}));
+        const tick=()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); let alive=false; for(const p of parts){ if(p.life<=0) continue; alive=true; p.x+=p.vx; p.y+=p.vy; p.vy+=0.25; p.life-=p.decay; ctx.globalAlpha=Math.max(0,p.life); ctx.fillStyle='#ff4500'; ctx.beginPath(); ctx.arc(p.x,p.y,3,0,Math.PI*2); ctx.fill(); } if(alive) requestAnimationFrame(tick); else canvas.remove(); }; tick();
+      }catch{}
+      pushToast("ok",`Скрафчено ${co.name} за 42 · 3×common ⛏️ molten`);
     }catch{ pushToast("err","Сеть упала"); }
   };
 

@@ -26,7 +26,7 @@ export function About42Page() {
         if (sections.length) gsap.set(sections, { y: 0, opacity: 1, clearProps: "transform" });
         if (bigNum) gsap.set(bigNum, { scale: 1, opacity: 1, clearProps: "transform" });
         const allCards = gsap.utils.toArray<HTMLElement>(
-          `.${styles.styleCard}, .${styles.squadCard}, .${styles.personCard}, .${styles.memeCard}, .${styles.timelineCard}, .${styles.conflict}`
+          `.${styles.styleCard}, .${styles.squadCard}, .${styles.personCard}, .${styles.memeCard}, .${styles.timelineCard}, .${styles.conflict}, .${styles.geoCard}, .${styles.bioCard}`
         );
         if (allCards.length) gsap.set(allCards, { y: 0, opacity: 1, scale: 1, clearProps: "transform" });
         return;
@@ -87,6 +87,8 @@ export function About42Page() {
 
       // — staggered scroll-reveal на карточках (y24)
       const cardGroups: Array<{ selector: string; trigger: string }> = [
+        { selector: `.${styles.bioCard}`, trigger: `.${styles.bioGrid}` },
+        { selector: `.${styles.geoCard}`, trigger: `.${styles.geoGrid}` },
         { selector: `.${styles.styleCard}`, trigger: `.${styles.styleGrid}` },
         { selector: `.${styles.squadCard}`, trigger: `.${styles.squadsGrid}` },
         { selector: `.${styles.personCard}`, trigger: `.${styles.peopleGrid}` },
@@ -114,7 +116,7 @@ export function About42Page() {
 
       // — hover RGB на карточках (spec): textShadow + boxShadow split
       const hoverCards = gsap.utils.toArray<HTMLElement>(
-        `.${styles.styleCard}, .${styles.squadCard}, .${styles.personCard}, .${styles.memeCard}, .${styles.timelineCard}, .${styles.conflict}, .${styles.storyCard}`
+        `.${styles.styleCard}, .${styles.squadCard}, .${styles.personCard}, .${styles.memeCard}, .${styles.timelineCard}, .${styles.conflict}, .${styles.storyCard}, .${styles.geoCard}, .${styles.bioCard}`
       );
       const cleanups: Array<() => void> = [];
       hoverCards.forEach((el) => {
@@ -205,6 +207,64 @@ export function About42Page() {
       </div>
 
       <div className={styles.sections}>
+        {/* §2 data 18:23 — Био-паспорт 42: Кирилл Александрович Баранов 05.04.1996 Ростов школа №65 2014 ДГТУ антикриз не окончил 4 курс YouTube 27.01.2011 Боб хавальник Twitch 2016 5opka мем 42 братуха — источники: ru.wikipedia.org/wiki/Баранов_Кирилл_Александрович + twitch-news.ru/streamers/5opka + aboutan.ru/blogery/kirill-baranov.html */}
+        <div className={styles.section} id="bio42">
+          <h2>Био-паспорт 42 — Кирилл Баранов</h2>
+          <div className={styles.bioGrid}>
+            <div className={styles.bioCard}><span className={styles.bioIcon}>🪪</span><strong>Кирилл Александрович Баранов</strong><p>Полное имя<br />гражданство РФ</p></div>
+            <div className={styles.bioCard}><span className={styles.bioIcon}>📅</span><strong>05.04.1996</strong><p>Ростов-на-Дону<br />Овен / Крыса · 30 лет в 2026</p></div>
+            <div className={styles.bioCard}><span className={styles.bioIcon}>🏫</span><strong>Школа №65 • 2014</strong><p>Ростов-на-Дону<br />окончил в 2014</p></div>
+            <div className={styles.bioCard}><span className={styles.bioIcon}>🎓</span><strong>ДГТУ — антикризис</strong><p>Антикризисный менеджмент<br />не окончил · отчислен 4 курс</p></div>
+            <div className={styles.bioCard}><span className={styles.bioIcon}>▶️</span><strong>YouTube 27.01.2011</strong><p>Minecraft «Боб хавальник»<br />первые летсплеи</p></div>
+            <div className={styles.bioCard}><span className={styles.bioIcon}>💜</span><strong>Twitch с 2016 — 5opka</strong><p>Канал создан 15.07.2012<br />стримы с 2016 · мем «42 братуха!»</p></div>
+          </div>
+          <div className={styles.bioSources}>
+            <span style={{ color: "rgba(240,240,240,0.5)", fontSize: "0.78rem" }}>Био-паспорт — проверено data 18:23. Источники:</span>
+            <a href="https://ru.wikipedia.org/wiki/%D0%91%D0%B0%D1%80%D0%B0%D0%BD%D0%BE%D0%B2,_%D0%9A%D0%B8%D1%80%D0%B8%D0%BB%D0%BB_%D0%90%D0%BB%D0%B5%D0%BA%D1%81%D0%B0%D0%BD%D0%B4%D1%80%D0%BE%D0%B2%D0%B8%D1%87" target="_blank" rel="noreferrer">Wikipedia: Баранов К.А. →</a>
+            <a href="https://twitch-news.ru/streamers/5opka/" target="_blank" rel="noreferrer">twitch-news.ru/5opka →</a>
+            <a href="https://aboutan.ru/blogery/kirill-baranov.html" target="_blank" rel="noreferrer">aboutan.ru →</a>
+            <a href="https://www.cybersport.ru/tags/strimery/5opka-kirill-baranov-biografiya-karera-mem-42-bratukha-i-skandaly" target="_blank" rel="noreferrer">cybersport.ru био →</a>
+          </div>
+        </div>
+
+        {/* §5 data 18:23 — Лор 42 братуха: субкультура 5opka Spotify-био трек 42 feat 6055 02.2025 рефрен Везде сорок два братуха код 42 Кузбасс эстер-эпиг MAGNUM — sources open.spotify/artist + ru.wikipedia/Баранов + cybersport + ru.wikipedia/Коды субъектов */}
+        <div className={styles.section} id="geografia42">
+          <h2>География 42 — Кузбасс код 42</h2>
+          <div className={styles.geoGrid}>
+            <div className={styles.geoCard}><span className={styles.geoIcon}>🗺️</span><strong>Код 42</strong><p>RU-KEM • ОКАТО 32<br/>Субъект РФ 42</p></div>
+            <div className={styles.geoCard}><span className={styles.geoIcon}>📐</span><strong>95 725 км²</strong><p>34-е место в РФ<br/>0,6% России</p></div>
+            <div className={styles.geoCard}><span className={styles.geoIcon}>👥</span><strong>2 527 219 чел.</strong><p>01.01.2025 • 17-е место<br/>плотность 26,4 чел/км²</p></div>
+            <div className={styles.geoCard}><span className={styles.geoIcon}>🏛️</span><strong>Кемерово • СФО</strong><p>Адм. центр — Кемерово<br/>Сибирский фед. округ</p></div>
+            <div className={styles.geoCard}><span className={styles.geoIcon}>📅</span><strong>26.01.1943</strong><p>Образована Указом ПВС<br/>ордена Ленина 1967 / 1970</p></div>
+            <div className={styles.geoCard}><span className={styles.geoIcon}>💰</span><strong>ВРП 1883,8 млрд ₽</strong><p>2023 • 21-е место в РФ</p></div>
+          </div>
+          <div className={styles.geoSources}>
+            <span style={{ color: "rgba(240,240,240,0.5)", fontSize: "0.78rem" }}>Кузбасс — не просто «42 братуха», а регион на карте. Источники:</span>
+            <a href="https://ru.wikipedia.org/wiki/%D0%9A%D0%B5%D0%BC%D0%B5%D1%80%D0%BE%D0%B2%D1%81%D0%BA%D0%B0%D1%8F_%D0%BE%D0%B1%D0%BB%D0%B0%D1%81%D1%82%D1%8C" target="_blank" rel="noreferrer">Wikipedia: Кемеровская область →</a>
+            <a href="https://www.consultant.ru/document/cons_doc_LAW_174188/e86450c622ff078214b604d61f45251f34addf47b" target="_blank" rel="noreferrer">consultant.ru код 42 →</a>
+            <a href="https://ru.wikipedia.org/wiki/%D0%9A%D0%BE%D0%B4%D1%8B_%D1%81%D1%83%D0%B1%D1%8A%D0%B5%D0%BA%D1%82%D0%BE%D0%B2_%D0%A0%D0%BE%D1%81%D1%81%D0%B8%D0%B9%D1%81%D0%BA%D0%BE%D0%B9_%D0%A4%D0%B5%D0%B4%D0%B5%D1%80%D0%B0%D1%86%D0%B8%D0%B8" target="_blank" rel="noreferrer">Коды субъектов 42 • RU-KEM 32 →</a>
+            <a href="/magnum/map">→ Карта 42</a>
+          </div>
+        </div>
+
+        {/* §5 Лор MAGNUM 42: мем 42 братуха как субкультура 5opka — Spotify-био + трек 42 feat 6055 02.2025 2.2M+ рефрен Везде сорок два братуха коррелирует с кодом 42 Кузбасса — эстер-эпиг MAGNUM */}
+        <div className={styles.section} id="lor42">
+          <h2>Лор MAGNUM 42 — «Везде сорок два, братуха!»</h2>
+          <div className={styles.storyCard} style={{ borderLeft: "3px solid #ff2d55" }}>
+            <p><strong>Мем → субкультура:</strong> «42 братуха!» — фирменный мем 5opka, закреплён в Spotify-био артиста как субкультура поколения Альфа. Из шутки на стриме он вырос в движение со сквадами, шубами и гимном.</p>
+            <p><strong>Трек «42 feat 6055» — 02.2025 · 2.2M+:</strong> совместный трек 5opka × 6055, выпущен в феврале 2025, рефрен <em>«Везде сорок два, братуха!»</em> — закрепил лор в музыке. Клип: Пятерка в окружении 42-братух в шубах/цепях/мухоморах.</p>
+            <p><strong>Код 42 Кузбасса = эстер-эпиг MAGNUM:</strong> №42 — официальный код Кемеровской области (RU-KEM, ОКАТО 32). В лоре MAGNUM это пасхалка: 42 — не просто мем, а «код региона» на карте России, отсылка к корням мема «Кемеровская область, сорок два, братуха!».</p>
+            <div className={styles.trackLinks} style={{ marginTop: 12, flexWrap: "wrap" }}>
+              <a href="https://open.spotify.com/artist/6hSwHa5Se498WfUj6zf4WN" target="_blank" rel="noreferrer">Spotify 5opka (био «42 братуха») →</a>
+              <a href="https://ru.wikipedia.org/wiki/%D0%91%D0%B0%D1%80%D0%B0%D0%BD%D0%BE%D0%B2,_%D0%9A%D0%B8%D1%80%D0%B8%D0%BB%D0%BB_%D0%90%D0%BB%D0%B5%D0%BA%D1%81%D0%B0%D0%BD%D0%B4%D1%80%D0%BE%D0%B2%D0%B8%D1%87" target="_blank" rel="noreferrer">Wikipedia Баранов →</a>
+              <a href="https://www.cybersport.ru/tags/strimery/5opka-kirill-baranov-biografiya-karera-mem-42-bratukha-i-skandaly" target="_blank" rel="noreferrer">cybersport.ru мем 42 →</a>
+              <a href="https://ru.wikipedia.org/wiki/%D0%9A%D0%BE%D0%B4%D1%8B_%D1%81%D1%83%D0%B1%D1%8A%D0%B5%D0%BA%D1%82%D0%BE%D0%B2_%D0%A0%D0%BE%D1%81%D1%81%D0%B8%D0%B9%D1%81%D0%BA%D0%BE%D0%B9_%D0%A4%D0%B5%D0%B4%D0%B5%D1%80%D0%B0%D1%86%D0%B8%D0%B8" target="_blank" rel="noreferrer">Коды субъектов 42 →</a>
+              <a href="https://risazatvorchestvo.com/track/42" target="_blank" rel="noreferrer">Трек «42» РЗТ →</a>
+            </div>
+            <p style={{ marginTop: 10, opacity: 0.6, fontSize: "0.78rem" }}>data 18:23 §5 · куда вставить: прессвол / Recaps SLAY 2025 / Викторина42 / Ритм42 / Галерея 42 — проверено data-seeker 5 запросов только первоисточники</p>
+          </div>
+        </div>
+
         <div className={styles.section}>
           <h2>Таймлайн</h2>
           <div className={styles.timeline}>
@@ -232,9 +292,12 @@ export function About42Page() {
             <div className={styles.timelineItem}>
               <div className={styles.timelineDate}>Фев 2025</div>
               <div className={styles.timelineCard}>
-                <strong>Трек «42» • 2.2M+ просмотров</strong>
-                <p>5opka & 6055 — клип: Пятерка в окружении 42-братух в фирменном стиле (шубы, цепи, мухоморы). РЗТ: risazatvorchestvo.com/track/42</p>
-                <a href="https://risazatvorchestvo.com/track/42" target="_blank" rel="noreferrer">РЗТ →</a>
+                <strong>Трек «42 feat 6055» • 02.2025 • 2.2M+</strong>
+                <p>5opka & 6055 — клип: Пятерка в окружении 42-братух в фирменном стиле (шубы, цепи, мухоморы). Рефрен <em>«Везде сорок два, братуха!»</em> — субкультура закреплена в Spotify-био 5opka, код 42 Кузбасса как эстер-эпиг MAGNUM.</p>
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 8 }}>
+                  <a href="https://risazatvorchestvo.com/track/42" target="_blank" rel="noreferrer">РЗТ →</a>
+                  <a href="https://open.spotify.com/artist/6hSwHa5Se498WfUj6zf4WN" target="_blank" rel="noreferrer">Spotify био →</a>
+                </div>
               </div>
             </div>
             <div className={styles.timelineItem}>
@@ -299,7 +362,7 @@ export function About42Page() {
         <div className={styles.section}>
           <h2>Ключевые фигуры</h2>
           <div className={styles.peopleGrid}>
-            <div className={styles.personCard}><div className={styles.personAvatar}>👑</div><strong>5opka</strong><p>Основатель, «босс», лидер</p><small>Кирилл Баранов • 05.04.1996</small></div>
+            <div className={styles.personCard}><div className={styles.personAvatar}>👑</div><strong>5opka</strong><p>Кирилл Александрович Баранов</p><small>05.04.1996 Ростов-на-Дону · школа №65 (2014) · ДГТУ антикризис (не окончил 4к) · YT 27.01.2011 «Боб хавальник» · Twitch с 2016 · «42 братуха!»</small></div>
             <div className={styles.personCard}><div className={styles.personAvatar}>🎵</div><strong>Яйцефонк (Ярик)</strong><p>Тиктокер</p><small>Основал сквад после отчисления из 10-го класса</small></div>
             <div className={styles.personCard}><div className={styles.personAvatar}>🔥</div><strong>Грибданил</strong><p>Тиктокер, соратник</p></div>
             <div className={styles.personCard}><div className={styles.personAvatar}>💅</div><strong>Стейси Крыса</strong><p>Сеструха</p></div>
@@ -344,11 +407,13 @@ export function About42Page() {
         </div>
 
         <div className={styles.section}>
-          <h2>Трек «42»</h2>
+          <h2>Трек «42 feat 6055» — 02.2025 · 2.2M+ · «Везде сорок два, братуха!»</h2>
           <div className={styles.trackHighlight}>
-            <p>5opka & 6055 — трек «42» набрал <strong>2.2M+ просмотров</strong> на YouTube. Клип — Пятерка в окружении 42-братух в фирменном стиле.</p>
+            <p>5opka & 6055 — трек «42» (февраль 2025) набрал <strong>2.2M+ просмотров</strong>. Рефрен — <em>«Везде сорок два, братуха!»</em>. Клип — Пятерка в окружении 42-братух в фирменном стиле. Мем закреплён в Spotify-био 5opka как субкультура, а код 42 Кемеровской области (RU-KEM) — эстер-эпиг лора MAGNUM.</p>
             <div className={styles.trackLinks}>
               <a href="https://risazatvorchestvo.com/track/42" target="_blank" rel="noreferrer">РЗТ трека →</a>
+              <a href="https://open.spotify.com/artist/6hSwHa5Se498WfUj6zf4WN" target="_blank" rel="noreferrer">Spotify-био →</a>
+              <a href="https://ru.wikipedia.org/wiki/%D0%9A%D0%BE%D0%B4%D1%8B_%D1%81%D1%83%D0%B1%D1%8A%D0%B5%D0%BA%D1%82%D0%BE%D0%B2_%D0%A0%D0%BE%D1%81%D1%81%D0%B8%D0%B9%D1%81%D0%BA%D0%BE%D0%B9_%D0%A4%D0%B5%D0%B4%D0%B5%D1%80%D0%B0%D1%86%D0%B8%D0%B8" target="_blank" rel="noreferrer">Код 42 →</a>
               <a href="https://risazatvorchestvo.com/artist/5opka" target="_blank" rel="noreferrer">Все рецензии →</a>
             </div>
           </div>

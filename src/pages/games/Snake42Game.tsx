@@ -159,7 +159,9 @@ export function Snake42Game() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [state, setState] = useState<"menu" | "playing" | "win" | "over">("menu");
   const [score, setScore] = useState(0);
-  const [best, setBest] = useState(() => { try { return Number(localStorage.getItem("snake42-best")) || 0; } catch { return 0; } });
+  const [best, setBest] = useState(0);
+  // Neon best — progress in magnum_game_scores (SPEC §7)
+  useEffect(()=>{ fetch("/magnum/api/games/my",{credentials:"include"}).then(r=>r.ok?r.json():null).then(j=>{ const arr=j?.scores as {game:string;score:number}[]|undefined; if(!arr) return; let m=0; for(const s of arr) if(s.game==="snake"&&s.score>m) m=s.score; if(m) setBest(m); }).catch(()=>{}); },[]);
   const [shake, setShake] = useState(0);
   const [combo, setCombo] = useState(0);
   const [comboFlash, setComboFlash] = useState(false);
@@ -306,7 +308,7 @@ export function Snake42Game() {
             playDie(); triggerShake(8);
             const curScore = snake.length * SCORE_PER_FOOD;
             const nb = Math.max(best, curScore); setBest(nb);
-            try { localStorage.setItem("snake42-best", String(nb)); } catch {}
+            void fetch("/magnum/api/games/submit",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({game:"snake",score:nb})}).catch(()=>{});
             setState("over");
             animRef.current = requestAnimationFrame(draw); return;
           }
@@ -333,7 +335,7 @@ export function Snake42Game() {
             const newScore = baseScore + bonusAccRef.current;
             setScore(newScore);
             const nb = Math.max(best, newScore); setBest(nb);
-            try { localStorage.setItem("snake42-best", String(nb)); } catch {}
+            void fetch("/magnum/api/games/submit",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({game:"snake",score:nb})}).catch(()=>{});
 
             // particles burst 12
             const burstColor = SNAKE_COLORS[snake.length % SNAKE_COLORS.length]!;

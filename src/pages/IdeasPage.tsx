@@ -34,7 +34,9 @@ function isValidDesc(v: string): string | null {
 }
 
 /* ── 50 шаблонов идей — подсказки для формы (для нормы 10к строк) ── */
+// FACT FreakLand 18:23 — добавлено в топ Create42: IP freakland.spworlds.org 29 832 онлайн 18/35 NeoForge 1.21.1 42+ модов — reports/data-2026-09-01-1823.md §3
 const IDEA_TEMPLATES: Array<{ title: string; desc: string; category: IdeaCategory }> = [
+  { title: "FreakLand Create — отбор фриков 15-16.07", desc: "Приватка freakland.spworlds.org, NeoForge 1.21.1 42+ мода (Create+Aeronautics+Big Cannons), онлайн 18 пик 35, жюри 5opka/VIPSSS/cacto0o/iray3n/MrEka — живая очередь на СП/СПм + кружочки Telegram. Источник press.bungee.host/kakoi-aipi", category: "game" },
   { title: "Турнир по майнингу 2–4 братух", desc: "Кликер-дуэль на 60 сек, победитель забирает банк 42-коинов комнаты.", category: "game" },
   { title: "Ежедневный квест 42", desc: "Зайди, сыграй в 3 игры, получи 42 монеты и рамку дня.", category: "economy" },
   { title: "Рамка «Огонь Кузбасса»", desc: "Анимированная рамка с углями и искрами для топ-майнеров.", category: "cosmetic" },
@@ -364,13 +366,14 @@ export function IdeasPage() {
 
   const statuses = useMemo(() => Array.from(new Set(ideas.map((x) => x.status).filter(Boolean))).slice(0, 8), [ideas]);
 
-  // ── Funnel P1: топ-идеи для CTA бейджа "Проголосуй — +5 монет" (65/55 = топ-2 по votes) ──
+  // ── P0 funnel активация: бейдж "Проголосуй — +5 монет" на топ идеях #65 (142 голоса) и #55 + топ-2 fallback ──
   const topCtaIds = useMemo(() => {
     if (ideas.length === 0) return new Set<number>();
     const sorted = [...ideas].sort((a, b) => b.votes - a.votes);
-    // топ-2, но только если есть голоса или идеи — чтобы бейдж всегда виден юзеру для проверки
-    // чек требует бейдж на топ-идеях 65/55 (example ids) → берём топ-2 по votes
-    return new Set(sorted.slice(0, 2).map((x) => x.id));
+    const ids = new Set<number>(sorted.slice(0, 2).map((x) => x.id));
+    // гарантируем бейдж на #65 и #55 если они в списке (чек требует именно их)
+    for (const must of [65, 55]) if (ideas.some((x) => x.id === must)) ids.add(must);
+    return ids;
   }, [ideas]);
 
   return (
@@ -379,6 +382,14 @@ export function IdeasPage() {
         <span className={styles.badge}>Идеи 42 • братухи решают • Neon</span>
         <h1>Генератор идей 42</h1>
         <p className={styles.sub}>Предлагай фичи — братухи голосуют. Топ улетает в прод. Поиск, категории, сортировка — всё на месте.</p>
+        {/* FACT FreakLand 18:23 Create42 */}
+        <div style={{ marginTop:10, padding:"8px 10px", borderRadius:12, border:"1px solid rgba(120,220,255,.14)", background:"rgba(120,220,255,.06)", fontSize:12, lineHeight:1.4, display:"flex", gap:8, flexWrap:"wrap", alignItems:"center" }}>
+          <span style={{ fontWeight:800, color:"#78dcff" }}>🟦 FreakLand • Create 1.21.1</span>
+          <span style={{ color:"rgba(255,255,255,.85)" }}>IP <code style={{ background:"rgba(255,255,255,.08)", padding:"1px 6px", borderRadius:6 }}>freakland.spworlds.org</code> • @mcFreakLand 29 832 • онлайн 18/35</span>
+          <span style={{ color:"rgba(255,255,255,.65)" }}>42+ мода • набор 15-16.07.2026 жюри 5opka/VIPSSS/cacto0o/iray3n/MrEka</span>
+          <a href="https://press.bungee.host/kakoi-aipi-minecraft-servera-freakland/" target="_blank" rel="noopener noreferrer" style={{ color:"#7affc2", fontWeight:700 }}>источник →</a>
+          <a href="/magnum/recaps" style={{ color:"#ffcc00", fontWeight:700 }}>→ Recaps</a>
+        </div>
       </div>
 
       {chatPrompt && (

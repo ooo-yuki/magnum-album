@@ -110,8 +110,10 @@ export function Stack42Game() {
   const [paused, setPaused] = useState(false);
   const [score, setScore] = useState(0);
   const [pts, setPts] = useState(0);
-  const [best, setBest] = useState(() => { try { return Number(localStorage.getItem("stack42-best")) || 0; } catch { return 0; } });
-  const [bestPts, setBestPts] = useState(() => { try { return Number(localStorage.getItem("stack42-bestPts")) || 0; } catch { return 0; } });
+  const [best, setBest] = useState(0);
+  const [bestPts, setBestPts] = useState(0);
+  // Neon best — progress in magnum_game_scores (SPEC §7), без LS
+  useEffect(()=>{ fetch("/magnum/api/games/my",{credentials:"include"}).then(r=>r.ok?r.json():null).then(j=>{ const arr=j?.scores as {game:string;score:number}[]|undefined; if(!arr) return; let m=0; for(const s of arr) if(s.game==="stack"&&s.score>m) m=s.score; if(m){ setBest(m); setBestPts(m); } }).catch(()=>{}); },[]);
   const [perfectStreak, setPerfectStreak] = useState(0);
   const [coinsEarned, setCoinsEarned] = useState(0);
 
@@ -178,7 +180,7 @@ export function Stack42Game() {
       const h = blocks.length - 1;
       const nb = Math.max(best, h); setBest(nb);
       const npts = Math.max(bestPts, ptsRef.current); setBestPts(npts);
-      try { localStorage.setItem("stack42-best", String(nb)); localStorage.setItem("stack42-bestPts", String(npts)); } catch {}
+      void fetch("/magnum/api/games/submit",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({game:"stack",score:Math.max(npts, nb*100)})}).catch(()=>{});
       void rewardCoins(Math.floor(ptsRef.current / 50) + h * 2);
       return;
     }
@@ -235,7 +237,7 @@ export function Stack42Game() {
       for (let i = 0; i < 40; i++) particlesRef.current.push({ x: (Math.random() - 0.5) * 190, y: h * BLOCK_H, vx: (Math.random() - 0.5) * 8, vy: -Math.random() * 8 - 2, life: 1, color: ["#ff2d55", "#ffcc00", "#00ff88", "#5865f2"][i % 4]!, size: 3 + Math.random() * 4.5 });
       const nb = Math.max(best, h); setBest(nb);
       const npts = Math.max(bestPts, ptsRef.current); setBestPts(npts);
-      try { localStorage.setItem("stack42-best", String(nb)); localStorage.setItem("stack42-bestPts", String(npts)); } catch {}
+      void fetch("/magnum/api/games/submit",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({game:"stack",score:Math.max(npts, nb*100)})}).catch(()=>{});
       void rewardCoins(420 + Math.floor(ptsRef.current / 10));
       setState("win");
     } else if (h >= WIN_HEIGHT && ptsRef.current < WIN_PTS) {

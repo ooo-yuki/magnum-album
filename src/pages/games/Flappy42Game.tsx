@@ -163,9 +163,11 @@ export function Flappy42Game() {
   const hudRef = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<"menu" | "playing" | "paused" | "win" | "dead">("menu");
   const [score, setScore] = useState(0);
-  const [diffId, setDiffId] = useState<DifficultyId>(() => { try { const v = localStorage.getItem("flappy42-diff") as DifficultyId | null; return v && DIFFICULTIES.some(d=>d.id===v) ? v : "norm"; } catch { return "norm"; } });
-  const [skinId, setSkinId] = useState<string>(() => { try { return localStorage.getItem("flappy42-skin") || "classic"; } catch { return "classic"; } });
-  const [best, setBest] = useState(() => { try { return Number(localStorage.getItem("flappy42-best")) || 0; } catch { return 0; } });
+  const [diffId, setDiffId] = useState<DifficultyId>(() => { try { const v = localStorage.getItem("flappy42-diff") as DifficultyId | null; return v && DIFFICULTIES.some(d=>d.id===v) ? v : "norm"; } catch { return "norm"; } }); // LS-UI-only: diff pref
+  const [skinId, setSkinId] = useState<string>(() => { try { return localStorage.getItem("flappy42-skin") || "classic"; } catch { return "classic"; } }); // LS-UI-only: skin pref
+  const [best, setBest] = useState(0);
+  // Neon best — progress in magnum_game_scores (SPEC §7)
+  useEffect(()=>{ fetch("/magnum/api/games/my",{credentials:"include"}).then(r=>r.ok?r.json():null).then(j=>{ const arr=j?.scores as {game:string;score:number}[]|undefined; if(!arr) return; let m=0; for(const s of arr) if(s.game==="flappy"&&s.score>m) m=s.score; if(m) setBest(m); }).catch(()=>{}); },[]);
   const [floats, setFloats] = useState<FloatText[]>([]);
   const floatIdRef = useRef(0);
 
@@ -208,7 +210,7 @@ export function Flappy42Game() {
   const submitScore = useCallback(async (sc: number) => {
     try {
       const coins = Math.round(sc * 4 * diff.coinMul);
-      await fetch("/magnum/api/games/submit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ game: "flappy", score: sc, difficulty: diffId, skin: skinId, coins }) });
+      await fetch("/magnum/api/games/submit", { method: "POST", credentials:"include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ game: "flappy", score: sc, difficulty: diffId, skin: skinId, coins }) });
       if (sc >= 7) playCoin();
     } catch {}
   }, [diff.coinMul, diffId, skinId]);
@@ -289,9 +291,9 @@ export function Flappy42Game() {
     return () => ctx.revert();
   }, []);
 
-  // persist diff/skin
-  useEffect(() => { try { localStorage.setItem("flappy42-diff", diffId); } catch {} }, [diffId]);
-  useEffect(() => { try { localStorage.setItem("flappy42-skin", skinId); } catch {} }, [skinId]);
+  // persist diff/skin — LS-UI-only
+  useEffect(() => { try { localStorage.setItem("flappy42-diff", diffId); } catch {} }, [diffId]); // LS-UI-only
+  useEffect(() => { try { localStorage.setItem("flappy42-skin", skinId); } catch {} }, [skinId]); // LS-UI-only
 
   // canvas loop
   useEffect(() => {
@@ -395,7 +397,7 @@ export function Flappy42Game() {
             if (scoreRef.current >= WIN_SCORE) {
               setState("win"); stateRef.current = "win";
               const nb = Math.max(best, scoreRef.current); setBest(nb);
-              try { localStorage.setItem("flappy42-best", String(nb)); } catch {}
+              void fetch("/magnum/api/games/submit",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({game:"flappy",score:nb})}).catch(()=>{});
               playWin();
               void submitScore(scoreRef.current);
               try { navigator.vibrate?.([30, 40, 60]); } catch {}
@@ -413,7 +415,7 @@ export function Flappy42Game() {
             setState("dead"); stateRef.current = "dead"; playHit(); shakeRef.current = 7;
             spawnParticles(BIRD_X, bird.y, 14, ["#ff2d55", "#ff6b55", "#ffaa44"], 1.1);
             const nb = Math.max(best, scoreRef.current); setBest(nb);
-            try { localStorage.setItem("flappy42-best", String(nb)); } catch {}
+            void fetch("/magnum/api/games/submit",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({game:"flappy",score:nb})}).catch(()=>{});
           }
         }
         // Collision — pipes (tighter AABB)
@@ -424,7 +426,7 @@ export function Flappy42Game() {
               setState("dead"); stateRef.current = "dead"; playHit(); shakeRef.current = 8;
               spawnParticles(BIRD_X, bird.y, 16, ["#ff2d55", "#7a3", "#ffcc00"], 1.15);
               const nb = Math.max(best, scoreRef.current); setBest(nb);
-              try { localStorage.setItem("flappy42-best", String(nb)); } catch {}
+              void fetch("/magnum/api/games/submit",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({game:"flappy",score:nb})}).catch(()=>{});
               break;
             }
           }

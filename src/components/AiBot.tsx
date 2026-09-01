@@ -53,22 +53,12 @@ function flashVerified(el: HTMLElement | null) {
   // pulse 2s loop for volcano frame
   gsap.to(el, { scale: 1.02, duration: 1, yoyo: true, repeat: 1, ease: "sine.inOut", delay: 1.2 });
 }
-// FRAME VOLCANO GOLD — mimo-v2.5 vision heuristic: засчитан/легенда без "не вижу"
+// FRAME VOLCANO GOLD — mimo-v2.5 vision heuristic: засчитан/легенда без "не вижу" — Neon-only (no localStorage)
 function isVolcanoVerified(reply: string): boolean {
   const lower = reply.toLowerCase();
   const hasPositive = /засчитан|легенда/.test(lower);
   const hasNegative = /не\s*виж|не\s*засчитан|не\s*видно|не вижу|не вижу пресейв/.test(lower);
   return hasPositive && !hasNegative;
-}
-function persistVolcanoFrameVerified() {
-  try {
-    const iso = new Date().toISOString();
-    localStorage.setItem("magnum-frame-verified", "1");
-    localStorage.setItem("magnum-frame-date", iso);
-    localStorage.setItem("frame-date", iso);
-    // also set volcano tier hint
-    localStorage.setItem("magnum-frame-tier", "volcano-gold");
-  } catch {}
 }
 
 const SHOP_SKINS_FOR_BOT: Array<{id:string;name:string;price:number;emoji:string}> = [
@@ -340,11 +330,10 @@ export function AiBot() {
       try {
         const reply = await callAi(text, image);
         setMessages((m) => [...m, { role: "bot", text: reply }]);
-        // FRAME VOLCANO GOLD — mimo-v2.5 vision → засчитан/легенда без "не вижу" → magnum_frames + LS + conic-volcano spin 3s #ff5722 + GSAP spring pulse 2s
+        // FRAME VOLCANO GOLD — mimo-v2.5 vision → засчитан/легенда без "не вижу" → Neon magnum_frames + conic-volcano spin 3s #ff5722 + GSAP spring pulse 2s (no localStorage)
         if (image) {
           const isVerifiedHeuristic = isVolcanoVerified(reply);
           const verified = isVerifiedHeuristic;
-          if (verified) persistVolcanoFrameVerified();
           void fetch("/magnum/api/frame/verify", {
             method: "POST",
             credentials: "include",
@@ -360,7 +349,6 @@ export function AiBot() {
             }
           }, 60);
         } else if (isVolcanoVerified(reply)) {
-          persistVolcanoFrameVerified();
           window.setTimeout(() => {
             const el = document.querySelector("[data-verified-badge]") as HTMLElement | null;
             flashVerified(el);
@@ -372,9 +360,8 @@ export function AiBot() {
         const fallback = image
           ? pick(PRAISES) + " (бот офлайн, но скрин я запомнил)"
           : pick(NAGS) + " (бот офлайн, но правда не офлайн)";
-        // offline fallback тоже верифицирует если был скрин — FRAME VOLCANO GOLD offline = засчитан + LS
+        // offline fallback тоже верифицирует если был скрин — FRAME VOLCANO GOLD offline = засчитан (Neon-only, no LS)
         if (image) {
-          persistVolcanoFrameVerified();
           void fetch("/magnum/api/frame/verify", {
             method: "POST",
             credentials: "include",

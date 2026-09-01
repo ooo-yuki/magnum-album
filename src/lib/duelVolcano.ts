@@ -6,13 +6,16 @@ export type DuelRecord = {
   scores: Array<{name:string;score:number}>;
   durationSec: number;
 };
-const KEY = "magnum-duel-history";
 const LIMIT = 20;
+// Neon-only: in-memory history — server persists via magnum_duel_history WS
+let mem: DuelRecord[] = [];
 export function getHistory(): DuelRecord[] {
-  try { const raw = localStorage.getItem(KEY); if(!raw) return []; const a = JSON.parse(raw); return Array.isArray(a)? a.slice(0,LIMIT):[]; } catch { return []; }
+  return mem.slice(0, LIMIT);
 }
 export function pushDuel(r: DuelRecord){
-  try { const h = getHistory(); h.unshift(r); localStorage.setItem(KEY, JSON.stringify(h.slice(0,LIMIT))); } catch {}
+  mem.unshift(r);
+  mem = mem.slice(0, LIMIT);
+  // optional Neon sync is handled server-side via WS persistDuelResults (magnum_duel_history)
 }
 export function calcScore(volcano:number): number {
   if(volcano<=1) return 1;

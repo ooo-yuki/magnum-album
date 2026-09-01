@@ -5,11 +5,12 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Hero } from "../components/Hero";
 import { Marquee } from "../components/Marquee";
 import { Stats } from "../components/Stats";
-import { Singles } from "../components/Singles";
 import { About } from "../components/About";
 import { NavGrid } from "../components/NavGrid";
 import { lazy, Suspense } from "react";
 // perf 16:34 — lazy below-fold (Timeline 576L + PressWall 207L + News2026 242L + CTA) — main 466→~340K eager
+// perf 2026-09-01 — Singles lazy (162L, GSAP/ScrollTrigger, 2 covers) → main -~12KB (chunk split)
+const Singles = lazy(() => import("../components/Singles").then(m => ({ default: m.Singles })));
 const Timeline = lazy(() => import("../components/Timeline").then(m => ({ default: m.Timeline })));
 const PressWall = lazy(() => import("../components/PressWall").then(m => ({ default: m.PressWall })));
 const News2026 = lazy(() => import("../components/News2026").then(m => ({ default: m.News2026 })));
@@ -414,7 +415,7 @@ export function HomePage() {
       <Suspense fallback={<div style={{minHeight:200}} /> }><PressWall /></Suspense>
       <Suspense fallback={<div style={{minHeight:160}} /> }><News2026 /></Suspense>
       <PromoBanners />
-      <Singles />
+      <Suspense fallback={<div style={{minHeight:220}} />}><Singles /></Suspense>
       <Suspense fallback={<div style={{minHeight:120}} /> }><CTA /></Suspense>
       <PopupBanner />
 

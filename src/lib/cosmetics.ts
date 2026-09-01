@@ -77,7 +77,7 @@ export const COSMETICS_CATALOG: CosmeticItem[] = [
   { id: "frame-gold-crystal-spin", slot: "frame", name: "Голд Кристалл Спин", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#e8f8ff,#38bdf8,#ffd700,#e8f8ff)" },
   { id: "banner-diamond-quartz", slot: "banner", name: "Даймонд Кварц", price: 1420, rarity: "legendary", style: "linear-gradient(90deg,#e8f8ff,#ffffff)" },
   { id: "title-rgb-crystal", slot: "title", name: "РГБ Кристалл", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#a8e8ff,#ff44cc,#00ffcc,#a8e8ff)" },
-  // ── VOLCANO GOLD 42 — 12 volcano-скинов + eruption + conic-volcano spin 3s #ff5722 ──
+  // ── VOLCANO GOLD 42 — 12 volcano-скинов + eruption glow conic-volcano spin 3s #ff5722 ──
   { id: "frame-volcano-ash", slot: "frame", name: "Вулкан Пепел", price: 42, rarity: "common", style: "2px solid #ff5722" },
   { id: "banner-volcano-ash", slot: "banner", name: "Пепел Вулкана", price: 42, rarity: "common", style: "linear-gradient(90deg,#ff5722,#ff8a65)" },
   { id: "title-volcano-ash", slot: "title", name: "Пепельный", price: 42, rarity: "common", style: "#ff5722" },
@@ -90,6 +90,19 @@ export const COSMETICS_CATALOG: CosmeticItem[] = [
   { id: "frame-volcano-gold-spin", slot: "frame", name: "Вулкан Голд Спин", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#ff5722,#ffcc00,#ffd700,#ff5722)" },
   { id: "banner-volcano-gold", slot: "banner", name: "Голд Вулкан", price: 1420, rarity: "legendary", style: "linear-gradient(90deg,#ff5722,#ffd700)" },
   { id: "title-volcano-gold", slot: "title", name: "Вулкан Голд", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#ff5722,#ffcc00,#ffd700,#ff5722)" },
+  // ── OBSIDIAN FORGE 42 — 12 obsidian: coal-dust 42 mine-shaft 142 meduza-obsidian 420 gold-obsidian-spin epic 1420 spin 3s molten ──
+  { id: "frame-obsidian-coal", slot: "frame", name: "Обсидиан Уголь", price: 42, rarity: "common", style: "2px solid #1a1a1a" },
+  { id: "banner-obsidian-dust", slot: "banner", name: "Угольная Пыль", price: 42, rarity: "common", style: "linear-gradient(90deg,#0a0a0a,#2b1a0a)" },
+  { id: "title-obsidian-coal", slot: "title", name: "Угольный", price: 42, rarity: "common", style: "#1a1a1a" },
+  { id: "frame-obsidian-shaft", slot: "frame", name: "Шахта Обсидиан", price: 142, rarity: "rare", style: "3px solid #4a2510" },
+  { id: "banner-obsidian-shaft", slot: "banner", name: "Шахта", price: 142, rarity: "rare", style: "linear-gradient(90deg,#1a0a00,#ff4500)" },
+  { id: "title-obsidian-shaft", slot: "title", name: "Шахтёр 42", price: 142, rarity: "rare", style: "#8b3a00" },
+  { id: "frame-meduza-obsidian", slot: "frame", name: "Медуза Обсидиан", price: 420, rarity: "epic", style: "conic-gradient(from 0deg,#1a1a1a,#ff4500,#ff8c00,#1a1a1a)" },
+  { id: "banner-meduza-obsidian", slot: "banner", name: "Медуза Расплав", price: 420, rarity: "epic", style: "linear-gradient(90deg,#1a1a1a,#ff5722)" },
+  { id: "title-meduza-obsidian", slot: "title", name: "Расплавленный", price: 420, rarity: "epic", style: "#ff5722" },
+  { id: "frame-gold-obsidian-spin", slot: "frame", name: "Голд Обсидиан Спин", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#1a1a1a,#ff4500,#ffcc00,#ffd700,#1a1a1a)" },
+  { id: "banner-obsidian-gold", slot: "banner", name: "Золото Обсидиана", price: 1420, rarity: "legendary", style: "linear-gradient(90deg,#1a1a1a,#ffcc00)" },
+  { id: "title-obsidian-gold", slot: "title", name: "Обсидиан Голд", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#ff4500,#ffcc00,#ffd700,#ff4500)" },
 ];
 
 // Явный список 12 GLACIER id — не substring, чтобы не дрифтить (kuzbass-ice, tom-glacier входят)
@@ -131,6 +144,23 @@ export const VOLCANO_GOLD_FRAME_ID = "frame-volcano-gold-spin";
 export const VOLCANO_GOLD_STYLE = "conic-gradient(from 0deg,#ff5722,#ffcc00,#ffd700,#ff5722)";
 export const VOLCANO_SHADOW = "0 0 16px #ff5722";
 export const VOLCANO_SPIN = "volcanoSpin 3s linear infinite";
+
+// ── OBSIDIAN FORGE 42 — 12 obsidian ids + molten epic 1420 spin 3s #ff5722/#ffcc00 ──
+export const OBSIDIAN_IDS_LIST = [
+  "frame-obsidian-coal","banner-obsidian-dust","title-obsidian-coal",
+  "frame-obsidian-shaft","banner-obsidian-shaft","title-obsidian-shaft",
+  "frame-meduza-obsidian","banner-meduza-obsidian","title-meduza-obsidian",
+  "frame-gold-obsidian-spin","banner-obsidian-gold","title-obsidian-gold",
+] as const;
+export const OBSIDIAN_IDS = new Set<string>(OBSIDIAN_IDS_LIST as unknown as string[]);
+export function isObsidianCosmetic(id:string):boolean{ return OBSIDIAN_IDS.has(id); }
+export const OBSIDIAN_CATALOG = COSMETICS_CATALOG.filter(c=> OBSIDIAN_IDS.has(c.id));
+export const OBSIDIAN_IDS_SET = OBSIDIAN_IDS;
+export const OBSIDIAN = OBSIDIAN_CATALOG;
+export const OBSIDIAN_GOLD_FRAME_ID = "frame-gold-obsidian-spin";
+export const OBSIDIAN_GOLD_STYLE = "conic-gradient(from 0deg,#1a1a1a,#ff4500,#ffcc00,#ffd700,#1a1a1a)";
+export const OBSIDIAN_SHADOW = "0 0 16px #ff5722";
+export const OBSIDIAN_SPIN = "obsidianSpin 3s linear infinite";
 
 // aliases for ShopPage imports
 export const COSMETICS = COSMETICS_CATALOG;

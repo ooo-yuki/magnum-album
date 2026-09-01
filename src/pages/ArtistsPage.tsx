@@ -138,12 +138,13 @@ export function ArtistsPage() {
             </div>
             <p className={styles.bio}>
               Начал в 2011 на YouTube с Minecraft. Создал сервер «СП» (Сервер Подписчиков). Основатель движения «42 братухи». 
-              Двукратный «Человек-мем года» на премии SLAY (2023, 2024). Сольный альбом <strong>CLAY</strong> (03.04.2026) — хип-хоп, 73 балла РЗТ, 81 рецензия. 
+              Двукратный «Человек-мем года» на премии SLAY (2023, 2024) + 3 награды SLAY 2025 03.12.2025: Аудитория года, Minecraft-стример года, Трек года XXL feat MellSher. Сольный альбом <strong>CLAY</strong> (03.04.2026) — хип-хоп, 73 балла РЗТ, 81 рецензия. 
               Название CLAY = Clowns Laugh At You, пасхалка на 10 лет. Дебют — «1000 жизней» (фев 2024, 14 треков).
             </p>
             <div className={styles.facts}>
               <div className={styles.fact}><strong>Сервер «СП»</strong><span>Minecraft • сообщество с 2011</span></div>
               <div className={styles.fact}><strong>Премия SLAY</strong><span>Мем года 2023 и 2024</span></div>
+              <div className={styles.fact}><strong>SLAY 2025×3</strong><span>03.12.2025 — Аудитория, Minecraft, XXL</span></div>
               <div className={styles.fact}><strong>42 братухи</strong><span>Основатель, «босс» движения</span></div>
               <div className={styles.fact}><strong>Коллабы</strong><span>илюха реп, Мазеллов, 6055, MellSher</span></div>
             </div>

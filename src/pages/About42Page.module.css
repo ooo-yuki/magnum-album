@@ -378,6 +378,62 @@
   border-color: rgba(255, 255, 255, 0.3);
 }
 
+/* GEO42 — Кузбасс код 42 */
+.geoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.9rem;
+}
+.geoCard {
+  padding: 1.1rem 1rem;
+  border-radius: 12px;
+  background: rgba(120, 220, 255, 0.04);
+  border: 1px solid rgba(120, 220, 255, 0.1);
+  text-align: center;
+}
+.geoIcon { font-size: 1.6rem; display: block; margin-bottom: 0.35rem; }
+.geoCard strong { display: block; font-size: 0.92rem; margin-bottom: 0.25rem; color: #7affc2; }
+.geoCard p { font-size: 0.78rem; color: rgba(240,240,240,0.55); line-height: 1.45; }
+.geoSources {
+  margin-top: 0.9rem;
+  display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;
+}
+.geoSources a {
+  padding: 0.35rem 0.7rem;
+  border-radius: 100px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  font-size: 0.75rem;
+}
+
+/* BIO42 — био-паспорт Кирилл Баранов 05.04.1996 */
+.bioGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.9rem;
+}
+.bioCard {
+  padding: 1.1rem 1rem;
+  border-radius: 12px;
+  background: rgba(255, 204, 0, 0.05);
+  border: 1px solid rgba(255, 204, 0, 0.14);
+  text-align: center;
+}
+.bioIcon { font-size: 1.6rem; display: block; margin-bottom: 0.35rem; }
+.bioCard strong { display: block; font-size: 0.88rem; margin-bottom: 0.25rem; color: #ffcc00; }
+.bioCard p { font-size: 0.78rem; color: rgba(240,240,240,0.55); line-height: 1.45; }
+.bioSources {
+  margin-top: 0.9rem;
+  display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;
+}
+.bioSources a {
+  padding: 0.35rem 0.7rem;
+  border-radius: 100px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  font-size: 0.75rem;
+}
+
 @media (max-width: 600px) {
   .timelineItem { grid-template-columns: 70px 1fr; }
   .slogans span { font-size: 0.7rem; }

@@ -44,6 +44,7 @@ const QUESTIONS: Question[] = [
   { q: "Какой первый сквад 42 братух?", options: ["НАХ-сквад (Москва)", "Шуба-сквад (Петербург)", "Хай-сквад (Воронеж)", "Урод-сквад (Ростов)"], correct: 1, fact: "Первый сквад появился в Петербурге в 2024 году." },
   { q: "Сколько треков в SUPER PUPER NOVA?", options: ["3", "4", "5", "7"], correct: 2, fact: "5 треков: Танцуй, Тонированный жигуль, Кис-кис, XXL, Репит." },
   { q: "Кто посвящён в «братухи 42» 24 февраля 2025?", options: ["Эльдар Джарахов", "Дмитрий Маликов", "Стинт", "Вова Солодков"], correct: 1, fact: "Дмитрий Маликов — певец, неожиданный союзник движения." },
+  { q: "Сколько наград взял 5opka на SLAY 2025 (03.12.2025)?", options: ["1 — Трек года", "2 — Аудитория + Minecraft", "3 — Аудитория года, Minecraft-стример года, Трек года XXL feat MellSher", "0 — номинирован, но не взял"], correct: 2, fact: "SLAY 2025 03.12.2025 — 3 статуэтки: Аудитория года + Minecraft-стример года + Трек года XXL feat MellSher. Источники: championat.com/news-6267700 + cybersport.ru + sport-express 2381308." },
   // ── новый контент-пакет MAGNUM 2026 (16 вопросов) ──
   { q: "Как назывался дебютный трек 5opka x MellSher?", options: ["Вокруг", "Молодой", "Кис-кис", "XXL"], correct: 0, fact: "«Вокруг» — совместный дроп Кирилла и Игоря, старт истории MAGNUM." },
   { q: "Что означает шифр M4GNUM на обложке?", options: ["MAGNUM с 4 вместо A", "42+MAGNUM", "Год 2024", "4 трека в альбоме"], correct: 0, fact: "Стилизация MAGNUM — буква A заменена на 4, отсылка к 42." },
@@ -262,7 +263,9 @@ export function QuizGame() {
   const [eliminated, setEliminated] = useState<number[]>([]);
   const [hintUsed, setHintUsed] = useState(false);
   const [streakFlash, setStreakFlash] = useState(false);
-  const [bestScore, setBestScore] = useState(() => { try { return Number(localStorage.getItem("quiz42-best") || 0); } catch { return 0; } });
+  const [bestScore, setBestScore] = useState(0);
+  // Neon best — progress in magnum_game_scores (SPEC §7), без LS
+  useEffect(()=>{ fetch("/magnum/api/games/my",{credentials:"include"}).then(r=>r.ok?r.json():null).then(j=>{ const arr=j?.scores as {game:string;score:number}[]|undefined; if(!arr) return; let m=0; for(const s of arr) if(s.game==="quiz"&&s.score>m) m=s.score; if(m) setBestScore(m); }).catch(()=>{}); },[]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -477,11 +480,8 @@ export function QuizGame() {
       const finalScore = scoreRef.current;
       const isWon = finalScore >= WIN_SCORE;
       setWon(isWon);
-      try {
-        const prev = Number(localStorage.getItem("quiz42-best") || 0);
-        if (finalScore > prev) { localStorage.setItem("quiz42-best", String(finalScore)); setBestScore(finalScore); }
-        localStorage.setItem("quiz42-last", String(finalScore));
-      } catch {}
+      setBestScore(v=> finalScore>v?finalScore:v);
+      void fetch("/magnum/api/games/submit",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({game:"quiz",score:finalScore})}).catch(()=>{});
       if (isWon) {
         playWin();
         try { if (navigator.vibrate) navigator.vibrate([30, 40, 30, 60]); } catch {}

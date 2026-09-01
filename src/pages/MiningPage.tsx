@@ -156,9 +156,9 @@ function costOf(u: Upgrade): number {
   return Math.floor(u.baseCost * Math.pow(1.42, u.count));
 }
 
-/* WS duel types */
-type DuelPlayer = { name: string; score: number };
-type DuelRoom = { id: string; state: "waiting" | "playing" | "finished"; players: DuelPlayer[]; durationSec: number };
+/* WS duel types — NITRO 42 */
+type DuelPlayer = { name: string; score: number; ready?: boolean; nitro?: number; volcano?: number; magma?: number; suspect?: boolean };
+type DuelRoom = { id: string; state: "waiting" | "playing" | "finished"; players: DuelPlayer[]; durationSec: number; wager?: number };
 
 export function MiningPage() {
   const [coins, setCoins] = useState<number>(0);
@@ -173,10 +173,28 @@ export function MiningPage() {
   const [vaultLoading, setVaultLoading] = useState(false);
   const vaultRef = useRef<HTMLDivElement>(null);
 
-  // duel WS
+  // duel WS — NITRO x9 + ghost + overheat
   const [duelRoom, setDuelRoom] = useState<DuelRoom | null>(null);
   const [duelConnected, setDuelConnected] = useState(false);
+  const [duelWager, setDuelWager] = useState<number>(0);
+  const [duelCode, setDuelCode] = useState<string>("");
+  const [nitro, setNitro] = useState(0);
+  const [oppNitro, setOppNitro] = useState(0);
+  const [overheat, setOverheat] = useState(false);
+  const [ghostTrail, setGhostTrail] = useState(false);
+  const [suspect, setSuspect] = useState(false);
+  const [nitroScore, setNitroScore] = useState(0);
+  const [duelLb, setDuelLb] = useState<Array<{player:string;score:number;avatar?:string|null}>>([]);
+  const [duelElo, setDuelElo] = useState<number|null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const nitroBarRef = useRef<HTMLDivElement>(null);
+  const ghostBarRef = useRef<HTMLDivElement>(null);
+  const nitroFillRef = useRef<HTMLDivElement>(null);
+  const lastClickRef = useRef(0);
+  const heldMaxRef = useRef<number|null>(null);
+  const overheatUntilRef = useRef(0);
+  const burstPendingRef = useRef(false);
 
   const rockRef = useRef<HTMLButtonElement>(null);
   const floatRootRef = useRef<HTMLDivElement>(null);
@@ -497,6 +515,16 @@ export function MiningPage() {
     wsRef.current?.send(JSON.stringify({ type: "start" }));
   };
 
+  // P0 funnel: автоскролл к #duel если hash при заходе (/magnum/mining#duel из нуджа)
+  useEffect(() => {
+    if (window.location.hash !== "#duel") return;
+    const t = window.setTimeout(() => {
+      const el = document.getElementById("duel");
+      if (el) el.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    }, 320);
+    return () => window.clearTimeout(t);
+  }, []);
+
   // hover RGB — chromatic lift
   const onShopEnter = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -630,8 +658,8 @@ export function MiningPage() {
         <div style={{ marginTop: 8, fontSize: 11, opacity: 0.45 }}>GET /magnum/api/mining/vault · POST /magnum/api/mining/vault/claim · {vaultClaimed.size}/5 забрано · баланс Neon: {coins} 42</div>
       </section>
 
-      {/* WS duel 2-4 игрока — P0 онбординг первого запуска */}
-      <section className={styles.duelSection} style={{ marginTop: 32 }}>
+      {/* WS duel 2-4 игрока — P0 funnel активация: id=duel для автоскролла из нуджа */}
+      <section id="duel" data-duel="42" className={styles.duelSection} style={{ marginTop: 32, scrollMarginTop: 72 }}>
         <h2 className={styles.sectionTitle}>ДУЭЛЬ 42 <span>· 2–4 БРАТУХИ · REALTIME WS</span></h2>
         <p style={{ opacity: 0.7, marginBottom: 12 }}>Комната на 2–4 игрока, кликер-дуэль 10 сек, broadcast scores, persist в magnum_leaderboard при финише.</p>
         {duelConnected && duelRoom?.state === "waiting" && !duelHintDismissed && (

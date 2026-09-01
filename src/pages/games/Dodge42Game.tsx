@@ -55,7 +55,7 @@ const DIFFICULTY = {
   hard: { label: "Хард", survive: 30, bulletMul: 1.6, speedMul: 1.25, win: 6000, hint: "ад 30с" },
 } as const;
 type DiffKey = keyof typeof DIFFICULTY;
-const LS_DIFF = "dodge42-diff";
+const LS_DIFF = "dodge42-diff"; // LS-UI-only: diff pref, not progress (SPEC §7.1 — progress in Neon)
 
 interface Particle {
   x: number; y: number; vx: number; vy: number;
@@ -132,13 +132,13 @@ export function Dodge42Game() {
     }).catch(()=>{});
   },[]);
   const [wave, setWave] = useState(0);
-  const [diff, setDiff] = useState<DiffKey>(() => { try { const v = localStorage.getItem(LS_DIFF) as DiffKey | null; return v && DIFFICULTY[v] ? v : "normal"; } catch { return "normal"; } });
+  const [diff, setDiff] = useState<DiffKey>(() => { try { const v = localStorage.getItem(LS_DIFF) as DiffKey | null; return v && DIFFICULTY[v] ? v : "normal"; } catch { return "normal"; } }); // LS-UI-only
   const [tipIdx, setTipIdx] = useState(0);
   const [dashCd, setDashCd] = useState(false);
   const [slowMo, setSlowMo] = useState(false);
   const diffRef = useRef<DiffKey>(diff);
   const slowRef = useRef(false);
-  useEffect(() => { diffRef.current = diff; try { localStorage.setItem(LS_DIFF, diff); } catch {} }, [diff]);
+  useEffect(() => { diffRef.current = diff; try { localStorage.setItem(LS_DIFF, diff); } catch {} }, [diff]); // LS-UI-only
   useEffect(() => { const id = setInterval(() => setTipIdx(i => (i + 1) % DODGE_TIPS.length), 3200); return () => clearInterval(id); }, []);
   useEffect(() => { slowRef.current = slowMo; }, [slowMo]);
 

@@ -136,14 +136,16 @@ function playWin() {
 export function TypingGame() {
   const [state, setState] = useState<"menu" | "playing" | "done">("menu");
   const [diff, setDiff] = useState<DiffKey>(() => {
-    try { const v = localStorage.getItem("typing42-diff") as DiffKey | null; return v && DIFFICULTY[v] ? v : "normal"; } catch { return "normal"; }
-  });
+    try { const v = localStorage.getItem("typing42-diff") as DiffKey | null; return v && DIFFICULTY[v] ? v : "normal"; } catch { return "normal"; } // LS-UI-only: diff pref
+  }); // LS-UI-only: diff pref
   const [phraseIdx, setPhraseIdx] = useState(0);
   const [typed, setTyped] = useState("");
   const [startTime, setStartTime] = useState(0);
   const [wpm, setWpm] = useState(0);
   const [displayWpm, setDisplayWpm] = useState(0);
-  const [bestWpm, setBestWpm] = useState(() => { try { return Number(localStorage.getItem("typing42-best")) || 0; } catch { return 0; } });
+  const [bestWpm, setBestWpm] = useState(0);
+  // Neon best — progress in magnum_game_scores (SPEC §7)
+  useEffect(()=>{ fetch("/magnum/api/games/my",{credentials:"include"}).then(r=>r.ok?r.json():null).then(j=>{ const arr=j?.scores as {game:string;score:number}[]|undefined; if(!arr) return; let m=0; for(const s of arr) if(s.game==="typing"&&s.score>m) m=s.score; if(m) setBestWpm(m); }).catch(()=>{}); },[]);
   const [completed, setCompleted] = useState(0);
   const [totalChars, setTotalChars] = useState(0);
   const [totalTime, setTotalTime] = useState(0);
@@ -165,7 +167,7 @@ export function TypingGame() {
   const cfg = DIFFICULTY[diff];
   const targetPhrases = PHRASES.slice(0, cfg.phraseCount);
   const phrase = targetPhrases[phraseIdx] ?? PHRASES[0]!;
-  useEffect(() => { try { localStorage.setItem("typing42-diff", diff); } catch {} }, [diff]);
+  useEffect(() => { try { localStorage.setItem("typing42-diff", diff); } catch {} }, [diff]); // LS-UI-only
   const spawnParticles = useCallback((count: number, color: string) => {
     const id0 = Date.now();
     const arr: Particle[] = Array.from({ length: count }, (_, i) => ({
@@ -275,10 +277,8 @@ export function TypingGame() {
     if (newCompleted >= targetPhrases.length) {
       const finalWpm = calcWPM(newTotalChars, newTotalTime);
       const acc = 100;
-      if (finalWpm > bestWpm) {
-        setBestWpm(finalWpm);
-        try { localStorage.setItem("typing42-best", String(finalWpm)); } catch {}
-      }
+      setBestWpm(v=> finalWpm>v?finalWpm:v);
+      void fetch("/magnum/api/games/submit",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({game:"typing",score:finalWpm})}).catch(()=>{});
       playWin();
       if (wpmRef.current && !prefersReducedMotion()) gsap.fromTo(wpmRef.current, { scale: 1 }, { scale: 1.35, duration: 0.22, ease: "back.out(1.7)" });
       spawnParticles(18, finalWpm >= cfg.win ? "#ffcc00" : "#00ff88");

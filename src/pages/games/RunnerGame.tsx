@@ -58,8 +58,8 @@ const DIFFICULTY = {
   hard:   { label: "Хард",   speed: 5.1, gravity: 0.68, jump: -13, win: 6000, hint: "турбо + хардкор" },
 } as const;
 type DiffKey = keyof typeof DIFFICULTY;
-const LS_DIFF = "runner42-diff";
-const LS_TIP = "runner42-tip-v1";
+const LS_DIFF = "runner42-diff"; // LS-UI-only: diff pref, not progress (SPEC §7.1)
+const LS_TIP = "runner42-tip-v1"; // LS-UI-only: dismissed tip flag
 
 interface Obstacle {
   x: number;
@@ -196,7 +196,7 @@ export function RunnerGame() {
   const [best, setBest] = useState(0);
   const [diff, setDiff] = useState<DiffKey>(() => {
     try { const v = localStorage.getItem(LS_DIFF) as DiffKey | null; return v && DIFFICULTY[v] ? v : "normal"; } catch { return "normal"; }
-  });
+  }); // LS-UI-only
   // Neon best — без LS (credentials:include), diff остаётся в LS_DIFF per SPEC §7.1
   useEffect(()=>{
     fetch("/magnum/api/games/my",{credentials:"include"}).then(r=>r.ok?r.json():null).then(j=>{
@@ -209,7 +209,7 @@ export function RunnerGame() {
   const [dashReady, setDashReady] = useState(true);
   const touchStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
   const diffRef = useRef<DiffKey>(diff);
-  useEffect(() => { diffRef.current = diff; try { localStorage.setItem(LS_DIFF, diff); } catch {} }, [diff]);
+  useEffect(() => { diffRef.current = diff; try { localStorage.setItem(LS_DIFF, diff); } catch {} }, [diff]); // LS-UI-only
   useEffect(() => { const id = setInterval(() => setTipIdx((i) => (i + 1) % RUNNER_TIPS.length), 3200); return () => clearInterval(id); }, []);
   void LS_TIP;
 

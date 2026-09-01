@@ -290,7 +290,9 @@ export function MemoryGame() {
   const [fever, setFever] = useState(false);
   const [hints, setHints] = useState(diffData.hint);
   const [score, setScore] = useState(0);
-  const [best, setBest] = useState<number>(() => { try { return Number(localStorage.getItem("memory42-best-normal"))||0; } catch { return 0; } });
+  const [best, setBest] = useState<number>(0);
+  // Neon best — progress in magnum_game_scores (SPEC §7), без LS
+  useEffect(()=>{ fetch("/magnum/api/games/my",{credentials:"include"}).then(r=>r.ok?r.json():null).then(j=>{ const arr=j?.scores as {game:string;score:number}[]|undefined; if(!arr) return; let m=0; for(const s of arr) if(s.game==="memory"&&s.score>m) m=s.score; if(m) setBest(m); }).catch(()=>{}); },[]);
   const [focusIdx, setFocusIdx] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -490,11 +492,8 @@ export function MemoryGame() {
             setWon(true);
             playWin();
             const finalScore = score + addScore + timeBonus;
-            try{
-              const key=`memory42-best-${diff}`;
-              const prev=Number(localStorage.getItem(key))||0;
-              if(finalScore>prev){ localStorage.setItem(key,String(finalScore)); setBest(finalScore); }
-            } catch {}
+            setBest(v=> finalScore>v?finalScore:v);
+            void fetch("/magnum/api/games/submit",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({game:"memory",score:finalScore})}).catch(()=>{});
             if (gridRef.current && !prefersReducedMotion()) gsap.to(gridRef.current, { scale: 1.02, duration: 0.2, yoyo: true, repeat: 1 });
             if(navigator.vibrate) navigator.vibrate([40,30,60,30,80]);
           }, 380);

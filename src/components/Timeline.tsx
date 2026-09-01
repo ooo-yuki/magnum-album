@@ -59,9 +59,9 @@ const STEPS: Milestone[] = [
   {
     date: "2025",
     year: "clay",
-    title: "CLAY × SUPER PUPER NOVA",
-    desc: "5 EP подряд: «SUPER PUPER NOVA» — 80 баллов РЗТ, трек «XXL» — 86 баллов и хит июля, сольный «CLAY» с «Слава Боссу». Drumedy на проде, The Fence на лейбле.",
-    tag: "XXL — 86 РЗТ",
+    title: "CLAY × SUPER PUPER NOVA × SLAY 2025×3",
+    desc: "5 EP подряд: SUPER PUPER NOVA — 80 баллов РЗТ, трек XXL — 86 баллов и «Трек года» SLAY 2025 (03.12.2025) feat MellSher; сольный CLAY с «Слава Боссу». 5opka — 3 статуэтки SLAY 2025: Аудитория года, Minecraft-стример года, Трек года XXL. Drumedy на проде, The Fence на лейбле.",
+    tag: "SLAY 2025×3 · XXL 86 РЗТ",
     accent: "#ff6b35",
   },
   {
