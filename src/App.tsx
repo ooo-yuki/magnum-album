@@ -6,20 +6,26 @@ import { Layout } from "./components/Layout";
 import { HomePage } from "./pages/HomePage";
 import { LastFitPage } from "./pages/LastFitPage";
 import { TrackPage } from "./pages/TrackPage";
-import { DiscographyPage } from "./pages/DiscographyPage";
 import { About42Page } from "./pages/About42Page";
-import { ArtistsPage } from "./pages/ArtistsPage";
 import { GamePage } from "./pages/GamePage";
 import { GamesHub } from "./pages/GamesHub";
-import { ShopPage } from "./pages/ShopPage";
-import { EcoPage } from "./pages/EcoPage";
-import { GalleryPage } from "./pages/GalleryPage";
-import { MiningPage } from "./pages/MiningPage";
-import { PresaveRatingPage } from "./pages/PresaveRatingPage";
-import { IdeasPage } from "./pages/IdeasPage";
-import { RecapsPage } from "./pages/RecapsPage";
 
-// — code-split: all 12 games are lazy — main bundle ~827KB → ~400KB expected
+// perf 14:26 — heavy pages lazy to cut main ~1.06MB (Gallery 441KB + Recaps 277KB + Discography 36KB + Shop 29KB + Eco/Mining/etc)
+const DiscographyPage = lazy(() => import("./pages/DiscographyPage").then(m => ({ default: m.DiscographyPage })));
+const ArtistsPage = lazy(() => import("./pages/ArtistsPage").then(m => ({ default: m.ArtistsPage })));
+const ShopPage = lazy(() => import("./pages/ShopPage").then(m => ({ default: m.ShopPage })));
+const EcoPage = lazy(() => import("./pages/EcoPage").then(m => ({ default: m.EcoPage })));
+const GalleryPage = lazy(() => import("./pages/GalleryPage").then(m => ({ default: m.GalleryPage })));
+const MiningPage = lazy(() => import("./pages/MiningPage").then(m => ({ default: m.MiningPage })));
+const PresaveRatingPage = lazy(() => import("./pages/PresaveRatingPage").then(m => ({ default: m.PresaveRatingPage })));
+const IdeasPage = lazy(() => import("./pages/IdeasPage").then(m => ({ default: m.IdeasPage })));
+const RecapsPage = lazy(() => import("./pages/RecapsPage").then(m => ({ default: m.RecapsPage })));
+
+function PageFallback() {
+  return <div style={{ padding: "4rem 2rem", textAlign: "center", color: "#ff2d55" }}>Загрузка…</div>;
+}
+
+// — code-split: 16 games lazy + 9 heavy pages lazy → main ~1.06MB → ~500KB expected
 const MemoryGame = lazy(() => import("./pages/games/MemoryGame").then(m => ({ default: m.MemoryGame })));
 const ClickerGame = lazy(() => import("./pages/games/ClickerGame").then(m => ({ default: m.ClickerGame })));
 const Match3Game = lazy(() => import("./pages/games/Match3Game").then(m => ({ default: m.Match3Game })));
@@ -49,9 +55,9 @@ export default function App() {
           <Route index element={<HomePage />} />
           <Route path="last-fit" element={<LastFitPage />} />
           <Route path="track/:slug" element={<TrackPage />} />
-          <Route path="discography" element={<DiscographyPage />} />
+          <Route path="discography" element={<Suspense fallback={<PageFallback />}><DiscographyPage /></Suspense>} />
           <Route path="42" element={<About42Page />} />
-          <Route path="artists" element={<ArtistsPage />} />
+          <Route path="artists" element={<Suspense fallback={<PageFallback />}><ArtistsPage /></Suspense>} />
           <Route path="game" element={<GamePage />} />
           <Route path="games" element={<GamesHub />} />
           <Route path="games/runner" element={<Suspense fallback={<GameFallback />}><RunnerGame /></Suspense>} />
@@ -70,13 +76,13 @@ export default function App() {
           <Route path="games/dodge" element={<Suspense fallback={<GameFallback />}><Dodge42Game /></Suspense>} />
           <Route path="games/quiz" element={<Suspense fallback={<GameFallback />}><QuizGame /></Suspense>} />
           <Route path="games/timeline" element={<Suspense fallback={<GameFallback />}><Timeline2026Game /></Suspense>} />
-          <Route path="shop" element={<ShopPage />} />
-          <Route path="eco" element={<EcoPage />} />
-          <Route path="gallery" element={<GalleryPage />} />
-          <Route path="mining" element={<MiningPage />} />
-          <Route path="presave-rating" element={<PresaveRatingPage />} />
-          <Route path="ideas" element={<IdeasPage />} />
-          <Route path="recaps" element={<RecapsPage />} />
+          <Route path="shop" element={<Suspense fallback={<PageFallback />}><ShopPage /></Suspense>} />
+          <Route path="eco" element={<Suspense fallback={<PageFallback />}><EcoPage /></Suspense>} />
+          <Route path="gallery" element={<Suspense fallback={<PageFallback />}><GalleryPage /></Suspense>} />
+          <Route path="mining" element={<Suspense fallback={<PageFallback />}><MiningPage /></Suspense>} />
+          <Route path="presave-rating" element={<Suspense fallback={<PageFallback />}><PresaveRatingPage /></Suspense>} />
+          <Route path="ideas" element={<Suspense fallback={<PageFallback />}><IdeasPage /></Suspense>} />
+          <Route path="recaps" element={<Suspense fallback={<PageFallback />}><RecapsPage /></Suspense>} />
         </Route>
       </Routes>
     </BrowserRouter>
