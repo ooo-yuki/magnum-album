@@ -93,7 +93,7 @@ const MOCK_POOL: Omit<Art42, "id">[] = [
     style: "СССР",
     emoji: "🧶",
     gradient: "linear-gradient(135deg,#8b1a2b,#d44d2a 40%,#1a1a1a 100%)",
-    src: "/magnum/images/gallery-42/mock-carpet.jpg",
+    src: "/magnum/images/gallery-42/42-agit-01.jpg",
     desc: "Ковёр на стене и братухи — уют по-магнумовски.",
     tag: "быт",
   },
