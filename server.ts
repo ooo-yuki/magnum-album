@@ -9,6 +9,7 @@ import { neon, Pool, neonConfig } from "@neondatabase/serverless";
 import ws from "ws";
 import { STUDIO_TRACKS, STUDIO_PRESETS, STUDIO_SCENE_DEFAULTS, STUDIO_BG_OPTIONS, STUDIO_FILTER_OPTIONS, isStudioTrackSlug, isStudioPresetId, getBpmForTrack, validateScenes } from "./src/lib/studio42.ts";
 import { RARITY_TABLE, DUST_REWARD, GACHA_POOL, EVENT_LEGENDARY_POOL, STANDARD_LEGENDARY_POOL, softPityCurve, getLegendaryChance, rollWithPity, gachaPrice } from "./src/lib/gacha.ts";
+import type { BannerType, Rarity as GachaRarity } from "./src/lib/gacha.ts";
 try { (neonConfig as unknown as { webSocketConstructor?: unknown }).webSocketConstructor = ws; } catch {}
 
 const MIMO_BASE = process.env.MIMO_BASE_URL || "https://token-plan-sgp.xiaomimimo.com/v1";
@@ -1309,14 +1310,14 @@ async function handleGachaRoll(req: Request): Promise<Response> {
   }
   // deduct coins
   await sql`UPDATE magnum_coins SET balance = balance - ${price} WHERE user_id=${user.id}`;
-  const results: { id: string; rarity: Rarity; isNew: boolean; dust: number; isEvent?: boolean }[] = [];
+  const results: { id: string; rarity: GachaRarity; isNew: boolean; dust: number; isEvent?: boolean }[] = [];
   let curPityCounter = pityCounter;
   let curPity5 = pity5star;
   let curLost = lost5050;
   let curPulls = pulls;
   for (let i = 0; i < count; i++) {
     const roll = rollWithPity(curPity5, banner, { pity4: curPityCounter, lost5050: curLost });
-    const rarity = roll.rarity as Rarity;
+    const rarity = roll.rarity as GachaRarity;
     const id = roll.id;
     // duplicate check: owned in magnum_cosmetics or magnum_shop_inventory?
     let isNew = true;
@@ -1331,8 +1332,6 @@ async function handleGachaRoll(req: Request): Promise<Response> {
         await sql`INSERT INTO magnum_dust (user_id, balance) VALUES (${user.id}, ${dust}) ON CONFLICT (user_id) DO UPDATE SET balance = magnum_dust.balance + ${dust}, updated_at = now()`;
       }
     } else {
-      // insert into appropriate inventory: cosmetics pool → magnum_cosmetics, otherwise magnum_shop_inventory
-      const isCosmetic = (GACHA_POOL[rarity] as string[]).includes(id) || (Object.values(GACHA_POOL) as string[][]).some(a=>a.includes(id));
       // try cosmetics first: lookup style from server COSMETICS_CATALOG
       const cosItem = COSMETICS_CATALOG.find(c=>c.id===id);
       if (cosItem) {
@@ -1389,7 +1388,78 @@ async function handleGachaStatus(req: Request): Promise<Response> {
 }
 
 async function handleGachaCatalog(): Promise<Response> {
-  return Response.json({ rarities: RARITY_TABLE, dustReward: DUST_REWARD, pools: GACHA_POOL, eventLegendary: EVENT_LEGENDARY_POOL, standardLegendary: STANDARD_LEGENDARY_POOL, price: { single: 42, ten: 390 } });
+  return Response.json({ rarities: RARITY_TABLE, dustReward: DUST_REWARD, pools: GACHA_POOL, eventLegendary: EVENT_LEGENDARY_POOL, standardLegendary: STANDARD_LEGENDARY_POOL, price: { single: 42, ten: 420 } });
+}
+async function ensureGachaHistoryTable(): Promise<void> {
+  if (!process.env.DATABASE_URL && !process.env.DATABASE_URL_UNPOOLED) return;
+  const sql=getSql();
+  await sql`CREATE TABLE IF NOT EXISTS magnum_gacha_history (id serial PRIMARY KEY, user_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, banner_type text NOT NULL, rarity text NOT NULL, cosmetic_id text NOT NULL, is_new boolean NOT NULL DEFAULT true, created_at timestamp DEFAULT now() NOT NULL)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_gacha_history_user ON magnum_gacha_history(user_id, created_at DESC)`;
+}
+void ensureGachaHistoryTable().then(()=> console.log("[startup] magnum_gacha_history ensured")).catch(e=> console.error("[startup] gacha_history failed",e));
+async function handleGachaBanners(): Promise<Response> {
+  const endsAt = new Date(Date.now() + 14*24*3600*1000).toISOString();
+  const banners = [
+    { id: "standard", name: "СТАНДАРТ 42", type: "standard", endsAt, rateUpId: null },
+    { id: "magma-frost", name: "MAGMA FROST", type: "event", endsAt, rateUpId: "banner-magma-frost" },
+  ];
+  return Response.json({ banners });
+}
+async function handleGachaHistory(req: Request): Promise<Response> {
+  const token=extractToken(req);
+  if(!token) return Response.json({ error:"unauthorized", needAuth:true }, { status:401, headers:{ "magnum:need-auth":"1" } });
+  const user=await getUserByToken(token); if(!user) return Response.json({ error:"unauthorized", needAuth:true }, { status:401, headers:{ "magnum:need-auth":"1" } });
+  await ensureGachaHistoryTable(); const sql=getSql();
+  const rows=await sql`SELECT banner_type, rarity, cosmetic_id, is_new, created_at FROM magnum_gacha_history WHERE user_id=${user.id} ORDER BY created_at DESC LIMIT 20`;
+  const history=rows.map((r:unknown)=>{ const x=r as {banner_type:string; rarity:string; cosmetic_id:string; is_new:boolean; created_at:string}; return { banner_type:String(x.banner_type), rarity:String(x.rarity), cosmetic_id:String(x.cosmetic_id), is_new:Boolean(x.is_new), created_at:x.created_at };});
+  return Response.json({ history, count: history.length });
+}
+async function handleGachaPity(req: Request): Promise<Response> {
+  const token=extractToken(req);
+  if(!token) return Response.json({ error:"unauthorized" }, { status:401, headers:{ "magnum:need-auth":"1" } });
+  const user=await getUserByToken(token); if(!user) return Response.json({ error:"unauthorized" }, { status:401, headers:{ "magnum:need-auth":"1" } });
+  await ensurePityTable(); const sql=getSql();
+  const rows=await sql`SELECT pity_counter, pity_5star, lost_50_50, pulls FROM magnum_pity WHERE user_id=${user.id} LIMIT 1`;
+  if(rows.length===0) return Response.json({ pity: { counter:0, pityCounter:0, pity5star:0, pity_5star:0, lost_50_50:false, pulls:0 }, guaranteeIn:{ epic:89, legendary:179 }, balances: { pity:0 } });
+  const r=rows[0] as {pity_counter:number; pity_5star:number; lost_50_50:boolean; pulls:number};
+  const c=Number(r.pity_counter); const p5=Number(r.pity_5star);
+  return Response.json({ pity:{ counter:c, pityCounter:c, pity5star:p5, pity_5star:p5, lost_50_50:Boolean(r.lost_50_50), pulls:Number(r.pulls) }, guaranteeIn:{ epic: Math.max(0, 90 - c -1), legendary: Math.max(0, 180 - p5 -1) }, balances:{ pity:c } });
+}
+async function handleGachaFreeRoll(req: Request): Promise<Response> {
+  const token=extractToken(req);
+  if(!token) return Response.json({ error:"unauthorized", needAuth:true }, { status:401, headers:{ "magnum:need-auth":"1" } });
+  const user=await getUserByToken(token); if(!user) return Response.json({ error:"unauthorized", needAuth:true }, { status:401, headers:{ "magnum:need-auth":"1" } });
+  const ip=getClientIp(req); if(!checkRateLimit(`gacha:free-roll:${user.id}:${ip}`, 5, 60_000)) return Response.json({ error:"rate limited" }, { status:429 });
+  const sql=getSql(); await ensurePityTable(); await ensureGachaHistoryTable(); await ensureDustTable();
+  // streak >=3 required via magnum_daily_claims latest streak
+  let streak=0;
+  try{
+    const drows=await sql`SELECT streak FROM magnum_daily_claims WHERE user_id=${user.id} ORDER BY claimed_at DESC LIMIT 1`;
+    if(drows.length) streak=Number((drows[0] as {streak:number}).streak);
+  }catch{}
+  if(streak < 3) return Response.json({ error:"need streak >=3 for free roll" }, { status:429 });
+  const today=new Date().toISOString().slice(0,10);
+  try{ await sql`CREATE TABLE IF NOT EXISTS magnum_gacha_free_rolls (user_id integer REFERENCES magnum_users(id) ON DELETE CASCADE, day_id text, created_at timestamp DEFAULT now(), PRIMARY KEY (user_id, day_id))`; }catch{}
+  const dup=await sql`SELECT user_id FROM magnum_gacha_free_rolls WHERE user_id=${user.id} AND day_id=${today} LIMIT 1`;
+  if(dup.length) return Response.json({ error:"already free-rolled today" }, { status:429 });
+  // pity
+  const pityRows=await sql`SELECT pity_counter, pity_5star, lost_50_50, pulls FROM magnum_pity WHERE user_id=${user.id} AND banner_type='standard' LIMIT 1`;
+  let pc=0,p5=0,lost=false,pulls=0; if(pityRows.length){ const r=pityRows[0] as {pity_counter:number; pity_5star:number; lost_50_50:boolean; pulls:number}; pc=Number(r.pity_counter); p5=Number(r.pity_5star); lost=Boolean(r.lost_50_50); pulls=Number(r.pulls); }
+  const roll=rollWithPity(p5, "standard", { pity4: pc, lost5050: lost });
+  const rarity=roll.rarity as GachaRarity; const id=roll.id;
+  const ownedCos=await sql`SELECT id FROM magnum_cosmetics WHERE user_id=${user.id} AND cosmetic_id=${id} LIMIT 1`;
+  const ownedInv=await sql`SELECT id FROM magnum_shop_inventory WHERE user_id=${user.id} AND skin_id=${id} LIMIT 1`;
+  let isNew=true; let dust=0;
+  if(ownedCos.length||ownedInv.length){ isNew=false; dust=DUST_REWARD[rarity]??0; if(dust) await sql`INSERT INTO magnum_dust (user_id,balance) VALUES (${user.id},${dust}) ON CONFLICT (user_id) DO UPDATE SET balance=magnum_dust.balance+${dust}, updated_at=now()`; }
+  else { const cos=COSMETICS_CATALOG.find(c=>c.id===id); if(cos) await sql`INSERT INTO magnum_cosmetics (user_id,cosmetic_id,slot,equipped,purchased_at) VALUES (${user.id},${id},${cos.slot},false,now())`; else await sql`INSERT INTO magnum_shop_inventory (user_id,skin_id,purchased_at,equipped) VALUES (${user.id},${id},now(),false)`; }
+  let nextPc=pc, nextP5=p5; let nextLost=lost; if(rarity==="legendary"){ nextP5=0; nextPc=0; } else if(rarity==="epic"){ nextPc=0; nextP5++; } else { nextPc++; nextP5++; }
+  if(roll.nextLost5050!==null) nextLost=Boolean(roll.nextLost5050);
+  await sql`INSERT INTO magnum_pity (user_id,banner_type,pity_counter,pity_5star,lost_50_50,pulls,updated_at) VALUES (${user.id},'standard',${nextPc},${nextP5},${nextLost},${pulls+1},now()) ON CONFLICT (user_id,banner_type) DO UPDATE SET pity_counter=${nextPc}, pity_5star=${nextP5}, lost_50_50=${nextLost}, pulls=${pulls+1}, updated_at=now()`;
+  await sql`INSERT INTO magnum_gacha_history (user_id,banner_type,rarity,cosmetic_id,is_new) VALUES (${user.id},'standard',${rarity},${id},${isNew})`;
+  await sql`INSERT INTO magnum_gacha_free_rolls (user_id,day_id) VALUES (${user.id},${today})`;
+  const balRows=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+  const bal=balRows.length?Number((balRows[0] as {balance:number}).balance):0;
+  return Response.json({ ok:true, results:[{ id, rarity, isNew, dust }], balance: bal });
 }
 
 
@@ -4599,6 +4669,10 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/shop/volcano/craft" && req.method === "POST") return handleVolcanoCraft(req);
     if (url.pathname === "/magnum/api/shop/obsidian/craft" && req.method === "POST") return handleObsidianCraft(req);
     if (url.pathname === "/magnum/api/shop/forge" && req.method === "POST") return handleGlacierCraft(req);
+
+    if (url.pathname === "/magnum/api/gacha/roll" && req.method === "POST") return handleGachaRoll(req);
+    if (url.pathname === "/magnum/api/gacha/status" && req.method === "GET") return handleGachaStatus(req);
+    if (url.pathname === "/magnum/api/gacha/catalog" && req.method === "GET") return handleGachaCatalog();
 
     // mining
     if (url.pathname === "/magnum/api/mining" && req.method === "GET") return handleMiningGet(req);

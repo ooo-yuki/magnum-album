@@ -5,8 +5,6 @@ export type BannerType = "standard" | "event";
 export type Rarity = "common" | "rare" | "epic" | "legendary";
 
 export const RARITY_TABLE: Record<Rarity, number> = {
-  // базовые шансы (до soft-pity): сумма =1
-  // legendary 0.6% — из спеки; epic ~5.1%; rare ~20%; common остальное
   legendary: 0.006,
   epic: 0.051,
   rare: 0.2,
@@ -20,7 +18,6 @@ export const RARITY_PRICE: Record<Rarity, number> = {
   legendary: 1420,
 } as const;
 
-// dust за дубликат (спека: epic 100, legendary 420; остальные — 14/42 для целостности)
 export const DUST_REWARD: Record<Rarity, number> = {
   common: 14,
   rare: 42,
@@ -28,8 +25,6 @@ export const DUST_REWARD: Record<Rarity, number> = {
   legendary: 420,
 } as const;
 
-// ── soft-pity кривая для 5* ──────────────────────────────────────────────
-// база 0.6% до 64; с 65 +6% за крутку (спека). 75 → 66.6% (>15% для теста), 85 → 100%
 export function softPityCurve(pity5: number): number {
   if (pity5 < 65) return 0.006;
   const extra = (pity5 - 64) * 0.06;
@@ -39,9 +34,6 @@ export function getLegendaryChance(pity5: number): number {
   return softPityCurve(pity5);
 }
 
-// ── пулы айтемов — берём из COSMETICS_CATALOG без жёсткой зависимости ──
-// Для изоляции от циклических импортов — список копируется лениво через динамический импорт в рантайме.
-// Но для детерминированности тестов экспортируем статический пул (ид совпадают с cosmetics.ts)
 export const GACHA_POOL: Record<Rarity, string[]> = {
   common: [
     "frame-neon42","frame-ice","frame-paper","banner-42wave","banner-ocean","banner-grid",
@@ -79,7 +71,6 @@ export const GACHA_POOL: Record<Rarity, string[]> = {
   ],
 };
 
-// ивент-легендарки — первые 3 легендарки считаются ивентовыми (детерминированно для 50/50)
 export const EVENT_LEGENDARY_POOL = GACHA_POOL.legendary.slice(0, 6);
 export const STANDARD_LEGENDARY_POOL = GACHA_POOL.legendary.slice(6);
 
@@ -95,14 +86,11 @@ export function pickItemId(rarity: Rarity, bannerType: BannerType, isEventWin: b
   return pickRandom(GACHA_POOL[rarity]);
 }
 
-// ── основной ролл с pity/soft-pity/50-50 логикой ───────────────────────────
-// Сигнатура для спеки: rollWithPity(pity, bannerType) — pity = pity_5star.
-// Для 4* гаранта принимаем opts.pity4 (pity_counter). Если не передан — гарант 90 не применяется (тест 90 pulls требует).
 export type RollResult = {
   rarity: Rarity;
   id: string;
-  isEvent: boolean; // true если выпал ивент-легендарка (для 50/50)
-  nextLost5050: boolean | null; // null если не легендарка; иначе флаг на будущее
+  isEvent: boolean;
+  nextLost5050: boolean | null;
 };
 
 export function rollWithPity(
@@ -113,17 +101,12 @@ export function rollWithPity(
   const pity5 = Math.max(0, Math.floor(pity));
   const pity4 = opts?.pity4 != null ? Math.max(0, Math.floor(opts.pity4)) : 0;
   const lost5050 = Boolean(opts?.lost5050);
-
-  // 1) гарант 180 на 5* — переопределяет всё
   const guaranteeLegendary = pity5 >= 179;
-  // 2) гарант 90 на 4*+ (epic+) — если 89 без epic+, следующая минимум epic
   const guaranteeEpicPlus = !guaranteeLegendary && pity4 >= 89;
-
   let rarity: Rarity;
   if (guaranteeLegendary) {
     rarity = "legendary";
   } else if (guaranteeEpicPlus) {
-    // гарант 90: минимум epic; но soft-pity может дать legendary
     const legChance = softPityCurve(pity5);
     const r = Math.random();
     if (r < legChance) rarity = "legendary";
@@ -136,8 +119,6 @@ export function rollWithPity(
     else if (r < legChance + RARITY_TABLE.epic + RARITY_TABLE.rare) rarity = "rare";
     else rarity = "common";
   }
-
-  // 50/50 на ивент-баннере для легендарок
   let isEvent = false;
   let nextLost: boolean | null = null;
   if (rarity === "legendary" && bannerType === "event") {
@@ -150,13 +131,31 @@ export function rollWithPity(
       nextLost = win ? false : true;
     }
   }
-
   const id = pickItemId(rarity, bannerType, isEvent);
   return { rarity, id, isEvent, nextLost5050: nextLost };
 }
 
-// ── хелпер для цены крутки (спека: 42/420, 10-я 390) ──
 export function gachaPrice(count: 1 | 10): number {
-  if (count === 10) return 390;
+  if (count === 10) return 420;
   return 42;
+}
+
+// ── BANNER 42 — витрина кейсов + GSAP рарити-хиты ──
+export type BannerInfo = { id: string; name: string; type: BannerType; endsAt: string; rateUpId: string | null; priceSingle: number; priceTen: number };
+const BANNER_END_AT_ISO = new Date(Date.now() + 14 * 24 * 3600 * 1000).toISOString();
+export const BANNER_CATALOG: BannerInfo[] = [
+  { id: "standard", name: "СТАНДАРТ 42", type: "standard", endsAt: new Date(Date.now() + 14 * 24 * 3600 * 1000).toISOString(), rateUpId: null, priceSingle: 42, priceTen: 420 },
+  { id: "magma-frost", name: "MAGMA FROST", type: "event", endsAt: new Date(Date.now() + 14 * 24 * 3600 * 1000).toISOString(), rateUpId: "banner-magma-frost", priceSingle: 42, priceTen: 420 },
+];
+export function getBannerCatalog(): BannerInfo[] {
+  const now = Date.now() + 14 * 24 * 3600 * 1000;
+  return BANNER_CATALOG.map(b => ({ ...b, endsAt: new Date(now).toISOString() }));
+}
+export function getPityDisplay(pity: number): string {
+  const n = Math.max(0, 90 - Math.floor(pity) - 1);
+  return `гарант через ${n}`;
+}
+export function getPityLegendaryDisplay(pity5: number): string {
+  const n = Math.max(0, 180 - Math.floor(pity5) - 1);
+  return `легендарка через ${n}`;
 }
