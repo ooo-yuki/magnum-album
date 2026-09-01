@@ -105,7 +105,24 @@ const RHYTHM_TIPS: string[] = [
   "Легко — окна шире (95 мс). Набей руку и забирай FEVER x2!",
 ];
 const LS_BEST = "rhythm42-best";
+const LS_BEST_DIFF = "rhythm42-best-diff";
 const LS_TUT = "rhythm42-tut-v1";
+const LS_MUTED = "rhythm42-muted";
+// ─────────────────────────────────────────────────────────────
+// 2026 ХРОНОЛОГИЯ MAGNUM — 5 пуль
+// ТУСА МЕДУЗА 14.08 (8K TikTok) → VPN (РЗТ) → CLAY 03.04 (81 рецензия)
+// → тур (923K Twitch) → пресейв https://music.thefence.me/psmagnum
+// Ритм: 5 песен × 5 пуль, FEVER 5 Perfect = 5 пуль заряжены
+// Tape 32 + breakdown + mute/share — без localStorage кроме best/muted
+// ─────────────────────────────────────────────────────────────
+// 2026 хронология 5 пуль — breakdown helper
+function tapeStats(tape: Array<string|null>) {
+  const p = tape.filter(j=>j==="perfect").length;
+  const g = tape.filter(j=>j==="good").length;
+  const m = tape.filter(j=>j==="miss").length;
+  const tot = p+g+m;
+  return { p,g,m, tot, acc: tot? Math.round((p*1+g*0.6)/tot*100): 100 };
+}
 // MAGNUM FEVER — 5 perfect подряд = 5 пуль заряжены, x2 очки 6с + золотая аура
 const FEVER_NEED = 5;
 const FEVER_MS = 6000;
@@ -146,7 +163,8 @@ function ensureAC() {
   return ac;
 }
 // MAGNUM SFX — 5 пуль: финальный выстрел FEVER звучит ярче (квинта)
-function playFeverBurst() {
+function playFeverBurst(mutedRef?: { current: boolean }) {
+  if (mutedRef?.current) return;
   const ctx = ensureAC(); if (!ctx) return;
   const now = ctx.currentTime;
   [0, 0.08, 0.16].forEach((d, i) => {
@@ -160,7 +178,8 @@ function playFeverBurst() {
     o.start(now + d); o.stop(now + d + 0.30);
   });
 }
-function playHit(j: Judgement) {
+function playHit(j: Judgement, mutedRef?: { current: boolean }) {
+  if (mutedRef?.current) return;
   const ctx = ensureAC(); if (!ctx) return;
   const o = ctx.createOscillator(); const g = ctx.createGain();
   o.connect(g); g.connect(ctx.destination);
@@ -169,7 +188,8 @@ function playHit(j: Judgement) {
   else { o.type = "square"; o.frequency.value = 180; g.gain.setValueAtTime(0.12, ctx.currentTime); safeRamp(g.gain, () => g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18), 0.001); }
   o.start(); o.stop(ctx.currentTime + 0.25);
 }
-function playKeyTap(lane: number) {
+function playKeyTap(lane: number, mutedRef?: { current: boolean }) {
+  if (mutedRef?.current) return;
   const ctx = ensureAC(); if (!ctx) return;
   const o = ctx.createOscillator(); const g = ctx.createGain();
   o.connect(g); g.connect(ctx.destination);
@@ -201,6 +221,10 @@ export function RhythmGame() {
   const [best, setBest] = useState(0);
   const [tipIdx, setTipIdx] = useState(0);
   const [showTut, setShowTut] = useState(false);
+  // v2026.09.01 — judgement tape + mute + share (5 пуль хронология)
+  const [judgeTape, setJudgeTape] = useState<Judgement[]>([]);
+  const [muted, setMuted] = useState(() => { try { return localStorage.getItem("rhythm42-muted")==="1"; } catch { return false; } });
+  const [shareMsg, setShareMsg] = useState("");
 
   const statsRef = useRef({ score: 0, combo: 0, maxCombo: 0, perfect: 0, good: 0, miss: 0, total: 0 });
   const notesRef = useRef<Note[]>([]);
@@ -221,6 +245,8 @@ export function RhythmGame() {
   const perfectStreakRef = useRef(0);
   const animRef = useRef(0);
   const canvasSizeRef = useRef({ w: 600, h: 560 });
+  const mutedRef = useRef(muted);
+  useEffect(() => { mutedRef.current = muted; try { localStorage.setItem("rhythm42-muted", muted ? "1":"0"); } catch {} }, [muted]);
 
   const hitNote = useCallback((lane: number, nowMs: number) => {
     const d = DIFFICULTY[diff];
@@ -233,7 +259,7 @@ export function RhythmGame() {
       if (dff < bestDiff && dff <= d.good) { bestDiff = dff; best = n; }
     }
     if (!best) {
-      playKeyTap(lane);
+      playKeyTap(lane, mutedRef);
       flashesRef.current.push({ lane, alpha: 0.35 });
       return;
     }
@@ -255,7 +281,7 @@ export function RhythmGame() {
         setFeverCount((c) => c + 1);
         pulseRef.current = 1.5;
         shakeRef.current = 8;
-        playFeverBurst();
+        playFeverBurst(mutedRef);
         for (let k = 0; k < 22; k++) particlesRef.current.push({ x: lane, y: 0, vx: (Math.random()-0.5)*10, vy: -Math.random()*7-2, life: 1, color: k%2===0 ? "#ffcc00" : "#ff2d55", size: 3+Math.random()*3 });
       }
       s.score += (100 + Math.min(s.combo * 5, 100)) * feverMult;
@@ -286,7 +312,8 @@ export function RhythmGame() {
       shakeRef.current = 2;
       for (let i = 0; i < 5; i++) particlesRef.current.push({ x: lane, y: 0, vx: (Math.random() - 0.5) * 4, vy: -Math.random() * 3 - 1, life: 1, color: "#00ff88", size: 2 + Math.random() * 2 });
     }
-    playHit(j);
+    setJudgeTape((t) => [...t.slice(-31), j]);
+    playHit(j, mutedRef);
     setTimeout(() => { best.y = -9999; }, 120);
   }, [diff]);
 
@@ -298,7 +325,7 @@ export function RhythmGame() {
     noteId = 0;
     notesRef.current = chart.map((c) => ({ id: noteId++, lane: c.lane, y: -200, hitTime: c.time, judged: false, judgement: null }));
     statsRef.current = { score: 0, combo: 0, maxCombo: 0, perfect: 0, good: 0, miss: 0, total: 0 };
-    setScore(0); setCombo(0); setMaxCombo(0); setAccuracy(100); setJudgement(null); setMissStreak(0); setFever(false); setFeverCount(0);
+    setScore(0); setCombo(0); setMaxCombo(0); setAccuracy(100); setJudgement(null); setMissStreak(0); setFever(false); setFeverCount(0); setJudgeTape([]); setShareMsg("");
     effectsRef.current = []; flashesRef.current = []; particlesRef.current = []; shakeRef.current = 0; pulseRef.current = 0;
     feverActiveRef.current = false; feverTimerRef.current = 0; perfectStreakRef.current = 0;
     startTimeRef.current = performance.now(); pausedTimeRef.current = 0; missStreakRef.current = 0;
@@ -473,7 +500,8 @@ export function RhythmGame() {
             effectsRef.current.push({ lane: n.lane, text: "MISS", color: "#ff2d55", life: 1, scale: 1 });
             shakeRef.current = 6;
             for (let k = 0; k < 6; k++) particlesRef.current.push({ x: n.lane, y: hitY, vx: (Math.random() - 0.5) * 5, vy: -Math.random() * 2 - 0.5, life: 1, color: "rgba(255,45,85,0.9)", size: 2.2 });
-            playHit("miss");
+            playHit("miss", mutedRef);
+            setJudgeTape((prev) => [...prev.slice(-31), "miss"]);
           }
         }
 
@@ -650,6 +678,27 @@ export function RhythmGame() {
             {fever && <div className={styles.stat} style={{ background: "rgba(255,204,0,0.14)", borderColor: "rgba(255,204,0,0.45)" }}><span>FEVER</span><strong style={{ color: "#ffcc00" }}>x2 {feverCount}⚡</strong></div>}
           </div>
           <div className={styles.progress}><div className={styles.fill} style={{ width: `${Math.min((score / DIFFICULTY[diff].win) * 100, 100)}%`, background: fever ? "linear-gradient(90deg,#ffcc00,#ff2d55)" : undefined }} /></div>
+          {/* v2026.09.01 — judgement tape 32 + mute + share */}
+          <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap", justifyContent:"center", marginBottom:6 }}>
+            <div style={{ display:"flex", gap:3, alignItems:"center" }}>
+              <span style={{ fontSize:"0.68rem", color:"rgba(240,240,240,0.35)", letterSpacing:"0.06em" }}>TAPE</span>
+              <div style={{ display:"flex", gap:2 }}>
+                {Array.from({length:32}).map((_,i)=>{ const j=judgeTape[i]; const col=j==="perfect"?"#ffcc00":j==="good"?"#00ff88":j==="miss"?"#ff2d55":"rgba(255,255,255,0.08)"; const h=j?10:6; return <span key={i} title={j||"—"} style={{ width:7, height:h, borderRadius:2, background:col, opacity:j?1:0.45, boxShadow:j==="perfect"?"0 0 6px rgba(255,204,0,0.6)":j==="miss"?"0 0 6px rgba(255,45,85,0.5)":"none", transition:"all 0.18s" }} /> })}
+              </div>
+              <span style={{ fontSize:"0.68rem", color:"rgba(240,240,240,0.32)" }}>{judgeTape.filter(j=>j==="perfect").length}P {judgeTape.filter(j=>j==="good").length}G {judgeTape.filter(j=>j==="miss").length}M</span>
+            </div>
+            <button onClick={()=>setMuted(v=>!v)} title={muted?"Включить звук":"Выключить звук"} style={{ padding:"0.28rem 0.6rem", borderRadius:999, fontSize:"0.72rem", fontWeight:800, cursor:"pointer", border:"1px solid rgba(255,255,255,0.12)", background: muted?"rgba(255,45,85,0.14)":"rgba(255,255,255,0.06)", color: muted?"#ff2d55":"rgba(240,240,240,0.7)" }}>{muted?"🔇":"🔊"} {muted?"Звук выкл":"Звук вкл"}</button>
+            <button onClick={async()=>{ const s=statsRef.current; const txt=`РИТМ MAGNUM — ${SONGS[songIdx]!.name} ${score} pts • ${accuracy}% • комбо ${maxCombo} • FEVER x${feverCount} — пресейв https://music.thefence.me/psmagnum`; try{ await navigator.clipboard.writeText(txt); setShareMsg("Скопировано!"); }catch{ setShareMsg(txt); } setTimeout(()=>setShareMsg(""),2200); }} style={{ padding:"0.28rem 0.6rem", borderRadius:999, fontSize:"0.72rem", fontWeight:700, cursor:"pointer", border:"1px solid rgba(255,255,255,0.12)", background:"rgba(255,255,255,0.06)", color:"rgba(240,240,240,0.7)" }}>⤴ Поделиться</button>
+            {shareMsg && <span style={{ fontSize:"0.72rem", color:"#00ff88" }}>{shareMsg}</span>}
+          </div>
+          {/* точность 5 пуль — Perfect золотая, Good бирюза, Miss красная */}
+          {judgeTape.length>0 && (
+            <div style={{ display:"flex", gap:2, height:6, maxWidth:560, margin:"0 auto 8px", borderRadius:99, overflow:"hidden", background:"rgba(255,255,255,0.06)" }}>
+              <div style={{ flex: Math.max(1, judgeTape.filter(j=>j==="perfect").length), background:"#ffcc00", transition:"flex 0.3s" }} />
+              <div style={{ flex: Math.max(1, judgeTape.filter(j=>j==="good").length), background:"#00ff88", opacity: judgeTape.some(j=>j==="good")?1:0.12 }} />
+              <div style={{ flex: Math.max(1, judgeTape.filter(j=>j==="miss").length), background:"#ff2d55", opacity: judgeTape.some(j=>j==="miss")?1:0.12 }} />
+            </div>
+          )}
           {fever && <div style={{ fontSize: "0.78rem", fontWeight: 800, color: "#ffcc00", textShadow: "0 0 12px rgba(255,204,0,0.7)", letterSpacing: "0.08em", marginBottom: 4 }}>⚡ MAGNUM FEVER — 5 ПУЛЬ ЗАРЯЖЕНЫ! x2 ОЧКИ ⚡</div>}
           {judgement && <div className={`${styles.judgement} ${styles[judgement]}`}>{judgement === "perfect" ? "PERFECT!" : judgement === "good" ? "GOOD!" : "MISS"}</div>}
           <div className={styles.canvasWrap}>
@@ -691,7 +740,22 @@ export function RhythmGame() {
             <p>{score} очков • макс комбо {maxCombo} • {accuracy}% точность{feverCount > 0 ? ` • FEVER x${feverCount}⚡` : ""}</p>
             <p className={styles.songDone}>{song.name} — пройден!{feverCount > 0 ? " · 5 пуль заряжены!" : ""}</p>
             {best > 0 && score >= best && <p style={{ fontSize: "0.85rem", color: "#ffcc00", fontWeight: 800 }}>★ Новый рекорд! {score} — предыдущий {best}</p>}
+            {judgeTape.length>0 && (()=>{ const p=judgeTape.filter(j=>j==="perfect").length, g=judgeTape.filter(j=>j==="good").length, m=judgeTape.filter(j=>j==="miss").length; return (
+              <div style={{ background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:10, padding:"0.5rem 0.7rem", marginBottom:8, width:"100%" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", fontSize:"0.72rem", fontWeight:800, marginBottom:4 }}>
+                  <span style={{color:"#ffcc00"}}>Perfect {p}</span><span style={{color:"#00ff88"}}>Good {g}</span><span style={{color:"#ff2d55"}}>Miss {m}</span><span style={{color:"rgba(240,240,240,0.5)"}}>{judgeTape.length} нот</span>
+                </div>
+                <div style={{ display:"flex", gap:2, height:6, borderRadius:99, overflow:"hidden", background:"rgba(255,255,255,0.06)" }}>
+                  <div style={{ flex: Math.max(1,p), background:"#ffcc00" }} /><div style={{ flex: Math.max(1,g), background:"#00ff88", opacity: g?1:0.12 }} /><div style={{ flex: Math.max(1,m), background:"#ff2d55", opacity: m?1:0.12 }} />
+                </div>
+                <div style={{ fontSize:"0.68rem", color:"rgba(240,240,240,0.38)", marginTop:4 }}>5 пуль MAGNUM: {SONGS[songIdx]!.name} · {DIFFICULTY[diff].label} · пресейв music.thefence.me/psmagnum</div>
+              </div>
+            ); })()}
             <p style={{ fontSize: "0.78rem", color: "rgba(240,240,240,0.5)", maxWidth: 360, textAlign: "center" }}>{RHYTHM_TIPS[tipIdx % RHYTHM_TIPS.length]}</p>
+            <div style={{ display:"flex", gap:8, justifyContent:"center", flexWrap:"wrap", marginBottom:8 }}>
+              <button onClick={async()=>{ const txt=`РИТМ MAGNUM \u2014 ${SONGS[songIdx]!.name} ${score} pts • ${accuracy}% • FEVER x${feverCount} — пресейв https://music.thefence.me/psmagnum`; try{ await navigator.clipboard.writeText(txt); setShareMsg("Скопировано!"); }catch{ setShareMsg(txt);} setTimeout(()=>setShareMsg(""),2200); }} style={{ padding:"0.45rem 0.9rem", borderRadius:999, fontSize:"0.78rem", fontWeight:800, cursor:"pointer", border:"1px solid rgba(255,255,255,0.12)", background:"rgba(255,255,255,0.06)", color:"rgba(240,240,240,0.7)" }}>⤴ Поделиться</button>
+              {shareMsg && <span style={{ fontSize:"0.72rem", color:"#00ff88", alignSelf:"center" }}>{shareMsg}</span>}
+            </div>
             <a href={PRESAVE} target="_blank" rel="noreferrer" className={styles.presaveBtn}>Пресейв MAGNUM →</a>
             <button className={styles.restartBtn} onClick={() => startGame(songIdx)}>Ещё раз</button>
           </div>
@@ -703,6 +767,16 @@ export function RhythmGame() {
             <h2>Попробуй ещё! 🥁</h2>
             <p>{score} / {DIFFICULTY[diff].win} • комбо {maxCombo} • {accuracy}%</p>
             <p className={styles.failHint}>Нужно больше Perfect — бей точнее в такт!</p>
+            {judgeTape.length>0 && (()=>{ const p=judgeTape.filter(j=>j==="perfect").length, g=judgeTape.filter(j=>j==="good").length, m=judgeTape.filter(j=>j==="miss").length; return (
+              <div style={{ background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:10, padding:"0.5rem 0.7rem", marginBottom:8, width:"100%" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", fontSize:"0.72rem", fontWeight:800, marginBottom:4 }}>
+                  <span style={{color:"#ffcc00"}}>Perfect {p}</span><span style={{color:"#00ff88"}}>Good {g}</span><span style={{color:"#ff2d55"}}>Miss {m}</span><span style={{color:"rgba(240,240,240,0.5)"}}>{judgeTape.length}</span>
+                </div>
+                <div style={{ display:"flex", gap:2, height:6, borderRadius:99, overflow:"hidden", background:"rgba(255,255,255,0.06)" }}>
+                  <div style={{ flex: Math.max(1,p), background:"#ffcc00" }} /><div style={{ flex: Math.max(1,g), background:"#00ff88", opacity: g?1:0.12 }} /><div style={{ flex: Math.max(1,m), background:"#ff2d55", opacity: m?1:0.12 }} />
+                </div>
+              </div>
+            ); })()}
             <p style={{ fontSize: "0.76rem", color: "rgba(240,240,240,0.42)", maxWidth: 340 }}>{RHYTHM_TIPS[tipIdx % RHYTHM_TIPS.length]}</p>
             <button className={styles.playBtn} onClick={() => startGame(songIdx)}>Ещё попытка</button>
             <a href={PRESAVE} target="_blank" rel="noreferrer" style={{ display: "inline-block", marginTop: 8, color: "#ff2d55", fontSize: "0.82rem", textDecoration: "underline" }}>Пресейв MAGNUM — 5 пуль →</a>
