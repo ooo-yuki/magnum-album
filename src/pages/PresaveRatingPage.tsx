@@ -229,11 +229,11 @@ export function PresaveRatingPage() {
     gsap.fromTo(rows, { y: 24, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.12, duration: 0.35, ease: "power2.out", overwrite: true });
   }, [filter, q, loading]);
 
-  // hover RGB — chromatic lift + tri-color shadow
+  // hover RGB — chromatic lift + tri-color shadow y:-4
   const onRowEnter = useCallback((e: React.MouseEvent<HTMLElement>) => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     gsap.to(e.currentTarget, {
-      y: -2,
+      y: -4,
       boxShadow: "0 12px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,45,85,0.20), 0 0 22px rgba(255,45,85,0.20), 0 0 22px rgba(0,255,136,0.12), 0 0 28px rgba(255,204,0,0.10)",
       borderColor: "rgba(255,45,85,0.35)",
       backgroundColor: "rgba(255,255,255,0.05)",
