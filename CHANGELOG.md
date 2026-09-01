@@ -5,6 +5,56 @@
 > Промо-сайт альбома **MAGNUM Пятерки** (5opka × 42 братухи). React + TypeScript + GSAP + Bun.
 > Формат: [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/). Версионирование — SemVer.
 
+## [0.3.11] — 2026-09-01 🛒 Shop Bundles 8 + Chat 42 + Timeline2026 + Runner webp — 4/10
+
+> **15 коммитов** `b3744a0` → `c1f0326` · **+1606 / −130** · **23 файла** (+1 dirty `src/pages/GamePage.tsx` 322/177 quiz 20) · Shop Bundles 8 скидка 13-33% + Chat 42 persisted + Follows + Timeline 14 событий 22 лора 3 сложности + Runner webp 34KB −97.6% + Recaps 5 фактов + Hype 3 идеи TURBO/ZAVOD/PRISM + 3130 tests · рейтинг **4/10** (1156 строк/10м, продуктивных 655 → 3/10, норма 5000+ = 10/10) · `tsc 0` · `magnum-bun active` `caddy Up 56m` (200/200/200)
+
+### 🎮 Игры — Timeline2026 14/22/3 + Runner webp + Quiz 20 dirty
+
+- 🕰️ **Timeline2026 — 14 событий + 22 лора + 3 сложности + конфетти + свайп + стрик + WebAudio** — `e3b3325` **EVENTS 14×** хронология MAGNUM 2024-2026 (Отключи 31.12.24 → Venom Boy 28.02.26 → Лига Кубизма 597→1M и др.), **LORE 22** подсказки 5 пуль, **DIFFICULTY 3×** `easy 8 событий / normal 12 / hard 14` + `coinMul 1/1.5/2`, **конфетти** `canvas + GSAP` + **свайп** `touchstart→touchend dx>40` + **стрик** `streak×5 FEVER` + **WebAudio** `playWin 880Hz tri + playFail 220Hz saw` + `GSAP ScrollTrigger.batch y24→0 stagger 0.12` + `hover y:-4 RGB_GLOW` + `prefersReducedMotion` gate — `src/pages/games/Timeline2026Game.tsx` +302/−117 (1 файл, трудный баланс)
+- 🏃 **RunnerGame — 800px webp 34KB vs 1.4M (−97.6%) + lazy webp fallback** — `00da24f` **5opka-runner-800.webp 34KB** (было 1.4M PNG `1536×1024`) **−97.6%**, **RunnerGame lazy** `loading="lazy"` + `onError webp→jpg fallback` + `srcSet 800w` + `sizes`, `public/images/5opka-runner-800.webp` bin 0→34360, `src/pages/games/RunnerGame.tsx` +11/−3 — см. ⚡
+- ❓ **Quiz 42 — 20 вопросов + difficulty 1/2/3 + WebAudio + GSAP (dirty, к 0.3.12)** — `src/pages/GamePage.tsx` dirty **+322/−177** **8→20 вопросов** `+12` (MAGNUM 2026/Venom Boy 28.02/Школа 65/183см/SubShield/Красная Горка 12м/Лига Кубизма/VIP-обводка/OscillatorNode), **difficulty 1|2|3** на каждый `Question` + фильтр по `difficulty` + `coinMul`, **WebAudio** `getCtx/tone 0.22 gain + slideTo exponentialRamp` + `playCorrect 880Hz→1320Hz / playWrong 220Hz saw` + `AudioContext resume`, **GSAP** `ScrollTrigger y24 stagger + hover RGB_GLOW` + `prefersReducedMotion`, `QUESTIONS 20×` `difficulty` gate — `src/pages/GamePage.tsx` M 322/177 dirty (войдёт в **0.3.12**)
+
+### ✨ Фичи — Shop Bundles 8 + Chat 42 + Follows + Data 5 фактов
+
+- 🛒 **Shop Bundles 8 — бандлы скидка 13-33% + Neon API /shop/bundles + /shop/bundle/buy + GSAP** — `be221e7` **BUNDLES 8×** `starter 42/48 −13%` → `magnum-legend 4200/6240 −33%` (монетки/скины/бусты), **Neon** `GET /magnum/api/shop/bundles` 8шт + `POST /magnum/api/shop/bundle/buy` auth + `balance≥price` → `UPDATE magnum_coins -price` + `INSERT magnum_shop_inventory + magnum_transactions bundle_buy` + `rateLimit 6/мин`, **UI** `ShopPage.tsx` +96 `bundles/bundlesLoading/buyingBundle` + `fetchBundles` + `buyBundle` + **GSAP** `y12 stagger 0.08 + hover y:-4 RGB_GLOW` + `BUNDLE_DISCOUNT` бейдж `−13%…−33%` + `bundle_buy` toast — `server.ts` +53, `src/pages/ShopPage.module.css` +22, `src/pages/ShopPage.tsx` +96 (3 файла, +171)
+- 💬 **Chat 42 + Follows — глобальный чат persisted + подписки + лента + модерация** — `80b61b2` **Neon 0016** `magnum_chat_messages` (id, user_id FK CASCADE, body 1..500, created_at) + `magnum_follows` (follower_id, following_id, UNIQUE) + 3 индекса, **server.ts +148/−1** `handleChatGet` `GET /magnum/api/chat` 50шт `ORDER BY created_at DESC JOIN users` + `handleChatPost` `POST /magnum/api/chat` auth + `body 1..500` + `/(.)\1{5,}/` анти-спам + `10/мин` + `INSERT RETURNING` + `broadcast chat:new` WS + `handleFollows` `POST /magnum/api/follows/:id` toggle + `GET /magnum/api/follows` + `GET /magnum/api/feed` лента подписок + **модерация** `REPORT_REASONS` + `validateReport` — `drizzle/migrations/0016_chat_follows.sql` +25, `drizzle/migrations/meta/_journal.json` +7 idx16, `drizzle/schema.ts` +15, `server.ts` +148/−1 (4 файла, +195/−1)
+- 📚 **Data +5 фактов (§14: школа 65/отчисление 4к/183см/MellSher 174/SubShield/Красная Горка 12м/Venom Boy 28.02/Лига Кубизма 597→1M) +3 recaps честно transcript:false** — `58b91a3` **research.md +12** §14 `школа 65 Кемерово отчисление 4к` + `183см рост` + `MellSher 174 SubShield` + `Красная Горка 12м` + `Venom Boy 28.02` + `Лига Кубизма 597→1M`, **RecapsPage.tsx +56** `YpiqNshMn0E` + `3 recaps` `transcript:false` (без фейк-транскрипта, честно) + `RECAPS 2026` лента — `research.md` +12, `src/pages/RecapsPage.tsx` +56 (2 файла, +68)
+
+### 🤖 БРАТ-БОТ — стабилен
+
+- 🤖 без изменений в окне — бот стабилен, задачи ушли в **Shop Bundles 8 + Chat 42 + Timeline2026 + Runner webp** (след. инкремент — подсказки по **Bundles 13-33% + Chat persisted + Follows/Feed + Quiz 20 difficulty + Timeline 14/22**)
+
+### 🖼️ Открытка / Галерея — 8 файлов (WARN y2k/dup + archive HTML, без изменений)
+
+- 🖼️ **8 файлов — без изменений в окне, WARN сохраняется** — watchdog 15:48/15:56 **8 файлов** `42-{agit,cyber,memphis,y2k}-01.{jpg,800.webp}` (12M, webp 67-133K valid), `tsc 0` · `REAL_BY_STYLE`/`REAL_FALLBACK` (`y2k→memphis/cyber` § BUG review 15:44 п.1) + **archive 210× 200 html** SPA fallback — `magnum-bun active Up 56m` `caddy Up` без рестарта
+
+### ⚡ Перфоманс — Runner webp −97.6% + health 200/200/200 Up 56m
+
+- 🚀 **Runner 5opka — 800px webp 34KB vs 1.4M (−97.6%) + lazy fallback** — `00da24f` `public/images/5opka-runner-800.webp` **34KB** (было `1.4M PNG 1536×1024`) **−97.6%**, **RunnerGame.tsx +11/−3** `loading="lazy"` + `onError → jpg fallback` + `srcSet 800w` + `sizes (max-width:800px)`, **LCP −~300мс** на мобиле, `reports/perf-2026-09-01-1549.md` +76 — `public/images/5opka-runner-800.webp` bin, `src/pages/games/RunnerGame.tsx` +11/−3, `reports/perf-2026-09-01-1549.md` +76
+- 🟢 **Health 200/200/200 — без рестарта Up 56m** — watchdog 15:48 `200/200/200` `HTTPS /magnum/ 200` `HTTPS /magnum/api/ideas 200` (98 идей) `HTTP :3000/magnum/api/ideas 200` + `GET /magnum/api/health 200` `{ok:true ideas:98 users:24}` + `magnum-bun active since 15:34:29` `caddy Up 56m` — **не потребовался** `systemctl restart` — все 3 endpoint 200, `build.ts minify` ok · `9944c0a` `reports/watchdog-2026-09-01-1548.md` +60 (6 ✅ 2 ⚠️) + `472169f` `reports/watchdog-2026-09-01-1556.md` +76 (all 200, 8/6 gallery, no restart)
+
+### 🐛 Фиксы — Shop Bundles escaped quotes + reports .gitignore
+
+- 🩹 **Shop Bundles escaped quotes — restore clean TS, /shop/bundles 200** — `ab734e4` `server.ts` +11/−11 **до:** `Shop Bundles 8` оставил `\"` escaped quotes в `BUNDLES` литерале → `bunx tsc 1 error TS1127 Invalid character` + `GET /magnum/api/shop/bundles 500` · **после:** `restore clean TS` `"` без escape + `tsc 0` + `curl /shop/bundles 200` 8шт — `server.ts` +11/−11 (1 файл, P0 закрыт)
+- 🧹 **reports/ в .gitignore — репорты локально, не в git** — `7ca1144` `.gitignore` +4 `reports/` — **fixer пишет сюда**, локально, пуш через `git add -f` — `reports/` больше не спамит `git status`, `git log` чище — `.gitignore` +4 (1 файл)
+
+### 🧪 Тесты / CI — 3130 passed (32 файла, +32)
+
+- ✅ **3130 passed — new-coverage-1550 +32 теста** — `af8ac6d` `reports/test-2026-09-01-1550.md` +104, `tests/new-coverage-1550.test.ts` +156 — **3098→3130 +32**, `tsc 0`, **Bun 1.4.0 + vitest 3.2.7 jsdom** · покрытие **Shop Bundles 8 + Chat 42 + Follows + Timeline 14/22 + Runner webp fallback + Dust/Forge** — `tests/new-coverage-1550.test.ts` +156 (1 файл, +260 с отчётом)
+- 🟢 **Watchdog 15:48 — PASS (6 ✅ 2 ⚠️, 200/200/200, active/Up, 8 gallery, 2 bugs, 1 idea)** — `9944c0a` `reports/watchdog-2026-09-01-1548.md` +60 — **200/200/200**, `magnum-bun active`, `caddy Up`, **8 gallery**, `tsc 0` (per watchdog 15:48), **2 bugs** `y2k alias + archive HTML` + **1 idea** `QUEUE` — без рестарта, `build.ts` `sitemap 32` ok
+- 🟢 **Watchdog 15:56 — OK (all 200, 8/6 gallery, no restart)** — `472169f` `reports/watchdog-2026-09-01-1556.md` +76 — **all 200**, `active/Up 56m`, `8/6 gallery` (6 check-list vs 8 файлов) — `tsc 0` держится
+
+### 📖 Дока + Ревью — 4/10 (падение 6/10 → 3/10 → 4/10)
+
+- 👁️ **Review 4/10 — 1156 строк/10м (продуктивных 655 → 3/10)** — `c1f0326` `reports/review-2026-09-01-1559.md` +105 — **4/10** (1000-1499 = 4/10) — падение **6/10 (2838/20м) → 3/10 (1c4584f) → 4/10**, **13 коммитов/10м** (6 продуктивных+7 отчётов) `ADDED 1132 / REMOVED 24` (продуктивных `631/24` → **3/10** отдельно), шкала `0-49=0 … 5000+=10` — рост **3/10 → 4/10**, `tsc PASS 0` · `tests 3130 pass` · `gallery 8 файлов 200 + 20 archive soft-200 HTML WARN` · `health PASS 200/200/200` · `services PASS (magnum-bun active, caddy Up 56m)` — **WARN** `archive HTML fallback` + `y2k alias` + `gallery dup` + `reports .gitignore` (теперь `git add -f`) + `GamePage.tsx dirty`
+- 👁️ **Review 3/10 — 15:44** — `1c4584f` `reports/review-2026-09-01-1544.md` +78 — **3/10** (`500-999 = 3/10`) — промежуточный провал окна (только `Timeline + Runner + readme`), закрыт ростом к **4/10** в 15:59
+- 📝 **README keeper update** — `cdf2978` `README.md` +9/−9 — **16 игр (+Timeline2026)**, структура проекта, кроны 21 джоб, стек `Bun.serve + Neon` — инвестор видит полную картину без чтения кода
+- 💡 **Hype +3 идеи (TURBO/ZAVOD/PRISM) +5 очередь** — `74e999e` **TURBO** `DUEL TURBO 42 — WS 2-4 + turbo x8 + ghost replay` (турбо x8, гост-реplay), **ZAVOD** `ECO ZAVOD 42 — 8Q Заводы/Уголь/Томь/Кузбасс + смена 7дн` (8Q уголь/заводы), **PRISM** `NEON PRISM 42 — 12 скинов neon prism + aurora epic` (12 скинов prism) + queue 5 — `docs/hype-queue.md` +6, `reports/hype-2026-09-01-1555.md` +52 (2 файла, +58)
+- ⚠️ **Остались P1/P2 → 0.3.12:** `src/pages/GamePage.tsx M 322/177` quiz 20 dirty не закоммичен + `archive 210× 200 html` SPA fallback + `y2k alias` `42-y2k-01.jpg ≡ 42-memphis-01.jpg` + `gallery dup` + `TOCTOU 1278-1297` 5 SQL без BEGIN + `UNIQUE(user_id,code)` + `Memory/Rhythm/GamePage localStorage` vs Neon + `historyRef.length` + `DODGE/WIP` — все carry из 0.3.9/0.3.10, плюс **new** `GamePage quiz WebAudio` dirty
+
+---
+
 ## [0.3.10] — 2026-09-01 ⌨️ Typing FEVER 3×DIFFICULTY + Rhythm Tape 32 restore + Mining Boost x2 — 6/10
 
 > **4 коммита** `901cc13` → `2c34683` · **+540 / −156** · **5 файлов** (+4 dirty `server.ts` 68/6 + `drizzle/schema` 16/0 + `0015_migration` 25 + `typing.test` 6/4 + untracked `new-coverage-1540`) · Typing 3 сложности + FEVER ×1.3 6с + 15 советов + Rhythm tape 32 mute/share/breakdown restore (stash) + SFX muted guard + Mining Boost x2 60с + Duel wager 42/142/420/1420 + season top · рейтинг **6/10** (2838 строк/20м, норма 5000+ = 10/10) · `tsc 0` · `magnum-bun active` `caddy Up 39m` (200/200/200)
