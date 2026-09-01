@@ -130,6 +130,13 @@ export function TrackPage() {
     if (!containerRef.current || !track) return;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const ctx = gsap.context(() => {
+      if (reducedMotion) {
+        // reduced-motion: instant visible, skip all entrance/parallax
+        gsap.set(`.${styles.hero} > *`, { y: 0, opacity: 1 });
+        gsap.set(`.${styles.section}`, { y: 0, opacity: 1 });
+        return;
+      }
+
       gsap.set(`.${styles.hero} > *`, { y: 30, opacity: 0 });
       gsap.set(`.${styles.section}`, { y: 40, opacity: 0 });
       const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
@@ -157,7 +164,7 @@ export function TrackPage() {
       });
 
       // staggered scroll-reveal on stats cards
-      if (!reducedMotion && statsRef.current) {
+      if (statsRef.current) {
         const cards = statsRef.current.querySelectorAll(`.${styles.statCard}`);
         gsap.set(cards, { y: 24, opacity: 0, scale: 0.92 });
         gsap.to(cards, {
@@ -176,7 +183,7 @@ export function TrackPage() {
       }
 
       // staggered scroll-reveal on facts list items
-      if (!reducedMotion && factsRef.current) {
+      if (factsRef.current) {
         const items = factsRef.current.querySelectorAll("li");
         gsap.set(items, { x: -20, opacity: 0 });
         gsap.to(items, {
@@ -192,6 +199,54 @@ export function TrackPage() {
           ease: "power2.out",
         });
       }
+
+      // hover RGB — chromatic lift + tri-color shadow on stat cards
+      const statCards = containerRef.current!.querySelectorAll(`.${styles.statCard}`);
+      statCards.forEach((card) => {
+        card.addEventListener("mouseenter", () => {
+          gsap.to(card, {
+            y: -4,
+            scale: 1.04,
+            borderColor: "rgba(255,45,85,0.35)",
+            boxShadow: "0 12px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,45,85,0.20), 0 0 22px rgba(255,45,85,0.20), 0 0 22px rgba(0,255,136,0.12), 0 0 28px rgba(255,204,0,0.10)",
+            duration: 0.3,
+            ease: "power2.out",
+          });
+        });
+        card.addEventListener("mouseleave", () => {
+          gsap.to(card, {
+            y: 0,
+            scale: 1,
+            borderColor: "rgba(255,255,255,0.06)",
+            boxShadow: "none",
+            duration: 0.25,
+            ease: "power2.in",
+          });
+        });
+      });
+
+      // hover RGB on listen cards
+      const listenCards = containerRef.current!.querySelectorAll(`.${styles.listenCard}`);
+      listenCards.forEach((card) => {
+        card.addEventListener("mouseenter", () => {
+          gsap.to(card, {
+            y: -3,
+            borderColor: "rgba(255,45,85,0.30)",
+            boxShadow: "0 10px 28px rgba(0,0,0,0.40), 0 0 0 1px rgba(255,45,85,0.18), 0 0 18px rgba(255,45,85,0.18), 0 0 18px rgba(0,255,136,0.10), 0 0 24px rgba(255,204,0,0.08)",
+            duration: 0.3,
+            ease: "power2.out",
+          });
+        });
+        card.addEventListener("mouseleave", () => {
+          gsap.to(card, {
+            y: 0,
+            borderColor: "rgba(255,255,255,0.06)",
+            boxShadow: "none",
+            duration: 0.25,
+            ease: "power2.in",
+          });
+        });
+      });
     }, containerRef);
     return () => ctx.revert();
   }, [track]);
