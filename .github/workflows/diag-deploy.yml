@@ -1,0 +1,18 @@
+name: Diag deploy reachability
+on:
+  workflow_dispatch:
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Проба порта с раннера и из контейнера
+        env:
+          H: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          echo "egress IP раннера: $(curl -s -m 8 https://api.ipify.org)"
+          for i in 1 2 3; do
+            timeout 8 bash -c "echo > /dev/tcp/$H/22" 2>/dev/null \
+              && echo "попытка $i: 22 открыт" || echo "попытка $i: 22 ОТКАЗ"
+          done
+          echo "--- из docker-контейнера (как у scp-action) ---"
+          docker run --rm alpine:3 sh -c "apk add -q --no-cache netcat-openbsd >/dev/null 2>&1; nc -z -w5 $H 22 && echo 'контейнер: 22 открыт' || echo 'контейнер: 22 ОТКАЗ'"
