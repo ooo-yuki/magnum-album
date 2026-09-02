@@ -1919,6 +1919,32 @@ async function handleShopBundleBuy(req:Request):Promise<Response>{
   let body:{bundleId?:string;id?:string}; try{body=(await req.json()) as typeof body;}catch{return Response.json({error:"Invalid JSON"},{status:400});}
   const raw=isValidBundleId(body.bundleId??body.id??""); if(!raw) return Response.json({error:"bundleId required"},{status:400});
   const bundle=getBundleById(raw); if(!bundle) return Response.json({error:"unknown bundle",bundleId:raw},{status:400});
+  // основной путь — транзакция с FOR UPDATE: двойной клик не спишет цену набора дважды
+  const txRes = await withCoinsLock(user.id, async (client, bal) => {
+    if(bal<bundle.price) return { ok:false, response: Response.json({error:"not enough coins",price:bundle.price,balance:bal,required:bundle.price},{status:402}) };
+    await client.query("UPDATE magnum_coins SET balance=balance-$1 WHERE user_id=$2", [bundle.price, user.id]);
+    const granted: string[]=[]; const skipped: string[]=[];
+    for(let i=0;i<bundle.items.length;i++){
+      const itemId=bundle.items[i]!; const slot=bundle.slots[i]!;
+      if(slot==="skin"){
+        const ex=await client.query("SELECT id FROM magnum_shop_inventory WHERE user_id=$1 AND skin_id=$2 LIMIT 1", [user.id, itemId]);
+        if(ex.rows.length>0){ skipped.push(itemId); continue; }
+        await client.query("INSERT INTO magnum_shop_inventory (user_id,skin_id,purchased_at,equipped) VALUES ($1,$2,now(),false)", [user.id, itemId]);
+        granted.push(itemId);
+      } else {
+        const ex=await client.query("SELECT id FROM magnum_cosmetics WHERE user_id=$1 AND cosmetic_id=$2 LIMIT 1", [user.id, itemId]);
+        if(ex.rows.length>0){ skipped.push(itemId); continue; }
+        await client.query("INSERT INTO magnum_cosmetics (user_id,cosmetic_id,slot,equipped,purchased_at) VALUES ($1,$2,$3,false,now())", [user.id, itemId, slot]);
+        granted.push(itemId);
+      }
+    }
+    await client.query("INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES ($1,$2,'shop_bundle',$3::jsonb)", [user.id, -bundle.price, JSON.stringify({bundleId:bundle.id,price:bundle.price,granted,skipped})]);
+    const tier = await grantTierFromCosmeticsTx(client, user.id, granted);
+    const newBal = await txBalance(client, user.id);
+    return { ok:true, response: Response.json({ok:true,bundleId:bundle.id,price:bundle.price,balance:newBal,granted,skipped,alreadyOwned:skipped,tier}) };
+  });
+  if (txRes) return txRes;
+  // fallback — окружение без DATABASE_URL_UNPOOLED
   try{
     const sql=getSql();
     const coins=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
@@ -1944,7 +1970,8 @@ async function handleShopBundleBuy(req:Request):Promise<Response>{
       }
     }
     await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${-bundle.price},'shop_bundle',${JSON.stringify({bundleId:bundle.id,price:bundle.price,granted,skipped})}::jsonb)`;
-    return Response.json({ok:true,bundleId:bundle.id,price:bundle.price,balance:newBal,granted,skipped,alreadyOwned:skipped});
+    const tier = await grantTierFromCosmetics(user.id, granted);
+    return Response.json({ok:true,bundleId:bundle.id,price:bundle.price,balance:newBal,granted,skipped,alreadyOwned:skipped,tier});
   }catch(e){ console.error("[bundle buy] failed",e); return Response.json({error:"db error"},{status:500}); }
 }
 
@@ -5358,8 +5385,29 @@ async function handlePassPremium(req:Request):Promise<Response>{
   await sql`UPDATE magnum_coins SET balance=balance-${price} WHERE user_id=${user.id}`;
   await sql`INSERT INTO magnum_transactions (user_id, amount, reason, meta) VALUES (${user.id}, ${-price}, 'pass_premium', ${JSON.stringify({price})}::jsonb)`;
   await sql`UPDATE magnum_pass_progress SET premium=true, updated_at=now() WHERE user_id=${user.id}`;
+  // premium track действительно открывает VIP: пишем подписку до конца сезона,
+  // чтобы AuthStatus (/api/shop/subscriptions) и isPremiumByTier видели один и тот же тир
+  const tier = await grantPassPremiumTier(user.id);
   const upd=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
-  return Response.json({ ok:true, premium:true, price, balance: Number((upd[0] as {balance:number}).balance) });
+  return Response.json({ ok:true, premium:true, price, tier, balance: Number((upd[0] as {balance:number}).balance) });
+}
+
+// premium-pass → magnum_subscriptions.tier='vip' до конца сезона
+async function grantPassPremiumTier(userId:number):Promise<string|null>{
+  try{
+    await ensureSubscriptionTable();
+    await ensurePassSeasonRow();
+    const sql=getSql();
+    const active=await sql`SELECT tier FROM magnum_subscriptions WHERE user_id=${userId} AND (ends_at IS NULL OR ends_at > now()) ORDER BY started_at DESC LIMIT 1`;
+    if(active.length){
+      const cur=String((active[0] as {tier:string}).tier);
+      if((TIER_RANK[cur] ?? 0) >= TIER_RANK.vip!) return cur;
+    }
+    const seasonRows=await sql`SELECT ends_at FROM magnum_pass_seasons WHERE id=${SEASON_ID} LIMIT 1`;
+    const endsAt=seasonRows.length? String((seasonRows[0] as {ends_at:string}).ends_at) : new Date(Date.now()+30*24*3600*1000).toISOString();
+    await sql`INSERT INTO magnum_subscriptions (user_id, tier, started_at, ends_at) VALUES (${userId}, 'vip', now(), ${endsAt}::timestamp)`;
+    return "vip";
+  }catch(e){ console.error("[pass premium tier] failed", e); return null; }
 }
 async function handlePassBuyLevels(req:Request):Promise<Response>{
   const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
