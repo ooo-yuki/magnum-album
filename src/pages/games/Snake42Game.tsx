@@ -233,7 +233,9 @@ export function Snake42Game() {
       if (e.code === "Space" && state === "playing") { /* pause reserved */ }
     };
     window.addEventListener("keydown", onKey);
-  
+    return () => window.removeEventListener("keydown", onKey);
+  }, [state]);
+
   useEffect(() => {
     const root: HTMLElement | null = document.querySelector<HTMLElement>("[data-gsap-root]") || (document.body as unknown as HTMLElement);
     if (!root) return;
@@ -260,9 +262,6 @@ export function Snake42Game() {
     }, root);
     return () => ctx.revert();
   }, []);
-
-  return () => window.removeEventListener("keydown", onKey);
-  }, [state]);
 
   // touch
   const touchRef = useRef<{ x: number; y: number } | null>(null);

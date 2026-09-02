@@ -429,7 +429,9 @@ export function KnifeHitGame() {
     };
     resize();
     window.addEventListener("resize", resize);
-  
+    return () => window.removeEventListener("resize", resize);
+  }, []);
+
   useEffect(() => {
     const root: HTMLElement | null = document.querySelector<HTMLElement>("[data-gsap-root]") || (document.body as unknown as HTMLElement);
     if (!root) return;
@@ -455,9 +457,6 @@ export function KnifeHitGame() {
       }
     }, root);
     return () => ctx.revert();
-  }, []);
-
-  return () => window.removeEventListener("resize", resize);
   }, []);
 
   useEffect(() => {

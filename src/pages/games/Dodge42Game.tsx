@@ -204,7 +204,9 @@ export function Dodge42Game() {
     };
     window.addEventListener("keydown", onDown);
     window.addEventListener("keyup", onUp);
-  
+    return () => { window.removeEventListener("keydown", onDown); window.removeEventListener("keyup", onUp); };
+  }, [doDash, toggleSlowMo, startGame]);
+
   useEffect(() => {
     const root: HTMLElement | null = document.querySelector<HTMLElement>("[data-gsap-root]") || (document.body as unknown as HTMLElement);
     if (!root) return;
@@ -230,9 +232,6 @@ export function Dodge42Game() {
       }
     }, root);
     return () => ctx.revert();
-  }, []);
-
-  return () => { window.removeEventListener("keydown", onDown); window.removeEventListener("keyup", onUp); };
   }, []);
 
   // canvas loop

@@ -639,7 +639,10 @@ export function RunnerGame() {
     };
 
     animId = requestAnimationFrame(gameLoop);
-  
+
+    return () => { cancelAnimationFrame(animId); window.removeEventListener("keydown", handleKey); window.removeEventListener("resize", resize); };
+  }, [gameState, jump, best, spawnParticles]);
+
   useEffect(() => {
     const root: HTMLElement | null = document.querySelector<HTMLElement>("[data-gsap-root]") || (document.body as unknown as HTMLElement);
     if (!root) return;
@@ -666,9 +669,6 @@ export function RunnerGame() {
     }, root);
     return () => ctx.revert();
   }, []);
-
-  return () => { cancelAnimationFrame(animId); window.removeEventListener("keydown", handleKey); window.removeEventListener("resize", resize); };
-  }, [gameState, jump, best, spawnParticles]);
 
   const startGame = () => {
     const d = DIFFICULTY[diffRef.current];
