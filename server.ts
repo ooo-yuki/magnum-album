@@ -268,15 +268,50 @@ async function handleCoinsGet(req: Request): Promise<Response> {
   return Response.json({ balance: Number((rows[0] as { balance: number }).balance) });
 }
 
+// ---- Косметика в публичных рейтингах ----
+// Один запрос на весь лидерборд: username → {frame, banner, title} из magnum_cosmetics(equipped).
+// Клиент достаёт стиль по id из src/lib/cosmetics.ts, поэтому отдаём только id.
+export type EquippedCosmetics = { frame: string | null; banner: string | null; title: string | null };
+const NO_COSMETICS: EquippedCosmetics = { frame: null, banner: null, title: null };
+
+async function fetchCosmeticsByUsername(usernames: Array<string | null | undefined>): Promise<Map<string, EquippedCosmetics>> {
+  const out = new Map<string, EquippedCosmetics>();
+  const uniq = [...new Set(usernames.filter((u): u is string => typeof u === "string" && u.length > 0))];
+  if (uniq.length === 0) return out;
+  try {
+    const sql = getSql();
+    const rows = await sql`SELECT u.username, mc.slot, mc.cosmetic_id FROM magnum_cosmetics mc JOIN magnum_users u ON u.id = mc.user_id WHERE mc.equipped = true AND u.username = ANY(${uniq}::text[])`;
+    for (const r of rows as Array<{ username: string; slot: string; cosmetic_id: string }>) {
+      const key = String(r.username);
+      const cur = out.get(key) ?? { frame: null, banner: null, title: null };
+      const slot = String(r.slot);
+      if (slot === "frame" || slot === "banner" || slot === "title") cur[slot] = String(r.cosmetic_id);
+      out.set(key, cur);
+    }
+  } catch (e) {
+    // косметика — украшение: её отсутствие не должно ронять лидерборд
+    console.error("[cosmetics lookup] failed", e);
+  }
+  return out;
+}
+
+// Добавляет frame/banner/title к строкам лидерборда (ключ — username или player).
+async function decorateWithCosmetics<T extends Record<string, unknown>>(rows: T[]): Promise<Array<T & EquippedCosmetics>> {
+  const keyOf = (r: T): string => String((r as { username?: unknown }).username ?? (r as { player?: unknown }).player ?? "");
+  const map = await fetchCosmeticsByUsername(rows.map(keyOf));
+  return rows.map((r) => ({ ...r, ...(map.get(keyOf(r)) ?? NO_COSMETICS) }));
+}
+
 // ---- Coins leaderboard (top 20) ----
 async function handleCoinsTop(): Promise<Response> {
   try {
     const sql = getSql();
     const rows = await sql`SELECT u.username, c.balance, s.skin_id as avatar, COALESCE(f.verified,false) as verified FROM magnum_coins c JOIN magnum_users u ON u.id=c.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id=c.user_id AND s.equipped=true LEFT JOIN magnum_frames f ON f.user_id=c.user_id ORDER BY c.balance DESC LIMIT 20`;
-    const top = rows.map((r: unknown) => {
+    const mapped = rows.map((r: unknown) => {
       const x = r as { username: string; balance: number; avatar: string | null; verified: boolean | null };
       return { username: String(x.username), balance: Number(x.balance), avatar: x.avatar || null, verified: Boolean(x.verified) };
     });
+    const top = await decorateWithCosmetics(mapped);
     return Response.json({ top, count: top.length });
   } catch (e) {
     console.error("[coins top] failed", e);
@@ -2040,10 +2075,11 @@ async function handleEcoLeaderboard(): Promise<Response> {
   try {
     const sql = getSql();
     const rows = await sql`SELECT COALESCE(u.username, r.player, 'Братуха') as player, r.score, r.rank, r.created_at, s.skin_id as avatar, COALESCE(f.verified,false) as verified FROM magnum_eco_results r LEFT JOIN magnum_users u ON u.id = r.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id = r.user_id AND s.equipped = true LEFT JOIN magnum_frames f ON f.user_id = r.user_id ORDER BY r.score DESC, r.created_at ASC LIMIT 50`;
-    const leaderboard = rows.map((r: unknown) => {
+    const mapped = rows.map((r: unknown) => {
       const x = r as { player: string; score: number; rank: string; created_at: string; avatar: string | null; verified: boolean | null };
       return { player: String(x.player), username: String(x.player), score: Number(x.score), rank: String(x.rank), status: String(x.rank || "pending"), created_at: x.created_at, avatar: x.avatar || null, verified: Boolean(x.verified) };
     });
+    const leaderboard = await decorateWithCosmetics(mapped);
     return Response.json({ leaderboard, entries: leaderboard });
   } catch (e) {
     console.error("[eco leaderboard] failed", e);
@@ -2118,8 +2154,10 @@ async function handleEcoRatingSubmit(req: Request): Promise<Response> {
 async function handleEcoRatingTop(): Promise<Response> {
   try{ const sql=getSql();
     await sql`CREATE TABLE IF NOT EXISTS magnum_eco_ratings (id serial PRIMARY KEY, user_id integer REFERENCES magnum_users(id) ON DELETE SET NULL, player text, score integer NOT NULL, rating integer NOT NULL, tier text NOT NULL, answers jsonb DEFAULT '[]'::jsonb NOT NULL, created_at timestamp DEFAULT now() NOT NULL)`;
-    const rows=await sql`SELECT COALESCE(u.username,r.player,'Братуха') as player,r.score,r.rating,r.tier,r.created_at,s.skin_id as avatar FROM magnum_eco_ratings r LEFT JOIN magnum_users u ON u.id=r.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id=r.user_id AND s.equipped=true ORDER BY r.rating DESC,r.score DESC,r.created_at ASC LIMIT 30`;
-    const top=rows.map((x:unknown)=>{const r=x as {player:string;score:number;rating:number;tier:string;created_at:string;avatar:string|null}; return {player:String(r.player),username:String(r.player),score:Number(r.score),rating:Number(r.rating),tier:String(r.tier),created_at:r.created_at,avatar:r.avatar};});
+    // только аккаунты: старые анонимные записи (user_id IS NULL) в публичный топ не попадают
+    const rows=await sql`SELECT u.username as player,r.score,r.rating,r.tier,r.created_at,s.skin_id as avatar FROM magnum_eco_ratings r JOIN magnum_users u ON u.id=r.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id=r.user_id AND s.equipped=true ORDER BY r.rating DESC,r.score DESC,r.created_at ASC LIMIT 30`;
+    const mapped=rows.map((x:unknown)=>{const r=x as {player:string;score:number;rating:number;tier:string;created_at:string;avatar:string|null}; return {player:String(r.player),username:String(r.player),score:Number(r.score),rating:Number(r.rating),tier:String(r.tier),created_at:r.created_at,avatar:r.avatar};});
+    const top=await decorateWithCosmetics(mapped);
     return Response.json({top,count:top.length,tiers:ECO_TIERS});
   }catch(e){console.error("[eco rating top] failed",e); return Response.json({error:"db error"},{status:500});}
 }
@@ -2733,8 +2771,14 @@ async function handleIdeaCommentPost(req: Request, idStr: string): Promise<Respo
 async function handlePresaveLeaderboard(): Promise<Response> {
   try{
     const sql=getSql();
-    const rows=await sql`SELECT COALESCE(u.username, 'Аноним') as username, count(*)::int as clicks, max(c.created_at) as last_click FROM magnum_presave_clicks c LEFT JOIN magnum_users u ON u.id=c.user_id GROUP BY u.username ORDER BY clicks DESC, last_click ASC LIMIT 20`;
-    return Response.json({ leaderboard: rows.map((r:unknown)=>{ const x=r as {username:string;clicks:number;last_click:string}; return {username:String(x.username),clicks:Number(x.clicks),lastClick:x.last_click}; }), count: rows.length });
+    // Топ — только аккаунты: анонимные клики (user_id IS NULL) не смешиваются с юзерами,
+    // их суммарное число отдаётся отдельным полем anonClicks.
+    const rows=await sql`SELECT u.username, count(*)::int as clicks, max(c.created_at) as last_click FROM magnum_presave_clicks c JOIN magnum_users u ON u.id=c.user_id GROUP BY u.username ORDER BY clicks DESC, last_click ASC LIMIT 20`;
+    const anonRows=await sql`SELECT count(*)::int as clicks FROM magnum_presave_clicks WHERE user_id IS NULL`;
+    const anonClicks=anonRows.length? Number((anonRows[0] as {clicks:number}).clicks) : 0;
+    const mapped=rows.map((r:unknown)=>{ const x=r as {username:string;clicks:number;last_click:string}; return {username:String(x.username),clicks:Number(x.clicks),lastClick:x.last_click}; });
+    const leaderboard=await decorateWithCosmetics(mapped);
+    return Response.json({ leaderboard, count: leaderboard.length, anonClicks });
   }catch(e){ console.error("[presave leaderboard] failed",e); return Response.json({error:"db error"},{status:500}); }
 }
 
@@ -3275,12 +3319,13 @@ async function handleMiningTop(): Promise<Response> {
   try {
     const sql = getSql();
     const rows = await sql`SELECT u.username, m.balance, m.upgrades, s.skin_id as avatar FROM magnum_mining m JOIN magnum_users u ON u.id=m.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id=m.user_id AND s.equipped=true ORDER BY m.balance DESC LIMIT 20`;
-    const top = rows.map((r: unknown) => {
+    const mapped = rows.map((r: unknown) => {
       const x = r as { username: string; balance: number; upgrades: unknown; avatar: string | null };
       const ups = parseUpgrades(x.upgrades);
-      const perSec = ups.reduce((s, u) => s + (UPGRADES_DEF[u.id]?.auto ?? 0) * u.count, 0);
+      const perSec = ups.reduce((sum, u) => sum + (UPGRADES_DEF[u.id]?.auto ?? 0) * u.count, 0);
       return { username: String(x.username), balance: Number(x.balance), perSec, upgrades: ups, avatar: x.avatar || null };
     });
+    const top = await decorateWithCosmetics(mapped);
     return Response.json({ top, count: top.length });
   } catch (e) {
     console.error("[mining top] failed", e);
@@ -3357,7 +3402,8 @@ async function handleGameTop(req: Request): Promise<Response> {
     const rows = game && GAME_WHITELIST.has(game)
       ? await sql`SELECT g.game, g.score, g.created_at, u.username, s.skin_id as avatar FROM magnum_game_scores g JOIN magnum_users u ON u.id=g.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id=g.user_id AND s.equipped=true WHERE g.game=${game} ORDER BY g.score DESC, g.created_at ASC LIMIT ${limit}`
       : await sql`SELECT g.game, g.score, g.created_at, u.username, s.skin_id as avatar FROM magnum_game_scores g JOIN magnum_users u ON u.id=g.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id=g.user_id AND s.equipped=true ORDER BY g.score DESC LIMIT ${limit}`;
-    return Response.json({ top: rows.map((r: unknown) => { const x=r as {game:string;score:number;created_at:string;username:string;avatar:string|null}; return { game:String(x.game), score:Number(x.score), username:String(x.username), avatar:x.avatar||null, created_at:x.created_at }; }), count: rows.length, game: game || "all" });
+    const mapped = rows.map((r: unknown) => { const x=r as {game:string;score:number;created_at:string;username:string;avatar:string|null}; return { game:String(x.game), score:Number(x.score), username:String(x.username), avatar:x.avatar||null, created_at:x.created_at }; });
+    return Response.json({ top: await decorateWithCosmetics(mapped), count: rows.length, game: game || "all" });
   } catch (e) { console.error("[game top] failed", e); return Response.json({ error: "db error" }, { status: 500 }); }
 }
 async function handleGameMy(req: Request): Promise<Response> {
@@ -4013,7 +4059,8 @@ async function handleDuel42Leaderboard(req: Request): Promise<Response> {
     const limit=Math.min(30,Math.max(1,Number(url.searchParams.get("limit")||20)));
     // season 7d: game=duel42 + created_at > now-7d
     const rows=await sql`SELECT l.player, l.score, l.created_at, s.skin_id as avatar FROM magnum_leaderboard l LEFT JOIN magnum_users u ON u.username=l.player LEFT JOIN magnum_shop_inventory s ON s.user_id=u.id AND s.equipped=true WHERE l.game='duel42' AND l.created_at > now() - interval '7 days' ORDER BY l.score DESC, l.created_at ASC LIMIT ${limit}`;
-    const board=rows.map((r:unknown)=>{const x=r as {player:string;score:number;created_at:string;avatar:string|null}; return {player:String(x.player),score:Number(x.score),created_at:x.created_at,avatar:x.avatar||null};});
+    const mapped=rows.map((r:unknown)=>{const x=r as {player:string;score:number;created_at:string;avatar:string|null}; return {player:String(x.player),username:String(x.player),score:Number(x.score),created_at:x.created_at,avatar:x.avatar||null};});
+    const board=await decorateWithCosmetics(mapped);
     // top 3 volcano-crown bonus + pulse 1.2s (VOLCANO SEASON 42 spec)
     return Response.json({ leaderboard:board, season:"7d", game:"duel42", count:board.length, top3Bonus:1420, crown:"volcano-crown-42", pulse:"1.2s", volcanoBar:"conic-volcano" });
   } catch(e){ console.error("[duel42 lb] failed",e); return Response.json({error:"db error"},{status:500}); }
@@ -5221,7 +5268,8 @@ async function handleBoardLeaderboard():Promise<Response>{
     const sql=getSql();
     const weekStart=new Date(); weekStart.setDate(weekStart.getDate()-7);
     const rows=await sql`SELECT g.user_id, u.username, max(g.score)::int as best, count(*)::int as plays, s.skin_id as avatar FROM magnum_game_scores g JOIN magnum_users u ON u.id=g.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id=g.user_id AND s.equipped=true WHERE g.created_at > ${weekStart.toISOString()} GROUP BY g.user_id, u.username, s.skin_id ORDER BY best DESC LIMIT 20`;
-    const top=rows.map((r:unknown,i:number)=>{ const x=r as {user_id:number; username:string; best:number; plays:number; avatar:string|null}; const idx=i; const reward= idx===0?1420: idx===1?420: idx===2?142:0; return { rank:idx+1, userId:Number(x.user_id), username:String(x.username), score:Number(x.best), plays:Number(x.plays), avatar:x.avatar||null, reward, crown: idx<3?"conic-gold":"", isTop3: idx<3 };});
+    const boardRows=rows.map((r:unknown,i:number)=>{ const x=r as {user_id:number; username:string; best:number; plays:number; avatar:string|null}; const idx=i; const reward= idx===0?1420: idx===1?420: idx===2?142:0; return { rank:idx+1, userId:Number(x.user_id), username:String(x.username), score:Number(x.best), plays:Number(x.plays), avatar:x.avatar||null, reward, crown: idx<3?"conic-gold":"", isTop3: idx<3 };});
+    const top=await decorateWithCosmetics(boardRows);
     const globalRes=await sql`SELECT count(*)::int as c FROM magnum_board_shares`;
     const globalCount=Number((globalRes[0] as {c:number}).c);
     return Response.json({ leaderboard:top, top, count:top.length, globalCount, weekRewards:[1420,420,142], crown:"conic-gold", weekStart: weekStart.toISOString() });
