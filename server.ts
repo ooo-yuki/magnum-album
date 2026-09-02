@@ -107,11 +107,14 @@ async function handleRegister(req: Request): Promise<Response> {
   }
   const RESERVED_NAMES = new Set(["admin", "support", "magnum", "system", "moderator", "bot"]);
   const usernameRaw = typeof body.username === "string" ? body.username.trim() : "";
-  const username = usernameRaw.toLowerCase().replace(/[^a-z0-9_]/g, "");
+  // Дефис разрешён: 1-клик регистрация выдаёт brat-xxxxxx. Раньше запрещённые
+  // символы молча вырезались — юзер получал не тот логин, который вводил.
+  const username = usernameRaw.toLowerCase();
   const password = typeof body.password === "string" ? body.password : "";
   const referralRaw = typeof body.referralCode === "string" ? body.referralCode.trim() : typeof body.referral_code === "string" ? body.referral_code.trim() : typeof body.code === "string" ? body.code.trim() : typeof body.bratCode === "string" ? body.bratCode.trim() : "";
-  if (!username || username.length < 3) return Response.json({ error: "username min 3 chars [a-z0-9_]" }, { status: 400 });
-  if (username.length > 32) return Response.json({ error: "username too long" }, { status: 400 });
+  if (!/^[a-z0-9_-]{3,32}$/.test(username) || username.startsWith("-") || username.endsWith("-") || username.includes("--")) {
+    return Response.json({ error: "username invalid: 3-32 [a-z0-9_-], дефис не в начале/конце" }, { status: 400 });
+  }
   if (RESERVED_NAMES.has(username)) return Response.json({ error: "username reserved" }, { status: 409 });
   if (!password || password.length < 8) return Response.json({ error: "password min 8 chars" }, { status: 400 });
 
@@ -2134,16 +2137,19 @@ function validateEcoScore(v: unknown): number | null { const n=Number(v); if(!Nu
 function validateEcoAnswers(v: unknown): number[] | null { if(!Array.isArray(v)||v.length>20) return null; const o:number[]=[]; for(const x of v){const n=Number(x); if(!Number.isInteger(n)||n<0||n>10) return null; o.push(n);} return o; }
 async function handleEcoTiers(): Promise<Response> { return Response.json({ tiers: ECO_TIERS, labels: ECO_RATING_LABELS, count: ECO_TIERS.length }); }
 async function handleEcoRatingSubmit(req: Request): Promise<Response> {
-  const token=extractToken(req); let user:{id:number;username:string}|null=null; if(token) try{user=await getUserByToken(token);}catch(e){ console.warn("[eco rating] getUserByToken failed", e instanceof Error ? e.message : String(e)); }
+  // Публичный рейтинг = рейтинг аккаунтов. Аноним не пишет в общий топ: иначе имя
+  // ничем не подтверждено и рейтинг смешивает аккаунты с кем угодно.
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized — войди, братуха"},{status:401});
+  let user:{id:number;username:string}|null=null; try{user=await getUserByToken(token);}catch(e){ console.warn("[eco rating] getUserByToken failed", e instanceof Error ? e.message : String(e)); }
+  if(!user) return Response.json({error:"unauthorized — войди, братуха"},{status:401});
   let body:{score?:unknown;answers?:unknown;player?:unknown}; try{body=(await req.json()) as typeof body;}catch{return Response.json({error:"Invalid JSON"},{status:400});}
   const score=validateEcoScore(body.score); if(score===null) return Response.json({error:"score -1000..1000"},{status:400});
   const answers=body.answers!==undefined?validateEcoAnswers(body.answers):[]; if(body.answers!==undefined&&answers===null) return Response.json({error:"answers 0..10 max20"},{status:400});
-  const tier=calcEcoRating(score); const player=user?.username??(typeof body.player==="string"?body.player.trim().slice(0,32):null);
-  if(!user&&(!player||player.length<2)) return Response.json({error:"player 2..32 or auth"},{status:400});
-  const ip=getClientIp(req); if(!checkRateLimit(`eco:rating:${user?.id??ip}`,10,60_000)) return Response.json({error:"rate limited"},{status:429});
+  const tier=calcEcoRating(score); const player=user.username;
+  if(!checkRateLimit(`eco:rating:${user.id}`,10,60_000)) return Response.json({error:"rate limited"},{status:429});
   try{ const sql=getSql();
     await sql`CREATE TABLE IF NOT EXISTS magnum_eco_ratings (id serial PRIMARY KEY, user_id integer REFERENCES magnum_users(id) ON DELETE SET NULL, player text, score integer NOT NULL, rating integer NOT NULL, tier text NOT NULL, answers jsonb DEFAULT '[]'::jsonb NOT NULL, created_at timestamp DEFAULT now() NOT NULL)`;
-    const rows=await sql`INSERT INTO magnum_eco_ratings (user_id,player,score,rating,tier,answers) VALUES (${user?.id??null},${player},${score},${tier.rating},${tier.tier},${JSON.stringify(answers??[])}::jsonb) RETURNING id,score,rating,tier,created_at`;
+    const rows=await sql`INSERT INTO magnum_eco_ratings (user_id,player,score,rating,tier,answers) VALUES (${user.id},${player},${score},${tier.rating},${tier.tier},${JSON.stringify(answers??[])}::jsonb) RETURNING id,score,rating,tier,created_at`;
     let coinsBonus=0; if(user&&tier.rating>=7){ coinsBonus=tier.rating===10?142:tier.rating>=9?84:42;
       await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${user.id},1000) ON CONFLICT (user_id) DO NOTHING`;
       await sql`UPDATE magnum_coins SET balance=balance+${coinsBonus} WHERE user_id=${user.id}`;
@@ -3598,7 +3604,7 @@ async function handleChatHistory(req: Request): Promise<Response> {
       const x = r as { id: number; body: string; reply_to: number | null; created_at: string; username: string; avatar: string | null };
       return { id: Number(x.id), body: String(x.body), replyTo: x.reply_to ? Number(x.reply_to) : null, created_at: x.created_at, username: String(x.username), avatar: x.avatar || null };
     });
-    const ordered = since ? list : list.reverse();
+    const ordered = await decorateWithCosmetics(since ? list : list.reverse());
     return Response.json({ messages: ordered, count: ordered.length, limit, offset });
   } catch (e) { console.error("[chat history] failed", e); return Response.json({ error: "db error" }, { status: 500 }); }
 }
@@ -3703,7 +3709,8 @@ async function handleFeed(req: Request): Promise<Response> {
     const url = new URL(req.url);
     const limit = Math.min(50, Math.max(1, Number(url.searchParams.get("limit") || 20)));
     const rows = await sql`SELECT m.id,m.body,m.created_at,u.username,s.skin_id as avatar FROM magnum_chat_messages m JOIN magnum_users u ON u.id=m.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id=m.user_id AND s.equipped=true WHERE m.user_id IN (SELECT following_id FROM magnum_follows WHERE follower_id=${user.id}) ORDER BY m.created_at DESC LIMIT ${limit}`;
-    return Response.json({ feed: rows.map((r: unknown) => { const x = r as { id: number; body: string; created_at: string; username: string; avatar: string | null }; return { id: Number(x.id), body: String(x.body), username: String(x.username), avatar: x.avatar || null, created_at: x.created_at }; }), count: rows.length });
+    const feedRows = rows.map((r: unknown) => { const x = r as { id: number; body: string; created_at: string; username: string; avatar: string | null }; return { id: Number(x.id), body: String(x.body), username: String(x.username), avatar: x.avatar || null, created_at: x.created_at }; });
+    return Response.json({ feed: await decorateWithCosmetics(feedRows), count: rows.length });
   } catch (e) { console.error("[feed] failed", e); return Response.json({ error: "db error" }, { status: 500 }); }
 }
 
@@ -4052,6 +4059,30 @@ async function handleSquadBattles(req:Request):Promise<Response>{
   return Response.json({battles:rows.map((r:any)=>({id:Number(r.id),winnerId:r.winner_id?Number(r.winner_id):null,winner:String(r.winner||""),score:r.score,created_at:r.created_at})),count:rows.length,squadId:sid});
 }
 // ---- VOLCANO SEASON 42: ELO 7d + volcano-crown топ-3 + pulse 1.2s + duel42 store ----
+// Реальные wins/streak дуэлянта из magnum_duel_history — вместо локальной накрутки в ArenaPage.
+async function handleDuel42Stats(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  try {
+    const sql = getSql();
+    const rows = await sql`SELECT winner, created_at FROM magnum_duel_history WHERE scores @> ${JSON.stringify([{ name: user.username }])}::jsonb ORDER BY created_at DESC LIMIT 100`;
+    const list = rows as Array<{ winner: string | null; created_at: string }>;
+    const plays = list.length;
+    const wins = list.filter((r) => r.winner === user.username).length;
+    let streak = 0;
+    for (const r of list) {
+      if (r.winner === user.username) streak++;
+      else break;
+    }
+    return Response.json({ plays, wins, streak, maxStreak: 7, username: user.username });
+  } catch (e) {
+    console.error("[duel42 stats] failed", e);
+    return Response.json({ error: "db error" }, { status: 500 });
+  }
+}
+
 async function handleDuel42Leaderboard(req: Request): Promise<Response> {
   try {
     const sql=getSql();
@@ -5918,9 +5949,18 @@ function broadcast(room: DuelRoom, payload: unknown) {
   }
 }
 
-function findOrCreateRoom(): DuelRoom {
+// Один аккаунт — один слот в комнате: два окна одного юзера не должны
+// оказаться в одной дуэли и накручивать wins сами себе.
+function roomHasUser(room: DuelRoom, userId: string): boolean {
+  for (const ws of room.players) {
+    if ((ws.data as WSData).id === userId) return true;
+  }
+  return false;
+}
+
+function findOrCreateRoom(userId?: string): DuelRoom {
   for (const r of rooms.values()) {
-    if (r.state === "waiting" && r.players.size < 4) return r;
+    if (r.state === "waiting" && r.players.size < 4 && !(userId && roomHasUser(r, userId))) return r;
   }
   const id = `room-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
   const room: DuelRoom = { id, players: new Set(), scores: new Map(), names: new Map(), state: "waiting", startedAt: null, timer: null, durationSec: 10, wager: 0, magma: new Map(), volcano: new Map(), lastClickAt: new Map(), heldMaxSince: new Map(), suspect: new Set(), overheatUntil: new Map(), heartbeat: null, clickCounts: new Map(), eruptionPending: new Map() };
@@ -6318,6 +6358,7 @@ const server = Bun.serve<WSData>({
     if (url.pathname.startsWith("/magnum/api/duel/invite/") && url.pathname.endsWith("/respond") && req.method === "POST") { const parts=url.pathname.split("/"); const idStr=parts[5] ?? ""; return handleDuelInviteRespond(req,idStr); }
     if (url.pathname.startsWith("/magnum/api/duel/seasons/") && url.pathname.endsWith("/top") && req.method === "GET") { const parts=url.pathname.split("/"); const idStr=parts[4] ?? ""; return handleDuelSeasonTop(req,idStr); }
     if (url.pathname === "/magnum/api/duel42/leaderboard" && req.method === "GET") return handleDuel42Leaderboard(req);
+    if (url.pathname === "/magnum/api/duel42/stats" && req.method === "GET") return handleDuel42Stats(req);
     if (url.pathname === "/magnum/api/leaderboard" && req.method === "GET") return handleLeaderboard(req);
     if (url.pathname === "/magnum/api/duel42/elo" && req.method === "GET") return handleDuel42Elo(req);
     if (url.pathname === "/magnum/api/duel42/wager" && req.method === "POST") return handleDuel42Wager(req);
@@ -6427,8 +6468,13 @@ const server = Bun.serve<WSData>({
       let room: DuelRoom;
       if(preRoomId && preRoomId.startsWith("squad:") && rooms.has(preRoomId)){
         room=rooms.get(preRoomId)!;
+        if(roomHasUser(room, ws.data.id)){
+          try{ ws.send(JSON.stringify({ type:"error", error:"duplicate_session", message:"Ты уже в этой комнате в другом окне" })); }catch{}
+          try{ ws.close(4009, "duplicate session"); }catch{}
+          return;
+        }
       } else {
-        room = findOrCreateRoom();
+        room = findOrCreateRoom(ws.data.id);
         (ws.data as WSData).roomId = room.id;
       }
       room.players.add(ws);
@@ -6466,6 +6512,10 @@ const server = Bun.serve<WSData>({
       }
       if (msg.type === "join" && typeof msg.code === "string" && msg.code.trim().length===4) {
         const code = msg.code.trim().toUpperCase(); const target = rooms.get(`room:${code}`);
+        if(target && roomHasUser(target, data.id)){
+          try{ ws.send(JSON.stringify({ type:"join_error", error:"duplicate_session", message:"Ты уже в этой комнате в другом окне — дуэль с самим собой не считается" })); }catch{}
+          return;
+        }
         if(target && target.players.size<4 && target.state==="waiting"){
           const oldId=data.roomId; if(oldId && oldId!==target.id){ const old=rooms.get(oldId); if(old){ old.players.delete(ws); old.scores.delete(ws); old.names.delete(ws); try{ws.unsubscribe(oldId);}catch{} } }
           target.players.add(ws); target.scores.set(ws,0); target.names.set(ws, ws.data.username); target.magma.set(ws,0); target.volcano.set(ws,0); (ws.data as WSData).roomId=target.id; ws.subscribe(target.id); wsReady.set(ws,false);
