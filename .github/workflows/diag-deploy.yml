@@ -1,0 +1,26 @@
+name: Diag deploy reachability
+on:
+  workflow_dispatch:
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Проверка адреса и портов (без раскрытия секретов)
+        env:
+          H: ${{ secrets.DEPLOY_HOST }}
+          P: ${{ secrets.DEPLOY_PORT }}
+        run: |
+          echo "форма адреса: $(printf '%s' "$H" | grep -qE '^[0-9.]+$' && echo IP || echo hostname), длина ${#H}"
+          echo "порт из секрета: длина ${#P}"
+          a=$(getent hosts "$H" 2>/dev/null | awk '{print $1; exit}')
+          b=$(getent hosts 5opka.ru 2>/dev/null | awk '{print $1; exit}')
+          echo "DEPLOY_HOST резолвится: $([ -n "$a" ] && echo да || echo НЕТ)"
+          echo "совпадает с 5opka.ru:   $([ -n "$a" ] && [ "$a" = "$b" ] && echo ДА || echo НЕТ)"
+          for port in 22 30640 30646 443; do
+            timeout 8 bash -c "echo > /dev/tcp/$H/$port" 2>/dev/null \
+              && echo "DEPLOY_HOST:$port -> открыт" || echo "DEPLOY_HOST:$port -> закрыт"
+          done
+          for port in 22 30640 30646 443; do
+            timeout 8 bash -c "echo > /dev/tcp/5opka.ru/$port" 2>/dev/null \
+              && echo "5opka.ru:$port -> открыт" || echo "5opka.ru:$port -> закрыт"
+          done
