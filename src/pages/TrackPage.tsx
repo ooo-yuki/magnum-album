@@ -206,6 +206,7 @@ export function TrackPage() {
       const statCards = containerRef.current!.querySelectorAll(`.${styles.statCard}`);
       statCards.forEach((card) => {
         card.addEventListener("mouseenter", () => {
+          if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
           gsap.to(card, {
             y: -4,
             scale: 1.04,
@@ -216,6 +217,7 @@ export function TrackPage() {
           });
         });
         card.addEventListener("mouseleave", () => {
+          if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
           gsap.to(card, {
             y: 0,
             scale: 1,
@@ -231,6 +233,7 @@ export function TrackPage() {
       const listenCards = containerRef.current!.querySelectorAll(`.${styles.listenCard}`);
       listenCards.forEach((card) => {
         card.addEventListener("mouseenter", () => {
+          if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
           gsap.to(card, {
             y: -3,
             borderColor: "rgba(255,45,85,0.30)",
@@ -240,6 +243,7 @@ export function TrackPage() {
           });
         });
         card.addEventListener("mouseleave", () => {
+          if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
           gsap.to(card, {
             y: 0,
             borderColor: "rgba(255,255,255,0.06)",

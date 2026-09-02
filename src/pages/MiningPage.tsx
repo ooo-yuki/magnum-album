@@ -486,8 +486,8 @@ export function MiningPage() {
         if (msg.type === "room" || msg.type === "lobby:created") {
           if (msg.room) { setDuelRoom(msg.room as DuelRoom); if (msg.code) setDuelCode(String(msg.code)); }
         }
-        if (msg.type === "suspect") { setSuspect(true); showToast(msg.toast||"братуха, авто-клик? 🚫"); if(stageRef.current) gsap.fromTo(stageRef.current,{x:-6},{x:6,duration:0.08, yoyo:true, repeat:5, ease:'power2.inOut'}); }
-        if (msg.type === "overheat") { setOverheat(true); setGhostTrail(true); showToast("OVERHEAT — кулдаун 1с −50% ❄️"); if(stageRef.current) gsap.fromTo(stageRef.current,{x:-6},{x:6,duration:0.09, yoyo:true, repeat:4}); setTimeout(()=>{ setOverheat(false); },1000); }
+        if (msg.type === "suspect") { setSuspect(true); showToast(msg.toast||"братуха, авто-клик? 🚫"); if(stageRef.current && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) gsap.fromTo(stageRef.current,{x:-6},{x:6,duration:0.08, yoyo:true, repeat:5, ease:'power2.inOut'}); }
+        if (msg.type === "overheat") { setOverheat(true); setGhostTrail(true); showToast("OVERHEAT — кулдаун 1с −50% ❄️"); if(stageRef.current && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) gsap.fromTo(stageRef.current,{x:-6},{x:6,duration:0.09, yoyo:true, repeat:4}); setTimeout(()=>{ setOverheat(false); },1000); }
         if (msg.type === "tick") {
           if (typeof msg.nitro==='number') setNitro(msg.nitro); else if(typeof msg.volcano==='number') setNitro(msg.volcano);
           else if(typeof msg.magma==='number') setNitro(msg.magma);
@@ -495,7 +495,7 @@ export function MiningPage() {
           if (msg.ghostTrail || msg.eruptionPending) setGhostTrail(true);
           if (msg.overheat) { setOverheat(true); setTimeout(()=>setOverheat(false),1000); }
           if (typeof msg.oppNitro==='number') setOppNitro(msg.oppNitro);
-          if (msg.lavaSpike || msg.eruption) { burstPendingRef.current=false; if(stageRef.current){ gsap.fromTo(stageRef.current,{scale:1},{scale:1.03,duration:0.12,yoyo:true,repeat:1}); } }
+          if (msg.lavaSpike || msg.eruption) { burstPendingRef.current=false; if(stageRef.current && !window.matchMedia('(prefers-reduced-motion: reduce)').matches){ gsap.fromTo(stageRef.current,{scale:1},{scale:1.03,duration:0.12,yoyo:true,repeat:1}); } }
           if (msg.ghostTrail && ghostBarRef.current && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
             gsap.fromTo(ghostBarRef.current,{opacity:0.6},{opacity:1, duration:0.4, yoyo:true, repeat:1, ease:'sine.inOut'});
           }
@@ -575,7 +575,7 @@ export function MiningPage() {
       heldMaxRef.current=null; burstPendingRef.current=false;
     }
     wsRef.current.send(JSON.stringify({ type: "click" }));
-    if (rockRef.current) gsap.fromTo(rockRef.current, { scale: 0.96 }, { scale: 1, duration: 0.15 });
+    if (rockRef.current && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) gsap.fromTo(rockRef.current, { scale: 0.96 }, { scale: 1, duration: 0.15 });
     if (nitroFillRef.current && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       gsap.fromTo(nitroFillRef.current,{scaleX:1},{scaleX:1.08,duration:0.12, yoyo:true, repeat:1});
     }

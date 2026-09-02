@@ -16,19 +16,16 @@ export function GachaReveal({ items, onClose }: { items: RevealItem[]; onClose: 
 
   useEffect(() => {
     if (!wrapRef.current || !cardsRef.current) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReduced) {
+      if (wrapRef.current) gsap.set(wrapRef.current, { clearProps: "all" });
       const els = cardsRef.current.querySelectorAll<HTMLElement>("[data-card]");
-      els.forEach(el => {
-        if (RARITY_STYLE[el.dataset.rarity || "common"]) {
-          // static glow only
-        }
-      });
+      els.forEach(el => gsap.set(el, { clearProps: "all" }));
       return;
     }
     const cards = cardsRef.current.querySelectorAll<HTMLElement>("[data-card]");
     if (!cards.length) return;
     const ctx = gsap.context(() => {
-      // y:0 appearance for wrapper
       gsap.set(wrapRef.current, { y: -20, opacity: 0 });
       gsap.to(wrapRef.current, { y: 0, opacity: 1, duration: 0.42, ease: "power2.out", overwrite: true });
       cards.forEach((card, idx) => {
@@ -40,18 +37,18 @@ export function GachaReveal({ items, onClose }: { items: RevealItem[]; onClose: 
         } else if (rarity === "rare") {
           gsap.set(card, { y: 24, opacity: 0, scale: 0.96 });
           gsap.to(card, { y: 0, opacity: 1, scale: 1, duration: 0.5, delay, ease: "back.out(1.2)", overwrite: true });
-          // glow handled via boxShadow already
         } else if (rarity === "epic") {
           gsap.set(card, { y: 32, opacity: 0, scale: 0.9 });
           gsap.to(card, { y: 0, opacity: 1, scale: 1, duration: 0.7, delay, ease: "elastic.out(1,0.5)", overwrite: true });
+          // epic shimmer is CSS linear 1.2s infinite — no extra GSAP needed, but ensure overwrite
         } else if (rarity === "legendary") {
           gsap.set(card, { y: 40, opacity: 0, scale: 0.85 });
           gsap.to(card, { y: 0, opacity: 1, scale: 1, duration: 0.9, delay, ease: "elastic.out(1,0.45)", overwrite: true });
           const inner = card.querySelector<HTMLElement>("[data-legendary-inner]");
           if (inner) {
-            gsap.to(inner, { scale: 1.06, duration: 0.5, delay: delay + 0.9, yoyo: true, repeat: 1, ease: "power2.inOut" });
+            gsap.to(inner, { scale: 1.06, duration: 0.5, delay: delay + 0.9, yoyo: true, repeat: 1, ease: "power2.inOut", overwrite: true });
           }
-          // confetti + burst
+          // 120 confetti: 80 immediate + 40 burst delayed 300ms — per spec total 120
           const root = card;
           for (let i = 0; i < 80; i++) {
             const d = document.createElement("div");
@@ -60,16 +57,15 @@ export function GachaReveal({ items, onClose }: { items: RevealItem[]; onClose: 
             d.style.pointerEvents = "none"; d.style.zIndex = "5";
             root.appendChild(d);
             const ang = Math.random() * Math.PI * 2, dist = 40 + Math.random() * 180;
-            gsap.to(d, { x: Math.cos(ang) * dist, y: Math.sin(ang) * dist + 40, rotation: Math.random() * 720, opacity: 0, duration: 0.8 + Math.random() * 0.5, ease: "power2.out", onComplete: () => d.remove() });
+            gsap.to(d, { x: Math.cos(ang) * dist, y: Math.sin(ang) * dist + 40, rotation: Math.random() * 720, opacity: 0, duration: 0.8 + Math.random() * 0.5, ease: "power2.out", overwrite: true, onComplete: () => d.remove() });
           }
-          // burst 120 extra particles delayed a bit
           setTimeout(() => {
             for (let i = 0; i < 40; i++) {
               const d = document.createElement("div");
               d.style.position = "absolute"; d.style.left = "50%"; d.style.top = "50%"; d.style.width = "4px"; d.style.height = "10px"; d.style.background = "#ffd700"; d.style.pointerEvents = "none"; d.style.zIndex = "5";
               root.appendChild(d);
               const ang = Math.random() * Math.PI * 2;
-              gsap.to(d, { x: Math.cos(ang) * 120, y: Math.sin(ang) * 120, rotation: 720, opacity: 0, duration: 0.6, ease: "power2.out", onComplete: () => d.remove() });
+              gsap.to(d, { x: Math.cos(ang) * 120, y: Math.sin(ang) * 120, rotation: 720, opacity: 0, duration: 0.6, ease: "power2.out", overwrite: true, onComplete: () => d.remove() });
             }
           }, 300);
         }
@@ -135,8 +131,11 @@ export function GachaReveal({ items, onClose }: { items: RevealItem[]; onClose: 
                 >
                   <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", color: st.color }}>{st.label}</div>
                   <div style={{ fontWeight: 800, marginTop: 6, fontSize: 12, wordBreak: "break-all" }}>{it.id}</div>
-                  <div style={{ marginTop: 6, fontSize: 11, opacity: 0.7 }}>{it.isNew ? "Новое!" : `Дубликат +${it.dust} пыли`}</div>
-                  {isEpic && <div style={{ position: "absolute", inset: 0, borderRadius: 14, background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent)", animation: "shimmer 1.2s ease infinite", pointerEvents: "none" }} />}
+                  <div style={{ marginTop: 6, fontSize: 11, opacity: 0.7 }}>
+                    {it.isNew ? "Новое!" : `Дубликат +${it.dust} пыли`}
+                    {!it.isNew && it.dust > 0 && <span style={{ marginLeft: 6, padding: "2px 5px", borderRadius: 6, background: "rgba(168,85,247,0.18)", border: "1px solid rgba(168,85,247,0.28)", fontSize: 10, fontWeight: 800, color: "#d8b4fe" }}>+{it.dust} пыль</span>}
+                  </div>
+                  {isEpic && <div style={{ position: "absolute", inset: 0, borderRadius: 14, background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent)", animation: "shimmer 1.2s linear infinite", pointerEvents: "none" }} />}
                 </div>
               </div>
             );

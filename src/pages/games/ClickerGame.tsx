@@ -221,7 +221,11 @@ export function ClickerGame() {
 
   useEffect(() => {
     if (!pageRef.current) return;
-    gsap.from(`.${styles.hero} > *`, { y: 20, opacity: 0, stagger: 0.12, duration: 0.6 });
+    if (prefersReducedMotion()) { gsap.set(`.${styles.hero} > *`, { y: 0, opacity: 1, clearProps: "transform" }); return; }
+    const ctx = gsap.context(() => {
+      gsap.from(`.${styles.hero} > *`, { y: 20, opacity: 0, stagger: 0.12, duration: 0.6 });
+    }, pageRef);
+    return () => ctx.revert();
   }, []);
 
   // modal ESC
@@ -240,7 +244,6 @@ export function ClickerGame() {
     const ctx=gsap.context(()=>{ const cards=root.querySelectorAll<HTMLElement>(".card,[data-card],.tile"); if(cards.length){ gsap.set(cards,{y:24,opacity:0}); ScrollTrigger.batch(cards,{onEnter:(batch:any)=>gsap.to(batch,{y:0,opacity:1,stagger:0.12,duration:0.55,ease:"power2.out"}),start:"top 92%",once:true}); } }, root);
     return ()=>ctx.revert();
   }, []);
-;
 
   const startGame = useCallback(() => {
     setStarted(true);
@@ -290,6 +293,7 @@ export function ClickerGame() {
 
   const spawnParticles = (count: number, inc: number) => {
     if (!burstRef.current) return;
+    if (prefersReducedMotion()) return;
     const colors = ["#ff2d55", "#ffcc00", "#00ff88", "#fff", "#5865f2"];
     for (let i = 0; i < count; i++) {
       const dot = document.createElement("span");
@@ -344,18 +348,18 @@ export function ClickerGame() {
       const msg = hit === 4200 ? "MAGNUM 4200 !" : hit === 420 ? "420 — турбо x6!" : hit === 100 ? "100 — ускорение x3!" : "42 — поехали!";
       setMilestoneMsg(msg);
       window.setTimeout(() => setMilestoneMsg(null), 1600);
-      if (toastRef.current) gsap.fromTo(toastRef.current, { y: 10, opacity: 0, scale: 0.9 }, { y: 0, opacity: 1, scale: 1, duration: 0.25, ease: "back.out(1.7)" });
+      if (toastRef.current && !prefersReducedMotion()) gsap.fromTo(toastRef.current, { y: 10, opacity: 0, scale: 0.9 }, { y: 0, opacity: 1, scale: 1, duration: 0.25, ease: "back.out(1.7)" });
       // milestone burst extra
       spawnParticles(10, inc);
     }
 
     // animations: number pop + button squash
-    if (numRef.current) gsap.fromTo(numRef.current, { scale: 1.38 }, { scale: 1, duration: 0.15, ease: "back.out(2.2)" });
-    if (btnRef.current) {
+    if (numRef.current && !prefersReducedMotion()) gsap.fromTo(numRef.current, { scale: 1.38 }, { scale: 1, duration: 0.15, ease: "back.out(2.2)" });
+    if (btnRef.current && !prefersReducedMotion()) {
       gsap.fromTo(btnRef.current, { scale: 0.95 }, { scale: 1, duration: 0.11, ease: "power1.out" });
     }
     // screen shake per click (лёгкий)
-    if (pageRef.current) {
+    if (pageRef.current && !prefersReducedMotion()) {
       gsap.to(pageRef.current, {
         x: (Math.random() - 0.5) * 4,
         y: (Math.random() - 0.5) * 2,
@@ -377,7 +381,7 @@ export function ClickerGame() {
       setStarted(false);
       setShowModal(true);
       playWin();
-      if (pageRef.current) gsap.to(pageRef.current, { x: 7, duration: 0.05, yoyo: true, repeat: 9, ease: "power1.inOut", onComplete: () => gsap.set(pageRef.current!, { x: 0 }) });
+      if (pageRef.current && !prefersReducedMotion()) gsap.to(pageRef.current, { x: 7, duration: 0.05, yoyo: true, repeat: 9, ease: "power1.inOut", onComplete: () => gsap.set(pageRef.current!, { x: 0 }) });
     }
   };
 

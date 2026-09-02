@@ -27,6 +27,7 @@ function hoverIn(el: HTMLElement){ if(prefersReducedMotion()) return; gsap.to(el
 const TARGET = 42;
 
 function spawnBigConfetti() {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   const colors = ["#ff2d55", "#ffcc00", "#00ff88", "#5865f2", "#ff6b35", "#ffffff"];
   const container = document.createElement("div");
   Object.assign(container.style, {
@@ -133,11 +134,10 @@ function PromoBanners() {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!ref.current) return;
-    ScrollTrigger.batch(ref.current.querySelectorAll('.card'), { onEnter: (batch:any)=>gsap.to(batch,{y:0, opacity:1, stagger:0.12, duration:0.55, ease:'power2.out'}), start:'top 92%', once:true});
-    const cards = ref.current.querySelectorAll<HTMLElement>("[data-promo]");
-    if (!cards.length) return;
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const ctx = gsap.context(() => {
+      const cards = ref.current!.querySelectorAll<HTMLElement>("[data-promo]");
+      if (!cards.length) return;
       if (prefersReduced) {
         gsap.set(cards, { y: 0, opacity: 1, scale: 1, clearProps: "transform" });
         gsap.set(ref.current!.querySelectorAll<HTMLElement>("[data-glow]"), { opacity: 0.22 });
@@ -369,8 +369,10 @@ export function HomePage() {
     if (now - lastClickRef.current > 6000) clicksRef.current = 0;
     lastClickRef.current = now;
 
-    gsap.fromTo(hit, { scale: 1 }, { scale: 1.08, duration: 0.12, yoyo: true, repeat: 1, ease: "power2.out" });
-    gsap.fromTo(hit, { filter: "drop-shadow(1px 0 0 #ff2d55) drop-shadow(-1px 0 0 #00ff88)" }, { filter: "none", duration: 0.18, ease: "power1.out" });
+    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      gsap.fromTo(hit, { scale: 1 }, { scale: 1.08, duration: 0.12, yoyo: true, repeat: 1, ease: "power2.out" });
+      gsap.fromTo(hit, { filter: "drop-shadow(1px 0 0 #ff2d55) drop-shadow(-1px 0 0 #00ff88)" }, { filter: "none", duration: 0.18, ease: "power1.out" });
+    }
 
     clicksRef.current += 1;
     const c = clicksRef.current;

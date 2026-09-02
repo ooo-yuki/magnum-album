@@ -189,9 +189,13 @@ export function Match3Game() {
 
   useEffect(() => {
     if (!ref.current) return;
-    ctxRef.current = gsap.context(() => {}, ref.current!);
-    gsap.from(`.${styles.hero} > *`, { y: 20, opacity: 0, stagger: 0.12, duration: 0.6 });
-  
+    if (prefersReducedMotion()) { gsap.set(`.${styles.hero} > *`, { y: 0, opacity: 1, clearProps: "transform" }); return; }
+    const ctx = gsap.context(() => {
+      gsap.from(`.${styles.hero} > *`, { y: 20, opacity: 0, stagger: 0.12, duration: 0.6 });
+    }, ref);
+    return () => ctx.revert();
+  }, []);
+
   // GSAP spec: y24 stagger 0.12 ScrollTrigger batch + reduced-motion gate + gsap.context cleanup + hover y:-4 RGB glow
   useEffect(() => {
     const root: HTMLElement | null = document.querySelector<HTMLElement>("[data-gsap-root]") || (document.body as unknown as HTMLElement);
@@ -220,11 +224,9 @@ export function Match3Game() {
     return () => ctx.revert();
   }, []);
 
-  return () => { ctxRef.current?.revert(); };
-  }, []);
-
   useEffect(() => {
     if (!movesRef.current) return;
+    if (prefersReducedMotion()) return;
     gsap.fromTo(movesRef.current, { scale: 1.35, color: moves <= 5 ? "#ff2d55" : "#ffcc00" }, { scale: 1, color: moves <= 5 ? "#ff2d55" : "#fff", duration: 0.35, ease: "back.out(2)" });
     if (moves <= 5 && moves > 0) {
       gsap.to(movesRef.current, { x: 3, duration: 0.06, yoyo: true, repeat: 5, ease: "power1.inOut" });
@@ -233,11 +235,13 @@ export function Match3Game() {
 
   useEffect(() => {
     if (!scoreRef.current) return;
+    if (prefersReducedMotion()) return;
     gsap.fromTo(scoreRef.current, { scale: 1.18 }, { scale: 1, duration: 0.28, ease: "back.out(1.7)" });
   }, [score]);
 
   useEffect(() => {
     if (combo > 0 && comboRef.current) {
+      if (prefersReducedMotion()) return;
       gsap.fromTo(comboRef.current, { scale: 0.6, rotation: -4, opacity: 0 }, { scale: 1, rotation: 0, opacity: 1, duration: 0.45, ease: "back.out(1.7)" });
       if (boardRef.current) {
         const intensity = Math.min(6 + combo * 3, 14);
@@ -251,7 +255,7 @@ export function Match3Game() {
     if (won) {
       playWin();
       // легкий shake всей страницы
-      if (ref.current) gsap.to(ref.current, { x: 4, duration: 0.06, yoyo: true, repeat: 6, ease: "power1.inOut", onComplete: () => gsap.set(ref.current, { x: 0 }) });
+      if (ref.current && !prefersReducedMotion()) gsap.to(ref.current, { x: 4, duration: 0.06, yoyo: true, repeat: 6, ease: "power1.inOut", onComplete: () => gsap.set(ref.current, { x: 0 }) });
     }
     if (lost) playLose();
   }, [won, lost]);
@@ -292,6 +296,18 @@ export function Match3Game() {
     const burstColor = comboLevel >= 2 ? "#ffcc00" : comboLevel === 1 ? "#ff2d55" : "#00ff88";
     spawnBurst(cc, cr, burstColor);
 
+    if (prefersReducedMotion()) {
+      const removed = currentBoard.map(row => [...row]);
+      for (const key of matched) {
+        const [r, c] = key.split(",").map(Number) as [number, number];
+        removed[r]![c] = null as unknown as Cell;
+      }
+      const { board: filled, falls } = applyGravity(removed);
+      setBoard(filled); setScore(newScore);
+      if (newScore >= TARGET) { setTimeout(() => { setWon(true); setLocked(false); }, 450); return; }
+      setTimeout(() => processCascade(filled, newScore, comboLevel + 1), 320);
+      return;
+    }
     const tl = gsap.timeline({
       onComplete: () => {
         const removed = currentBoard.map(row => [...row]);

@@ -181,5 +181,12 @@ export const MAGMA_GOLD_STYLE = "conic-gradient(from 0deg,#ff4500,#ff8c00,#ffd70
 export const MAGMA_SHADOW = "0 0 16px #ff4500";
 export const MAGMA_SPIN = "magmaSpin 3s linear infinite";
 
+export const SKIN_EMOJI: Record<string, string> = {
+  mops: "🐗", rhino: "🦏", monkey: "🐵", frog: "🐸",
+  panda: "🐼", fox: "🦊", owl: "🦉",
+  shark: "🦈", flamingo: "🦩", wolf: "🐺",
+  tiger: "🐯", dragon: "🐉",
+};
+
 // aliases for ShopPage imports
 export const COSMETICS = COSMETICS_CATALOG;

@@ -304,8 +304,11 @@ export function MemoryGame() {
   // intro GSAP
   useEffect(() => {
     if (!ref.current) return;
-    if (prefersReducedMotion()) return;
-    gsap.from(`.${styles.grid} .${styles.card}`, { scale: 0.8, opacity: 0, stagger: 0.06, duration: 0.42, ease: "back.out(1.4)", delay: 0.18 });
+    if (prefersReducedMotion()) { gsap.set(`.${styles.grid} .${styles.card}`, { scale: 1, opacity: 1, clearProps: "transform" }); return; }
+    const ctx = gsap.context(() => {
+      gsap.from(`.${styles.grid} .${styles.card}`, { scale: 0.8, opacity: 0, stagger: 0.06, duration: 0.42, ease: "back.out(1.4)", delay: 0.18 });
+    }, ref);
+    return () => ctx.revert();
   }, [diff, theme]);
 
   // timer

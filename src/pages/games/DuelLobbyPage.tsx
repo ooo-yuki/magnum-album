@@ -201,3 +201,4 @@ export function DuelLobbyPage() {
     </div>
   );
 }
+export const DuelLobbyGame = DuelLobbyPage;

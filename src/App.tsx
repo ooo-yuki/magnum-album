@@ -27,6 +27,7 @@ const Tour42Page = lazy(() => import("./pages/Tour42Page").then(m => ({ default:
 const Flow42Page = lazy(() => import("./pages/Flow42Page").then(m => ({ default: m.Flow42Page})));
 const Chain42Page = lazy(() => import("./pages/Chain42Page").then(m => ({ default: m.Chain42Page})));
 // opt 15:06 — 5 оставшихся eager страниц → lazy (тяжёлые чанки >50KB каждый не нужен на /)
+const Pass42Page = lazy(() => import("./pages/Pass42Page").then(m => ({ default: m.Pass42Page })));
 const About42Page = lazy(() => import("./pages/About42Page").then(m => ({ default: m.About42Page })));
 const TrackPage = lazy(() => import("./pages/TrackPage").then(m => ({ default: m.TrackPage })));
 const LastFitPage = lazy(() => import("./pages/LastFitPage").then(m => ({ default: m.LastFitPage })));
@@ -56,8 +57,6 @@ const Snake42Game = lazy(() => import("./pages/games/Snake42Game").then(m => ({ 
 const Dodge42Game = lazy(() => import("./pages/games/Dodge42Game").then(m => ({ default: m.Dodge42Game })));
 const QuizGame = lazy(() => import("./pages/games/QuizGame").then(m => ({ default: m.QuizGame })));
 const Timeline2026Game = lazy(() => import("./pages/games/Timeline2026Game").then(m => ({ default: m.Timeline2026Game })));
-const DuelMagma = lazy(() => import("./pages/games/DuelMagma").then(m => ({ default: m.DuelMagma })));
-const DuelVolcano = lazy(() => import("./pages/games/DuelVolcano").then(m => ({ default: m.DuelVolcano })));
 
 function GameFallback() {
   return <div style={{ padding: "4rem 2rem", textAlign: "center", color: "#ff2d55" }}>Загрузка игры… 🎮</div>;
@@ -94,8 +93,6 @@ export default function App() {
           <Route path="games/dodge" element={<Suspense fallback={<GameFallback />}><Dodge42Game /></Suspense>} />
           <Route path="games/quiz" element={<Suspense fallback={<GameFallback />}><QuizGame /></Suspense>} />
           <Route path="games/timeline" element={<Suspense fallback={<GameFallback />}><Timeline2026Game /></Suspense>} />
-          <Route path="games/duel-magma" element={<Suspense fallback={<GameFallback />}><DuelMagma /></Suspense>} />
-          <Route path="games/duel-volcano" element={<Suspense fallback={<GameFallback />}><DuelVolcano /></Suspense>} />
           <Route path="shop" element={<Suspense fallback={<PageFallback />}><ShopPage /></Suspense>} />
           <Route path="eco" element={<Suspense fallback={<PageFallback />}><EcoPage /></Suspense>} />
           <Route path="gallery" element={<Suspense fallback={<PageFallback />}><GalleryPage /></Suspense>} />
@@ -115,6 +112,7 @@ export default function App() {
           <Route path="flow" element={<Suspense fallback={<PageFallback />}><Flow42Page /></Suspense>} />
           <Route path="chain" element={<Suspense fallback={<PageFallback />}><Chain42Page /></Suspense>} />
           <Route path="chain/join/:code" element={<Suspense fallback={<PageFallback />}><Chain42Page /></Suspense>} />
+          <Route path="pass" element={<Suspense fallback={<PageFallback />}><Pass42Page /></Suspense>} />
         </Route>
       </Routes>
     </BrowserRouter>

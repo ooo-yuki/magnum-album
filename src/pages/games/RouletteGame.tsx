@@ -121,8 +121,11 @@ export function RouletteGame(){
   // GSAP entrance
   useEffect(()=>{
     if(!wrapRef.current) return;
+    if(prefersReducedMotion()) { gsap.set(`.${styles.panel}`, { y:0, opacity:1, clearProps:"transform" }); return; }
     const ctx=gsap.context(()=>{ gsap.from(`.${styles.panel}`,{ y:30, opacity:0, duration:0.6, stagger:0.08, ease:"back.out(1.4)"}); },wrapRef);
-  
+    return ()=>ctx.revert();
+  },[]);
+
   // GSAP spec: y24 stagger 0.12 ScrollTrigger batch + reduced-motion gate + gsap.context cleanup + hover y:-4 RGB glow
   useEffect(() => {
     const root: HTMLElement | null = document.querySelector<HTMLElement>("[data-gsap-root]") || (document.body as unknown as HTMLElement);
@@ -150,9 +153,6 @@ export function RouletteGame(){
     }, root);
     return () => ctx.revert();
   }, []);
-
-  return ()=>ctx.revert();
-  },[]);
 
   // stats: hot/cold numbers from history
   const freqMap = (()=>{ const m=new Map<number,number>(); history.forEach(h=>m.set(h.n,(m.get(h.n)||0)+1)); return m; })();
@@ -279,7 +279,7 @@ export function RouletteGame(){
     if(balance - totalBet < totalBet) return;
     setBets(prev=>[...prev, ...prev.map(b=>({...b}))]);
     playChipStack();
-    if(wrapRef.current) gsap.fromTo(wrapRef.current,{scale:1},{scale:1.012,duration:0.12,yoyo:true,repeat:1,ease:"power1.inOut"});
+    if(wrapRef.current && !prefersReducedMotion()) gsap.fromTo(wrapRef.current,{scale:1},{scale:1.012,duration:0.12,yoyo:true,repeat:1,ease:"power1.inOut"});
   },[spinning, bets, balance, totalBet]);
 
   const repeatLast = useCallback(()=>{
@@ -313,7 +313,7 @@ export function RouletteGame(){
     const ballStart=ballRef.current.angle;
     const ballDelta= -(spins*2.2*Math.PI*2 + Math.random()*1.2);
     playSpinRumble();
-    if(wrapRef.current) gsap.to(wrapRef.current,{ scale:1.01, duration:0.15, yoyo:true, repeat:1 });
+    if(wrapRef.current && !prefersReducedMotion()) gsap.to(wrapRef.current,{ scale:1.01, duration:0.15, yoyo:true, repeat:1 });
 
     const obj={ p:0 };
     gsap.to(obj,{
@@ -344,8 +344,8 @@ export function RouletteGame(){
           if(net>0){
             if(net>=chip*10) { playBigWin(); burstConfetti(32); }
             else playWinSound();
-            if(wrapRef.current) gsap.fromTo(wrapRef.current,{scale:1},{scale:1.02,duration:0.18,yoyo:true,repeat:1,ease:"back.out(1.4)"});
-          } else { playLoseSound(); if(net< -chip*3 && wrapRef.current) gsap.to(wrapRef.current,{x:4,duration:0.06,yoyo:true,repeat:5,onComplete:()=>gsap.set(wrapRef.current!,{x:0})}); }
+            if(wrapRef.current && !prefersReducedMotion()) gsap.fromTo(wrapRef.current,{scale:1},{scale:1.02,duration:0.18,yoyo:true,repeat:1,ease:"back.out(1.4)"});
+          } else { playLoseSound(); if(net< -chip*3 && wrapRef.current && !prefersReducedMotion()) gsap.to(wrapRef.current,{x:4,duration:0.06,yoyo:true,repeat:5,onComplete:()=>gsap.set(wrapRef.current!,{x:0})}); }
           draw();
           // auto-repeat if enabled and balance allows
           if(autoSpin && clamped>0 && clamped < WIN_BALANCE){
