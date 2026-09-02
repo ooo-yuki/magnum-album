@@ -8,7 +8,7 @@
 import { neon, Pool, neonConfig } from "@neondatabase/serverless";
 import ws from "ws";
 import { STUDIO_TRACKS, STUDIO_PRESETS, STUDIO_SCENE_DEFAULTS, STUDIO_BG_OPTIONS, STUDIO_FILTER_OPTIONS, isStudioTrackSlug, isStudioPresetId, getBpmForTrack, validateScenes } from "./src/lib/studio42.ts";
-import { RARITY_TABLE, DUST_REWARD, GACHA_POOL, EVENT_LEGENDARY_POOL, STANDARD_LEGENDARY_POOL, softPityCurve, getLegendaryChance, rollWithPity, gachaPrice } from "./src/lib/gacha.ts";
+import { RARITY_TABLE, DUST_REWARD, GACHA_POOL, EVENT_LEGENDARY_POOL, STANDARD_LEGENDARY_POOL, softPityCurve, getLegendaryChance, rollWithPity, gachaPrice, pickItemId } from "./src/lib/gacha.ts";
 import type { BannerType, Rarity as GachaRarity } from "./src/lib/gacha.ts";
 import { XP_PER_LEVEL, MAX_LEVEL, SEASON_ID, PASS_REWARDS, xpForSource } from "./src/lib/pass42.ts";
 import { TRACKS as CHARTS_TRACKS, seededSnapshots, isPeriod } from "./src/lib/charts42.ts";
@@ -791,7 +791,7 @@ async function handleShopUnequip(req: Request): Promise<Response> {
 }
 
 // ---- Cosmetics shop — единый источник src/lib/cosmetics.ts (92 предмета, VOLCANO 12 + OBSIDIAN 12 molten) ----
-import { GLACIER_CATALOG, GLACIER_IDS, isGlacierCosmetic, PRISM_CATALOG, PRISM_IDS, isPrismCosmetic, CRYSTAL_CATALOG, CRYSTAL_IDS, isCrystalCosmetic, VOLCANO_CATALOG, VOLCANO_IDS, isVolcanoCosmetic, OBSIDIAN_CATALOG, OBSIDIAN_IDS, isObsidianCosmetic } from "./src/lib/cosmetics.ts";
+import { GLACIER_CATALOG, GLACIER_IDS, isGlacierCosmetic, PRISM_CATALOG, PRISM_IDS, isPrismCosmetic, CRYSTAL_CATALOG, CRYSTAL_IDS, isCrystalCosmetic, VOLCANO_CATALOG, VOLCANO_IDS, isVolcanoCosmetic, OBSIDIAN_CATALOG, OBSIDIAN_IDS, isObsidianCosmetic, FORGE_CATALOG, isForgeCosmetic } from "./src/lib/cosmetics.ts";
 import { POINTS_CANON, MAP_POINT_IDS, isCorrectAnswer, isAllPointsDone } from "./src/lib/map42.ts";
 // Каталог косметики и типы — единый источник src/lib/cosmetics.ts
 import { COSMETICS_CATALOG, RARITY_PRICE } from "./src/lib/cosmetics.ts";
@@ -934,12 +934,7 @@ async function handleLog(req: Request): Promise<Response> {
   return Response.json({ ok: true });
 }
 
-// ---- PRISM 42 — dust / dismantle / craft + /shop/prism & /shop/dust ----
-async function ensureDustTable():Promise<void>{
-  if (!process.env.DATABASE_URL && !process.env.DATABASE_URL_UNPOOLED) return;
-  const sql=getSql();
-  await sql`CREATE TABLE IF NOT EXISTS magnum_dust (user_id integer primary key references magnum_users(id) on delete cascade, balance integer not null default 0, updated_at timestamp default now())`;
-}
+// ---- PRISM 42 — dismantle / craft + /shop/prism & /shop/dust (единая валюта — magnum_coins) ----
 // Индексы под чтение косметики (инвентарь + equipped в лидербордах).
 // Дублирует drizzle/migrations/0034_cosmetics_index.sql, чтобы работать без прогона миграций.
 async function ensureCosmeticsIndexes(): Promise<void> {
@@ -1026,7 +1021,6 @@ export async function backfillSubscriptionsFromCosmetics(): Promise<{ scanned: n
   return { scanned: byUser.size, backfilled };
 }
 // startup ensure + backfill (non-blocking, logged)
-void ensureDustTable().then(()=> console.log("[startup] magnum_dust ensured")).catch(e=> console.error("[startup] ensureDustTable failed", e));
 void ensurePityTable().then(()=> console.log("[startup] magnum_pity ensured")).catch(e=> console.error("[startup] ensurePityTable failed", e));
 async function ensureLeaderboardAccounts(): Promise<void> {
   const sql = getSql();
@@ -1137,10 +1131,10 @@ async function handlePrismCatalog():Promise<Response>{ return Response.json({ ca
 async function handleDustGet(req:Request):Promise<Response>{
   const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
   const user=await getUserByToken(token); if(!user) return Response.json({error:"unauthorized"},{status:401});
-  await ensureDustTable();
   const sql=getSql();
-  const rows=await sql`SELECT balance FROM magnum_dust WHERE user_id=${user.id} LIMIT 1`;
-  const bal=rows.length? Number((rows[0] as {balance:number}).balance):0;
+  await sql`INSERT INTO magnum_coins (user_id, balance) VALUES (${user.id}, 1000) ON CONFLICT (user_id) DO NOTHING`;
+  const rows=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+  const bal=rows.length? Number((rows[0] as {balance:number}).balance):1000;
   return Response.json({ balance: bal, dust: bal });
 }
 async function handleDismantle(req:Request):Promise<Response>{
@@ -1150,16 +1144,17 @@ async function handleDismantle(req:Request):Promise<Response>{
   let body:{cosmeticId?:string;id?:string}; try{ body=(await req.json()) as typeof body;}catch{ return Response.json({error:"Invalid JSON"},{status:400});}
   const raw=validateCosmeticId(body.cosmeticId??body.id??""); if(!raw) return Response.json({error:"cosmeticId required"},{status:400});
   const item=COSMETICS_CATALOG.find(c=>c.id===raw); if(!item) return Response.json({error:"unknown cosmetic",cosmeticId:raw},{status:400});
-  await ensureDustTable();
   const sql=getSql();
   const owned=await sql`SELECT id FROM magnum_cosmetics WHERE user_id=${user.id} AND cosmetic_id=${raw} LIMIT 1`;
   if(owned.length===0) return Response.json({error:"not owned",cosmeticId:raw},{status:404});
   const reward=obsidianDismantleReward(item);
   await sql`DELETE FROM magnum_cosmetics WHERE user_id=${user.id} AND cosmetic_id=${raw}`;
-  await sql`INSERT INTO magnum_dust (user_id,balance) VALUES (${user.id},${reward}) ON CONFLICT (user_id) DO UPDATE SET balance=magnum_dust.balance+${reward}, updated_at=now()`;
+  await sql`INSERT INTO magnum_coins (user_id, balance) VALUES (${user.id}, 1000) ON CONFLICT (user_id) DO NOTHING`;
+  await sql`UPDATE magnum_coins SET balance = balance + ${reward} WHERE user_id=${user.id}`;
   await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${reward},'dismantle',${JSON.stringify({cosmeticId:raw,reward})}::jsonb)`;
-  const r=await sql`SELECT balance FROM magnum_dust WHERE user_id=${user.id} LIMIT 1`;
-  return Response.json({ ok:true, dismantled:raw, reward, dust:Number((r[0] as {balance:number}).balance) });
+  const r=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+  const rBal=Number((r[0] as {balance:number}).balance);
+  return Response.json({ ok:true, dismantled:raw, reward, dust:rBal, balance:rBal });
 }
 async function handlePrismCraft(req:Request):Promise<Response>{
   const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
@@ -1169,19 +1164,20 @@ async function handlePrismCraft(req:Request):Promise<Response>{
   const raw=validateCosmeticId(body.cosmeticId??body.id??""); if(!raw) return Response.json({error:"cosmeticId required"},{status:400});
   const item=COSMETICS_CATALOG.find(c=>c.id===raw); if(!item) return Response.json({error:"unknown cosmetic",cosmeticId:raw},{status:400});
   if(!isPrismCosmetic(raw)) return Response.json({error:"only prism craft allowed",cosmeticId:raw},{status:400});
-  await ensureDustTable();
   const sql=getSql();
   const ex=await sql`SELECT id FROM magnum_cosmetics WHERE user_id=${user.id} AND cosmetic_id=${raw} LIMIT 1`;
   if(ex.length>0) return Response.json({error:"already owned",cosmeticId:raw},{status:409});
   const cost=item.price;
-  const drows=await sql`SELECT balance FROM magnum_dust WHERE user_id=${user.id} LIMIT 1`;
+  await sql`INSERT INTO magnum_coins (user_id, balance) VALUES (${user.id}, 1000) ON CONFLICT (user_id) DO NOTHING`;
+  const drows=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
   const dustBal=drows.length? Number((drows[0] as {balance:number}).balance):0;
-  if(dustBal<cost) return Response.json({error:"not enough dust",cost,dust:dustBal,required:cost},{status:402});
-  await sql`UPDATE magnum_dust SET balance=balance-${cost}, updated_at=now() WHERE user_id=${user.id}`;
+  if(dustBal<cost) return Response.json({error:"not enough coins",cost,dust:dustBal,balance:dustBal,required:cost},{status:402});
+  await sql`UPDATE magnum_coins SET balance=balance-${cost} WHERE user_id=${user.id}`;
   await sql`INSERT INTO magnum_cosmetics (user_id,cosmetic_id,slot,equipped,purchased_at) VALUES (${user.id},${raw},${item.slot},false,now())`;
   await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${-cost},'prism_craft',${JSON.stringify({cosmeticId:raw,cost})}::jsonb)`;
-  const nr=await sql`SELECT balance FROM magnum_dust WHERE user_id=${user.id} LIMIT 1`;
-  return Response.json({ ok:true, crafted:raw, slot:item.slot, cost, dust:Number((nr[0] as {balance:number}).balance) });
+  const nr=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+  const nrBal=Number((nr[0] as {balance:number}).balance);
+  return Response.json({ ok:true, crafted:raw, slot:item.slot, cost, dust:nrBal, balance:nrBal });
 }
 
 async function handleGlacierCatalog(): Promise<Response> {
@@ -1198,7 +1194,6 @@ async function handleGlacierCraft(req: Request): Promise<Response> {
   if(!isGlacierCosmetic(raw)) return Response.json({error:"only glacier craft allowed",cosmeticId:raw},{status:400});
   // only uncommon (rare) targets craftable via 3x common
   if(target.rarity!=="rare") return Response.json({error:"only uncommon (142) craftable via 3x common",cosmeticId:raw},{status:400});
-  await ensureDustTable();
   const sql=getSql();
   const ex=await sql`SELECT id FROM magnum_cosmetics WHERE user_id=${user.id} AND cosmetic_id=${raw} LIMIT 1`;
   if(ex.length>0) return Response.json({error:"already owned",cosmeticId:raw},{status:409});
@@ -1232,7 +1227,6 @@ async function handleCrystalCraft(req: Request): Promise<Response> {
   const raw=validateCosmeticId(body.targetId??body.cosmeticId??body.id??""); if(!raw) return Response.json({error:"targetId required"},{status:400});
   const target=COSMETICS_CATALOG.find(c=>c.id===raw); if(!target) return Response.json({error:"unknown cosmetic",cosmeticId:raw},{status:400});
   if(!isCrystalCosmetic(raw)) return Response.json({error:"only crystal craft allowed",cosmeticId:raw},{status:400});
-  await ensureDustTable();
   const sql=getSql();
   const ex=await sql`SELECT id FROM magnum_cosmetics WHERE user_id=${user.id} AND cosmetic_id=${raw} LIMIT 1`;
   if(ex.length>0) return Response.json({error:"already owned",cosmeticId:raw},{status:409});
@@ -1285,7 +1279,6 @@ async function handleVolcanoCraft(req: Request): Promise<Response> {
   const target=COSMETICS_CATALOG.find(c=>c.id===raw); if(!target) return Response.json({error:"unknown cosmetic",cosmeticId:raw},{status:400});
   if(!isVolcanoCosmetic(raw)) return Response.json({error:"only volcano craft allowed",cosmeticId:raw},{status:400});
   if(target.rarity!=="rare") return Response.json({error:"only uncommon (142) craftable via 3x common",cosmeticId:raw},{status:400});
-  await ensureDustTable();
   const sql=getSql();
   const ex=await sql`SELECT id FROM magnum_cosmetics WHERE user_id=${user.id} AND cosmetic_id=${raw} LIMIT 1`;
   if(ex.length>0) return Response.json({error:"already owned",cosmeticId:raw},{status:409});
@@ -1319,7 +1312,6 @@ async function handleObsidianCraft(req: Request): Promise<Response> {
   const target=COSMETICS_CATALOG.find(c=>c.id===raw); if(!target) return Response.json({error:"unknown cosmetic",cosmeticId:raw},{status:400});
   if(!isObsidianCosmetic(raw)) return Response.json({error:"only obsidian craft allowed",cosmeticId:raw},{status:400});
   if(target.rarity!=="rare") return Response.json({error:"only uncommon (142) craftable via 3x common",cosmeticId:raw},{status:400});
-  await ensureDustTable();
   const sql=getSql();
   const ex=await sql`SELECT id FROM magnum_cosmetics WHERE user_id=${user.id} AND cosmetic_id=${raw} LIMIT 1`;
   if(ex.length>0) return Response.json({error:"already owned",cosmeticId:raw},{status:409});
@@ -1341,6 +1333,36 @@ async function handleObsidianCraft(req: Request): Promise<Response> {
   return Response.json({ ok:true, crafted:raw, slot:target.slot, cost:42, balance:newBal2, consumed:ownedCommons.slice(0,3), inventory:(inv as {cosmetic_id:string}[]).map(r=>r.cosmetic_id) });
 }
 
+async function handleForgeCraft(req: Request): Promise<Response> {
+  const token=extractToken(req); if(!token) return Response.json({error:"unauthorized"},{status:401});
+  const user=await getUserByToken(token); if(!user) return Response.json({error:"unauthorized"},{status:401});
+  const ip=getClientIp(req); if(!checkRateLimit(`shop:forge-craft:${user.id}:${ip}`,12,60_000)) return Response.json({error:"rate limited"},{status:429});
+  let body:{ targetId?:string; cosmeticId?:string; id?:string }; try{ body=(await req.json()) as typeof body;}catch{ return Response.json({error:"Invalid JSON"},{status:400});}
+  const raw=validateCosmeticId(body.targetId??body.cosmeticId??body.id??""); if(!raw) return Response.json({error:"targetId required"},{status:400});
+  const target=COSMETICS_CATALOG.find(c=>c.id===raw); if(!target) return Response.json({error:"unknown cosmetic",cosmeticId:raw},{status:400});
+  if(!isForgeCosmetic(raw)) return Response.json({error:"only forge craft allowed",cosmeticId:raw},{status:400});
+  if(target.rarity!=="rare") return Response.json({error:"only uncommon (142) craftable via 3x common",cosmeticId:raw},{status:400});
+  const sql=getSql();
+  const ex=await sql`SELECT id FROM magnum_cosmetics WHERE user_id=${user.id} AND cosmetic_id=${raw} LIMIT 1`;
+  if(ex.length>0) return Response.json({error:"already owned",cosmeticId:raw},{status:409});
+  const allRows = await sql`SELECT cosmetic_id FROM magnum_cosmetics WHERE user_id=${user.id}`;
+  const ownedIds = new Set((allRows as {cosmetic_id:string}[]).map(r=>r.cosmetic_id));
+  const commonForgeIds = FORGE_CATALOG.filter(c=>c.rarity==="common").map(c=>c.id);
+  const ownedCommons = commonForgeIds.filter(id=>ownedIds.has(id));
+  if(ownedCommons.length < 3) return Response.json({error:"need 3 common forge skins",owned:ownedCommons.length,required:3},{status:402});
+  const coins=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+  let bal=coins.length? Number((coins[0] as {balance:number}).balance):0;
+  if(bal < 42) return Response.json({error:"not enough coins",required:42,balance:bal},{status:402});
+  await sql`UPDATE magnum_coins SET balance=balance-42 WHERE user_id=${user.id}`;
+  for(let i=0;i<3;i++){ const cid=ownedCommons[i]!; await sql`DELETE FROM magnum_cosmetics WHERE user_id=${user.id} AND cosmetic_id=${cid}`; }
+  await sql`INSERT INTO magnum_cosmetics (user_id,cosmetic_id,slot,equipped,purchased_at) VALUES (${user.id},${raw},${target.slot},false,now())`;
+  await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${-42},'forge_craft',${JSON.stringify({target:raw, consumed:ownedCommons.slice(0,3)})}::jsonb)`;
+  const upd3=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+  const newBal3=Number((upd3[0] as {balance:number}).balance);
+  const inv2=await sql`SELECT cosmetic_id FROM magnum_cosmetics WHERE user_id=${user.id} ORDER BY purchased_at ASC`;
+  return Response.json({ ok:true, crafted:raw, slot:target.slot, cost:42, balance:newBal3, consumed:ownedCommons.slice(0,3), inventory:(inv2 as {cosmetic_id:string}[]).map(r=>r.cosmetic_id) });
+}
+
 // ---- GACHA CORE 42 — pity 90/180 + 50/50 + soft-pity 65 + magnum_pity ----
 async function handleGachaRoll(req: Request): Promise<Response> {
   const token = extractToken(req);
@@ -1358,7 +1380,6 @@ async function handleGachaRoll(req: Request): Promise<Response> {
   if (count !== 1 && count !== 10) return Response.json({ error: "count must be 1 or 10" }, { status: 400 });
   const price = gachaPrice(count);
   await ensurePityTable();
-  await ensureDustTable();
   await ensureGachaHistoryTable();
   const sql = getSql();
   await sql`BEGIN`;
@@ -1391,7 +1412,7 @@ async function handleGachaRoll(req: Request): Promise<Response> {
         isNew = false;
         dust = DUST_REWARD[rarity] ?? 0;
         if (dust > 0) {
-          await sql`INSERT INTO magnum_dust (user_id, balance) VALUES (${user.id}, ${dust}) ON CONFLICT (user_id) DO UPDATE SET balance = magnum_dust.balance + ${dust}, updated_at = now()`;
+          await sql`UPDATE magnum_coins SET balance = balance + ${dust} WHERE user_id=${user.id}`;
         }
       } else {
         const cosItem = COSMETICS_CATALOG.find(c=>c.id===id);
@@ -1413,8 +1434,7 @@ async function handleGachaRoll(req: Request): Promise<Response> {
     await sql`INSERT INTO magnum_transactions (user_id, amount, reason, meta) VALUES (${user.id}, ${-price}, 'gacha_roll', ${JSON.stringify({ banner, count, price, results: results.map(r=>({id:r.id, rarity:r.rarity})) })}::jsonb)`;
     const balAfter = await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
     const newBal = balAfter.length ? Number((balAfter[0] as { balance: number }).balance) : 0;
-    const dustRows = await sql`SELECT balance FROM magnum_dust WHERE user_id=${user.id} LIMIT 1`;
-    const dustBal = dustRows.length ? Number((dustRows[0] as { balance: number }).balance) : 0;
+    const dustBal = newBal;
     await sql`COMMIT`;
     const guaranteeIn = { epic: Math.max(0, 90 - (curPityCounter + 1)), legendary: Math.max(0, 180 - (curPity5 + 1)) };
     const pity = { counter: curPityCounter, pityCounter: curPityCounter, pity5star: curPity5, pity_5star: curPity5, lost_50_50: curLost, lost5050: curLost, pulls: curPulls, banner };
@@ -1481,7 +1501,7 @@ async function handleGachaFreeRoll(req: Request): Promise<Response> {
   if(!token) return Response.json({ error:"unauthorized", needAuth:true }, { status:401, headers:{ "magnum:need-auth":"1" } });
   const user=await getUserByToken(token); if(!user) return Response.json({ error:"unauthorized", needAuth:true }, { status:401, headers:{ "magnum:need-auth":"1" } });
   const ip=getClientIp(req); if(!checkRateLimit(`gacha:free-roll:${user.id}:${ip}`, 5, 60_000)) return Response.json({ error:"rate limited" }, { status:429 });
-  const sql=getSql(); await ensurePityTable(); await ensureGachaHistoryTable(); await ensureDustTable();
+  const sql=getSql(); await ensurePityTable(); await ensureGachaHistoryTable();
   // streak >=3 required via magnum_daily_claims latest streak
   let streak=0;
   try{
@@ -1502,7 +1522,7 @@ async function handleGachaFreeRoll(req: Request): Promise<Response> {
     const ownedCos=await sql`SELECT id FROM magnum_cosmetics WHERE user_id=${user.id} AND cosmetic_id=${id} LIMIT 1`;
     const ownedInv=await sql`SELECT id FROM magnum_shop_inventory WHERE user_id=${user.id} AND skin_id=${id} LIMIT 1`;
     let isNew=true; let dust=0;
-    if(ownedCos.length||ownedInv.length){ isNew=false; dust=DUST_REWARD[rarity]??0; if(dust) await sql`INSERT INTO magnum_dust (user_id,balance) VALUES (${user.id},${dust}) ON CONFLICT (user_id) DO UPDATE SET balance=magnum_dust.balance+${dust}, updated_at=now()`; }
+    if(ownedCos.length||ownedInv.length){ isNew=false; dust=DUST_REWARD[rarity]??0; if(dust) await sql`UPDATE magnum_coins SET balance=balance+${dust} WHERE user_id=${user.id}`; }
     else { const cos=COSMETICS_CATALOG.find(c=>c.id===id); if(cos) await sql`INSERT INTO magnum_cosmetics (user_id,cosmetic_id,slot,equipped,purchased_at) VALUES (${user.id},${id},${cos.slot},false,now())`; else await sql`INSERT INTO magnum_shop_inventory (user_id,skin_id,purchased_at,equipped) VALUES (${user.id},${id},now(),false)`; }
     let nextPc=pc, nextP5=p5; let nextLost=lost; if(rarity==="legendary"){ nextP5=0; nextPc=0; } else if(rarity==="epic"){ nextPc=0; nextP5++; } else { nextPc++; nextP5++; }
     if(roll.nextLost5050!==null) nextLost=Boolean(roll.nextLost5050);
@@ -1513,6 +1533,47 @@ async function handleGachaFreeRoll(req: Request): Promise<Response> {
     await sql`COMMIT`;
     return Response.json({ ok:true, results:[{ id, rarity, isNew, dust }], balance: bal });
   }catch(e){ try{ await sql`ROLLBACK`; }catch{} console.error("[gacha free-roll] tx failed",e); return Response.json({ error:"db error" },{status:500}); }
+}
+
+// "Кейс" — гарантированный epic+ ролл вне пити стандартного баннера, за единый баланс (магазин/дуэли/заврики — тот же счёт)
+async function handleGachaDustBuy(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized", needAuth: true }, { status: 401, headers: { "magnum:need-auth": "1" } });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized", needAuth: true }, { status: 401, headers: { "magnum:need-auth": "1" } });
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`gacha:dust-buy:${user.id}:${ip}`, 10, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
+  const price = 420;
+  await ensureGachaHistoryTable();
+  const sql = getSql();
+  await sql`BEGIN`;
+  try {
+    await sql`INSERT INTO magnum_coins (user_id, balance) VALUES (${user.id}, 1000) ON CONFLICT (user_id) DO NOTHING`;
+    const coinsRows = await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} FOR UPDATE`;
+    const bal = coinsRows.length ? Number((coinsRows[0] as { balance: number }).balance) : 0;
+    if (bal < price) { await sql`ROLLBACK`; return Response.json({ error: "not enough coins", price, balance: bal, required: price }, { status: 402 }); }
+    await sql`UPDATE magnum_coins SET balance = balance - ${price} WHERE user_id=${user.id}`;
+    const rarity: GachaRarity = Math.random() < 0.05 ? "legendary" : "epic";
+    const id = pickItemId(rarity, "standard", false);
+    let isNew = true; let dust = 0;
+    const ownedCos = await sql`SELECT id FROM magnum_cosmetics WHERE user_id=${user.id} AND cosmetic_id=${id} LIMIT 1`;
+    const ownedInv = await sql`SELECT id FROM magnum_shop_inventory WHERE user_id=${user.id} AND skin_id=${id} LIMIT 1`;
+    if (ownedCos.length > 0 || ownedInv.length > 0) {
+      isNew = false;
+      dust = DUST_REWARD[rarity] ?? 0;
+      if (dust > 0) await sql`UPDATE magnum_coins SET balance = balance + ${dust} WHERE user_id=${user.id}`;
+    } else {
+      const cosItem = COSMETICS_CATALOG.find(c => c.id === id);
+      if (cosItem) await sql`INSERT INTO magnum_cosmetics (user_id, cosmetic_id, slot, equipped, purchased_at) VALUES (${user.id}, ${id}, ${cosItem.slot}, false, now())`;
+      else await sql`INSERT INTO magnum_shop_inventory (user_id, skin_id, purchased_at, equipped) VALUES (${user.id}, ${id}, now(), false)`;
+    }
+    await sql`INSERT INTO magnum_gacha_history (user_id, banner_type, rarity, cosmetic_id, is_new) VALUES (${user.id}, 'standard', ${rarity}, ${id}, ${isNew})`;
+    await sql`INSERT INTO magnum_transactions (user_id, amount, reason, meta) VALUES (${user.id}, ${-price}, 'gacha_dust_case', ${JSON.stringify({ price, rarity, id })}::jsonb)`;
+    const balAfter = await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+    const newBal = balAfter.length ? Number((balAfter[0] as { balance: number }).balance) : 0;
+    await sql`COMMIT`;
+    return Response.json({ ok: true, results: [{ id, rarity, isNew, dust }], balance: newBal, dust: newBal, balanceDust: newBal });
+  } catch (e) { try { await sql`ROLLBACK`; } catch {} console.error("[gacha dust buy] tx failed", e); return Response.json({ error: "db error" }, { status: 500 }); }
 }
 
 // ---- GACHA QUESTS 42 — daily/weekly + comeback 42 ----
@@ -1630,7 +1691,7 @@ async function handleGachaQuestClaim(req: Request): Promise<Response> {
   if (!questId) return Response.json({ error:"questId required" }, { status:400 });
   const def = gachaQuestDefById(questId);
   if (!def) return Response.json({ error:"unknown questId", allowed:[...QUEST_DEFS.map(q=>q.id), WEEKLY_DEF.id] }, { status:400 });
-  await ensureGachaQuestsTable(); await ensurePityTable(); await ensureDustTable(); await ensureGachaHistoryTable();
+  await ensureGachaQuestsTable(); await ensurePityTable(); await ensureGachaHistoryTable();
   const sql = getSql();
   const weekId = gachaWeekId();
   await sql`BEGIN`;
@@ -1657,7 +1718,7 @@ async function handleGachaQuestClaim(req: Request): Promise<Response> {
       let isNew=true; let dust=0;
       const ownedCos=await sql`SELECT id FROM magnum_cosmetics WHERE user_id=${user.id} AND cosmetic_id=${id} LIMIT 1`;
       const ownedInv=await sql`SELECT id FROM magnum_shop_inventory WHERE user_id=${user.id} AND skin_id=${id} LIMIT 1`;
-      if(ownedCos.length>0 || ownedInv.length>0){ isNew=false; dust=DUST_REWARD[rarity]??0; if(dust>0) await sql`INSERT INTO magnum_dust (user_id,balance) VALUES (${user.id},${dust}) ON CONFLICT (user_id) DO UPDATE SET balance=magnum_dust.balance+${dust}, updated_at=now()`; }
+      if(ownedCos.length>0 || ownedInv.length>0){ isNew=false; dust=DUST_REWARD[rarity]??0; if(dust>0) await sql`UPDATE magnum_coins SET balance=balance+${dust} WHERE user_id=${user.id}`; }
       else { const cos=COSMETICS_CATALOG.find(c=>c.id===id); if(cos) await sql`INSERT INTO magnum_cosmetics (user_id,cosmetic_id,slot,equipped,purchased_at) VALUES (${user.id},${id},${cos.slot},false,now())`; else await sql`INSERT INTO magnum_shop_inventory (user_id,skin_id,purchased_at,equipped) VALUES (${user.id},${id},now(),false)`; }
       if(rarity==="legendary"){ curP5=0; curPc=0; } else if(rarity==="epic"){ curPc=0; curP5++; } else { curPc++; curP5++; }
       if(roll.nextLost5050!==null) curLost=Boolean(roll.nextLost5050);
@@ -1675,12 +1736,12 @@ async function handleGachaQuestClaim(req: Request): Promise<Response> {
         await sql`INSERT INTO magnum_gacha_quests (user_id, quest_id, week_id, progress, target, claimed, completed, updated_at) VALUES (${user.id}, ${wDef.id}, ${weekId}, 1, ${wDef.target}, false, ${1>=wDef.target}, now()) ON CONFLICT (user_id, quest_id, week_id) DO UPDATE SET progress = LEAST(magnum_gacha_quests.target, magnum_gacha_quests.progress + 1), completed = (LEAST(magnum_gacha_quests.target, magnum_gacha_quests.progress + 1) >= magnum_gacha_quests.target), updated_at = now()`;
       }catch{}
     }
-    const dustRows = await sql`SELECT balance FROM magnum_dust WHERE user_id=${user.id} LIMIT 1`;
-    const dustBal = dustRows.length ? Number((dustRows[0] as {balance:number}).balance) : 0;
+    const coinRows = await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+    const dustBal = coinRows.length ? Number((coinRows[0] as {balance:number}).balance) : 0;
     const pity = { counter:curPc, pityCounter:curPc, pity5star:curP5, pity_5star:curP5, lost_50_50:curLost, lost5050:curLost, pulls:curPulls, banner };
     const guaranteeIn = { epic: Math.max(0, 90 - (curPc+1)), legendary: Math.max(0, 180 - (curP5+1)) };
     await sql`COMMIT`;
-    return Response.json({ ok:true, questId, results, pity, guaranteeIn, dustBalance: dustBal, dust: dustBal, banner, rolls, claimed:true });
+    return Response.json({ ok:true, questId, results, pity, guaranteeIn, dustBalance: dustBal, dust: dustBal, balance: dustBal, banner, rolls, claimed:true });
   } catch(e){ try{ await sql`ROLLBACK`; }catch{} console.error("[gacha quest claim] tx failed",e); return Response.json({ error:"db error" },{status:500}); }
 }
 
@@ -1691,7 +1752,7 @@ async function handleGachaComebackClaim(req: Request): Promise<Response> {
   if (!user) return Response.json({ error:"unauthorized" }, { status:401, headers:{ "magnum:need-auth":"1" } });
   const ip=getClientIp(req);
   if(!checkRateLimit(`gacha:comeback:${user.id}:${ip}`, 20, 60_000)) return Response.json({ error:"rate limited" },{status:429});
-  await ensureGachaQuestsTable(); await ensurePityTable(); await ensureDustTable(); await ensureGachaHistoryTable();
+  await ensureGachaQuestsTable(); await ensurePityTable(); await ensureGachaHistoryTable();
   const sql=getSql();
   let lastActivity: Date|null=null;
   try{
@@ -1737,7 +1798,7 @@ async function handleGachaComebackClaim(req: Request): Promise<Response> {
       let isNew=true; let dust=0;
       const ownedCos=await sql`SELECT id FROM magnum_cosmetics WHERE user_id=${user.id} AND cosmetic_id=${id} LIMIT 1`;
       const ownedInv=await sql`SELECT id FROM magnum_shop_inventory WHERE user_id=${user.id} AND skin_id=${id} LIMIT 1`;
-      if(ownedCos.length||ownedInv.length){ isNew=false; dust=DUST_REWARD[rarity]??0; if(dust) await sql`INSERT INTO magnum_dust (user_id,balance) VALUES (${user.id},${dust}) ON CONFLICT (user_id) DO UPDATE SET balance=magnum_dust.balance+${dust}, updated_at=now()`; }
+      if(ownedCos.length||ownedInv.length){ isNew=false; dust=DUST_REWARD[rarity]??0; if(dust) await sql`UPDATE magnum_coins SET balance=balance+${dust} WHERE user_id=${user.id}`; }
       else { const cos=COSMETICS_CATALOG.find(c=>c.id===id); if(cos) await sql`INSERT INTO magnum_cosmetics (user_id,cosmetic_id,slot,equipped,purchased_at) VALUES (${user.id},${id},${cos.slot},false,now())`; else await sql`INSERT INTO magnum_shop_inventory (user_id,skin_id,purchased_at,equipped) VALUES (${user.id},${id},now(),false)`; }
       if(rarity==="legendary"){ curP5=0; curPc=0; } else if(rarity==="epic"){ curPc=0; curP5++; } else { curPc++; curP5++; }
       if(roll.nextLost5050!==null) curLost=Boolean(roll.nextLost5050);
@@ -1753,8 +1814,7 @@ async function handleGachaComebackClaim(req: Request): Promise<Response> {
     await sql`INSERT INTO magnum_comeback_claims (user_id,last_claim,claims) VALUES (${user.id}, now(), 1) ON CONFLICT (user_id) DO UPDATE SET last_claim=now(), claims=magnum_comeback_claims.claims+1`;
     const balRows=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
     const balance=balRows.length? Number((balRows[0] as {balance:number}).balance):0;
-    const dustRows=await sql`SELECT balance FROM magnum_dust WHERE user_id=${user.id} LIMIT 1`;
-    const dustBal=dustRows.length? Number((dustRows[0] as {balance:number}).balance):0;
+    const dustBal=balance;
     const pity={ counter:curPc, pityCounter:curPc, pity5star:curP5, pity_5star:curP5, lost_50_50:curLost, lost5050:curLost, pulls:curPulls, banner };
     const guaranteeIn={ epic: Math.max(0,90-(curPc+1)), legendary: Math.max(0,180-(curP5+1)) };
     await sql`COMMIT`;
@@ -1818,7 +1878,6 @@ async function handleSpin(req: Request): Promise<Response> {
   const ip = getClientIp(req);
   if (!checkRateLimit(`spin:${user.id}:${ip}`, 6, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
   await ensureSpinTable();
-  await ensureDustTable();
   const sql = getSql();
   // fetch or init spin row
   const rows = await sql`SELECT last_spin, streak, free_spins, total_spins FROM magnum_daily_spin WHERE user_id=${user.id} LIMIT 1`;
@@ -1880,10 +1939,10 @@ async function handleSpin(req: Request): Promise<Response> {
 
   // apply rewards
   if (appliedDust > 0) {
-    await sql`INSERT INTO magnum_dust (user_id, balance) VALUES (${user.id}, ${appliedDust}) ON CONFLICT (user_id) DO UPDATE SET balance = magnum_dust.balance + ${appliedDust}, updated_at = now()`;
+    const totalReward = appliedDust + Math.floor(appliedDust/3);
     await sql`INSERT INTO magnum_coins (user_id, balance) VALUES (${user.id}, 1000) ON CONFLICT (user_id) DO NOTHING`;
-    await sql`UPDATE magnum_coins SET balance = balance + ${Math.floor(appliedDust/3)} WHERE user_id=${user.id}`;
-    await sql`INSERT INTO magnum_transactions (user_id, amount, reason, meta) VALUES (${user.id}, ${appliedDust}, 'spin_dust', ${JSON.stringify({ sector: sector.id, dust, appliedDust, multiplier, streak: nextStreak, epicRolled })}::jsonb)`;
+    await sql`UPDATE magnum_coins SET balance = balance + ${totalReward} WHERE user_id=${user.id}`;
+    await sql`INSERT INTO magnum_transactions (user_id, amount, reason, meta) VALUES (${user.id}, ${totalReward}, 'spin_dust', ${JSON.stringify({ sector: sector.id, dust, appliedDust, multiplier, streak: nextStreak, epicRolled })}::jsonb)`;
   }
   if (skinId) {
     const ex = await sql`SELECT id FROM magnum_cosmetics WHERE user_id=${user.id} AND cosmetic_id=${skinId} LIMIT 1`;
@@ -1893,9 +1952,10 @@ async function handleSpin(req: Request): Promise<Response> {
       await sql`INSERT INTO magnum_cosmetics (user_id, cosmetic_id, slot, equipped, purchased_at) VALUES (${user.id}, ${skinId}, ${slot}, false, now())`;
       await sql`INSERT INTO magnum_transactions (user_id, amount, reason, meta) VALUES (${user.id}, 0, 'spin_skin', ${JSON.stringify({ sector: sector.id, skinId })}::jsonb)`;
     } else {
-      // duplicate -> convert to dust 42
+      // duplicate -> convert to coins 42
       const dupDust = 42 * multiplier;
-      await sql`INSERT INTO magnum_dust (user_id, balance) VALUES (${user.id}, ${dupDust}) ON CONFLICT (user_id) DO UPDATE SET balance = magnum_dust.balance + ${dupDust}, updated_at = now()`;
+      await sql`INSERT INTO magnum_coins (user_id, balance) VALUES (${user.id}, 1000) ON CONFLICT (user_id) DO NOTHING`;
+      await sql`UPDATE magnum_coins SET balance = balance + ${dupDust} WHERE user_id=${user.id}`;
       await sql`INSERT INTO magnum_transactions (user_id, amount, reason, meta) VALUES (${user.id}, ${dupDust}, 'spin_skin_dup_dust', ${JSON.stringify({ sector: sector.id, skinId, dupDust })}::jsonb)`;
     }
   }
@@ -1918,10 +1978,8 @@ async function handleSpin(req: Request): Promise<Response> {
 
   const balRows = await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
   const balance = balRows.length ? Number((balRows[0] as { balance: number }).balance) : 0;
-  const dustRows = await sql`SELECT balance FROM magnum_dust WHERE user_id=${user.id} LIMIT 1`;
-  const dustBal = dustRows.length ? Number((dustRows[0] as { balance: number }).balance) : 0;
 
-  return Response.json({ ok: true, sector: sector.id, reward: { sectorIndex: idx, sectorId: sector.id, label: sector.label, dust, appliedDust, skinId, isEmpty, extraSpin, epicRolled, multiplier }, streak: nextStreak, multiplier, balance, dust: dustBal, freeSpins: newFree, totalSpins: totalSpins+1 });
+  return Response.json({ ok: true, sector: sector.id, reward: { sectorIndex: idx, sectorId: sector.id, label: sector.label, dust, appliedDust, skinId, isEmpty, extraSpin, epicRolled, multiplier }, streak: nextStreak, multiplier, balance, dust: balance, freeSpins: newFree, totalSpins: totalSpins+1 });
 }
 
 async function handleSpinReferral(req: Request): Promise<Response> {
@@ -3252,22 +3310,19 @@ async function handlePresaveRecoverBonus(req: Request): Promise<Response> {
   try {
     const sql = getSql();
     await ensurePresaveRecoveryTable();
-    await ensureDustTable();
     const ex = await sql`SELECT user_id FROM magnum_presave_recovery WHERE user_id=${user.id} LIMIT 1`;
     if (ex.length > 0) return Response.json({ ok: false, already: true, error: "already claimed" }, { status: 409 });
     const dust = 142;
     await sql`INSERT INTO magnum_presave_recovery (user_id, claimed_at) VALUES (${user.id}, now())`;
-    await sql`INSERT INTO magnum_dust (user_id, balance) VALUES (${user.id}, ${dust}) ON CONFLICT (user_id) DO UPDATE SET balance=magnum_dust.balance+${dust}, updated_at=now()`;
     await sql`INSERT INTO magnum_coins (user_id, balance) VALUES (${user.id}, 1000) ON CONFLICT (user_id) DO NOTHING`;
+    await sql`UPDATE magnum_coins SET balance = balance + ${dust} WHERE user_id=${user.id}`;
     // also add presave click as recovery so myClicks becomes 1
     try { await sql`INSERT INTO magnum_presave_clicks (user_id, url, ip, variant, created_at) VALUES (${user.id}, 'https://music.thefence.me/psmagnum', ${ip}, 'recovery', now())`; } catch {}
     await sql`INSERT INTO magnum_transactions (user_id, amount, reason, meta) VALUES (${user.id}, ${dust}, 'presave_recover', ${JSON.stringify({ dust, origin: "recovery" })}::jsonb)`;
-    const dustRow = await sql`SELECT balance FROM magnum_dust WHERE user_id=${user.id} LIMIT 1`;
-    const dustBal = dustRow.length ? Number((dustRow[0] as { balance: number }).balance) : dust;
     const coinRow = await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
-    const coinBal = coinRow.length ? Number((coinRow[0] as { balance: number }).balance) : 0;
-    try { await ensureNotification(user.id, "Пресейв восстановлен", `+${dust} dust за возврат — золотая рамка ближе!`, "presave"); } catch {}
-    return Response.json({ ok: true, dust, dustBalance: dustBal, balance: coinBal });
+    const coinBal = coinRow.length ? Number((coinRow[0] as { balance: number }).balance) : dust;
+    try { await ensureNotification(user.id, "Пресейв восстановлен", `+${dust} монет за возврат — золотая рамка ближе!`, "presave"); } catch {}
+    return Response.json({ ok: true, dust, dustBalance: coinBal, balance: coinBal });
   } catch (e) {
     console.error("[presave recover] failed", e);
     return Response.json({ error: "db error" }, { status: 500 });
@@ -4359,8 +4414,6 @@ async function handleConveyorClaim(req:Request):Promise<Response>{
     const balance=Number((upd[0] as {balance:number}).balance);
     const newDust=dust+pending;
     await sql`UPDATE magnum_conveyor_state SET dust=${newDust}, last_claim=now() WHERE user_id=${user.id}`;
-    // also add to magnum_dust for shop vault discount
-    try{ await ensureDustTable(); await sql`INSERT INTO magnum_dust (user_id,balance) VALUES (${user.id},${pending}) ON CONFLICT (user_id) DO UPDATE SET balance=magnum_dust.balance+${pending}, updated_at=now()`; }catch{}
     await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${pending},'conveyor_claim',${JSON.stringify({pending, perMin, elapsedMin:Math.floor(elapsedMin)})}::jsonb)`;
     // leaderboard update — best dust
     try{ await sql`INSERT INTO magnum_leaderboard (player,score,game,created_at,user_id) VALUES (${user.username},${newDust},'conveyor',now(),${user.id})`; }catch{}
@@ -4544,8 +4597,7 @@ async function handlePetGet(req:Request):Promise<Response>{
     const xp=Number(pet.xp);
     const coinsR=await getSql()`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
     const balance=coinsR.length?Number((coinsR[0] as {balance:number}).balance):1000;
-    const dustR=await getSql()`SELECT balance FROM magnum_dust WHERE user_id=${user.id} LIMIT 1`;
-    const dust=dustR.length?Number((dustR[0] as {balance:number}).balance):0;
+    const dust=balance;
     const miningBonus=petMiningBonusPct(stage);
     const conveyorBonus=petConveyorBonusPct(stage);
     const canClaimDaily=(()=>{ if(!pet.last_claim_at) return true; const diff=(Date.now()-new Date(pet.last_claim_at).getTime())/3600000; return diff>=20; })();
@@ -4673,18 +4725,17 @@ async function handlePetPrestige(req:Request):Promise<Response>{
   try{
     const pet=await getOrCreatePet(user.id);
     if(Number(pet.xp)<1420) return Response.json({error:"need 1420 XP (титан)", xp:Number(pet.xp), required:1420},{status:402});
-    await ensureDustTable();
     const sql=getSql();
-    const drow=await sql`SELECT balance FROM magnum_dust WHERE user_id=${user.id} LIMIT 1`;
+    const drow=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
     const dust=drow.length?Number((drow[0] as {balance:number}).balance):0;
-    if(dust<1420) return Response.json({error:"need 1420 dust", dust, required:1420},{status:402});
-    await sql`UPDATE magnum_dust SET balance=balance-1420, updated_at=now() WHERE user_id=${user.id}`;
+    if(dust<1420) return Response.json({error:"need 1420 coins", dust, required:1420},{status:402});
+    await sql`UPDATE magnum_coins SET balance=balance-1420 WHERE user_id=${user.id}`;
     const skinId="pet-titan-gold";
     await sql`INSERT INTO magnum_cosmetics (user_id,cosmetic_id,slot,equipped,purchased_at) VALUES (${user.id},${skinId},'frame',false,now()) ON CONFLICT DO NOTHING`;
     try{ await sql`INSERT INTO magnum_cosmetics (user_id,cosmetic_id,slot,equipped,purchased_at) VALUES (${user.id},${skinId},'frame',false,now())`; }catch{}
     // ensure cosmetic catalog includes? fallback just insert
     await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${-1420},'pet_prestige',${JSON.stringify({skin:skinId})}::jsonb)`;
-    const nd=await sql`SELECT balance FROM magnum_dust WHERE user_id=${user.id} LIMIT 1`;
+    const nd=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
     return Response.json({ ok:true, skin:skinId, dust: nd.length?Number((nd[0] as {balance:number}).balance):0 });
   }catch(e){
     // if magnum_cosmetics insert fails due to missing table, still deduct fallback path via magnum_shop_inventory
@@ -6689,6 +6740,7 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/shop/volcano/craft" && req.method === "POST") return handleVolcanoCraft(req);
     if (url.pathname === "/magnum/api/shop/obsidian/craft" && req.method === "POST") return handleObsidianCraft(req);
     if (url.pathname === "/magnum/api/shop/forge" && req.method === "POST") return handleGlacierCraft(req);
+    if (url.pathname === "/magnum/api/shop/forge/craft" && req.method === "POST") return handleForgeCraft(req);
 
     if (url.pathname === "/magnum/api/gacha/roll" && req.method === "POST") return handleGachaRoll(req);
     if (url.pathname === "/magnum/api/gacha/status" && req.method === "GET") return handleGachaStatus(req);
@@ -6697,6 +6749,7 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/gacha/history" && req.method === "GET") return handleGachaHistory(req);
     if (url.pathname === "/magnum/api/gacha/pity" && req.method === "GET") return handleGachaPity(req);
     if (url.pathname === "/magnum/api/gacha/free-roll" && req.method === "POST") return handleGachaFreeRoll(req);
+    if (url.pathname === "/magnum/api/gacha/dust/buy" && req.method === "POST") return handleGachaDustBuy(req);
     if ((url.pathname === "/magnum/api/gacha/quests" || url.pathname === "/magnum/api/gacha/quests/status") && req.method === "GET") return handleGachaQuestsStatus(req);
     if (url.pathname === "/magnum/api/gacha/quests/progress" && req.method === "POST") return handleGachaQuestProgress(req);
     if (url.pathname === "/magnum/api/gacha/quests/claim" && req.method === "POST") return handleGachaQuestClaim(req);

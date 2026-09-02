@@ -303,11 +303,7 @@ export const magnumSubscriptions = pgTable("magnum_subscriptions", {
   endsAt: timestamp("ends_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
-export const magnumDust = pgTable("magnum_dust", {
-  userId: integer("user_id").primaryKey().references(() => magnumUsers.id, { onDelete: "cascade" }),
-  balance: integer("balance").default(0).notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+// magnum_dust удалена миграцией 0037 — пыль слита в единый баланс magnum_coins
 export const magnumSquads = pgTable("magnum_squads", {
   id: serial("id").primaryKey(),
   code: text("code").notNull().unique(),

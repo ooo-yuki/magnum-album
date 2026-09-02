@@ -269,11 +269,7 @@ export function GachaPage() {
 
       {/* top vitrine bar */}
       <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap", alignItems: "center" }}>
-        <span style={{ padding: "6px 10px", borderRadius: 8, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", fontSize: 12 }}>Баланс: {balance ?? "…"} монет</span>
-        <span style={{ padding: "6px 10px", borderRadius: 8, background: "rgba(168,85,247,0.12)", border: "1px solid rgba(168,85,247,0.22)", fontSize: 12, display: "inline-flex", gap: 6, alignItems: "center" }}>
-          <span>Пыль: {dust ?? "…"} </span>
-          <Link to="/magnum/shop" style={{ color: "#a855f7", textDecoration: "underline", fontWeight: 800, fontSize: 11 }}>→ /shop#dust</Link>
-        </span>
+        <span style={{ padding: "6px 10px", borderRadius: 8, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", fontSize: 12 }}>Баланс: {balance ?? dust ?? "…"} монет — общий счёт для всех режимов</span>
         <span style={{ padding: "6px 10px", borderRadius: 8, background: "rgba(255,204,0,0.12)", border: "1px solid rgba(255,204,0,0.22)", fontSize: 12 }}>до эпика 90: {epicLeft} {epicLeft === 0 ? "— гарант!" : ""}</span>
         <span style={{ padding: "6px 10px", borderRadius: 8, background: isSoftPity ? "rgba(255,45,85,0.18)" : "rgba(255,204,0,0.10)", border: isSoftPity ? "1px solid rgba(255,45,85,0.35)" : "1px solid rgba(255,204,0,0.18)", fontSize: 12, fontWeight: isSoftPity ? 800 : 600, color: isSoftPity ? "#ff2d55" : undefined, boxShadow: isSoftPity ? "0 0 10px rgba(255,45,85,0.35)" : undefined }}>
           до легендарки 180: {legendaryLeft} {legendaryLeft === 0 ? "— гарант!" : ""}
@@ -289,11 +285,11 @@ export function GachaPage() {
 
       {/* pass preview + shop links */}
       <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap", alignItems: "center" }}>
-        <Link to="/magnum/shop" style={{ padding: "6px 10px", borderRadius: 8, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", fontSize: 12, color: "#fff", textDecoration: "none" }}>Магазин пыли → /shop</Link>
+        <Link to="/magnum/shop" style={{ padding: "6px 10px", borderRadius: 8, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", fontSize: 12, color: "#fff", textDecoration: "none" }}>Магазин → /shop</Link>
         <Link to="/magnum/pass" style={{ padding: "6px 10px", borderRadius: 8, background: "linear-gradient(135deg,#a855f7, #5865f2)", border: "1px solid rgba(168,85,247,0.35)", fontSize: 12, color: "#fff", textDecoration: "none", fontWeight: 800 }}>
           Пропуск 42 → /pass FREE/PREMIUM {pass ? `• LV ${pass.level}/42 XP ${pass.xp} ${pass.premium ? "PREMIUM ✓" : "FREE"}` : "• LV …/42"}
         </Link>
-        <Link to="/magnum/shop#dust" style={{ padding: "6px 10px", borderRadius: 8, background: "rgba(168,85,247,0.12)", border: "1px solid rgba(168,85,247,0.22)", fontSize: 12, color: "#d8b4fe", textDecoration: "none" }}>Обменник пыли</Link>
+        <Link to="/magnum/shop#dust" style={{ padding: "6px 10px", borderRadius: 8, background: "rgba(168,85,247,0.12)", border: "1px solid rgba(168,85,247,0.22)", fontSize: 12, color: "#d8b4fe", textDecoration: "none" }}>Крафт в Prism Vault</Link>
       </div>
       {pass && (
         <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
@@ -304,11 +300,11 @@ export function GachaPage() {
       {/* Dust Shop CTA */}
       <div ref={dustRef} style={{ marginTop: 14, padding: 14, borderRadius: 14, background: "linear-gradient(135deg, rgba(168,85,247,0.14), rgba(88,101,242,0.10))", border: "1px solid rgba(168,85,247,0.22)", display: "flex", gap: 10, alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
         <div>
-          <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: "0.06em" }}>ОБМЕННИК ПЫЛИ 42 — кейс за пыль</div>
-          <div style={{ fontSize: 11, opacity: 0.65, marginTop: 4 }}>Баланс пыли: <strong style={{ color: "#d8b4fe" }}>{dust ?? "…"} dust</strong> • цена кейса 420 dust • без монет • POST /magnum/api/gacha/dust/buy • дубликат → dust по RARITY</div>
+          <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: "0.06em" }}>КЕЙС 42 — гарант epic+</div>
+          <div style={{ fontSize: 11, opacity: 0.65, marginTop: 4 }}>Баланс: <strong style={{ color: "#d8b4fe" }}>{dust ?? "…"}</strong> • цена кейса 420 — тот же счёт, что и в магазине, дуэлях, майнинге • дубликат → бонус к балансу по RARITY</div>
         </div>
         <button data-dust-btn onClick={doDustBuy} disabled={loading === "dust-buy" || (dust !== null && dust < 420)} style={{ padding: "10px 16px", borderRadius: 10, border: "1px solid #a855f7", background: dust !== null && dust < 420 ? "rgba(168,85,247,0.08)" : "rgba(168,85,247,0.22)", color: dust !== null && dust < 420 ? "#9aa4b2" : "#fff", fontWeight: 900, cursor: dust !== null && dust < 420 ? "not-allowed" : "pointer", opacity: dust !== null && dust < 420 ? 0.6 : 1, fontSize: 12 }}>
-          {loading === "dust-buy" ? "…" : "Кейс за 420 dust"}
+          {loading === "dust-buy" ? "…" : "Кейс за 420"}
         </button>
       </div>
 

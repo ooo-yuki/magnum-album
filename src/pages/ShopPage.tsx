@@ -204,7 +204,6 @@ export function ShopPage() {
   const [cosEquipped, setCosEquipped] = useState<Record<string,string>>({});
   const [cosTab, setCosTab] = useState<"all"|CosmeticSlot|"prism"|"glacier"|"crystal"|"volcano"|"obsidian"|"forge">("all");
   const filteredCosmetics = useMemo(()=> cosTab==="all"? COSMETICS : cosTab==="prism"? COSMETICS.filter(x=>x.id.includes("prism")) : cosTab==="glacier"? COSMETICS.filter(x=>GLACIER_IDS_SET.has(x.id)) : cosTab==="crystal"? COSMETICS.filter(x=>CRYSTAL_IDS_SET.has(x.id)) : cosTab==="volcano"? COSMETICS.filter(x=>VOLCANO_IDS_SET.has(x.id)) : cosTab==="obsidian"? COSMETICS.filter(x=>OBSIDIAN_IDS_SET.has(x.id)) : cosTab==="forge"? COSMETICS.filter(x=>FORGE_IDS_SET.has(x.id)) : COSMETICS.filter(x=>x.slot===cosTab), [cosTab]);
-  const [dust, setDust] = useState(0);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const toastId = useRef(0);
   const shownCoins = useRef(getCoins());
@@ -281,12 +280,6 @@ export function ShopPage() {
             setCosEquipped(eq);
           }
         }
-      }catch{}
-    })();
-    void (async()=>{
-      try{
-        const r=await fetch("/magnum/api/shop/dust",{credentials:"include"});
-        if(r.ok){ const d=await r.json() as {dust:number;balance:number}; if(!cancelled) setDust(d.dust??d.balance??0); }
       }catch{}
     })();
     return () => { cancelled = true; };
@@ -679,23 +672,23 @@ export function ShopPage() {
     if(!me){ pushToast("err","Войди — нужен логин для разборки"); window.dispatchEvent(new CustomEvent("magnum:need-auth")); return; }
     try{
       const r=await fetch("/magnum/api/shop/dismantle",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({cosmeticId:co.id})});
-      const d=await r.json().catch(()=>({})) as {dust?:number;reward?:number;error?:string};
+      const d=await r.json().catch(()=>({})) as {balance?:number;reward?:number;error?:string};
       if(!r.ok){ pushToast("err", String((d as any).error||"Разборка не прошла")); return; }
       setCosOwned(v=>v.filter(x=>x!==co.id));
-      setDust((d as any).dust??0);
-      pushToast("ok",`Разобрано ${co.name} +${(d as any).reward} пыли · dust ${(d as any).dust}`);
+      if(typeof (d as any).balance==="number") setCoins((d as any).balance);
+      pushToast("ok",`Разобрано ${co.name} +${(d as any).reward} монет`);
     }catch{ pushToast("err","Сеть упала"); }
   };
   const craftPrism = async (co: Cosmetic) => {
     if(!me){ pushToast("err","Войди — нужен логин для крафта"); window.dispatchEvent(new CustomEvent("magnum:need-auth")); return; }
-    if(dust < co.price){ pushToast("err",`Нужно ${co.price} пыли, у тебя ${dust}`); return; }
+    if(coins < co.price){ pushToast("err",`Нужно ${co.price} монет, у тебя ${coins}`); return; }
     try{
       const r=await fetch("/magnum/api/shop/craft",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({cosmeticId:co.id})});
-      const d=await r.json().catch(()=>({})) as {dust?:number;error?:string};
+      const d=await r.json().catch(()=>({})) as {balance?:number;error?:string};
       if(!r.ok){ pushToast("err", String((d as any).error||"Крафт не прошёл")); return; }
       setCosOwned(v=>[...v,co.id]);
-      setDust((d as any).dust??0);
-      pushToast("ok",`Скрафчено ${co.name} за ${co.price} пыли`);
+      if(typeof (d as any).balance==="number") setCoins((d as any).balance);
+      pushToast("ok",`Скрафчено ${co.name} за ${co.price} 🪙`);
     }catch{ pushToast("err","Сеть упала"); }
   };
   const craftGlacier = async (co: Cosmetic) => {
@@ -803,13 +796,13 @@ export function ShopPage() {
   const craftForge = async (co: Cosmetic) => {
     if(!me){ pushToast("err","Войди — нужен логин для крафта"); window.dispatchEvent(new CustomEvent("magnum:need-auth")); return; }
     if(!FORGE_IDS_SET.has(co.id)){ pushToast("err","Только FORGE крафт 🔨"); return; }
-    if(dust < 42){ pushToast("err",`Нужно 42 пыли, у тебя ${dust} · пыли для FORGE`); return; }
+    if(co.rarity!=="rare"){ pushToast("err","FORGE крафт только для uncommon (142) — собери 3×common 🔨"); return; }
+    if(coins < 42){ pushToast("err",`Нужно 42 монеты, у тебя ${coins}`); return; }
     try{
       const r=await fetch("/magnum/api/shop/forge/craft",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({targetId:co.id})});
-      const d=await r.json().catch(()=>({})) as {dust?:number;balance?:number;error?:string;inventory?:string[]};
+      const d=await r.json().catch(()=>({})) as {balance?:number;error?:string;inventory?:string[]};
       if(!r.ok){ pushToast("err", String((d as any).error||"Крафт не прошёл")); return; }
-      const newDust = (d as any).dust ?? (d as any).balance ?? dust-42;
-      setDust(newDust);
+      if(typeof (d as any).balance==="number") setCoins((d as any).balance);
       const invIds = ((d as any).inventory as string[])||[];
       if(invIds.length) setCosOwned(invIds);
       else setCosOwned(v=>[...v,co.id]);
@@ -825,7 +818,7 @@ export function ShopPage() {
         const ctx=canvas.getContext('2d')!; const parts=Array.from({length:80},()=>({x:window.innerWidth/2,y:window.innerHeight/2,vx:(Math.random()-0.5)*12,vy:(Math.random()-0.5)*12-4,life:1,decay:0.015+Math.random()*0.01}));
         const tick=()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); let alive=false; for(const p of parts){ if(p.life<=0) continue; alive=true; p.x+=p.vx; p.y+=p.vy; p.vy+=0.25; p.life-=p.decay; ctx.globalAlpha=Math.max(0,p.life); ctx.fillStyle='#9147ff'; ctx.beginPath(); ctx.arc(p.x,p.y,3,0,Math.PI*2); ctx.fill(); } if(alive) requestAnimationFrame(tick); else canvas.remove(); }; tick();
       }catch{}
-      pushToast("ok",`Скрафчено ${co.name} за 42 пыли 🔨 holo`);
+      pushToast("ok",`Скрафчено ${co.name} за 42 🔨 holo`);
     }catch{ pushToast("err","Сеть упала"); }
   };
 
@@ -1046,7 +1039,7 @@ export function ShopPage() {
       <section className={styles.cosmetics} aria-label="Косметика 42">
         <div className={styles.cosHead}>
           <h2 className={styles.cosTitle}>2. КОСМЕТИКА 42 — рамки · баннеры · титулы</h2>
-          <p className={styles.cosSub}>104 предмета (32 + 12 PRISM + 12 GLACIER + 12 CRYSTAL + 12 VOLCANO + 12 OBSIDIAN + 12 FORGE) · пыль {dust} · Neon · без localStorage</p>
+          <p className={styles.cosSub}>104 предмета (32 + 12 PRISM + 12 GLACIER + 12 CRYSTAL + 12 VOLCANO + 12 OBSIDIAN + 12 FORGE) · Neon · без localStorage</p>
           <div className={styles.cosTabs} role="tablist">
             {(["all","frame","banner","title","prism","glacier","crystal","volcano","obsidian","forge"] as const).map(t => (
               <button key={t} type="button" role="tab" aria-selected={cosTab===t} className={`${styles.cosTab} ${cosTab===t?styles.cosTabOn:""}`} onClick={()=>setCosTab(t)}>{t==="all"?"Все":t==="frame"?"Рамки":t==="banner"?"Баннеры":t==="prism"?"PRISM 12":t==="glacier"?"GLACIER 12":t==="crystal"?"CRYSTAL 12":t==="volcano"?"VOLCANO 12 🌋":t==="obsidian"?"OBSIDIAN 12 ⛏️":t==="forge"?"FORGE 12 🔨":"Титулы"}</button>
@@ -1075,18 +1068,18 @@ export function ShopPage() {
                   <span className={styles.cosName}>{co.name}{isPrism?"":isGlacier?" ❄️":isCrystal?" 💎":isVolcano?" 🌋":isObsidian?" ⛏️":isForge?" 🔨":""}</span>
                   <span className={styles.cosSlot}>{co.slot}{isPrism?" · prism":isGlacier?" · glacier":isCrystal?" · crystal":isVolcano?" · volcano":isObsidian?" · obsidian":isForge?" · forge":""}</span>
                 </div>
-                <div className={styles.cosMeta}><span className={styles.cosRarity} style={{color:RARITY_META[co.rarity].color}}>{RARITY_META[co.rarity].label}</span><span className={styles.cosPrice}>🪙 {co.price}{isPrism?" · пыль":isGlacier && co.rarity==="legendary"?" · frost ❄️":isCrystal && co.rarity==="legendary"?" · crystal 3s":isVolcano && co.rarity==="legendary"?" · volcano 3s 🌋":isObsidian && co.rarity==="legendary"?" · molten 3s ⛏️":isForge && co.rarity==="legendary"?" · holo 3s 🔨":isForge && co.rarity==="epic"?" · holo 🔨":isForge?" · forge":isObsidian?" · obsidian":isVolcano?" · volcano":""}</span></div>
+                <div className={styles.cosMeta}><span className={styles.cosRarity} style={{color:RARITY_META[co.rarity].color}}>{RARITY_META[co.rarity].label}</span><span className={styles.cosPrice}>🪙 {co.price}{isPrism?"":isGlacier && co.rarity==="legendary"?" · frost ❄️":isCrystal && co.rarity==="legendary"?" · crystal 3s":isVolcano && co.rarity==="legendary"?" · volcano 3s 🌋":isObsidian && co.rarity==="legendary"?" · molten 3s ⛏️":isForge && co.rarity==="legendary"?" · holo 3s 🔨":isForge && co.rarity==="epic"?" · holo 🔨":isForge?" · forge":isObsidian?" · obsidian":isVolcano?" · volcano":""}</span></div>
                 {isOwned ? (
                   <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                     {isEq ? <button type="button" className={styles.btnWear} onClick={()=>equipCosmetic(co)}>✅ Надет</button> : <button type="button" className={styles.btnWear} onClick={()=>equipCosmetic(co)}>Надеть</button>}
-                    <button type="button" className={styles.btnGhost} onClick={()=>dismantle(co)} title="Разобрать → пыль">♻️ +{FORGE_IDS_SET.has(co.id) ? 100 : OBSIDIAN_IDS_SET.has(co.id) ? (co.rarity==="legendary"?420:co.rarity==="epic"?100:co.rarity==="rare"?42:14) : CRYSTAL_IDS_SET.has(co.id) ? (co.rarity==="legendary"?420:co.rarity==="epic"?100:co.rarity==="rare"?42:14) : GLACIER_IDS_SET.has(co.id) ? (co.rarity==="legendary"?420:co.rarity==="epic"?100:co.rarity==="rare"?42:14) : VOLCANO_IDS_SET.has(co.id) ? (co.rarity==="legendary"?420:co.rarity==="epic"?100:co.rarity==="rare"?42:14) : co.rarity==="legendary"?420:co.rarity==="epic"?142:co.rarity==="rare"?42:14}✨</button>
+                    <button type="button" className={styles.btnGhost} onClick={()=>dismantle(co)} title="Разобрать → монеты">♻️ +{FORGE_IDS_SET.has(co.id) ? 100 : OBSIDIAN_IDS_SET.has(co.id) ? (co.rarity==="legendary"?420:co.rarity==="epic"?100:co.rarity==="rare"?42:14) : CRYSTAL_IDS_SET.has(co.id) ? (co.rarity==="legendary"?420:co.rarity==="epic"?100:co.rarity==="rare"?42:14) : GLACIER_IDS_SET.has(co.id) ? (co.rarity==="legendary"?420:co.rarity==="epic"?100:co.rarity==="rare"?42:14) : VOLCANO_IDS_SET.has(co.id) ? (co.rarity==="legendary"?420:co.rarity==="epic"?100:co.rarity==="rare"?42:14) : co.rarity==="legendary"?420:co.rarity==="epic"?142:co.rarity==="rare"?42:14}✨</button>
                   </div>
-                ) : isPrism ? <button type="button" className={`${styles.btnBuy} ${dust>=co.price?"":styles.btnLocked}`} onClick={()=>craftPrism(co)}>✨ {co.price} пыль</button> : isGlacier ? <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>craftGlacier(co)}>❄️ {co.price} {co.rarity==="rare"?"· крафт 3×common 42":""}</button> : isCrystal ? <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>craftCrystal(co)}>💎 {co.price} {co.rarity==="rare"?"· крафт 3×common 42":co.rarity==="epic"?"· крафт 3×uncommon 142":""}</button> : isVolcano ? <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>craftVolcano(co)}>🌋 {co.price}{co.rarity==="rare"?" · крафт 3×common 42 🌋":""}</button> : isObsidian ? <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>craftObsidian(co)}>⛏️ {co.price}{co.rarity==="rare"?" · крафт 3×common 42 ⛏️":""}</button> : isForge ? <button type="button" className={`${styles.btnBuy} ${dust>=42?"":styles.btnLocked}`} onClick={()=>craftForge(co)}>🔨 42 пыль</button> : <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>buyCosmetic(co)}>🪙 {co.price}</button>}
+                ) : isPrism ? <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>craftPrism(co)}>🪙 {co.price}</button> : isGlacier ? <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>craftGlacier(co)}>❄️ {co.price} {co.rarity==="rare"?"· крафт 3×common 42":""}</button> : isCrystal ? <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>craftCrystal(co)}>💎 {co.price} {co.rarity==="rare"?"· крафт 3×common 42":co.rarity==="epic"?"· крафт 3×uncommon 142":""}</button> : isVolcano ? <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>craftVolcano(co)}>🌋 {co.price}{co.rarity==="rare"?" · крафт 3×common 42 🌋":""}</button> : isObsidian ? <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>craftObsidian(co)}>⛏️ {co.price}{co.rarity==="rare"?" · крафт 3×common 42 ⛏️":""}</button> : isForge ? <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>craftForge(co)}>🔨 {co.price}{co.rarity==="rare"?" · крафт 3×common 42 🔨":""}</button> : <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>buyCosmetic(co)}>🪙 {co.price}</button>}
               </div>
             );
           })}
         </div>
-        {cosOwned.length>0 && <p className={styles.cosHint}>В инвентаре: {cosOwned.length}/104 · пыль: {dust} · разбор: FORGE 100 ✨ / common 14 / rare 42 / epic 100(142 PRISM)/420 · крафт FORGE 42 пыль 🔨 · PRISM за пыль · GLACIER 3×common→uncommon 42 · CRYSTAL 3×common→uncommon 42 / 3×uncommon→rare 142 · VOLCANO 3×common→uncommon 42 🌋 · OBSIDIAN 3×common→uncommon 42 ⛏️ · verified -42/нед 💎</p>}
+        {cosOwned.length>0 && <p className={styles.cosHint}>В инвентаре: {cosOwned.length}/104 · разбор → монеты: FORGE 100 ✨ / common 14 / rare 42 / epic 100(142 PRISM)/420 · крафт FORGE 42 🔨 · PRISM крафт за монеты · GLACIER 3×common→uncommon 42 · CRYSTAL 3×common→uncommon 42 / 3×uncommon→rare 142 · VOLCANO 3×common→uncommon 42 🌋 · OBSIDIAN 3×common→uncommon 42 ⛏️ · verified -42/нед 💎</p>}
       </section>
 
       {}
