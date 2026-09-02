@@ -16,6 +16,8 @@ import { FLASHMOB_TYPES, hashDayToSeed, getFlashmobForDay } from "./src/lib/flas
 import { SPIN_SECTORS, getStreakMultiplier } from "./src/lib/spinRewards.ts";
 import { TOUR_STOPS as TOUR_STOPS_CANON, type TourStop as TourStopCanon, getTourCityId as getTourCityIdCanon, isTourCityId as isTourCityIdCanon } from "./src/lib/tour42.ts";
 import { QUEST_DEFS, WEEKLY_DEF, weekId as gachaWeekId, dayId as gachaDayId, eligibleComeback, COMEBACK_REWARD_ROLLS, COMEBACK_COINS } from "./src/lib/gachaQuests.ts";
+import { ZAVRI_ROSTER, ZAVRI_BY_ID, ZAVRI_ROTATION_MS, zavriBannerIndex, zavriBannerSlotStart, zavriBannerDef, RARITY_COLOR as ZAVRI_RARITY_COLOR } from "./src/lib/zavri/catalog.ts";
+import { ZAVRI_PRICE, ZAVRI_SHARDS_DUPE, ZAVRI_ASCEND_COST, ZAVRI_MAX_ASCENSION, ZAVRI_BEG_MAX_PER_DAY, ZAVRI_BEG_CHANCE, ZAVRI_BEG_PITY_ASK, zavriPrice, rollZavri, zavriBuffPct, breedChildSpecies, breedChildGender, isBegIntent, begRollGranted } from "./src/lib/zavri/gacha.ts";
 try { (neonConfig as unknown as { webSocketConstructor?: unknown }).webSocketConstructor = ws; } catch {}
 
 const MIMO_BASE = process.env.MIMO_BASE_URL || "https://token-plan-sgp.xiaomimimo.com/v1";
@@ -2630,12 +2632,14 @@ async function handleMiningClick(req: Request): Promise<Response> {
     const boostUntil = miningBoostUntil.get(user.id) ?? 0;
     const boosted = Date.now() < boostUntil;
     if (boosted) inc = inc * 2;
+    const zb = await getZavriBuff(user.id);
+    if (zb.mining > 0) inc = Math.round(inc * (1 + zb.mining / 100));
     const sql = getSql();
     const rows = await sql`UPDATE magnum_mining SET balance = balance + ${inc}, updated_at = now() WHERE user_id = ${user.id} RETURNING balance, upgrades`;
     const r = rows[0] as { balance: number; upgrades: unknown };
     try { await bumpQuest(user.id, "daily_mining30", 1); } catch {}
     try { await addPassXp(user.id, 5, 'mining'); } catch {}
-    return Response.json({ balance: Number(r.balance), upgrades: parseUpgrades(r.upgrades), added: inc, boosted, boostUntil: boosted ? boostUntil : null });
+    return Response.json({ balance: Number(r.balance), upgrades: parseUpgrades(r.upgrades), added: inc, boosted, boostUntil: boosted ? boostUntil : null, zavriBuff: zb });
   } catch (e) {
     console.error("[mining click] failed", e);
     return Response.json({ error: "db error" }, { status: 500 });
@@ -2695,10 +2699,12 @@ async function handleMiningCollect(req: Request): Promise<Response> {
     const elapsedSec = Math.max(0, Math.floor((Date.now() - last) / 1000));
     const cappedSec = Math.min(elapsedSec, 6 * 3600);
     if (cappedSec < 5) return Response.json({ balance: Number(r.balance), upgrades, perSec, collected: 0, idleSec: cappedSec });
-    const collected = perSec * cappedSec;
+    const zb = await getZavriBuff(user.id);
+    const buffedPerSec = zb.mining > 0 ? Math.round(perSec * (1 + zb.mining / 100)) : perSec;
+    const collected = buffedPerSec * cappedSec;
     const updated = await sql`UPDATE magnum_mining SET balance = balance + ${collected}, updated_at = now() WHERE user_id = ${user.id} RETURNING balance, updated_at`;
     const nb = Number((updated[0] as { balance: number }).balance);
-    return Response.json({ balance: nb, upgrades, perSec, collected, idleSec: cappedSec });
+    return Response.json({ balance: nb, upgrades, perSec, collected, idleSec: cappedSec, buffedPerSec, zavriBuff: zb });
   } catch (e) {
     console.error("[mining collect] failed", e);
     return Response.json({ error: "db error" }, { status: 500 });
@@ -4430,6 +4436,81 @@ async function ensurePetTable():Promise<void>{
   await sql`ALTER TABLE magnum_pets ADD COLUMN IF NOT EXISTS last_claim_at timestamptz`;
   await sql`ALTER TABLE magnum_pets ADD COLUMN IF NOT EXISTS streak integer DEFAULT 0`;
 }
+// ---- ZAVRI 42 — гача 42-завров (30-мин баннеры) ----
+async function ensureZavriTables(): Promise<void> {
+  const sql = getSql();
+  await sql`CREATE TABLE IF NOT EXISTS magnum_zavri_collection (id serial PRIMARY KEY, user_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, species_id text NOT NULL, gender text NOT NULL, nickname text, xp integer NOT NULL DEFAULT 0, hunger integer NOT NULL DEFAULT 100, happiness integer NOT NULL DEFAULT 100, ascension integer NOT NULL DEFAULT 0, generation integer NOT NULL DEFAULT 1, parent_a integer, parent_b integer, last_pet_at timestamptz, last_breed_at timestamptz, last_tick timestamptz NOT NULL DEFAULT now(), born_at timestamptz NOT NULL DEFAULT now())`;
+  await sql`ALTER TABLE magnum_zavri_collection ADD COLUMN IF NOT EXISTS last_pet_at timestamptz`;
+  await sql`ALTER TABLE magnum_zavri_collection ADD COLUMN IF NOT EXISTS last_breed_at timestamptz`;
+  await sql`ALTER TABLE magnum_zavri_collection ADD COLUMN IF NOT EXISTS last_tick timestamptz`;
+  await sql`CREATE TABLE IF NOT EXISTS magnum_zavri_pity (user_id integer PRIMARY KEY REFERENCES magnum_users(id) ON DELETE CASCADE, p4 integer NOT NULL DEFAULT 0, p5 integer NOT NULL DEFAULT 0, lost_5050 boolean NOT NULL DEFAULT false, pulls integer NOT NULL DEFAULT 0, updated_at timestamptz NOT NULL DEFAULT now())`;
+  await sql`CREATE TABLE IF NOT EXISTS magnum_zavri_history (id serial PRIMARY KEY, user_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, slot bigint NOT NULL, rarity text NOT NULL, kind text NOT NULL, species_id text NOT NULL, amount integer, is_new boolean NOT NULL DEFAULT true, created_at timestamptz NOT NULL DEFAULT now())`;
+  await sql`CREATE TABLE IF NOT EXISTS magnum_zavri_shards (user_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, species_id text NOT NULL, count integer NOT NULL DEFAULT 0, PRIMARY KEY (user_id, species_id))`;
+  await sql`CREATE TABLE IF NOT EXISTS magnum_zavri_begs (user_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, day_id text NOT NULL, asks integer NOT NULL DEFAULT 0, granted integer NOT NULL DEFAULT 0, spent integer NOT NULL DEFAULT 0, last_ask_at timestamptz, PRIMARY KEY (user_id, day_id))`;
+  await sql`ALTER TABLE magnum_zavri_begs ADD COLUMN IF NOT EXISTS spent integer NOT NULL DEFAULT 0`;
+  await sql`CREATE TABLE IF NOT EXISTS magnum_zavri_breeds (id serial PRIMARY KEY, user_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, parent_a integer REFERENCES magnum_zavri_collection(id) ON DELETE SET NULL, parent_b integer REFERENCES magnum_zavri_collection(id) ON DELETE SET NULL, ready_at timestamptz NOT NULL, claimed boolean NOT NULL DEFAULT false, child_species text, child_gender text, child_seed integer, created_at timestamptz NOT NULL DEFAULT now())`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_zavri_collection_user ON magnum_zavri_collection(user_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_zavri_history_user ON magnum_zavri_history(user_id, created_at DESC)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_zavri_breeds_user ON magnum_zavri_breeds(user_id, ready_at)`;
+}
+void ensureZavriTables().then(() => console.log("[startup] magnum_zavri_* ensured")).catch((e) => console.error("[startup] zavri ensure failed", e));
+async function getZavriPityRow(userId: number) {
+  await ensureZavriTables();
+  const sql = getSql();
+  const rows = await sql`SELECT p4, p5, lost_5050, pulls FROM magnum_zavri_pity WHERE user_id=${userId} LIMIT 1`;
+  if (rows.length) { const r = rows[0] as { p4: number; p5: number; lost_5050: boolean; pulls: number }; return { p4: Number(r.p4), p5: Number(r.p5), lost5050: Boolean(r.lost_5050), pulls: Number(r.pulls) }; }
+  await sql`INSERT INTO magnum_zavri_pity (user_id, p4, p5, lost_5050, pulls) VALUES (${userId}, 0, 0, false, 0) ON CONFLICT (user_id) DO NOTHING`;
+  return { p4: 0, p5: 0, lost5050: false, pulls: 0 };
+}
+async function getZavriBuff(userId: number): Promise<{ mining: number; conveyor: number; coins: number }> {
+  try {
+    await ensureZavriTables();
+    const sql = getSql();
+    const rows = await sql`SELECT species_id, ascension, hunger FROM magnum_zavri_collection WHERE user_id=${userId}`;
+    if (!rows.length) return { mining: 0, conveyor: 0, coins: 0 };
+    const owned = rows.map((r: unknown) => { const x = r as { species_id: string; ascension: number; hunger: number }; return { speciesId: String(x.species_id), ascension: Number(x.ascension), hunger: Number(x.hunger) }; });
+    return zavriBuffPct(owned);
+  } catch { return { mining: 0, conveyor: 0, coins: 0 }; }
+}
+function zavriApplyDecay(row: { hunger: number; happiness: number; last_tick: string }): { hunger: number; happiness: number; hours: number } {
+  const elapsed = Date.now() - new Date(row.last_tick).getTime();
+  const hours = Math.min(24, Math.max(0, Math.floor(elapsed / 3600000)));
+  if (hours <= 0) return { hunger: Number(row.hunger), happiness: Number(row.happiness), hours: 0 };
+  return { hunger: Math.max(0, Number(row.hunger) - hours * 2), happiness: Math.max(0, Number(row.happiness) - hours), hours };
+}
+async function zavriGrantBegIfEligible(userId: number, userText: string): Promise<{ grantedNow: boolean; asks: number; granted: number; available: number } | null> {
+  if (!isBegIntent(userText)) return null;
+  await ensureZavriTables();
+  const sql = getSql();
+  const dayId = new Date().toISOString().slice(0, 10);
+  await sql`BEGIN`;
+  try {
+    await sql`INSERT INTO magnum_zavri_begs (user_id, day_id, asks, granted, spent) VALUES (${userId}, ${dayId}, 0, 0, 0) ON CONFLICT (user_id, day_id) DO NOTHING`;
+    const rows = await sql`SELECT asks, granted, spent FROM magnum_zavri_begs WHERE user_id=${userId} AND day_id=${dayId} LIMIT 1 FOR UPDATE`;
+    const cur = rows[0] as { asks: number; granted: number; spent: number };
+    let asks = Number(cur.asks) + 1;
+    let granted = Number(cur.granted);
+    const spent = Number(cur.spent);
+    let grantedNow = false;
+    if (granted < ZAVRI_BEG_MAX_PER_DAY) {
+      const shouldGrant = begRollGranted(asks - 1, granted, Math.random());
+      if (shouldGrant) { granted += 1; grantedNow = true; }
+    }
+    await sql`UPDATE magnum_zavri_begs SET asks=${asks}, granted=${granted}, last_ask_at=now() WHERE user_id=${userId} AND day_id=${dayId}`;
+    await sql`COMMIT`;
+    const available = Math.max(0, granted - spent);
+    return { grantedNow, asks, granted, available };
+  } catch (e) { try { await sql`ROLLBACK`; } catch {} throw e; }
+}
+async function zavriGetBegState(userId: number): Promise<{ asks: number; granted: number; spent: number; available: number; dayId: string }> {
+  await ensureZavriTables();
+  const sql = getSql();
+  const dayId = new Date().toISOString().slice(0, 10);
+  await sql`INSERT INTO magnum_zavri_begs (user_id, day_id, asks, granted, spent) VALUES (${userId}, ${dayId}, 0, 0, 0) ON CONFLICT (user_id, day_id) DO NOTHING`;
+  const rows = await sql`SELECT asks, granted, spent FROM magnum_zavri_begs WHERE user_id=${userId} AND day_id=${dayId} LIMIT 1`;
+  const r = rows[0] as { asks: number; granted: number; spent: number };
+  return { asks: Number(r.asks), granted: Number(r.granted), spent: Number(r.spent), available: Math.max(0, Number(r.granted) - Number(r.spent)), dayId };
+}
 async function getOrCreatePet(userId:number){
   await ensurePetTable();
   const sql=getSql();
@@ -4614,6 +4695,283 @@ async function handlePetPrestige(req:Request):Promise<Response>{
       return Response.json({ ok:true, skin:"pet-titan-gold", fallback:true });
     }catch(e2){ console.error("[pet prestige fallback] failed",e2); return Response.json({error:"db error"},{status:500}); }
   }
+}
+
+// ---- ZAVRI 42 — гача 42-завров (30-мин баннер) + террариум ----
+async function handleZavriBanner(req: Request): Promise<Response> {
+  const now = Date.now();
+  const slot = Math.floor(now / ZAVRI_ROTATION_MS);
+  const idx = ((slot % ZAVRI_ROSTER.length) + ZAVRI_ROSTER.length) % ZAVRI_ROSTER.length;
+  const featured = ZAVRI_ROSTER[idx]!;
+  const slotStart = slot * ZAVRI_ROTATION_MS;
+  const slotEnd = slotStart + ZAVRI_ROTATION_MS;
+  const next = ZAVRI_ROSTER[(idx + 1) % ZAVRI_ROSTER.length]!;
+  const cycle = Math.floor(slot / ZAVRI_ROSTER.length);
+  const roster = ZAVRI_ROSTER.map((z) => ({ id: z.id, name: z.name, title: z.title, rarity: z.rarity, gender: z.gender, quote: z.quote, buff: z.buff, img: `/magnum/images/zavri/${z.id}.png`, color: ZAVRI_RARITY_COLOR[z.rarity] }));
+  let pity: { p4: number; p5: number; lost5050: boolean; pulls: number } | null = null;
+  let begState: { asks: number; granted: number; spent: number; available: number } | null = null;
+  let balance: number | null = null;
+  const token = extractToken(req);
+  if (token) { try { const u = await getUserByToken(token); if (u) { pity = await getZavriPityRow(u.id); begState = await zavriGetBegState(u.id); const br = await getSql()`SELECT balance FROM magnum_coins WHERE user_id=${u.id} LIMIT 1`; balance = br.length ? Number((br[0] as { balance: number }).balance) : null; } } catch {}
+  }
+  return Response.json({ slot, idx, cycle, featured: { ...roster[idx]!, slotStart, slotEnd, remainingMs: Math.max(0, slotEnd - now) }, next: { ...roster[(idx + 1) % roster.length]!, }, remainingMs: Math.max(0, slotEnd - now), endsAt: new Date(slotEnd).toISOString(), slotStart: new Date(slotStart).toISOString(), roster, pity, beg: begState, balance, rotationMs: ZAVRI_ROTATION_MS });
+}
+async function handleZavriRoll(req: Request): Promise<Response> {
+  const token = extractToken(req); if (!token) return Response.json({ error: "unauthorized" }, { status: 401, headers: { "magnum:need-auth": "1" } });
+  const user = await getUserByToken(token); if (!user) return Response.json({ error: "unauthorized" }, { status: 401, headers: { "magnum:need-auth": "1" } });
+  const ip = getClientIp(req); if (!checkRateLimit(`zavri:roll:${user.id}:${ip}`, 10, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
+  let body: { count?: number; source?: string; useGrant?: boolean };
+  try { body = (await req.json()) as typeof body; } catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
+  const countRaw = Number(body.count ?? 1);
+  const count: 1 | 10 = countRaw === 10 ? 10 : countRaw === 1 ? 1 : 0 as never;
+  if (count !== 1 && count !== 10) return Response.json({ error: "count must be 1 or 10" }, { status: 400 });
+  const useGrant = Boolean(body.source === "grant" || body.useGrant);
+  const price = zavriPrice(count);
+  const now = Date.now(); const slot = Math.floor(now / ZAVRI_ROTATION_MS); const idx = ((slot % ZAVRI_ROSTER.length) + ZAVRI_ROSTER.length) % ZAVRI_ROSTER.length; const featured = ZAVRI_ROSTER[idx]!;
+  await ensureZavriTables(); const sql = getSql();
+  await sql`BEGIN`;
+  try {
+    let freeAvailable = 0;
+    if (useGrant) {
+      const dayId = new Date().toISOString().slice(0, 10);
+      await sql`INSERT INTO magnum_zavri_begs (user_id, day_id, asks, granted, spent) VALUES (${user.id}, ${dayId}, 0, 0, 0) ON CONFLICT (user_id, day_id) DO NOTHING`;
+      const br = await sql`SELECT granted, spent FROM magnum_zavri_begs WHERE user_id=${user.id} AND day_id=${dayId} LIMIT 1 FOR UPDATE`;
+      const granted = Number((br[0] as { granted: number }).granted); const spent = Number((br[0] as { spent: number }).spent);
+      freeAvailable = Math.max(0, granted - spent);
+      if (freeAvailable < 1) { await sql`ROLLBACK`; return Response.json({ error: "no free rolls", dayId, granted, spent, available: freeAvailable }, { status: 402 }); }
+    } else {
+      await sql`INSERT INTO magnum_coins (user_id, balance) VALUES (${user.id}, 1000) ON CONFLICT (user_id) DO NOTHING`;
+      const br = await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} FOR UPDATE`;
+      const bal = Number((br[0] as { balance: number }).balance);
+      if (bal < price) { await sql`ROLLBACK`; return Response.json({ error: "not enough coins", price, balance: bal, required: price }, { status: 402 }); }
+      await sql`UPDATE magnum_coins SET balance = balance - ${price} WHERE user_id=${user.id}`;
+    }
+    const pityRows = await sql`SELECT p4, p5, lost_5050, pulls FROM magnum_zavri_pity WHERE user_id=${user.id} LIMIT 1 FOR UPDATE`;
+    let curPity = pityRows.length ? { p4: Number((pityRows[0] as { p4: number }).p4), p5: Number((pityRows[0] as { p5: number }).p5), lost5050: Boolean((pityRows[0] as { lost_5050: boolean }).lost_5050), pulls: Number((pityRows[0] as { pulls: number }).pulls) } : { p4: 0, p5: 0, lost5050: false, pulls: 0 };
+    const ownedRows = await sql`SELECT DISTINCT species_id FROM magnum_zavri_collection WHERE user_id=${user.id}`;
+    const ownedSet = new Set<string>(ownedRows.map((r: unknown) => String((r as { species_id: string }).species_id)));
+    const results: Array<{ kind: "species" | "shards"; rarity: string; speciesId: string; isNew?: boolean; amount?: number; isFeatured?: boolean; nickname?: string | null }> = [];
+    let cur = { ...curPity };
+    for (let i = 0; i < count; i++) {
+      const out = rollZavri({ p4: cur.p4, p5: cur.p5, lost5050: cur.lost5050 }, featured.id, ownedSet, Math.random);
+      cur.p4 = out.next.p4; cur.p5 = out.next.p5; cur.lost5050 = out.next.lost5050; cur.pulls++;
+      const rr = out.result;
+      if (rr.kind === "shards") {
+        await sql`INSERT INTO magnum_zavri_shards (user_id, species_id, count) VALUES (${user.id}, ${rr.speciesId}, ${rr.amount}) ON CONFLICT (user_id, species_id) DO UPDATE SET count = magnum_zavri_shards.count + ${rr.amount}`;
+        results.push({ kind: "shards", rarity: rr.rarity, speciesId: rr.speciesId, amount: rr.amount });
+        await sql`INSERT INTO magnum_zavri_history (user_id, slot, rarity, kind, species_id, amount, is_new) VALUES (${user.id}, ${slot}, ${rr.rarity}, 'shards', ${rr.speciesId}, ${rr.amount}, false)`;
+      } else {
+        const def = ZAVRI_BY_ID.get(rr.speciesId)!;
+        const gender = def.gender;
+        const ins = await sql`INSERT INTO magnum_zavri_collection (user_id, species_id, gender, nickname, xp, hunger, happiness, ascension, generation, last_tick) VALUES (${user.id}, ${rr.speciesId}, ${gender}, null, 0, 100, 100, 0, 1, now()) RETURNING id`;
+        ownedSet.add(rr.speciesId);
+        results.push({ kind: "species", rarity: rr.rarity, speciesId: rr.speciesId, isNew: true, isFeatured: rr.isFeatured, nickname: null });
+        await sql`INSERT INTO magnum_zavri_history (user_id, slot, rarity, kind, species_id, is_new) VALUES (${user.id}, ${slot}, ${rr.rarity}, 'species', ${rr.speciesId}, true)`;
+      }
+    }
+    await sql`INSERT INTO magnum_zavri_pity (user_id, p4, p5, lost_5050, pulls, updated_at) VALUES (${user.id}, ${cur.p4}, ${cur.p5}, ${cur.lost5050}, ${cur.pulls}, now()) ON CONFLICT (user_id) DO UPDATE SET p4=${cur.p4}, p5=${cur.p5}, lost_5050=${cur.lost5050}, pulls=${cur.pulls}, updated_at=now()`;
+    if (useGrant) {
+      const dayId = new Date().toISOString().slice(0, 10);
+      await sql`UPDATE magnum_zavri_begs SET spent = spent + 1 WHERE user_id=${user.id} AND day_id=${dayId}`;
+      await sql`INSERT INTO magnum_transactions (user_id, amount, reason, meta) VALUES (${user.id}, 0, 'zavri_roll_grant', ${JSON.stringify({ count, slot, featured: featured.id, results })}::jsonb)`;
+    } else {
+      await sql`INSERT INTO magnum_transactions (user_id, amount, reason, meta) VALUES (${user.id}, ${-price}, 'zavri_roll', ${JSON.stringify({ count, slot, featured: featured.id, price, results })}::jsonb)`;
+    }
+    const balAfter = await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+    const newBal = Number((balAfter[0] as { balance: number }).balance);
+    const shardRows = await sql`SELECT species_id, count FROM magnum_zavri_shards WHERE user_id=${user.id}`;
+    const shards: Record<string, number> = {};
+    for (const r of shardRows) { const x = r as { species_id: string; count: number }; shards[String(x.species_id)] = Number(x.count); }
+    const collRows = await sql`SELECT id, species_id, gender, nickname, xp, hunger, happiness, ascension, generation FROM magnum_zavri_collection WHERE user_id=${user.id} ORDER BY id ASC`;
+    const buff = zavriBuffPct(collRows.map((r: unknown) => { const x = r as { species_id: string; ascension: number; hunger: number }; return { speciesId: String(x.species_id), ascension: Number(x.ascension), hunger: Number(x.hunger) }; }));
+    await sql`COMMIT`;
+    return Response.json({ ok: true, count, slot, featured: featured.id, results, pity: cur, price: useGrant ? 0 : price, balance: newBal, shards, buff, freeUsed: useGrant });
+  } catch (e) { try { await sql`ROLLBACK`; } catch {} console.error("[zavri roll] failed", e); return Response.json({ error: "db error" }, { status: 500 }); }
+}
+async function handleZavriCollection(req: Request): Promise<Response> {
+  const token = extractToken(req); if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token); if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  await ensureZavriTables(); const sql = getSql();
+  const rows = await sql`SELECT id, species_id, gender, nickname, xp, hunger, happiness, ascension, generation, parent_a, parent_b, last_pet_at, last_breed_at, last_tick, born_at FROM magnum_zavri_collection WHERE user_id=${user.id} ORDER BY id ASC`;
+  let collection = rows.map((r: unknown) => {
+    const x = r as { id: number; species_id: string; gender: string; nickname: string | null; xp: number; hunger: number; happiness: number; ascension: number; generation: number; parent_a: number | null; parent_b: number | null; last_pet_at: string | null; last_breed_at: string | null; last_tick: string; born_at: string };
+    const decay = zavriApplyDecay({ hunger: Number(x.hunger), happiness: Number(x.happiness), last_tick: String(x.last_tick) });
+    return { id: Number(x.id), speciesId: String(x.species_id), species_id: String(x.species_id), gender: String(x.gender), nickname: x.nickname, xp: Number(x.xp), hunger: decay.hunger, happiness: decay.happiness, ascension: Number(x.ascension), generation: Number(x.generation), parentA: x.parent_a, parentB: x.parent_b, lastPetAt: x.last_pet_at, lastBreedAt: x.last_breed_at, lastTick: String(x.last_tick), bornAt: String(x.born_at), hoursDecay: decay.hours };
+  });
+  const needsUpdate = collection.filter((c) => c.hoursDecay > 0);
+  if (needsUpdate.length) {
+    for (const c of needsUpdate) { await sql`UPDATE magnum_zavri_collection SET hunger=${c.hunger}, happiness=${c.happiness}, last_tick=now() WHERE id=${c.id} AND user_id=${user.id}`; }
+  }
+  const shardsRows = await sql`SELECT species_id, count FROM magnum_zavri_shards WHERE user_id=${user.id}`;
+  const shards: Record<string, number> = {};
+  for (const r of shardsRows) { const x = r as { species_id: string; count: number }; shards[String(x.species_id)] = Number(x.count); }
+  const pity = await getZavriPityRow(user.id);
+  const breeds = await sql`SELECT id, parent_a, parent_b, ready_at, claimed, child_species, child_gender, child_seed, created_at FROM magnum_zavri_breeds WHERE user_id=${user.id} ORDER BY created_at DESC LIMIT 10`;
+  const buff = zavriBuffPct(collection.map((c) => ({ speciesId: c.speciesId, ascension: c.ascension, hunger: c.hunger })));
+  const beg = await zavriGetBegState(user.id);
+  return Response.json({ ok: true, collection, shards, pity, buff, breeds, beg });
+}
+async function handleZavriFeed(req: Request): Promise<Response> {
+  const token = extractToken(req); if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token); if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const ip = getClientIp(req); if (!checkRateLimit(`zavri:feed:${user.id}:${ip}`, 20, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
+  let body: { id?: number }; try { body = (await req.json()) as typeof body; } catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
+  const id = Number(body.id); if (!Number.isInteger(id) || id <= 0) return Response.json({ error: "id required" }, { status: 400 });
+  await ensureZavriTables(); const sql = getSql();
+  const rows = await sql`SELECT id, hunger, happiness, xp, last_tick FROM magnum_zavri_collection WHERE id=${id} AND user_id=${user.id} LIMIT 1`;
+  if (!rows.length) return Response.json({ error: "not found" }, { status: 404 });
+  const r = rows[0] as { id: number; hunger: number; happiness: number; xp: number; last_tick: string };
+  const decay = zavriApplyDecay({ hunger: Number(r.hunger), happiness: Number(r.happiness), last_tick: String(r.last_tick) });
+  const curHunger = decay.hunger;
+  if (curHunger >= 100) return Response.json({ error: "not hungry", hunger: curHunger }, { status: 409 });
+  const cost = 42;
+  await sql`INSERT INTO magnum_coins (user_id, balance) VALUES (${user.id}, 1000) ON CONFLICT (user_id) DO NOTHING`;
+  const br = await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1 FOR UPDATE`;
+  const bal = Number((br[0] as { balance: number }).balance);
+  if (bal < cost) return Response.json({ error: "not enough coins", required: cost, balance: bal }, { status: 402 });
+  const newHunger = Math.min(100, curHunger + 20);
+  const newXp = Number(r.xp) + 42;
+  await sql`BEGIN`;
+  try {
+    await sql`UPDATE magnum_coins SET balance = balance - ${cost} WHERE user_id=${user.id}`;
+    await sql`UPDATE magnum_zavri_collection SET hunger=${newHunger}, happiness=${Math.min(100, decay.happiness + 5)}, xp=${newXp}, last_tick=now() WHERE id=${id} AND user_id=${user.id}`;
+    await sql`INSERT INTO magnum_transactions (user_id, amount, reason, meta) VALUES (${user.id}, ${-cost}, 'zavri_feed', ${JSON.stringify({ id, hunger: newHunger, xp: newXp })}::jsonb)`;
+    await sql`COMMIT`;
+  } catch (e) { try { await sql`ROLLBACK`; } catch {} throw e; }
+  const upd = await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+  return Response.json({ ok: true, id, hunger: newHunger, xp: newXp, cost, balance: Number((upd[0] as { balance: number }).balance) });
+}
+async function handleZavriPet(req: Request): Promise<Response> {
+  const token = extractToken(req); if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token); if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const ip = getClientIp(req); if (!checkRateLimit(`zavri:pet:${user.id}:${ip}`, 30, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
+  let body: { id?: number }; try { body = (await req.json()) as typeof body; } catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
+  const id = Number(body.id); if (!Number.isInteger(id) || id <= 0) return Response.json({ error: "id required" }, { status: 400 });
+  await ensureZavriTables(); const sql = getSql();
+  const rows = await sql`SELECT id, happiness, last_pet_at FROM magnum_zavri_collection WHERE id=${id} AND user_id=${user.id} LIMIT 1`;
+  if (!rows.length) return Response.json({ error: "not found" }, { status: 404 });
+  const r = rows[0] as { id: number; happiness: number; last_pet_at: string | null };
+  if (r.last_pet_at) { const diff = Date.now() - new Date(String(r.last_pet_at)).getTime(); if (diff < 5 * 60 * 1000) return Response.json({ error: "cooldown", remainingMs: 5 * 60 * 1000 - diff }, { status: 429 }); }
+  const newHappy = Math.min(100, Number(r.happiness) + 15);
+  await sql`UPDATE magnum_zavri_collection SET happiness=${newHappy}, xp = xp + 10, last_pet_at=now(), last_tick=now() WHERE id=${id} AND user_id=${user.id}`;
+  const upd = await sql`SELECT happiness, xp FROM magnum_zavri_collection WHERE id=${id} LIMIT 1`;
+  const nr = upd[0] as { happiness: number; xp: number };
+  return Response.json({ ok: true, id, happiness: Number(nr.happiness), xp: Number(nr.xp) });
+}
+async function handleZavriRename(req: Request): Promise<Response> {
+  const token = extractToken(req); if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token); if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  let body: { id?: number; name?: string; nickname?: string }; try { body = (await req.json()) as typeof body; } catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
+  const id = Number(body.id); const name = String(body.name ?? body.nickname ?? "").trim().slice(0, 24);
+  if (!Number.isInteger(id) || id <= 0) return Response.json({ error: "id required" }, { status: 400 });
+  if (!name || name.length < 1) return Response.json({ error: "name required" }, { status: 400 });
+  if (name.includes("<") || name.includes(">")) return Response.json({ error: "invalid chars" }, { status: 400 });
+  await ensureZavriTables(); const sql = getSql();
+  const rows = await sql`SELECT id FROM magnum_zavri_collection WHERE id=${id} AND user_id=${user.id} LIMIT 1`;
+  if (!rows.length) return Response.json({ error: "not found" }, { status: 404 });
+  await sql`UPDATE magnum_zavri_collection SET nickname=${name} WHERE id=${id} AND user_id=${user.id}`;
+  return Response.json({ ok: true, id, nickname: name });
+}
+async function handleZavriAscend(req: Request): Promise<Response> {
+  const token = extractToken(req); if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token); if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const ip = getClientIp(req); if (!checkRateLimit(`zavri:ascend:${user.id}:${ip}`, 10, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
+  let body: { id?: number }; try { body = (await req.json()) as typeof body; } catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
+  const id = Number(body.id); if (!Number.isInteger(id) || id <= 0) return Response.json({ error: "id required" }, { status: 400 });
+  await ensureZavriTables(); const sql = getSql();
+  const rows = await sql`SELECT id, species_id, ascension FROM magnum_zavri_collection WHERE id=${id} AND user_id=${user.id} LIMIT 1`;
+  if (!rows.length) return Response.json({ error: "not found" }, { status: 404 });
+  const r = rows[0] as { id: number; species_id: string; ascension: number };
+  const curAsc = Number(r.ascension);
+  if (curAsc >= ZAVRI_MAX_ASCENSION) return Response.json({ error: "max ascension", ascension: curAsc }, { status: 409 });
+  const cost = ZAVRI_ASCEND_COST[curAsc]!;
+  const shardRows = await sql`SELECT count FROM magnum_zavri_shards WHERE user_id=${user.id} AND species_id=${String(r.species_id)} LIMIT 1`;
+  const have = shardRows.length ? Number((shardRows[0] as { count: number }).count) : 0;
+  if (have < cost) return Response.json({ error: "not enough shards", required: cost, have, speciesId: String(r.species_id) }, { status: 402 });
+  await sql`BEGIN`;
+  try {
+    await sql`UPDATE magnum_zavri_shards SET count = count - ${cost} WHERE user_id=${user.id} AND species_id=${String(r.species_id)}`;
+    await sql`UPDATE magnum_zavri_collection SET ascension = ascension + 1 WHERE id=${id} AND user_id=${user.id}`;
+    await sql`INSERT INTO magnum_transactions (user_id, amount, reason, meta) VALUES (${user.id}, 0, 'zavri_ascend', ${JSON.stringify({ id, speciesId: String(r.species_id), from: curAsc, to: curAsc + 1, cost })}::jsonb)`;
+    await sql`COMMIT`;
+  } catch (e) { try { await sql`ROLLBACK`; } catch {} throw e; }
+  const upd = await sql`SELECT ascension FROM magnum_zavri_collection WHERE id=${id} LIMIT 1`;
+  return Response.json({ ok: true, id, ascension: Number((upd[0] as { ascension: number }).ascension), cost });
+}
+async function handleZavriBreedStart(req: Request): Promise<Response> {
+  const token = extractToken(req); if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token); if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const ip = getClientIp(req); if (!checkRateLimit(`zavri:breed:${user.id}:${ip}`, 10, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
+  let body: { a?: number; b?: number; parentA?: number; parentB?: number };
+  try { body = (await req.json()) as typeof body; } catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
+  const a = Number(body.a ?? body.parentA); const b = Number(body.b ?? body.parentB);
+  if (!Number.isInteger(a) || !Number.isInteger(b) || a <= 0 || b <= 0 || a === b) return Response.json({ error: "need 2 different parents" }, { status: 400 });
+  await ensureZavriTables(); const sql = getSql();
+  const rows = await sql`SELECT id, species_id, gender, last_breed_at FROM magnum_zavri_collection WHERE user_id=${user.id} AND id IN (${a}, ${b})`;
+  if (rows.length !== 2) return Response.json({ error: "parents not found" }, { status: 404 });
+  const pa = rows.find((r: unknown) => Number((r as { id: number }).id) === a) as { id: number; species_id: string; gender: string; last_breed_at: string | null };
+  const pb = rows.find((r: unknown) => Number((r as { id: number }).id) === b) as { id: number; species_id: string; gender: string; last_breed_at: string | null };
+  const ga = String(pa.gender), gb = String(pb.gender);
+  if (ga === gb) return Response.json({ error: "need m+f", genders: [ga, gb] }, { status: 400 });
+  const cd = 24 * 3600 * 1000;
+  for (const p of [pa, pb] as Array<{ last_breed_at: string | null }>) { if (p.last_breed_at) { const diff = Date.now() - new Date(String(p.last_breed_at)).getTime(); if (diff < cd) return Response.json({ error: "cooldown", remainingMs: cd - diff }, { status: 429 }); } }
+  const active = await sql`SELECT id FROM magnum_zavri_breeds WHERE user_id=${user.id} AND claimed=false LIMIT 1`;
+  if (active.length) return Response.json({ error: "incubator busy", breedId: Number((active[0] as { id: number }).id) }, { status: 409 });
+  const readyAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+  const childSpecies = breedChildSpecies(String(pa.species_id), String(pb.species_id), Math.random);
+  const childGender = breedChildGender(Math.random);
+  const childSeed = Math.floor(Math.random() * 1e9);
+  const ins = await sql`INSERT INTO magnum_zavri_breeds (user_id, parent_a, parent_b, ready_at, child_species, child_gender, child_seed) VALUES (${user.id}, ${a}, ${b}, ${readyAt}::timestamptz, ${childSpecies}, ${childGender}, ${childSeed}) RETURNING id, ready_at`;
+  const bid = Number((ins[0] as { id: number }).id);
+  await sql`UPDATE magnum_zavri_collection SET last_breed_at=now() WHERE id IN (${a}, ${b}) AND user_id=${user.id}`;
+  return Response.json({ ok: true, breedId: bid, readyAt, childSpecies, childGender });
+}
+async function handleZavriBreedClaim(req: Request): Promise<Response> {
+  const token = extractToken(req); if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token); if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  let body: { breedId?: number; id?: number; rush?: boolean };
+  try { body = (await req.json()) as typeof body; } catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
+  const breedId = Number(body.breedId ?? body.id);
+  const rush = Boolean(body.rush);
+  if (!Number.isInteger(breedId) || breedId <= 0) return Response.json({ error: "breedId required" }, { status: 400 });
+  await ensureZavriTables(); const sql = getSql();
+  const rows = await sql`SELECT id, parent_a, parent_b, ready_at, claimed, child_species, child_gender, child_seed FROM magnum_zavri_breeds WHERE id=${breedId} AND user_id=${user.id} LIMIT 1`;
+  if (!rows.length) return Response.json({ error: "not found" }, { status: 404 });
+  const r = rows[0] as { id: number; parent_a: number; parent_b: number; ready_at: string; claimed: boolean; child_species: string; child_gender: string; child_seed: number };
+  if (r.claimed) return Response.json({ error: "already claimed" }, { status: 409 });
+  const readyMs = new Date(String(r.ready_at)).getTime();
+  if (Date.now() < readyMs && !rush) return Response.json({ error: "not ready", remainingMs: readyMs - Date.now(), readyAt: String(r.ready_at) }, { status: 423 });
+  if (Date.now() < readyMs && rush) {
+    const rushPrice = 420;
+    const br = await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+    const bal = Number((br[0] as { balance: number }).balance);
+    if (bal < rushPrice) return Response.json({ error: "not enough coins", required: rushPrice, balance: bal }, { status: 402 });
+    await sql`BEGIN`;
+    try {
+      await sql`UPDATE magnum_coins SET balance = balance - ${rushPrice} WHERE user_id=${user.id}`;
+      await sql`INSERT INTO magnum_transactions (user_id, amount, reason, meta) VALUES (${user.id}, ${-rushPrice}, 'zavri_breed_rush', ${JSON.stringify({ breedId, price: rushPrice })}::jsonb)`;
+      await sql`COMMIT`;
+    } catch (e) { try { await sql`ROLLBACK`; } catch {} throw e; }
+  }
+  const parents = await sql`SELECT generation FROM magnum_zavri_collection WHERE id IN (${Number(r.parent_a)}, ${Number(r.parent_b)}) AND user_id=${user.id}`;
+  const gens = parents.map((x: unknown) => Number((x as { generation: number }).generation));
+  const gen = Math.max(...gens, 1) + 1;
+  await sql`BEGIN`;
+  try {
+    const ins = await sql`INSERT INTO magnum_zavri_collection (user_id, species_id, gender, nickname, xp, hunger, happiness, ascension, generation, parent_a, parent_b, last_tick) VALUES (${user.id}, ${String(r.child_species)}, ${String(r.child_gender)}, null, 0, 100, 100, 0, ${gen}, ${Number(r.parent_a)}, ${Number(r.parent_b)}, now()) RETURNING id`;
+    const childId = Number((ins[0] as { id: number }).id);
+    await sql`UPDATE magnum_zavri_breeds SET claimed=true, child_species=${String(r.child_species)} WHERE id=${breedId} AND user_id=${user.id}`;
+    await sql`COMMIT`;
+    const coll = await sql`SELECT id, species_id, gender, nickname, xp, hunger, happiness, ascension, generation FROM magnum_zavri_collection WHERE id=${childId} LIMIT 1`;
+    return Response.json({ ok: true, breedId, childId, child: coll[0] });
+  } catch (e) { try { await sql`ROLLBACK`; } catch {} throw e; }
+}
+async function handleZavriHistory(req: Request): Promise<Response> {
+  const token = extractToken(req); if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token); if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  await ensureZavriTables(); const sql = getSql();
+  const rows = await sql`SELECT slot, rarity, kind, species_id, amount, is_new, created_at FROM magnum_zavri_history WHERE user_id=${user.id} ORDER BY created_at DESC LIMIT 30`;
+  return Response.json({ history: rows });
 }
 
 // ---- STUDIO 42 — нейро-визуализатор + клип-конструктор ----
@@ -5874,15 +6232,20 @@ async function handleAi(req: Request): Promise<Response> {
       choices?: { message?: { content?: string } }[];
       usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
     };
-    const text = data.choices?.[0]?.message?.content?.trim();
+    let text = data.choices?.[0]?.message?.content?.trim();
     if (!text) {
       return Response.json({ error: "Empty response" }, { status: 502 });
     }
     const dt = Date.now() - t0;
     console.log(`[ai-proxy] ok ${dt}ms ip=${ip} user=${aiUser?.username ?? "anon"} image=${!!imageDataUrl} tokens=${data.usage?.total_tokens ?? "?"}`);
+    // ZAVRI 42 — выпрашивание круток у ИИ-бота (только текст + auth)
+    let zavriGrant: { grantedNow: boolean; asks: number; granted: number; available: number } | null = null;
+    if (aiUser && userText && !imageDataUrl) {
+      try { zavriGrant = await zavriGrantBegIfEligible(aiUser.id, userText); if (zavriGrant?.grantedNow) text += "\n\n🎲 [Системно: Бот-завр одолжил тебе крутку — загляни в Завры 42 → Гача! Бесплатных осталось: " + zavriGrant.available + "]"; } catch (e) { console.error("[zavri beg] failed", e); }
+    }
     // дождаться ledger чтобы не терять аудит при быстром выходе (но не дольше 300мс)
     try { await Promise.race([ledgerPromise, new Promise(r => setTimeout(r, 300))]); } catch (e) { console.error("[ai ledger await] failed", e); }
-    return Response.json({ text });
+    return Response.json({ text, zavriGrant });
   } catch (e) {
     console.error("[ai-proxy] fetch failed:", e, `ip=${ip} user=${aiUser?.username ?? "anon"}`);
     try { await Promise.race([ledgerPromise, new Promise(r => setTimeout(r, 300))]); } catch (e) { console.error("[ai ledger await] failed", e); }
@@ -6337,6 +6700,17 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/gacha/quests/progress" && req.method === "POST") return handleGachaQuestProgress(req);
     if (url.pathname === "/magnum/api/gacha/quests/claim" && req.method === "POST") return handleGachaQuestClaim(req);
     if ((url.pathname === "/magnum/api/gacha/comeback" || url.pathname === "/magnum/api/gacha/comeback/claim") && req.method === "POST") return handleGachaComebackClaim(req);
+    // ZAVRI 42
+    if (url.pathname === "/magnum/api/zavri/banner" && req.method === "GET") return handleZavriBanner(req);
+    if (url.pathname === "/magnum/api/zavri/roll" && req.method === "POST") return handleZavriRoll(req);
+    if (url.pathname === "/magnum/api/zavri/collection" && req.method === "GET") return handleZavriCollection(req);
+    if (url.pathname === "/magnum/api/zavri/feed" && req.method === "POST") return handleZavriFeed(req);
+    if (url.pathname === "/magnum/api/zavri/pet" && req.method === "POST") return handleZavriPet(req);
+    if (url.pathname === "/magnum/api/zavri/rename" && req.method === "POST") return handleZavriRename(req);
+    if (url.pathname === "/magnum/api/zavri/ascend" && req.method === "POST") return handleZavriAscend(req);
+    if (url.pathname === "/magnum/api/zavri/breed/start" && req.method === "POST") return handleZavriBreedStart(req);
+    if (url.pathname === "/magnum/api/zavri/breed/claim" && req.method === "POST") return handleZavriBreedClaim(req);
+    if (url.pathname === "/magnum/api/zavri/history" && req.method === "GET") return handleZavriHistory(req);
 
     if (url.pathname === "/magnum/api/spin/status" && req.method === "GET") return handleSpinStatus(req);
     if (url.pathname === "/magnum/api/spin" && req.method === "POST") return handleSpin(req);

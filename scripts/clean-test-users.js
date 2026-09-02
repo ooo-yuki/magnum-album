@@ -48,6 +48,17 @@ async function purgeUser(uid, username) {
     else if (t === "cosmetics") try { await sql`DELETE FROM magnum_cosmetics WHERE user_id = ${uid}`; } catch (e) {}
     else if (t === "daily_claims") try { await sql`DELETE FROM magnum_daily_claims WHERE user_id = ${uid}`; } catch (e) {}
     else if (t === "coins") try { await sql`DELETE FROM magnum_coins WHERE user_id = ${uid}`; } catch (e) {}
+    else if (t === "gacha_history") try { await sql`DELETE FROM magnum_gacha_history WHERE user_id = ${uid}`; } catch (e) {}
+    else if (t === "pity") try { await sql`DELETE FROM magnum_pity WHERE user_id = ${uid}`; } catch (e) {}
+    else if (t === "gacha_quests") try { await sql`DELETE FROM magnum_gacha_quests WHERE user_id = ${uid}`; } catch (e) {}
+    else if (t === "pass_progress") try { await sql`DELETE FROM magnum_pass_progress WHERE user_id = ${uid}`; } catch (e) {}
+    else if (t === "pets") try { await sql`DELETE FROM magnum_pets WHERE user_id = ${uid}`; } catch (e) {}
+    else if (t === "zavri_collection") try { await sql`DELETE FROM magnum_zavri_collection WHERE user_id = ${uid}`; } catch (e) {}
+    else if (t === "zavri_pity") try { await sql`DELETE FROM magnum_zavri_pity WHERE user_id = ${uid}`; } catch (e) {}
+    else if (t === "zavri_history") try { await sql`DELETE FROM magnum_zavri_history WHERE user_id = ${uid}`; } catch (e) {}
+    else if (t === "zavri_shards") try { await sql`DELETE FROM magnum_zavri_shards WHERE user_id = ${uid}`; } catch (e) {}
+    else if (t === "zavri_begs") try { await sql`DELETE FROM magnum_zavri_begs WHERE user_id = ${uid}`; } catch (e) {}
+    else if (t === "zavri_breeds") try { await sql`DELETE FROM magnum_zavri_breeds WHERE user_id = ${uid}`; } catch (e) {}
   }
   try { await sql`DELETE FROM magnum_leaderboard WHERE player = ${username}`; } catch (e) {}
   await sql`DELETE FROM magnum_users WHERE id = ${uid}`;
@@ -60,7 +71,7 @@ const LIST = [
   "ai_usage","mining_exchanges","reports","moderation_log","idea_comments","conveyor_state",
   "duel_invites","duel_wagers","dust","mining_boosts","squad_battles","squad_members","squads",
   "eco_challenges","eco_shares","map_progress","map_events","map_shares","ideas","cosmetics",
-  "daily_claims","coins",
+  "daily_claims","coins","gacha_history","pity","gacha_quests","pass_progress","pets","zavri_collection","zavri_pity","zavri_history","zavri_shards","zavri_begs","zavri_breeds",
 ];
 
 (async () => {
