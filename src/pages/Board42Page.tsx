@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import gsap from "gsap";
 import { CosmeticIdentity, cosmeticBannerStyle, type LeaderCosmetics } from "../components/CosmeticBadge";
+import { GuestGate } from "../components/GuestGate";
 
 type FeedItem = { game:string; score:number; username:string; userId:number; avatar:string|null; created_at:string; timeAgo:string };
 type ChallengeItem = { id:number; challengerId:number; challengedId:number; challenger:string; challenged:string; game:string; score:number; status:string; created_at:string; expires_at:string; remainingMs:number; remainingH:string };
@@ -181,6 +182,7 @@ export function Board42Page(){
 
   return (
     <div ref={wrapRef} style={{maxWidth:980,margin:"0 auto",padding:"24px 16px",position:"relative"}}>
+      <GuestGate action="попадать в недельный топ доски" />
       <h1 style={{fontSize:28,fontWeight:900,letterSpacing:"-0.02em"}}>ДОСКА 42 <span style={{color:"#ff2d55"}}>— лента рекордов</span></h1>
       <p style={{opacity:0.7,marginTop:6,fontSize:13}}>Глобальные рекорды • друзья • вызовы 24ч • шаринг 1080×1080 +42/день • топ-3 недели +1420 crown conic-gold</p>
       {}

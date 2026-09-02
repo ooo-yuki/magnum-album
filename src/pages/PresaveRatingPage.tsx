@@ -7,6 +7,7 @@ import { StreakReviveBanner } from "../components/StreakReviveBanner";
 import { CosmeticIdentity, cosmeticBannerStyle, type LeaderCosmetics } from "../components/CosmeticBadge";
 import { SKIN_EMOJI } from "../lib/cosmetics";
 import styles from "./PresaveRatingPage.module.css";
+import { GuestGate } from "../components/GuestGate";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -471,6 +472,7 @@ export function PresaveRatingPage() {
 
   return (
     <div className={styles.page} ref={rootRef}>
+      <GuestGate action="попасть в рейтинг пресейва" />
       <header ref={heroRef} className={styles.header}>
         <div className={styles.badge}>★ РЕЙТИНГ ПРЕСЕЙВА · MAGNUM · 42 БРАТУХИ</div>
         <div ref={goldRef} className={styles.goldCelebrate} data-testid="presave-gold-badge" data-gold="true" data-presave-fomo-badge>

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import gsap from "gsap";
 import { FLOW_BEATS, FLOW_BEAT_LABELS, FLOW_TAKT_SEC, FLOW_TIPS, WAGER_OPTIONS, SCORING, calcWPM, type Wager } from "../lib/flow42";
+import { GuestGate } from "../components/GuestGate";
 
 type JudgeResult = {
   ok: boolean;
@@ -244,6 +245,7 @@ export function Flow42Page() {
 
   return (
     <div ref={wrapRef} style={{ maxWidth: 980, margin: "0 auto", padding: "24px 16px", position: "relative" }}>
+      <GuestGate action="попадать в топ Flow 42" />
       <div data-hero>
         <h1 style={{ fontSize: 28, fontWeight: 900, letterSpacing: "-0.02em" }}>БИТВА ФЛОУ 42 <span style={{ color: "#ff2d55" }}>— vs БРАТ-БОТ</span></h1>
         <p style={{ opacity: 0.7, marginTop: 6, fontSize: 13 }}>4 такта ×8с = 32с • печатай панчи • AI-судья mimo-v2.5 → рифма/панч/флоу 0-42 • WPM&gt;80 ×1.2 • wager 0/42/142/420</p>

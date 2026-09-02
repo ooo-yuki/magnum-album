@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import gsap from "gsap";
 import s from "./ConveyorPage.module.css";
+import { GuestGate } from "../components/GuestGate";
 
 const CATALOG_PREVIEW = [
   { icon:"⛏️", name:"Шахта", desc:"Базовая добыча · 4 dust/мин" },
@@ -58,6 +59,7 @@ function Onboarding(){
   const goAuth=()=>window.dispatchEvent(new CustomEvent("magnum:need-auth"));
 
   return <div ref={pageRef} className={s.page}>
+    <GuestGate action="качать конвейер и попадать в топ" />
     <div className={s.onboard}>
       <h1>КОНВЕЙЕР 42</h1>
       <p className={s.onboardSub}>

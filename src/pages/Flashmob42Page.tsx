@@ -3,6 +3,7 @@ import gsap from "gsap";
 import styles from "./Flashmob42Page.module.css";
 import { FLASHMOB_TYPES, getFlashmobForDay, todayDayString, seededQuizForDay, seededMemorySequence, type QuizQ } from "../lib/flashmob42";
 import { subscribeMe } from "../lib/authMe";
+import { GuestGate } from "../components/GuestGate";
 
 type TodayResp = { ok?:boolean; day:string; type:string; title:string; shortTitle?:string; desc?:string; seed:number; durationSec:number; target:number; icon?:string; myScore?:number|null; myRank?:number|null; count?:number };
 type LbItem = { userId:number; username:string; score:number; rank:number; avatar:string|null; created_at:string };
@@ -314,6 +315,7 @@ export function Flashmob42Page(){
 
   return (
     <div ref={wrapRef} className={styles.page} style={{position:"relative"}}>
+      <GuestGate action="участвовать во флешмобе" />
       <div className={styles.header}>
         <div>
           <div className={styles.title}>ФЛЕШМОБ 42 <span>— вирус</span></div>

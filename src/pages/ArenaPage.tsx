@@ -3,6 +3,7 @@ import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import styles from "./ArenaPage.module.css";
 import { CosmeticIdentity, cosmeticBannerStyle, type LeaderCosmetics } from "../components/CosmeticBadge";
+import { GuestGate } from "../components/GuestGate";
 
 gsap.registerPlugin(useGSAP as never);
 
@@ -22,6 +23,7 @@ function weekIdNow(): string {
 function StreakCalendar({ streak, weekId }: { streak: number; weekId: string }) {
   return (
     <div className={styles.streakWrap} data-testid="streak-calendar">
+      <GuestGate action="драться в Арене и попадать в рейтинг" />
       {Array.from({ length: 7 }, (_, i) => (
         <span key={i} className={`${styles.dot} ${i < streak ? styles.dotOn : ""}`}>{i < streak ? "✓" : i + 1}</span>
       ))}

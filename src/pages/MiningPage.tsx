@@ -5,6 +5,7 @@ import styles from "./MiningPage.module.css";
 import { CosmeticIdentity, cosmeticBannerStyle, type LeaderCosmetics } from "../components/CosmeticBadge";
 import { AuthStatus } from "../components/AuthStatus";
 import { FirstGameBanner } from "../components/FirstGameBanner";
+import { GuestGate } from "../components/GuestGate";
 gsap.registerPlugin(ScrollTrigger);
 const RGB_GLOW="0 12px 36px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,45,85,0.22), 0 0 28px rgba(255,45,85,0.22), 0 0 28px rgba(0,255,136,0.14), 0 0 32px rgba(255,204,0,0.10)";
 
@@ -557,6 +558,7 @@ export function MiningPage() {
 
   return (
     <div className={styles.page} ref={pageRef}>
+      <GuestGate action="добывать и попадать в топ шахтёров" />
       <header className={styles.header}>
         <div className={styles.badge}>⛏️ ИРОНИЧНЫЙ МАЙНИНГ · 42-COIN · КУЗБАСС EDITION</div>
         <h1 className={styles.heroTitle}>МАЙНИ 42-КОИНЫ<br /><span>КОПАЙ КАК ШАХТЁР</span></h1>

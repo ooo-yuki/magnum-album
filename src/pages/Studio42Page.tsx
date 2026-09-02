@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import gsap from "gsap";
 import { STUDIO_TRACKS, STUDIO_PRESETS, STUDIO_SCENE_DEFAULTS, STUDIO_BG_OPTIONS, STUDIO_FILTER_OPTIONS, isStudioTrackSlug, isStudioPresetId, getBpmForTrack, validateScenes, type StudioTrackSlug, type StudioPresetId, type StudioScene } from "../lib/studio42";
+import { GuestGate } from "../components/GuestGate";
 
 const TRACKS = STUDIO_TRACKS;
 const PRESETS = STUDIO_PRESETS;
@@ -268,6 +269,7 @@ export function Studio42Page() {
 
   return (
     <div style={{maxWidth:1120, margin:"0 auto", padding:"1.2rem 1rem 2rem"}}>
+      <GuestGate action="публиковать работы и собирать лайки" />
       <div style={{display:"flex", flexWrap:"wrap", gap:"0.75rem", alignItems:"center", marginBottom:"0.9rem"}}>
         <span style={{fontSize:"0.72rem", fontWeight:800, letterSpacing:"0.08em", color:"#ff2d55", border:"1px solid rgba(255,45,85,0.3)", padding:"0.2rem 0.5rem", borderRadius:999}}>СТУДИЯ 42</span>
         <h1 style={{margin:0, fontSize:"1.6rem", fontWeight:900, letterSpacing:"-0.02em"}}>Нейро-визуализатор + клип-конструктор</h1>

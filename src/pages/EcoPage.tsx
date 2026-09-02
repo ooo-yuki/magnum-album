@@ -3,6 +3,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import styles from "./EcoPage.module.css";
 import { CosmeticIdentity, cosmeticBannerStyle, type LeaderCosmetics } from "../components/CosmeticBadge";
+import { GuestGate } from "../components/GuestGate";
 
 gsap.registerPlugin(ScrollTrigger);
 const prefersReduced = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -391,6 +392,7 @@ export function EcoPage() {
   };
   return (
     <div className={styles.page} ref={rootRef}>
+      <GuestGate action="сохранять эко-результат в рейтинг" />
       <header className={styles.header}>
         <span className={styles.badge} style={{ background: "conic-gradient(from 0deg at 50% 50%, #22c55e 0%, #16a34a 35%, #4ade80 70%, #15803d 100%)", WebkitBackgroundClip: "text", borderImage: "conic-gradient(from 0deg, #22c55e, #16a34a, #4ade80) 1" }}>ECO LES 42 • Лес • Тайга • Кузбасс • Bio-вахта 7дн</span>
         <h1 className={styles.title}>ECO LES 42</h1>
