@@ -204,30 +204,48 @@ export function ZavriTerrarium({ items, eatId, breedPair, onPet, onPick }: Props
     }
   }, [eatId]);
 
-  // breed jumps
+  // breed — около минуты трахаются (пара прыжков циклично, без откровенщины, ~60с)
   useEffect(() => {
     if (!breedPair) return;
     const [a, b] = breedPair;
     const ga = groupsRef.current.get(a), gb = groupsRef.current.get(b);
     if (!ga || !gb) return;
+    const origA = { x: ga.position.x, z: ga.position.z };
+    const origB = { x: gb.position.x, z: gb.position.z };
     const tl = gsap.timeline();
-    [ga, gb].forEach((g, idx) => {
-      tl.to(g.position, { y: 0.9, duration: 0.22, ease: "power2.out" }, idx * 0.08)
-        .to(g.position, { y: 0, duration: 0.28, ease: "bounce.out" }, idx * 0.08 + 0.22)
-        .to(g.position, { y: 0.7, duration: 0.2, ease: "power2.out" }, 0.5 + idx * 0.06)
-        .to(g.position, { y: 0, duration: 0.3, ease: "bounce.out" }, 0.7 + idx * 0.06);
-    });
-    // hearts between
-    const el = wrapRef.current;
-    if (el) {
-      for (let i = 0; i < 5; i++) {
-        const d = document.createElement("div");
-        d.textContent = "♥";
-        d.style.position = "absolute"; d.style.left = "50%"; d.style.top = "42%"; d.style.color = "#ff5a8a"; d.style.fontSize = "16px"; d.style.pointerEvents = "none";
-        el.appendChild(d);
-        gsap.to(d, { y: -48 - Math.random() * 24, x: (Math.random() - 0.5) * 48, opacity: 0, scale: 1.4, duration: 0.9, delay: 0.4 + i * 0.07, ease: "power2.out", onComplete: () => d.remove() });
+    // сблизить к центру выгула
+    tl.to(ga.position, { x: 0.55, z: 0.15, duration: 0.5, ease: "power2.out" }, 0);
+    tl.to(gb.position, { x: -0.55, z: -0.15, duration: 0.5, ease: "power2.out" }, 0);
+    tl.to(ga.rotation, { y: -0.2, duration: 0.4, ease: "power2.out" }, 0);
+    tl.to(gb.rotation, { y: 0.2, duration: 0.4, ease: "power2.out" }, 0);
+    // ~27 циклов × ~2.18с ≈ 60с
+    for (let i = 0; i < 27; i++) {
+      const t = 0.7 + i * 2.18;
+      [ga, gb].forEach((g, idx) => {
+        tl.to(g.position, { y: 0.88, duration: 0.18, ease: "power2.out" }, t + idx * 0.09)
+          .to(g.position, { y: 0, duration: 0.26, ease: "bounce.out" }, t + idx * 0.09 + 0.18)
+          .to(g.position, { y: 0.72, duration: 0.18, ease: "power2.out" }, t + 0.48 + idx * 0.07)
+          .to(g.position, { y: 0, duration: 0.28, ease: "bounce.out" }, t + 0.66 + idx * 0.07);
+        tl.to(g.scale, { x: 1.06, y: 0.94, z: 1.06, duration: 0.16, ease: "power2.out" }, t + idx * 0.09)
+          .to(g.scale, { x: 1, y: 1, z: 1, duration: 0.22, ease: "power2.out" }, t + 0.44 + idx * 0.07);
+      });
+      if (i % 3 === 0) {
+        tl.call(() => {
+          const el = wrapRef.current; if (!el) return;
+          for (let k = 0; k < 3; k++) {
+            const d = document.createElement("div"); d.textContent = k % 2 ? "♥" : "💦";
+            d.style.position = "absolute"; d.style.left = "50%"; d.style.top = "38%";
+            d.style.color = k % 2 ? "#ff5a8a" : "#ffd1e6"; d.style.fontSize = "13px"; d.style.pointerEvents = "none";
+            el.appendChild(d);
+            gsap.to(d, { y: -42 - Math.random() * 18, x: (Math.random() - 0.5) * 44, opacity: 0, scale: 1.25, duration: 0.85, delay: k * 0.08, ease: "power2.out", onComplete: () => d.remove() });
+          }
+        }, undefined, t + 0.28);
       }
     }
+    // разойтись обратно
+    tl.to(ga.position, { x: origA.x, z: origA.z, duration: 0.5, ease: "power2.inOut" }, 60);
+    tl.to(gb.position, { x: origB.x, z: origB.z, duration: 0.5, ease: "power2.inOut" }, 60);
+    return () => { tl.kill(); gsap.killTweensOf([ga.position, gb.position, ga.scale, gb.scale, ga.rotation, gb.rotation]); };
   }, [breedPair]);
 
   if (!items.length) return <div style={{ padding: 18, textAlign: "center", color: "rgba(255,255,255,0.6)", border: "1px dashed rgba(255,255,255,0.12)", borderRadius: 14 }}>Террариум пуст — выбей завров в баннере выше</div>;

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 import gsap from "gsap";
 import { ZAVRI_ROSTER, ZAVRI_BY_ID, RARITY_COLOR } from "../lib/zavri/catalog";
@@ -54,8 +54,10 @@ export function ZavriGachaPage() {
   const [renameId, setRenameId] = useState<number | null>(null);
   const [renameVal, setRenameVal] = useState("");
   const [eatTicks, setEatTicks] = useState<Record<number, number>>({});
+  const [breedTicks, setBreedTicks] = useState<Record<number, number>>({});
   const [breedWalkPair, setBreedWalkPair] = useState<[number, number] | null>(null);
   const [walkEatId, setWalkEatId] = useState<number | null>(null);
+  const [matingUntil, setMatingUntil] = useState<number | null>(null);
 
   const fetchBanner = useCallback(async () => {
     try { const r = await fetch("/magnum/api/zavri/banner", { credentials: "include" }); if (r.ok) setBanner(await r.json() as BannerResp); } catch {}
@@ -135,7 +137,8 @@ export function ZavriGachaPage() {
     if (!selectedA || !selectedB) { setMsg("выбери двух завров разного пола"); return; }
     const a = selectedA, b = selectedB;
     setLoading("breed");
-    try { const r = await fetch("/magnum/api/zavri/breed/start", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ a, b }) }); const j = await r.json() as { error?: string }; if (!r.ok) { setMsg(j.error || "ошибка"); return; } setBreedWalkPair([a, b]); window.setTimeout(() => setBreedWalkPair(null), 1600); setSelectedA(null); setSelectedB(null); await fetchColl(); } finally { setLoading(null); }
+    try { const r = await fetch("/magnum/api/zavri/breed/start", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ a, b }) }); const j = await r.json() as { error?: string }; if (!r.ok) { setMsg(j.error || "ошибка"); return; } const until = Date.now() + 60_000; setMatingUntil(until); setBreedWalkPair([a, b]); setBreedTicks((m) => ({ ...m, [a]: (m[a] ?? 0) + 1, [b]: (m[b] ?? 0) + 1 })); window.setTimeout(() => setBreedWalkPair(null), 61_000); window.setTimeout(() => setMatingUntil(null), 61_000); setSelectedA(null); setSelectedB(null); // яйцо появится только после минуты траха — не фетчим сразу
+      window.setTimeout(() => void fetchColl(), 61_200); setMsg("Завры спариваются… яйцо через минуту"); } finally { setLoading(null); }
   };
   const claimBreed = async (breedId: number, rush = false) => {
     setLoading(`claim${breedId}`);
@@ -157,6 +160,7 @@ export function ZavriGachaPage() {
 
   const pickSpecies = (id: string) => ZAVRI_BY_ID.get(id) ?? ZAVRI_ROSTER.find((z) => z.id === id) ?? null;
   const selectedNerenolBlocked = [selectedA, selectedB].some((id) => id != null && collection.find((c) => c.id === id)?.speciesId === "nerenol");
+  const terrariumItems = useMemo(() => collection.map((c) => ({ id: c.id, speciesId: c.speciesId, hunger: c.hunger, happiness: c.happiness, ascension: c.ascension })), [collection]);
 
   return (
     <div ref={wrapRef} className={styles.wrap}>
@@ -230,7 +234,7 @@ export function ZavriGachaPage() {
           <span style={{ fontSize: 11, color: "rgba(255,255,255,0.52)" }}>клик по завру — погладить · ходят сами</span>
         </div>
         <ZavriTerrarium
-          items={collection.map((c) => ({ id: c.id, speciesId: c.speciesId, hunger: c.hunger, happiness: c.happiness, ascension: c.ascension }))}
+          items={terrariumItems}
           eatId={walkEatId}
           breedPair={breedWalkPair}
           onPet={(id) => void doPet(id)}
@@ -283,7 +287,7 @@ export function ZavriGachaPage() {
                     } else if (isA) setSelectedA(null);
                     else setSelectedB(null);
                   }} style={{ cursor: "pointer" }}>
-                    <ZavriCanvas speciesId={c.speciesId} seed={c.id} hunger={c.hunger} happiness={c.happiness} size={168} interactive onPet={() => void doPet(c.id)} />
+                    <ZavriCanvas speciesId={c.speciesId} seed={c.id} hunger={c.hunger} happiness={c.happiness} size={168} interactive onPet={() => void doPet(c.id)} eatTick={eatTicks[c.id]} breedTick={breedTicks[c.id]} />
                   </div>
                   <div className={styles.cardMeta}>
                     <div className={styles.cardTitle}>
@@ -328,14 +332,22 @@ export function ZavriGachaPage() {
       <section className={styles.Incubator ?? (styles as unknown as Record<string, string>).Incubator} data-stagger style={{ display: "grid", gap: 10 }}>
         <div className={(styles as unknown as Record<string, string>).Incubator ? undefined : styles.history as unknown as string} style={{ border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, background: "rgba(18,18,22,0.86)", padding: 14, display: "grid", gap: 10 }}>
           <h2 className={styles.h2}>Инкубатор</h2>
-          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.62)" }}>Выбери двух завров разного пола в террариуме (клик по карточке) · размножение — пара прыжков вместе, без откровенщины · яйцо зреет 30 мин · ускорение 420 монет{selectedNerenolBlocked ? <span style={{ color: "#ff8a8a", marginLeft: 8 }}>· Неренол 🚫 бесплоден</span> : null}</div>
+          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.62)" }}>Выбери двух завров разного пола в террариуме (клик по карточке) · яйцо зреет 30 мин · ускорение 420 монет{selectedNerenolBlocked ? <span style={{ color: "#ff8a8a", marginLeft: 8 }}>· Неренол 🚫 бесплоден</span> : null}</div>
           <div className={styles.begRow}>
             <span className={styles.pill}>A: {selectedA ?? "—"}</span>
             <span className={styles.pill}>B: {selectedB ?? "—"}</span>
             <button className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSmall}`} disabled={!!loading || !selectedA || !selectedB || selectedNerenolBlocked} onClick={() => void startBreed()}>{loading === "breed" ? "…" : selectedNerenolBlocked ? "Неренол не размножается" : "Размножить"}</button>
             <button className={`${styles.btn} ${styles.btnGhost} ${styles.btnSmall}`} onClick={() => { setSelectedA(null); setSelectedB(null); }}>Сброс</button>
           </div>
-          {activeBreed ? (
+          {matingUntil && Date.now() < matingUntil ? (
+            <div className={styles.history} style={{ display: "grid", gap: 8, borderColor: "rgba(255,90,138,0.22)", background: "rgba(255,90,138,0.06)" }}>
+              <div style={{ display: "grid", gap: 6 }}>
+                <strong>💞 Спаривание… {fmtTimer(matingUntil - now)}</strong>
+                <div style={{ height: 6, borderRadius: 999, background: "rgba(255,255,255,0.08)", overflow: "hidden" }}><div style={{ width: `${Math.round(((60000 - (matingUntil - now)) / 60000) * 100)}%`, height: "100%", background: "linear-gradient(90deg,#ff5a8a,#ff8a00)", transition: "width 0.25s linear" }} /></div>
+                <span style={{ fontSize: 12, color: "rgba(255,255,255,0.62)" }}>Яйцо появится через минуту</span>
+              </div>
+            </div>
+          ) : activeBreed ? (
             (() => {
               const readyMs = new Date(activeBreed.ready_at).getTime();
               const remain = Math.max(0, readyMs - now);

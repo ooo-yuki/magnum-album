@@ -14,12 +14,14 @@ type Props = {
   interactive?: boolean;
   onPet?: () => void;
   eatTick?: number;
+  breedTick?: number;
 };
 
-export function ZavriCanvas({ speciesId, seed = 0, hunger = 100, happiness = 100, size = 180, interactive, onPet, eatTick }: Props) {
+export function ZavriCanvas({ speciesId, seed = 0, hunger = 100, happiness = 100, size = 180, interactive, onPet, eatTick, breedTick }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const groupRef = useRef<THREE.Group | null>(null);
   const eatTickRef = useRef<number>(eatTick ?? 0);
+  const breedTickRef = useRef<number>(breedTick ?? 0);
 
   useEffect(() => {
     const el = wrapRef.current;
@@ -160,6 +162,37 @@ export function ZavriCanvas({ speciesId, seed = 0, hunger = 100, happiness = 100
       }
     });
   }, [eatTick]);
+
+  useEffect(() => {
+    if (breedTick == null || breedTick === breedTickRef.current) return;
+    breedTickRef.current = breedTick;
+    const g = groupRef.current;
+    const el = wrapRef.current;
+    if (!g || !el) return;
+    import("gsap").then(({ default: gsap }) => {
+      gsap.killTweensOf(g.position); gsap.killTweensOf(g.scale);
+      // ~60с: 27 циклов по ~2.2с — пару прыжков циклично
+      const tl = gsap.timeline();
+      for (let i = 0; i < 27; i++) {
+        const t = i * 2.18;
+        tl.to(g.position, { y: 0.88, duration: 0.18, ease: "power2.out" }, t)
+          .to(g.position, { y: 0, duration: 0.26, ease: "bounce.out" }, t + 0.18)
+          .to(g.position, { y: 0.72, duration: 0.18, ease: "power2.out" }, t + 0.48)
+          .to(g.position, { y: 0, duration: 0.28, ease: "bounce.out" }, t + 0.66);
+        if (i % 3 === 0) {
+          tl.call(() => {
+            for (let k = 0; k < 2; k++) {
+              const d = document.createElement("div"); d.textContent = k ? "♥" : "💦";
+              d.style.position = "absolute"; d.style.left = "50%"; d.style.top = "32%";
+              d.style.color = k ? "#ff5a8a" : "#ffd1e6"; d.style.fontSize = "12px"; d.style.pointerEvents = "none";
+              el.appendChild(d);
+              gsap.to(d, { y: -22 - Math.random() * 12, x: (Math.random() - 0.5) * 22, opacity: 0, scale: 1.2, duration: 0.7, delay: k * 0.07, ease: "power2.out", onComplete: () => d.remove() });
+            }
+          }, undefined, t + 0.28);
+        }
+      }
+    });
+  }, [breedTick]);
 
   return (
     <div
