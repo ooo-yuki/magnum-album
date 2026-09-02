@@ -1041,6 +1041,7 @@ const HIDDEN_TEST_ACCOUNTS = [
   "racee77t44","race2ahyg5v","race677q1c","shopkw44je",
   "sess_test_1788303319_66981","t1788303334_5218",
   "t86_test_funnel","t86_test_funnel2","testshop42","123123",
+  "system", // служебный аккаунт, не участник
 ];
 // Тестовые аккаунты скрыты флагом, а не удалены: обратимо и не рвёт внешние ключи.
 async function ensureHiddenAccounts(): Promise<void> {

@@ -10,5 +10,6 @@ UPDATE "magnum_users" SET "hidden" = true WHERE lower("username") IN (
   'race7ojpnc','race2y2mfaa','shop20jst9','shopt9o42w','race2m8am6h',
   'racee77t44','race2ahyg5v','race677q1c','shopkw44je',
   'sess_test_1788303319_66981','t1788303334_5218',
-  't86_test_funnel','t86_test_funnel2','testshop42','123123'
+  't86_test_funnel','t86_test_funnel2','testshop42','123123',
+  'system'
 );
