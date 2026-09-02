@@ -530,29 +530,79 @@ async function handleCoinsTransfer(req: Request): Promise<Response> {
 }
 
 // ---- Shop handlers (magnum_shop_inventory) ----
+// Цены скинов и редкостей — единый источник: src/lib/shopCatalog.ts (SKINS)
+// и src/lib/cosmetics.ts (RARITY_PRICE). Здесь только алиасы для legacy-клиентов.
 const SHOP_PRICES: Record<string, number> = {
-  "skin-common": 42,
-  "skin-rare": 142,
-  "skin-epic": 420,
-  "skin-legendary": 1420,
-  "skin_42": 42,
-  "skin_142": 142,
-  "skin_420": 420,
-  "skin_1420": 1420,
-  "basic": 42,
-  "rare": 142,
-  "epic": 420,
-  "legendary": 1420,
-  "42": 42,
-  "142": 142,
-  "420": 420,
-  "1420": 1420,
+  ...Object.fromEntries(SKINS.map((sk) => [sk.id, sk.price])),
+  "skin-common": RARITY_PRICE.common,
+  "skin-rare": RARITY_PRICE.rare,
+  "skin-epic": RARITY_PRICE.epic,
+  "skin-legendary": RARITY_PRICE.legendary,
+  "skin_42": RARITY_PRICE.common,
+  "skin_142": RARITY_PRICE.rare,
+  "skin_420": RARITY_PRICE.epic,
+  "skin_1420": RARITY_PRICE.legendary,
+  "basic": RARITY_PRICE.common,
+  "rare": RARITY_PRICE.rare,
+  "epic": RARITY_PRICE.epic,
+  "legendary": RARITY_PRICE.legendary,
+  "42": RARITY_PRICE.common,
+  "142": RARITY_PRICE.rare,
+  "420": RARITY_PRICE.epic,
+  "1420": RARITY_PRICE.legendary,
 };
 
 function getSkinPrice(skinId: string): number | null {
   if (SHOP_PRICES[skinId] != null) return SHOP_PRICES[skinId];
   // P0 #5: strict — no heuristic fallback (was substring 42/142/etc allowed price bypass 13-33% discount abuse)
   return null;
+}
+
+// ---- Единая TOCTOU-защита покупок: транзакция + SELECT ... FOR UPDATE ----
+// Двойной клик по «Купить» не должен списать монеты дважды или выдать дубликат.
+type TxClient = { query: (q: string, prm?: unknown[]) => Promise<{ rows: unknown[] }> };
+type PooledClient = TxClient & { release: () => void };
+type PoolLike = { connect: () => Promise<PooledClient>; end: () => Promise<void> };
+type TxOutcome = { ok: boolean; response: Response };
+
+async function withCoinsLock(
+  userId: number,
+  fn: (client: TxClient, balance: number) => Promise<TxOutcome>,
+): Promise<Response | null> {
+  const unpooled = process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL || "";
+  if (!unpooled) return null;
+  let pool: PoolLike | null = null;
+  let client: PooledClient | null = null;
+  try {
+    pool = new Pool({ connectionString: unpooled }) as unknown as PoolLike;
+    client = await pool.connect();
+    if (!client) return null;
+    await client.query("BEGIN");
+    let balance = 0;
+    const balRes = await client.query("SELECT balance FROM magnum_coins WHERE user_id=$1 FOR UPDATE", [userId]);
+    if (balRes.rows.length === 0) {
+      await client.query("INSERT INTO magnum_coins (user_id,balance) VALUES ($1,1000) ON CONFLICT (user_id) DO NOTHING", [userId]);
+      const again = await client.query("SELECT balance FROM magnum_coins WHERE user_id=$1 FOR UPDATE", [userId]);
+      balance = again.rows.length ? Number((again.rows[0] as { balance: number }).balance) : 1000;
+    } else {
+      balance = Number((balRes.rows[0] as { balance: number }).balance);
+    }
+    const out = await fn(client, balance);
+    await client.query(out.ok ? "COMMIT" : "ROLLBACK");
+    return out.response;
+  } catch (e) {
+    try { if (client) await client.query("ROLLBACK"); } catch { /* соединение уже мертво */ }
+    console.error("[coins tx] failed", e);
+    return null;
+  } finally {
+    try { if (client) client.release(); } catch { /* уже освобождён */ }
+    try { if (pool) await pool.end(); } catch { /* уже закрыт */ }
+  }
+}
+
+async function txBalance(client: TxClient, userId: number): Promise<number> {
+  const r = await client.query("SELECT balance FROM magnum_coins WHERE user_id=$1 LIMIT 1", [userId]);
+  return r.rows.length ? Number((r.rows[0] as { balance: number }).balance) : 0;
 }
 
 async function handleShopBuy(req: Request): Promise<Response> {
@@ -568,6 +618,18 @@ async function handleShopBuy(req: Request): Promise<Response> {
   if (!skinId) return Response.json({ error: "skinId required" }, { status: 400 });
   const price = getSkinPrice(skinId);
   if (price == null) return Response.json({ error: "unknown skin" }, { status: 400 });
+  // основной путь — транзакция с FOR UPDATE
+  const txRes = await withCoinsLock(user.id, async (client, balance) => {
+    const owned = await client.query("SELECT id FROM magnum_shop_inventory WHERE user_id=$1 AND skin_id=$2 LIMIT 1", [user.id, skinId]);
+    if (owned.rows.length > 0) return { ok: false, response: Response.json({ error: "already owned", skinId }, { status: 409 }) };
+    if (balance < price) return { ok: false, response: Response.json({ error: "not enough coins", price, balance, required: price }, { status: 402 }) };
+    await client.query("UPDATE magnum_coins SET balance = balance - $1 WHERE user_id=$2", [price, user.id]);
+    await client.query("INSERT INTO magnum_shop_inventory (user_id, skin_id, purchased_at, equipped) VALUES ($1,$2,now(),false)", [user.id, skinId]);
+    const newBalance = await txBalance(client, user.id);
+    return { ok: true, response: Response.json({ ok: true, skinId, price, balance: newBalance }) };
+  });
+  if (txRes) return txRes;
+  // fallback — окружение без DATABASE_URL_UNPOOLED
   try {
     const sql = getSql();
     const exists = await sql`SELECT id FROM magnum_shop_inventory WHERE user_id = ${user.id} AND skin_id = ${skinId} LIMIT 1`;
@@ -691,107 +753,12 @@ async function handleShopUnequip(req: Request): Promise<Response> {
 // ---- Cosmetics shop — единый источник src/lib/cosmetics.ts (92 предмета, VOLCANO 12 + OBSIDIAN 12 molten) ----
 import { GLACIER_CATALOG, GLACIER_IDS, isGlacierCosmetic, PRISM_CATALOG, PRISM_IDS, isPrismCosmetic, CRYSTAL_CATALOG, CRYSTAL_IDS, isCrystalCosmetic, VOLCANO_CATALOG, VOLCANO_IDS, isVolcanoCosmetic, OBSIDIAN_CATALOG, OBSIDIAN_IDS, isObsidianCosmetic } from "./src/lib/cosmetics.ts";
 import { POINTS_CANON, MAP_POINT_IDS, isCorrectAnswer, isAllPointsDone } from "./src/lib/map42.ts";
-export type CosmeticSlot = "frame" | "banner" | "title";
-export type CosmeticItem = { id: string; slot: CosmeticSlot; name: string; price: number; rarity: "common"|"rare"|"epic"|"legendary"; style: string };
-export const COSMETICS_CATALOG: CosmeticItem[] = [
-  { id: "frame-neon42", slot: "frame", name: "Неон 42", price: 42, rarity: "common", style: "2px solid #ff44cc" },
-  { id: "frame-gold", slot: "frame", name: "Золото 42", price: 142, rarity: "rare", style: "3px solid #ffcc00" },
-  { id: "frame-rgb", slot: "frame", name: "RGB-пульс", price: 420, rarity: "epic", style: "3px solid #00ffcc" },
-  { id: "frame-dragon", slot: "frame", name: "Драконьи когти", price: 1420, rarity: "legendary", style: "4px solid #ff2d55" },
-  { id: "frame-ice", slot: "frame", name: "Лёд MAGNUM", price: 84, rarity: "common", style: "2px solid #7dd8ff" },
-  { id: "frame-fire", slot: "frame", name: "Пламя", price: 184, rarity: "rare", style: "3px solid #ff6a00" },
-  { id: "frame-toxic", slot: "frame", name: "Токсик", price: 390, rarity: "epic", style: "3px solid #7cff00" },
-  { id: "frame-void", slot: "frame", name: "Войд", price: 1420, rarity: "legendary", style: "4px solid #7a1ecb" },
-  { id: "frame-paper", slot: "frame", name: "Бумажный", price: 42, rarity: "common", style: "2px dashed #aaa" },
-  { id: "frame-pixel", slot: "frame", name: "Пиксель 42", price: 142, rarity: "rare", style: "3px solid #5865f2" },
-  { id: "frame-holo", slot: "frame", name: "Голо-рамка", price: 520, rarity: "epic", style: "3px solid #9147ff" },
-  { id: "frame-crown", slot: "frame", name: "Корона", price: 2042, rarity: "legendary", style: "4px solid #ffd700" },
-  { id: "banner-42wave", slot: "banner", name: "Волна 42", price: 42, rarity: "common", style: "linear-gradient(90deg,#ff44cc,#00ffcc)" },
-  { id: "banner-magnum", slot: "banner", name: "MAGNUM fire", price: 142, rarity: "rare", style: "linear-gradient(90deg,#ff2d55,#ffcc00)" },
-  { id: "banner-glitch", slot: "banner", name: "Глитч", price: 420, rarity: "epic", style: "linear-gradient(90deg,#5865f2,#9147ff)" },
-  { id: "banner-voidstar", slot: "banner", name: "Звезда войда", price: 1420, rarity: "legendary", style: "linear-gradient(90deg,#0a0a0a,#7a1ecb 50%,#ff44cc)" },
-  { id: "banner-ocean", slot: "banner", name: "Океан", price: 84, rarity: "common", style: "linear-gradient(90deg,#0c2e57,#2b7fd4)" },
-  { id: "banner-sunset", slot: "banner", name: "Закат", price: 184, rarity: "rare", style: "linear-gradient(90deg,#ff7b00,#ff44cc)" },
-  { id: "banner-forest", slot: "banner", name: "Лес 42", price: 390, rarity: "epic", style: "linear-gradient(90deg,#14401a,#8fe06a)" },
-  { id: "banner-nebula", slot: "banner", name: "Туманность", price: 1420, rarity: "legendary", style: "linear-gradient(90deg,#1b0a3a,#ff2d55)" },
-  { id: "banner-grid", slot: "banner", name: "Сетка", price: 62, rarity: "common", style: "linear-gradient(90deg,#2e3238,#b8bcc4)" },
-  { id: "banner-tiger", slot: "banner", name: "Тигр", price: 520, rarity: "epic", style: "linear-gradient(90deg,#8a3c00,#ffd76a)" },
-  { id: "title-bra", slot: "title", name: "Братуха", price: 42, rarity: "common", style: "#9aa4b2" },
-  { id: "title-42", slot: "title", name: "42 навсегда", price: 142, rarity: "rare", style: "#5865f2" },
-  { id: "title-magnum", slot: "title", name: "MAGNUM", price: 420, rarity: "epic", style: "#ff44cc" },
-  { id: "title-legend", slot: "title", name: "Легенда", price: 2042, rarity: "legendary", style: "#ffcc00" },
-  { id: "title-neon", slot: "title", name: "Неоновый", price: 84, rarity: "common", style: "#00ffcc" },
-  { id: "title-hype", slot: "title", name: "Хайп", price: 184, rarity: "rare", style: "#9147ff" },
-  { id: "title-toxic", slot: "title", name: "Токсичный", price: 390, rarity: "epic", style: "#7cff00" },
-  { id: "title-vip", slot: "title", name: "VIP 42", price: 1420, rarity: "legendary", style: "#ff2d55" },
-  { id: "title-noob", slot: "title", name: "Новичок", price: 22, rarity: "common", style: "#aaa" },
-  { id: "title-god", slot: "title", name: "Бог 42", price: 4242, rarity: "legendary", style: "#ffd700" },
-  // ── PRISM 42 — 12 неон-призм (aurora conic) ──
-  { id: "frame-prism-rose", slot: "frame", name: "Призма Роза", price: 42, rarity: "common", style: "conic-gradient(from 0deg,#ff44cc,#ffcc00,#00ffcc,#5865f2,#ff44cc)" },
-  { id: "frame-prism-ice", slot: "frame", name: "Призма Лёд", price: 142, rarity: "rare", style: "conic-gradient(from 45deg,#7dd8ff,#00ffcc,#9147ff,#7dd8ff)" },
-  { id: "frame-prism-toxic", slot: "frame", name: "Призма Токсик", price: 420, rarity: "epic", style: "conic-gradient(from 90deg,#7cff00,#00ffcc,#ffcc00,#7cff00)" },
-  { id: "frame-prism-void", slot: "frame", name: "Призма Войд", price: 1420, rarity: "legendary", style: "conic-gradient(from 180deg,#7a1ecb,#ff44cc,#0a0a0a,#7a1ecb)" },
-  { id: "banner-prism-aurora", slot: "banner", name: "Аврора Призм", price: 84, rarity: "common", style: "linear-gradient(90deg,#00ffcc,#5865f2 35%,#ff44cc 70%,#ffcc00)" },
-  { id: "banner-prism-neon", slot: "banner", name: "Неон Призм", price: 184, rarity: "rare", style: "linear-gradient(90deg,#ff44cc,#9147ff 40%,#00ffcc)" },
-  { id: "banner-prism-sunset", slot: "banner", name: "Призм Закат", price: 390, rarity: "epic", style: "linear-gradient(90deg,#ff7b00,#ff44cc 40%,#7a1ecb)" },
-  { id: "banner-prism-abyss", slot: "banner", name: "Призм Бездна", price: 1420, rarity: "legendary", style: "linear-gradient(90deg,#0a0a0a,#7a1ecb 30%,#ffcc00 70%,#ff44cc)" },
-  { id: "title-prism-novice", slot: "title", name: "Призм Новичок", price: 22, rarity: "common", style: "#7dd8ff" },
-  { id: "title-prism-hype", slot: "title", name: "Призм Хайп", price: 142, rarity: "rare", style: "#ff44cc" },
-  { id: "title-prism-aurora", slot: "title", name: "Аврора", price: 420, rarity: "epic", style: "#9147ff" },
-  { id: "title-prism-legend", slot: "title", name: "Призм Легенда", price: 2042, rarity: "legendary", style: "conic-gradient(from 0deg,#ffcc00,#ff44cc,#00ffcc,#ffcc00)" },
-  // ── GLACIER VAULT 42 ── 12 glacier-скинов (common 42 / uncommon 142 / rare 420 / epic 1420) + frost ──
-  { id: "frame-glacier-matte", slot: "frame", name: "Гляйшер Матт", price: 42, rarity: "common", style: "2px solid #e0faff" },
-  { id: "banner-snow-dust", slot: "banner", name: "Снежная Пыль", price: 42, rarity: "common", style: "linear-gradient(90deg,#ffffff,#e0faff)" },
-  { id: "title-ice-fence", slot: "title", name: "Ледяной Забор", price: 42, rarity: "common", style: "#b8e6fe" },
-  { id: "frame-siberia-frost", slot: "frame", name: "Сибирь Фрост", price: 142, rarity: "rare", style: "3px solid #a5f3fc" },
-  { id: "banner-tom-glacier", slot: "banner", name: "Том Гляйшер", price: 142, rarity: "rare", style: "linear-gradient(90deg,#06b6d4,#0891b2)" },
-  { id: "title-kuzbass-ice", slot: "title", name: "Кузбасс Лёд", price: 142, rarity: "rare", style: "#0e7490" },
-  { id: "frame-meduza-glacier", slot: "frame", name: "Медуза Гляйшер", price: 420, rarity: "epic", style: "conic-gradient(from 0deg,#a5f3fc,#06b6d4,#e0faff,#a5f3fc)" },
-  { id: "banner-vpn-frost", slot: "banner", name: "ВПН Фрост", price: 420, rarity: "epic", style: "linear-gradient(90deg,#e0faff,#06b6d4)" },
-  { id: "title-nova-tundra", slot: "title", name: "Нова Тундра", price: 420, rarity: "epic", style: "#7c3aed" },
-  { id: "frame-gold-glacier-spin", slot: "frame", name: "Голд Гляйшер Спин", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#e0faff,#06b6d4,#ffd700,#e0faff)" },
-  { id: "banner-diamond-frost", slot: "banner", name: "Даймонд Фрост", price: 1420, rarity: "legendary", style: "linear-gradient(90deg,#e0faff,#ffffff)" },
-  { id: "title-rgb-glacier", slot: "title", name: "РГБ Гляйшер", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#e0faff,#ff44cc,#00ffcc,#e0faff)" },
-  // ── CRYSTAL VAULT 42 ── 12 crystal-скинов (common 42 / uncommon 142 / rare 420 / epic 1420) + quartz ──
-  { id: "frame-crystal-matte", slot: "frame", name: "Кристалл Матт", price: 42, rarity: "common", style: "2px solid #e8f8ff" },
-  { id: "banner-snow-quartz", slot: "banner", name: "Снежный Кварц", price: 42, rarity: "common", style: "linear-gradient(90deg,#ffffff,#e8f0ff)" },
-  { id: "title-crystal-fence", slot: "title", name: "Кристалл Забор", price: 42, rarity: "common", style: "#b8e0ff" },
-  { id: "frame-siberia-crystal", slot: "frame", name: "Сибирь Кристалл", price: 142, rarity: "rare", style: "3px solid #a8e8ff" },
-  { id: "banner-tom-quartz", slot: "banner", name: "Том Кварц", price: 142, rarity: "rare", style: "linear-gradient(90deg,#38bdf8,#0ea5e9)" },
-  { id: "title-taiga-crystal", slot: "title", name: "Тайга Кристалл", price: 142, rarity: "rare", style: "#0e7490" },
-  { id: "frame-meduza-crystal", slot: "frame", name: "Медуза Кристалл", price: 420, rarity: "epic", style: "conic-gradient(from 0deg,#a8e8ff,#38bdf8,#e8f8ff,#a8e8ff)" },
-  { id: "banner-vpn-quartz", slot: "banner", name: "ВПН Кварц", price: 420, rarity: "epic", style: "linear-gradient(90deg,#e8f8ff,#38bdf8)" },
-  { id: "title-nova-crystal", slot: "title", name: "Нова Кристалл", price: 420, rarity: "epic", style: "#7c3aed" },
-  { id: "frame-gold-crystal-spin", slot: "frame", name: "Голд Кристалл Спин", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#e8f8ff,#38bdf8,#ffd700,#e8f8ff)" },
-  { id: "banner-diamond-quartz", slot: "banner", name: "Даймонд Кварц", price: 1420, rarity: "legendary", style: "linear-gradient(90deg,#e8f8ff,#ffffff)" },
-  { id: "title-rgb-crystal", slot: "title", name: "РГБ Кристалл", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#a8e8ff,#ff44cc,#00ffcc,#a8e8ff)" },
-  // ── VOLCANO GOLD 42 — 12 volcano-скинов + eruption glow conic-volcano spin 3s #ff5722 ──
-  { id: "frame-volcano-ash", slot: "frame", name: "Вулкан Пепел", price: 42, rarity: "common", style: "2px solid #ff5722" },
-  { id: "banner-volcano-ash", slot: "banner", name: "Пепел Вулкана", price: 42, rarity: "common", style: "linear-gradient(90deg,#ff5722,#ff8a65)" },
-  { id: "title-volcano-ash", slot: "title", name: "Пепельный", price: 42, rarity: "common", style: "#ff5722" },
-  { id: "frame-volcano-lava", slot: "frame", name: "Вулкан Лава", price: 142, rarity: "rare", style: "3px solid #d32f2f" },
-  { id: "banner-volcano-lava", slot: "banner", name: "Лава Вулкана", price: 142, rarity: "rare", style: "linear-gradient(90deg,#d32f2f,#ff5722)" },
-  { id: "title-volcano-lava", slot: "title", name: "Лавовый", price: 142, rarity: "rare", style: "#d32f2f" },
-  { id: "frame-volcano-eruption", slot: "frame", name: "Вулкан Извержение", price: 420, rarity: "epic", style: "conic-gradient(from 0deg,#ff5722,#ff8a65,#ff5722,#d32f2f,#ff5722)" },
-  { id: "banner-volcano-eruption", slot: "banner", name: "Извержение", price: 420, rarity: "epic", style: "linear-gradient(90deg,#ff5722,#d32f2f)" },
-  { id: "title-volcano-eruption", slot: "title", name: "Извергающий", price: 420, rarity: "epic", style: "#ff5722" },
-  { id: "frame-volcano-gold-spin", slot: "frame", name: "Вулкан Голд Спин", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#ff5722,#ffcc00,#ffd700,#ff5722)" },
-  { id: "banner-volcano-gold", slot: "banner", name: "Голд Вулкан", price: 1420, rarity: "legendary", style: "linear-gradient(90deg,#ff5722,#ffd700)" },
-  { id: "title-volcano-gold", slot: "title", name: "Вулкан Голд", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#ff5722,#ffcc00,#ffd700,#ff5722)" },
-  // ── OBSIDIAN FORGE 42 — 12 obsidian: coal-dust 42 mine-shaft 142 meduza-obsidian 420 gold-obsidian-spin epic 1420 spin 3s molten ──
-  { id: "frame-obsidian-coal", slot: "frame", name: "Обсидиан Уголь", price: 42, rarity: "common", style: "2px solid #1a1a1a" },
-  { id: "banner-obsidian-dust", slot: "banner", name: "Угольная Пыль", price: 42, rarity: "common", style: "linear-gradient(90deg,#0a0a0a,#2b1a0a)" },
-  { id: "title-obsidian-coal", slot: "title", name: "Угольный", price: 42, rarity: "common", style: "#1a1a1a" },
-  { id: "frame-obsidian-shaft", slot: "frame", name: "Шахта Обсидиан", price: 142, rarity: "rare", style: "3px solid #4a2510" },
-  { id: "banner-obsidian-shaft", slot: "banner", name: "Шахта", price: 142, rarity: "rare", style: "linear-gradient(90deg,#1a0a00,#ff4500)" },
-  { id: "title-obsidian-shaft", slot: "title", name: "Шахтёр 42", price: 142, rarity: "rare", style: "#8b3a00" },
-  { id: "frame-meduza-obsidian", slot: "frame", name: "Медуза Обсидиан", price: 420, rarity: "epic", style: "conic-gradient(from 0deg,#1a1a1a,#ff4500,#ff8c00,#1a1a1a)" },
-  { id: "banner-meduza-obsidian", slot: "banner", name: "Медуза Расплав", price: 420, rarity: "epic", style: "linear-gradient(90deg,#1a1a1a,#ff5722)" },
-  { id: "title-meduza-obsidian", slot: "title", name: "Расплавленный", price: 420, rarity: "epic", style: "#ff5722" },
-  { id: "frame-gold-obsidian-spin", slot: "frame", name: "Голд Обсидиан Спин", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#1a1a1a,#ff4500,#ffcc00,#ffd700,#1a1a1a)" },
-  { id: "banner-obsidian-gold", slot: "banner", name: "Золото Обсидиана", price: 1420, rarity: "legendary", style: "linear-gradient(90deg,#1a1a1a,#ffcc00)" },
-  { id: "title-obsidian-gold", slot: "title", name: "Обсидиан Голд", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#ff4500,#ffcc00,#ffd700,#ff4500)" },
-];
+// Каталог косметики и типы — единый источник src/lib/cosmetics.ts
+import { COSMETICS_CATALOG, RARITY_PRICE } from "./src/lib/cosmetics.ts";
+import type { CosmeticSlot, CosmeticItem } from "./src/lib/cosmetics.ts";
+import { SKINS } from "./src/lib/shopCatalog.ts";
+export { COSMETICS_CATALOG, RARITY_PRICE };
+export type { CosmeticSlot, CosmeticItem };
 function getCosmeticPrice(id: string): number | null { return COSMETICS_CATALOG.find(c=>c.id===id)?.price ?? null; }
 function getCosmeticSlot(id: string): CosmeticSlot | null { return COSMETICS_CATALOG.find(c=>c.id===id)?.slot ?? null; }
 function validateCosmeticId(id: unknown): string | null { if(typeof id!=="string") return null; const sv=id.trim(); if(!sv||sv.length<2||sv.length>64||!/^[a-z0-9-]{2,64}$/.test(sv)) return null; if(sv.startsWith("-")||sv.endsWith("-")||sv.includes("--")) return null; return sv; }
@@ -817,67 +784,39 @@ async function handleCosmeticBuy(req: Request): Promise<Response> {
     if(ex.length>0) return Response.json({error:"already owned",cosmeticId:raw},{status:409});
   } catch (e) { console.error("[cosmetic buy] precheck failed", e); return Response.json({error:"db error"},{status:500}); }
   // transactional path — protects verified -42 7d window + balance from parallel POST race
-  const unpooled = process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL || "";
-  const doTransaction = async (): Promise<Response|null> => {
-    if (!unpooled) return null;
-    let pool: InstanceType<typeof Pool> | null = null;
-    let client: { query: (q:string, p?:unknown[])=>Promise<{rows:unknown[]}>; release: ()=>void } | null = null;
-    try {
-      pool = new Pool({ connectionString: unpooled });
-      client = await (pool as unknown as { connect: ()=>Promise<typeof client> }).connect() as typeof client;
-      if (!client) return null;
-      await client.query("BEGIN");
-      // lock coins row for this user
-      const balRes = await client.query("SELECT balance FROM magnum_coins WHERE user_id=$1 FOR UPDATE", [user.id]);
-      let bal = 0;
-      if (balRes.rows.length===0) {
-        await client.query("INSERT INTO magnum_coins (user_id,balance) VALUES ($1,1000) ON CONFLICT (user_id) DO NOTHING", [user.id]);
-        bal = 1000;
-      } else bal = Number((balRes.rows[0] as {balance:number}).balance);
-      // re-check ownership inside tx (TOCTOU guard)
-      const ownedRes = await client.query("SELECT id FROM magnum_cosmetics WHERE user_id=$1 AND cosmetic_id=$2 LIMIT 1", [user.id, raw]);
-      if (ownedRes.rows.length>0) {
-        await client.query("ROLLBACK"); client.release(); await (pool as unknown as { end: ()=>Promise<void> }).end();
-        return Response.json({error:"already owned",cosmeticId:raw},{status:409});
-      }
-      // verified -42/week discount — must be inside tx to prevent double-spend of 7d window
-      let finalPrice = price;
-      let discountApplied = 0;
-      try {
-        const vRes = await client.query("SELECT verified FROM magnum_frames WHERE user_id=$1 ORDER BY created_at DESC LIMIT 1", [user.id]);
-        const isVerified = vRes.rows.length>0 && Boolean((vRes.rows[0] as {verified:boolean}).verified);
-        if (isVerified) {
-          const lastDiscRes = await client.query("SELECT created_at FROM magnum_transactions WHERE user_id=$1 AND reason='cosmetic_discount' ORDER BY created_at DESC LIMIT 1", [user.id]);
-          const canDiscount = lastDiscRes.rows.length===0 || (Date.now() - new Date((lastDiscRes.rows[0] as {created_at:string}).created_at).getTime() > 7*24*60*60*1000);
-          if (canDiscount && finalPrice >= 42) { finalPrice = price - 42; discountApplied = 42; }
-        }
-      } catch (e) {
-        console.error("[discount]", e);
-      }
-      if (bal < finalPrice) {
-        await client.query("ROLLBACK"); client.release(); await (pool as unknown as { end: ()=>Promise<void> }).end();
-        return Response.json({error:"not enough coins",price:finalPrice,originalPrice:price,discount:discountApplied,balance:bal,required:finalPrice},{status:402});
-      }
-      await client.query("UPDATE magnum_coins SET balance=balance-$1 WHERE user_id=$2", [finalPrice, user.id]);
-      const updRes = await client.query("SELECT balance FROM magnum_coins WHERE user_id=$1 LIMIT 1", [user.id]);
-      const newBal = Number((updRes.rows[0] as {balance:number}).balance);
-      await client.query("INSERT INTO magnum_cosmetics (user_id,cosmetic_id,slot,equipped,purchased_at) VALUES ($1,$2,$3,false,now())", [user.id, raw, slot]);
-      if (discountApplied>0) {
-        await client.query("INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES ($1,$2,'cosmetic_discount',$3::jsonb)", [user.id, -discountApplied, JSON.stringify({cosmeticId:raw, discount:discountApplied, originalPrice:price})]);
-      }
-      await client.query("COMMIT");
-      client.release(); await (pool as unknown as { end: ()=>Promise<void> }).end();
-      return Response.json({ok:true,cosmeticId:raw,slot,price:finalPrice,originalPrice:price,discount:discountApplied,balance:newBal});
-    } catch (e) {
-      try { if (client) await (client as unknown as { query:(q:string)=>Promise<void> }).query("ROLLBACK"); } catch {}
-      try { if (client) (client as unknown as { release:()=>void }).release(); } catch {}
-      try { if (pool) await (pool as unknown as { end:()=>Promise<void> }).end(); } catch {}
-      // 42P01 and other DB errors fall through to fallback / logged
-      console.error("[cosmetic buy] tx failed", e);
-      return null;
+  const txRes = await withCoinsLock(user.id, async (client, bal) => {
+    // re-check ownership inside tx (TOCTOU guard)
+    const ownedRes = await client.query("SELECT id FROM magnum_cosmetics WHERE user_id=$1 AND cosmetic_id=$2 LIMIT 1", [user.id, raw]);
+    if (ownedRes.rows.length > 0) {
+      return { ok: false, response: Response.json({ error: "already owned", cosmeticId: raw }, { status: 409 }) };
     }
-  };
-  const txRes = await doTransaction();
+    // verified -42/week discount — внутри транзакции, чтобы окно 7 дней не потратилось дважды
+    let finalPrice = price;
+    let discountApplied = 0;
+    try {
+      const vRes = await client.query("SELECT verified FROM magnum_frames WHERE user_id=$1 ORDER BY created_at DESC LIMIT 1", [user.id]);
+      const isVerified = vRes.rows.length > 0 && Boolean((vRes.rows[0] as { verified: boolean }).verified);
+      if (isVerified) {
+        const lastDiscRes = await client.query("SELECT created_at FROM magnum_transactions WHERE user_id=$1 AND reason='cosmetic_discount' ORDER BY created_at DESC LIMIT 1", [user.id]);
+        const canDiscount = lastDiscRes.rows.length === 0 || (Date.now() - new Date((lastDiscRes.rows[0] as { created_at: string }).created_at).getTime() > 7 * 24 * 60 * 60 * 1000);
+        if (canDiscount && finalPrice >= 42) { finalPrice = price - 42; discountApplied = 42; }
+      }
+    } catch (e) {
+      console.error("[discount]", e);
+    }
+    if (bal < finalPrice) {
+      return { ok: false, response: Response.json({ error: "not enough coins", price: finalPrice, originalPrice: price, discount: discountApplied, balance: bal, required: finalPrice }, { status: 402 }) };
+    }
+    await client.query("UPDATE magnum_coins SET balance=balance-$1 WHERE user_id=$2", [finalPrice, user.id]);
+    await client.query("INSERT INTO magnum_cosmetics (user_id,cosmetic_id,slot,equipped,purchased_at) VALUES ($1,$2,$3,false,now())", [user.id, raw, slot]);
+    if (discountApplied > 0) {
+      await client.query("INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES ($1,$2,'cosmetic_discount',$3::jsonb)", [user.id, -discountApplied, JSON.stringify({ cosmeticId: raw, discount: discountApplied, originalPrice: price })]);
+    }
+    // косметика, дающая тир (title-vip / title-god / prism), сразу создаёт подписку
+    const tier = await grantTierFromCosmeticsTx(client, user.id, [raw]);
+    const newBal = await txBalance(client, user.id);
+    return { ok: true, response: Response.json({ ok: true, cosmeticId: raw, slot, price: finalPrice, originalPrice: price, discount: discountApplied, balance: newBal, tier }) };
+  });
   if (txRes) return txRes;
   // fallback — non-transactional path (e.g. in tests without DB / WS) with proper catch logging
   try{ const sql=getSql();
@@ -904,7 +843,8 @@ async function handleCosmeticBuy(req: Request): Promise<Response> {
     if (discountApplied>0) {
       await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${-discountApplied},'cosmetic_discount',${JSON.stringify({cosmeticId:raw, discount:discountApplied, originalPrice:price})}::jsonb)`;
     }
-    return Response.json({ok:true,cosmeticId:raw,slot,price:finalPrice,originalPrice:price,discount:discountApplied,balance:newBal});
+    const tier = await grantTierFromCosmetics(user.id, [raw]);
+    return Response.json({ok:true,cosmeticId:raw,slot,price:finalPrice,originalPrice:price,discount:discountApplied,balance:newBal,tier});
   }catch(e){ console.error("[cosmetic buy] failed",e); return Response.json({error:"db error"},{status:500}); }
 }
 async function handleCosmeticEquip(req: Request): Promise<Response> {
@@ -960,12 +900,67 @@ async function ensureDustTable():Promise<void>{
   const sql=getSql();
   await sql`CREATE TABLE IF NOT EXISTS magnum_dust (user_id integer primary key references magnum_users(id) on delete cascade, balance integer not null default 0, updated_at timestamp default now())`;
 }
+// Индексы под чтение косметики (инвентарь + equipped в лидербордах).
+// Дублирует drizzle/migrations/0034_cosmetics_index.sql, чтобы работать без прогона миграций.
+async function ensureCosmeticsIndexes(): Promise<void> {
+  if (!process.env.DATABASE_URL && !process.env.DATABASE_URL_UNPOOLED) return;
+  const sql = getSql();
+  await sql`CREATE INDEX IF NOT EXISTS magnum_cosmetics_user_equipped_idx ON magnum_cosmetics (user_id, equipped)`;
+  await sql`CREATE INDEX IF NOT EXISTS magnum_sessions_user_id_idx ON magnum_sessions (user_id)`;
+}
 async function ensurePityTable(): Promise<void> {
   if (!process.env.DATABASE_URL && !process.env.DATABASE_URL_UNPOOLED) return;
   const sql = getSql();
   await sql`CREATE TABLE IF NOT EXISTS magnum_pity (user_id integer NOT NULL REFERENCES magnum_users(id) ON DELETE CASCADE, banner_type text NOT NULL, pity_counter integer DEFAULT 0 NOT NULL, pity_5star integer DEFAULT 0 NOT NULL, lost_50_50 boolean DEFAULT false NOT NULL, pulls integer DEFAULT 0 NOT NULL, updated_at timestamp DEFAULT now() NOT NULL, PRIMARY KEY (user_id, banner_type))`;
   await sql`CREATE INDEX IF NOT EXISTS idx_magnum_pity_user ON magnum_pity (user_id)`;
 }
+// ---- Tier из косметики — единое правило для backfill, покупки косметики и бандлов ----
+// title-god → pro, любой prism → vip+, title-vip → vip. Приоритет сверху вниз.
+const TIER_RANK: Record<string, number> = { vip: 1, "vip+": 2, pro: 3 };
+export function tierFromCosmeticIds(ids: string[]): string | null {
+  if (ids.includes("title-god")) return "pro";
+  if (ids.some((id) => isPrismCosmetic(id))) return "vip+";
+  if (ids.includes("title-vip")) return "vip";
+  return null;
+}
+
+// Выдаёт подписку, если куплена косметика, дающая тир, и активной подписки
+// такого же или более высокого уровня ещё нет. Возвращает актуальный тир.
+async function grantTierFromCosmeticsTx(client: TxClient, userId: number, ids: string[]): Promise<string | null> {
+  const derived = tierFromCosmeticIds(ids);
+  if (!derived) return null;
+  try {
+    const active = await client.query(
+      "SELECT tier FROM magnum_subscriptions WHERE user_id=$1 AND (ends_at IS NULL OR ends_at > now()) ORDER BY started_at DESC LIMIT 1",
+      [userId],
+    );
+    const cur = active.rows.length ? String((active.rows[0] as { tier: string }).tier) : null;
+    if (cur && (TIER_RANK[cur] ?? 0) >= (TIER_RANK[derived] ?? 0)) return cur;
+    await client.query("INSERT INTO magnum_subscriptions (user_id, tier, started_at) VALUES ($1,$2,now())", [userId, derived]);
+    return derived;
+  } catch (e) {
+    console.error("[tier grant tx] failed", e);
+    return null;
+  }
+}
+
+async function grantTierFromCosmetics(userId: number, ids: string[]): Promise<string | null> {
+  const derived = tierFromCosmeticIds(ids);
+  if (!derived) return null;
+  try {
+    await ensureSubscriptionTable();
+    const sql = getSql();
+    const active = await sql`SELECT tier FROM magnum_subscriptions WHERE user_id=${userId} AND (ends_at IS NULL OR ends_at > now()) ORDER BY started_at DESC LIMIT 1`;
+    const cur = active.length ? String((active[0] as { tier: string }).tier) : null;
+    if (cur && (TIER_RANK[cur] ?? 0) >= (TIER_RANK[derived] ?? 0)) return cur;
+    await sql`INSERT INTO magnum_subscriptions (user_id, tier, started_at) VALUES (${userId}, ${derived}, now())`;
+    return derived;
+  } catch (e) {
+    console.error("[tier grant] failed", e);
+    return null;
+  }
+}
+
 // backfill job: one-shot scan of cosmetics → subscriptions for legacy VIP without row
 export async function backfillSubscriptionsFromCosmetics(): Promise<{ scanned: number; backfilled: number }> {
   if (!process.env.DATABASE_URL && !process.env.DATABASE_URL_UNPOOLED) return { scanned: 0, backfilled: 0 };
@@ -981,10 +976,7 @@ export async function backfillSubscriptionsFromCosmetics(): Promise<{ scanned: n
   }
   let backfilled = 0;
   for (const [uid, ids] of byUser) {
-    let derived: string|null=null;
-    if (ids.includes("title-god")) derived="pro";
-    else if (ids.some(id=>isPrismCosmetic(id))) derived="vip+";
-    else if (ids.includes("title-vip")) derived="vip";
+    const derived = tierFromCosmeticIds(ids);
     if (!derived) continue;
     const active = await sql`SELECT 1 FROM magnum_subscriptions WHERE user_id=${uid} AND (ends_at IS NULL OR ends_at > now()) LIMIT 1`;
     if (active.length===0) {
@@ -996,6 +988,7 @@ export async function backfillSubscriptionsFromCosmetics(): Promise<{ scanned: n
 // startup ensure + backfill (non-blocking, logged)
 void ensureDustTable().then(()=> console.log("[startup] magnum_dust ensured")).catch(e=> console.error("[startup] ensureDustTable failed", e));
 void ensurePityTable().then(()=> console.log("[startup] magnum_pity ensured")).catch(e=> console.error("[startup] ensurePityTable failed", e));
+void ensureCosmeticsIndexes().then(()=> console.log("[startup] cosmetics indexes ensured")).catch(e=> console.error("[startup] ensureCosmeticsIndexes failed", e));
 void ensureSubscriptionTable().then(()=> console.log("[startup] magnum_subscriptions ensured")).catch(e=> console.error("[startup] ensureSubscriptionTable failed", e));
 void backfillSubscriptionsFromCosmetics().then(r=> { if(r.backfilled) console.log(`[startup] subscriptions backfill ${r.backfilled}/${r.scanned}`); }).catch(e=> console.error("[startup] backfill failed", e));
 // FRAME VOLCANO GOLD — ensure magnum_frames for mimo-v2.5 vision verify
