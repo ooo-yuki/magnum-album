@@ -4,9 +4,10 @@ import styles from "./Flashmob42Page.module.css";
 import { FLASHMOB_TYPES, getFlashmobForDay, todayDayString, seededQuizForDay, seededMemorySequence, type QuizQ } from "../lib/flashmob42";
 import { subscribeMe } from "../lib/authMe";
 import { GuestGate } from "../components/GuestGate";
+import { CosmeticAvatar, CosmeticIdentity, cosmeticBannerStyle } from "../components/CosmeticBadge";
 
 type TodayResp = { ok?:boolean; day:string; type:string; title:string; shortTitle?:string; desc?:string; seed:number; durationSec:number; target:number; icon?:string; myScore?:number|null; myRank?:number|null; count?:number };
-type LbItem = { userId:number; username:string; score:number; rank:number; avatar:string|null; created_at:string };
+type LbItem = { userId:number; username:string; score:number; rank:number; avatar:string|null; created_at:string ; frame?:string|null; banner?:string|null; title?:string|null };
 type SubmitResp = { ok?:boolean; score:number; rank:number; count:number; pct:number; coins?:number; streak?:number; topReward?:number; error?:string };
 
 function useToday(){
@@ -402,11 +403,11 @@ export function Flashmob42Page(){
         <div ref={lbRef} className={styles.lb}>
           {leaderboard.length===0 && <div style={{opacity:.6,padding:16,textAlign:"center",border:"1px dashed rgba(255,255,255,.12)",borderRadius:12}}>Пока пусто — стань первым!</div>}
           {leaderboard.map(it=> (
-            <div key={`${it.userId}-${it.created_at}`} data-lb-row className={`${styles.lbRow} ${me && it.userId===me.id ? styles.lbMe : ""}`}>
+            <div key={`${it.userId}-${it.created_at}`} data-lb-row className={`${styles.lbRow} ${me && it.userId===me.id ? styles.lbMe : ""}`} style={cosmeticBannerStyle(it.banner)}>
               <div className={styles.lbRank}>{it.rank}</div>
-              <div style={{width:32,height:32,borderRadius:999,background: it.avatar? `url(${it.avatar}) center/cover`:"linear-gradient(135deg,#ff2d55,#ffcc00)",display:"grid",placeItems:"center",fontWeight:900,fontSize:12}}>{!it.avatar && String(it.username).slice(0,2).toUpperCase()}</div>
+              <CosmeticAvatar avatar={it.avatar} frame={it.frame} size={32} fallback={String(it.username).slice(0,2).toUpperCase()} />
               <div style={{flex:1,minWidth:0}}>
-                <div style={{fontWeight:800,fontSize:13,display:"flex",gap:6}}><span>{it.username}</span><span style={{opacity:.6,fontSize:11,alignSelf:"center"}}>#{it.userId}</span><span style={{marginLeft:"auto"}}>{it.score}</span></div>
+                <div style={{fontWeight:800,fontSize:13,display:"flex",gap:6}}><span><CosmeticIdentity username={it.username} frame={null} title={it.title} size={0} /></span><span style={{opacity:.6,fontSize:11,alignSelf:"center"}}>#{it.userId}</span><span style={{marginLeft:"auto"}}>{it.score}</span></div>
                 <div style={{opacity:.6,fontSize:11}}>{new Date(it.created_at).toLocaleString("ru-RU")}</div>
               </div>
               {it.rank===1 && <span style={{padding:"2px 6px",borderRadius:6,background:"linear-gradient(90deg,#ffcc00,#ff2d55)",color:"#111",fontWeight:800,fontSize:11}}>+1420</span>}
