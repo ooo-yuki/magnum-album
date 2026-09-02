@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import gsap from "gsap";
 import { STUDIO_TRACKS, STUDIO_PRESETS, STUDIO_SCENE_DEFAULTS, STUDIO_BG_OPTIONS, STUDIO_FILTER_OPTIONS, isStudioTrackSlug, isStudioPresetId, getBpmForTrack, validateScenes, type StudioTrackSlug, type StudioPresetId, type StudioScene } from "../lib/studio42";
 import { GuestGate } from "../components/GuestGate";
+import { CosmeticIdentity, type LeaderCosmetics } from "../components/CosmeticBadge";
 
 const TRACKS = STUDIO_TRACKS;
 const PRESETS = STUDIO_PRESETS;
@@ -13,7 +14,7 @@ export function Studio42Page() {
   const [scenes, setScenes] = useState<StudioScene[]>(() => [...STUDIO_SCENE_DEFAULTS]);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [saves, setSaves] = useState<Array<{id:number; username:string; trackSlug:string; preset:string; scenes:StudioScene[]; likes:number}>>([]);
-  const [leaderboard, setLeaderboard] = useState<Array<{id:number; username:string; likes:number; trackSlug:string}>>([]);
+  const [leaderboard, setLeaderboard] = useState<Array<{id:number; username:string; likes:number; trackSlug:string; avatar?:string|null} & LeaderCosmetics>>([]);
   const [shareMsg, setShareMsg] = useState("");
   const [saveMsg, setSaveMsg] = useState("");
   const [likesAnim, setLikesAnim] = useState<Record<number, boolean>>({});
@@ -369,7 +370,7 @@ export function Studio42Page() {
           <div style={{display:"flex", flexDirection:"column", gap:"0.4rem", marginTop:"0.4rem"}}>
             {leaderboard.length===0 ? <span style={{color:"rgba(255,255,255,0.45)", fontSize:"0.82rem"}}>Неделя пустая</span> : leaderboard.slice(0,10).map((r,i)=>(
               <div key={r.id} style={{display:"flex", justifyContent:"space-between", padding:"0.45rem 0.6rem", borderRadius:10, background: i===0?"rgba(255,204,0,0.12)":i===1?"rgba(255,255,255,0.08)":i===2?"rgba(255,120,0,0.10)":"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.06)"}}>
-                <span style={{fontSize:"0.82rem"}}>#{i+1} {r.username} • {r.likes} ❤️</span>
+                <span style={{fontSize:"0.82rem", display:"inline-flex", alignItems:"center", gap:6, minWidth:0}}>#{i+1} <CosmeticIdentity username={r.username} avatar={r.avatar} frame={r.frame} title={r.title} size={22} /> • {r.likes} ❤️</span>
                 <span style={{fontSize:"0.72rem", color:"#ffcc00", fontWeight:800}}>{i===0?"+1420":i===1?"+420":i===2?"+142":""}</span>
               </div>
             ))}

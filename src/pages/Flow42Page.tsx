@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import gsap from "gsap";
 import { FLOW_BEATS, FLOW_BEAT_LABELS, FLOW_TAKT_SEC, FLOW_TIPS, WAGER_OPTIONS, SCORING, calcWPM, type Wager } from "../lib/flow42";
 import { GuestGate } from "../components/GuestGate";
+import { CosmeticIdentity, cosmeticBannerStyle, type LeaderCosmetics } from "../components/CosmeticBadge";
 
 type JudgeResult = {
   ok: boolean;
@@ -31,7 +32,7 @@ export function Flow42Page() {
   const [msg, setMsg] = useState("");
   const [balance, setBalance] = useState<number | null>(null);
   const [tipIdx, setTipIdx] = useState(0);
-  const [top5, setTop5] = useState<{ username: string; score: number }[]>([]);
+  const [top5, setTop5] = useState<Array<{ username: string; score: number; avatar?: string | null } & LeaderCosmetics>>([]);
   const timerRef = useRef<number | null>(null);
   const startRef = useRef<number>(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -373,8 +374,8 @@ export function Flow42Page() {
       <div data-card style={{ marginTop: 14, padding: 12, borderRadius: 12, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
         <div style={{ fontWeight: 800, fontSize: 12, opacity: 0.8 }}>ТОП-5 недели — ФЛОУ 42</div>
         {top5.length === 0 ? <div style={{ opacity: 0.5, fontSize: 12, marginTop: 6 }}>Пока пусто — стань первым!</div> : top5.slice(0, 5).map((r, i) => (
-          <div key={i} style={{ display: "flex", gap: 8, padding: "6px 0", borderBottom: i < 4 ? "1px solid rgba(255,255,255,0.06)" : "none", fontSize: 13 }}>
-            <span style={{ width: 18, fontWeight: 800 }}>{i + 1}</span><span style={{ flex: 1 }}>{r.username}</span><span style={{ fontWeight: 800 }}>{r.score}</span>
+          <div key={i} style={{ display: "flex", gap: 8, alignItems: "center", padding: "6px 0", borderBottom: i < 4 ? "1px solid rgba(255,255,255,0.06)" : "none", fontSize: 13, ...cosmeticBannerStyle(r.banner) }}>
+            <span style={{ width: 18, fontWeight: 800 }}>{i + 1}</span><span style={{ flex: 1, minWidth: 0 }}><CosmeticIdentity username={r.username} avatar={r.avatar} frame={r.frame} title={r.title} size={22} /></span><span style={{ fontWeight: 800 }}>{r.score}</span>
           </div>
         ))}
       </div>

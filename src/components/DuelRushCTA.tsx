@@ -3,6 +3,7 @@ import gsap from "gsap";
 import { subscribeMe } from "../lib/authMe";
 import { drawDuelShareCard, canvasToBlob, shareOrDownloadDuel } from "../lib/duelShareCard";
 import { genABCD } from "../lib/ws";
+import { CosmeticIdentity, type LeaderCosmetics } from "./CosmeticBadge";
 
 type Props = {
   score: number;
@@ -17,7 +18,7 @@ export function DuelRushCTA({ score, game = "clicker", durationSec = 42, compact
   const prestigeRef = useRef<HTMLDivElement>(null);
   const [me, setMe] = useState<{ username: string } | null>(null);
   const [elo, setElo] = useState<number | null>(null);
-  const [lb, setLb] = useState<Array<{ player: string; score: number }>>([]);
+  const [lb, setLb] = useState<Array<{ player: string; score: number; avatar?: string | null } & LeaderCosmetics>>([]);
   const [code] = useState(() => genABCD());
   const [generating, setGenerating] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -103,7 +104,7 @@ export function DuelRushCTA({ score, game = "clicker", durationSec = 42, compact
             <div style={{ display:"grid", gap:4 }}>
               {lb.map((r,i)=>(
                 <div key={r.player+i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"6px 8px", borderRadius:10, background: i===0?"linear-gradient(90deg,rgba(255,87,34,0.18),rgba(255,204,0,0.10))":"rgba(255,255,255,0.04)", border: i===0?"1px solid rgba(255,87,34,0.22)":"1px solid rgba(255,255,255,0.06)", fontSize:12 }}>
-                  <span style={{ fontWeight:800, color: i===0?"#ffcc00":"#fff" }}>#{i+1} {r.player} {i===0?"👑": i===1?"🥈": i===2?"🥉":""} {i<3? "🌋":""}</span>
+                  <span style={{ fontWeight:800, color: i===0?"#ffcc00":"#fff", display:"inline-flex", alignItems:"center", gap:6, minWidth:0 }}>#{i+1} <CosmeticIdentity username={r.player} avatar={r.avatar} frame={r.frame} title={r.title} size={20} /> {i===0?"👑": i===1?"🥈": i===2?"🥉":""} {i<3? "🌋":""}</span>
                   <b style={{ color:"#ffcc00" }}>{Math.round(r.score)}</b>
                 </div>
               ))}
