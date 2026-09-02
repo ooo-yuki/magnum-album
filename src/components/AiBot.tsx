@@ -253,8 +253,17 @@ export function AiBot() {
   // open via global nav event: window.dispatchEvent(new CustomEvent("open-aibot"))
   useEffect(() => {
     const onOpen = (): void => setOpen(true);
+    const onPrefill = ((e: Event): void => {
+      const d = (e as CustomEvent<{ text?: string }>).detail;
+      if (d?.text) setInput(String(d.text));
+      setOpen(true);
+    }) as EventListener;
     window.addEventListener("open-aibot", onOpen as EventListener);
-    return () => window.removeEventListener("open-aibot", onOpen as EventListener);
+    window.addEventListener("prefill-aibot", onPrefill as EventListener);
+    return () => {
+      window.removeEventListener("open-aibot", onOpen as EventListener);
+      window.removeEventListener("prefill-aibot", onPrefill as EventListener);
+    };
   }, []);
 
   const fileToDataUrl = useCallback((file: File): Promise<string> => {

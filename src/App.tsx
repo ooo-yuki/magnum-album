@@ -18,7 +18,9 @@ const IdeasPage = lazy(() => import("./pages/IdeasPage").then(m => ({ default: m
 const RecapsPage = lazy(() => import("./pages/RecapsPage").then(m => ({ default: m.RecapsPage })));
 const SquadPage = lazy(() => import("./pages/SquadPage").then(m => ({ default: m.SquadPage })));
 const ConveyorPage = lazy(() => import("./pages/ConveyorPage").then(m => ({ default: m.ConveyorPage })));
+const ZavriGachaPage = lazy(() => import("./pages/ZavriGachaPage").then(m => ({ default: m.ZavriGachaPage })));
 const Map42Page = lazy(() => import("./pages/Map42Page").then(m => ({ default: m.Map42Page })));
+// Map42Page kept for legacy deep-links, but /magnum/map now renders Завры 42
 const ArenaPage = lazy(() => import("./pages/ArenaPage").then(m => ({ default: m.ArenaPage })));
 const Board42Page = lazy(() => import("./pages/Board42Page").then(m => ({ default: m.Board42Page })));
 const GachaPage = lazy(() => import("./pages/GachaPage").then(m => ({ default: m.GachaPage })));
@@ -105,7 +107,9 @@ export default function App() {
           <Route path="recaps" element={<Suspense fallback={<PageFallback />}><RecapsPage /></Suspense>} />
           <Route path="squad" element={<Suspense fallback={<PageFallback />}><SquadPage /></Suspense>} />
           <Route path="conveyor" element={<Suspense fallback={<PageFallback />}><ConveyorPage /></Suspense>} />
-          <Route path="map" element={<Suspense fallback={<PageFallback />}><Map42Page /></Suspense>} />
+          <Route path="map" element={<Suspense fallback={<PageFallback />}><ZavriGachaPage /></Suspense>} />
+          <Route path="zavri" element={<Suspense fallback={<PageFallback />}><ZavriGachaPage /></Suspense>} />
+          <Route path="map-legacy" element={<Suspense fallback={<PageFallback />}><Map42Page /></Suspense>} />
           <Route path="arena" element={<Suspense fallback={<PageFallback />}><ArenaPage /></Suspense>} />
           <Route path="studio" element={<Suspense fallback={<PageFallback />}><Studio42Page /></Suspense>} />
           <Route path="share-card" element={<Suspense fallback={<PageFallback />}><ShareCardPage /></Suspense>} />

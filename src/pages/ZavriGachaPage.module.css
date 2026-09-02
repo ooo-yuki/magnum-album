@@ -1,0 +1,50 @@
+.wrap { max-width: 1100px; margin: 0 auto; padding: 18px 14px 40px; display: grid; gap: 18px; }
+.hero { text-align: center; padding: 10px 0 2px; }
+.heroTitle { font-size: clamp(28px, 6vw, 44px); font-weight: 900; letter-spacing: -0.02em; line-height: 1; }
+.heroSub { margin-top: 6px; color: rgba(255,255,255,0.66); font-size: 13px; }
+.banner { position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); border-radius: 18px; background: rgba(18,18,22,0.96); display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 0; min-height: 360px; }
+@media (max-width: 860px) { .banner { grid-template-columns: 1fr; } }
+.bannerArt { position: relative; display: grid; place-items: center; padding: 16px; background: radial-gradient(700px 420px at 50% 28%, rgba(255,255,255,0.06), transparent 62%); min-height: 360px; }
+.bannerImg { width: min(420px, 90%); height: auto; filter: drop-shadow(0 16px 32px rgba(0,0,0,0.45)); }
+.rarityBadge { position: absolute; left: 14px; top: 14px; padding: 6px 10px; border-radius: 999px; font-size: 11px; font-weight: 900; letter-spacing: 0.08em; border: 1px solid rgba(255,255,255,0.12); background: rgba(0,0,0,0.35); backdrop-filter: blur(8px); }
+.timer { position: absolute; right: 14px; top: 14px; padding: 6px 10px; border-radius: 999px; font-size: 12px; font-weight: 800; letter-spacing: 0.06em; border: 1px solid rgba(255,255,255,0.12); background: rgba(0,0,0,0.45); }
+.bannerInfo { padding: 16px; display: grid; gap: 12px; align-content: start; border-left: 1px solid rgba(255,255,255,0.06); }
+@media (max-width: 860px) { .bannerInfo { border-left: none; border-top: 1px solid rgba(255,255,255,0.06); } }
+.titleRow { display: grid; gap: 4px; }
+.title { font-size: 22px; font-weight: 900; line-height: 1.1; }
+.titleSmall { font-size: 11px; font-weight: 800; letter-spacing: 0.12em; opacity: 0.7; }
+.quote { font-size: 13px; color: rgba(255,255,255,0.72); font-style: italic; border-left: 2px solid rgba(255,255,255,0.12); padding-left: 10px; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.pill { font-size: 11px; font-weight: 800; letter-spacing: 0.06em; padding: 6px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); }
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.btn { padding: 12px 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); font-weight: 900; letter-spacing: 0.04em; cursor: pointer; transition: transform 0.12s, filter 0.12s; }
+.btn:active { transform: scale(0.98); }
+.btnPrimary { background: linear-gradient(135deg, #ff2d55, #ff8a00); color: #fff; border-color: rgba(255,255,255,0.18); box-shadow: 0 8px 22px rgba(255,45,85,0.35); }
+.btnGhost { background: rgba(255,255,255,0.06); color: #fff; }
+.btnSmall { padding: 8px 10px; font-size: 12px; border-radius: 10px; }
+.pity { font-size: 11px; color: rgba(255,255,255,0.62); display: grid; gap: 4px; }
+.begRow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.terrariumHead { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+.h2 { font-size: 18px; font-weight: 900; }
+.buffBar { display: flex; flex-wrap: wrap; gap: 8px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+.card { position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; background: rgba(18,18,22,0.86); display: grid; gap: 8px; padding: 10px; }
+.cardTop { display: grid; place-items: center; background: radial-gradient(260px 160px at 50% 28%, rgba(255,255,255,0.05), transparent 66%); border-radius: 12px; padding: 4px; min-height: 190px; }
+.cardMeta { display: grid; gap: 6px; }
+.cardTitle { font-weight: 900; font-size: 13px; line-height: 1.2; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.badge { padding: 3px 7px; border-radius: 999px; font-size: 10px; font-weight: 900; letter-spacing: 0.06em; border: 1px solid currentColor; }
+.nickRow { display: flex; gap: 6px; align-items: center; }
+.nickInput { flex: 1; min-width: 0; padding: 6px 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.06); color: #fff; font-size: 12px; }
+.bars { display: grid; gap: 6px; }
+.bar { height: 6px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; }
+.barFill { height: 100%; border-radius: 999px; transition: width 0.35s; }
+.cardActions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.cardActionsWide { grid-template-columns: 1fr; }
+.selectRing { position: absolute; inset: 0; border-radius: 16px; pointer-events: none; border: 2px solid transparent; }
+.selectRingActive { border-color: #ffcc00; box-shadow: 0 0 0 3px rgba(255,204,0,0.18), 0 0 18px rgba(255,204,0,0.35); }
+ Incubator { border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; background: rgba(18,18,22,0.86); padding: 14px; display: grid; gap: 10px; }
+.shards { border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; background: rgba(18,18,22,0.86); padding: 14px; display: grid; gap: 10px; }
+.shardsGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px,1fr)); gap: 10px; }
+.shardCard { border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; background: rgba(255,255,255,0.04); padding: 10px; display: grid; gap: 6px; }
+.history { border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; background: rgba(18,18,22,0.86); padding: 14px; display: grid; gap: 10px; }
+.histRow { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); font-size: 12px; }
