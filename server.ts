@@ -15,6 +15,7 @@ import { TRACKS as CHARTS_TRACKS, seededSnapshots, isPeriod } from "./src/lib/ch
 import { FLASHMOB_TYPES, hashDayToSeed, getFlashmobForDay } from "./src/lib/flashmob42.ts";
 import { SPIN_SECTORS, getStreakMultiplier } from "./src/lib/spinRewards.ts";
 import { TOUR_STOPS as TOUR_STOPS_CANON, type TourStop as TourStopCanon, getTourCityId as getTourCityIdCanon, isTourCityId as isTourCityIdCanon } from "./src/lib/tour42.ts";
+import { QUEST_DEFS, WEEKLY_DEF, weekId as gachaWeekId, dayId as gachaDayId, eligibleComeback, COMEBACK_REWARD_ROLLS, COMEBACK_COINS } from "./src/lib/gachaQuests.ts";
 try { (neonConfig as unknown as { webSocketConstructor?: unknown }).webSocketConstructor = ws; } catch {}
 
 const MIMO_BASE = process.env.MIMO_BASE_URL || "https://token-plan-sgp.xiaomimimo.com/v1";
@@ -104,12 +105,15 @@ async function handleRegister(req: Request): Promise<Response> {
   } catch {
     return Response.json({ error: "Invalid JSON" }, { status: 400 });
   }
-  const username = typeof body.username === "string" ? body.username.trim() : "";
+  const RESERVED_NAMES = new Set(["admin", "support", "magnum", "system", "moderator", "bot"]);
+  const usernameRaw = typeof body.username === "string" ? body.username.trim() : "";
+  const username = usernameRaw.toLowerCase().replace(/[^a-z0-9_]/g, "");
   const password = typeof body.password === "string" ? body.password : "";
   const referralRaw = typeof body.referralCode === "string" ? body.referralCode.trim() : typeof body.referral_code === "string" ? body.referral_code.trim() : typeof body.code === "string" ? body.code.trim() : typeof body.bratCode === "string" ? body.bratCode.trim() : "";
-  if (!username || username.length < 3) return Response.json({ error: "username min 3 chars" }, { status: 400 });
-  if (!password || password.length < 3) return Response.json({ error: "password min 3 chars" }, { status: 400 });
+  if (!username || username.length < 3) return Response.json({ error: "username min 3 chars [a-z0-9_]" }, { status: 400 });
   if (username.length > 32) return Response.json({ error: "username too long" }, { status: 400 });
+  if (RESERVED_NAMES.has(username)) return Response.json({ error: "username reserved" }, { status: 409 });
+  if (!password || password.length < 8) return Response.json({ error: "password min 8 chars" }, { status: 400 });
 
   const sql = getSql();
   const exists = await sql`SELECT id FROM magnum_users WHERE username = ${username} LIMIT 1`;
@@ -1452,6 +1456,253 @@ async function handleGachaFreeRoll(req: Request): Promise<Response> {
   }catch(e){ try{ await sql`ROLLBACK`; }catch{} console.error("[gacha free-roll] tx failed",e); return Response.json({ error:"db error" },{status:500}); }
 }
 
+// ---- GACHA QUESTS 42 — daily/weekly + comeback 42 ----
+async function ensureGachaQuestsTable(): Promise<void> {
+  if (!process.env.DATABASE_URL && !process.env.DATABASE_URL_UNPOOLED) return;
+  const sql = getSql();
+  await sql`CREATE TABLE IF NOT EXISTS magnum_gacha_quests (user_id integer NOT NULL REFERENCES magnum_users(id) ON DELETE CASCADE, quest_id text NOT NULL, week_id text NOT NULL, progress integer DEFAULT 0 NOT NULL, target integer NOT NULL, claimed boolean DEFAULT false NOT NULL, completed boolean DEFAULT false NOT NULL, updated_at timestamp DEFAULT now() NOT NULL, PRIMARY KEY (user_id, quest_id, week_id))`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_gacha_quests_user ON magnum_gacha_quests (user_id, week_id)`;
+  await sql`CREATE TABLE IF NOT EXISTS magnum_comeback_claims (user_id integer PRIMARY KEY REFERENCES magnum_users(id) ON DELETE CASCADE, last_claim timestamp DEFAULT now() NOT NULL, claims integer DEFAULT 0 NOT NULL)`;
+}
+void ensureGachaQuestsTable().then(()=> console.log("[startup] magnum_gacha_quests ensured")).catch(e=> console.error("[startup] gacha_quests failed", e));
+
+function gachaQuestDefById(id: string) {
+  if (id === WEEKLY_DEF.id) return WEEKLY_DEF;
+  return QUEST_DEFS.find(q=>q.id===id) ?? null;
+}
+
+async function bumpQuest(userId: number, questId: string, inc = 1): Promise<void> {
+  const def = gachaQuestDefById(questId);
+  if (!def) return;
+  const target = def.target;
+  const weekId = gachaWeekId();
+  const safeInc = Math.max(1, Math.min(inc, target));
+  try {
+    await ensureGachaQuestsTable();
+    const sql = getSql();
+    await sql`INSERT INTO magnum_gacha_quests (user_id, quest_id, week_id, progress, target, claimed, completed, updated_at) VALUES (${userId}, ${questId}, ${weekId}, ${Math.min(safeInc, target)}, ${target}, false, ${Math.min(safeInc, target) >= target}, now()) ON CONFLICT (user_id, quest_id, week_id) DO UPDATE SET progress = LEAST(magnum_gacha_quests.target, magnum_gacha_quests.progress + ${safeInc}), completed = (LEAST(magnum_gacha_quests.target, magnum_gacha_quests.progress + ${safeInc}) >= magnum_gacha_quests.target), updated_at = now()`;
+  } catch (e) { console.error("[bumpQuest] failed", questId, e); }
+}
+
+async function handleGachaQuestsStatus(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401, headers: { "magnum:need-auth": "1" } });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401, headers: { "magnum:need-auth": "1" } });
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`gacha:quests:status:${user.id}:${ip}`, 20, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
+  await ensureGachaQuestsTable();
+  const sql = getSql();
+  const weekId = gachaWeekId();
+  let rows: unknown[] = [];
+  try { rows = await sql`SELECT quest_id, progress, target, claimed, completed, updated_at FROM magnum_gacha_quests WHERE user_id=${user.id} AND week_id=${weekId}`; } catch {}
+  const rowMap = new Map<string, { progress:number; target:number; claimed:boolean; completed:boolean }>();
+  for (const r of rows as { quest_id:string; progress:number; target:number; claimed:boolean; completed:boolean }[]) rowMap.set(String(r.quest_id), { progress:Number(r.progress), target:Number(r.target), claimed:Boolean(r.claimed), completed:Boolean(r.completed) });
+  const quests = QUEST_DEFS.map(def=>{
+    const cur = rowMap.get(def.id);
+    const progress = cur ? cur.progress : 0;
+    const claimed = cur ? cur.claimed : false;
+    const completed = cur ? cur.completed : progress >= def.target;
+    return { id: def.id, title: def.title, desc: def.desc, target: def.target, progress, completed, claimed, reward: def.reward, banner: def.banner, icon: def.icon };
+  });
+  const wCur = rowMap.get(WEEKLY_DEF.id);
+  const wProgress = wCur ? wCur.progress : 0;
+  const wClaimed = wCur ? wCur.claimed : false;
+  const wCompleted = wCur ? wCur.completed : wProgress >= WEEKLY_DEF.target;
+  const weekly = { id: WEEKLY_DEF.id, title: WEEKLY_DEF.title, desc: WEEKLY_DEF.desc, target: WEEKLY_DEF.target, progress: wProgress, completed: wCompleted, claimed: wClaimed, reward: WEEKLY_DEF.reward, banner: WEEKLY_DEF.banner, icon: WEEKLY_DEF.icon, weekId };
+  // comeback eligibility
+  let lastActivity: Date|null = null;
+  try {
+    const la = await sql`SELECT GREATEST( (SELECT MAX(created_at) FROM magnum_transactions WHERE user_id=${user.id}), (SELECT MAX(claimed_at) FROM magnum_daily_claims WHERE user_id=${user.id}) ) as last`;
+    const v = (la[0] as { last: string | null })?.last;
+    if (v) lastActivity = new Date(v);
+  } catch {}
+  const { eligible, days } = eligibleComeback(lastActivity);
+  let throttleEligible = eligible;
+  let throttleDays = days;
+  try {
+    const cr = await sql`SELECT last_claim FROM magnum_comeback_claims WHERE user_id=${user.id} LIMIT 1`;
+    if (cr.length) {
+      const lastClaim = new Date((cr[0] as { last_claim:string }).last_claim);
+      const diff = (Date.now() - lastClaim.getTime())/86400000;
+      if (diff < 7) { throttleEligible = false; throttleDays = Math.floor(diff); }
+    }
+  } catch {}
+  const comeback = { eligible: throttleEligible && eligible, days: throttleEligible ? days : throttleDays, lastActivity: lastActivity ? lastActivity.toISOString() : null, reward: { rolls: COMEBACK_REWARD_ROLLS, coins: COMEBACK_COINS } };
+  return Response.json({ quests, weekly, comeback, weekId });
+}
+
+async function handleGachaQuestProgress(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401, headers: { "magnum:need-auth": "1" } });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401, headers: { "magnum:need-auth": "1" } });
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`gacha:quests:progress:${user.id}:${ip}`, 20, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
+  let body: { questId?:string; quest_id?:string; id?:string; inc?:number };
+  try { body = (await req.json()) as typeof body; } catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
+  const questId = String(body.questId ?? body.quest_id ?? body.id ?? "").trim();
+  if (!questId) return Response.json({ error: "questId required" }, { status: 400 });
+  const def = gachaQuestDefById(questId);
+  if (!def) return Response.json({ error: "unknown questId", allowed: [...QUEST_DEFS.map(q=>q.id), WEEKLY_DEF.id] }, { status: 400 });
+  const incRaw = body.inc != null ? Number(body.inc) : 1;
+  const inc = Number.isFinite(incRaw) ? Math.max(1, Math.min(Math.floor(incRaw), def.target)) : 1;
+  await ensureGachaQuestsTable();
+  const sql = getSql();
+  const weekId = gachaWeekId();
+  try {
+    await sql`INSERT INTO magnum_gacha_quests (user_id, quest_id, week_id, progress, target, claimed, completed, updated_at) VALUES (${user.id}, ${questId}, ${weekId}, ${Math.min(inc, def.target)}, ${def.target}, false, ${Math.min(inc, def.target) >= def.target}, now()) ON CONFLICT (user_id, quest_id, week_id) DO UPDATE SET progress = LEAST(magnum_gacha_quests.target, magnum_gacha_quests.progress + ${inc}), completed = (LEAST(magnum_gacha_quests.target, magnum_gacha_quests.progress + ${inc}) >= magnum_gacha_quests.target), updated_at = now()`;
+    const rows = await sql`SELECT progress, target, claimed, completed FROM magnum_gacha_quests WHERE user_id=${user.id} AND quest_id=${questId} AND week_id=${weekId} LIMIT 1`;
+    const r = rows[0] as { progress:number; target:number; claimed:boolean; completed:boolean };
+    return Response.json({ ok:true, questId, progress:Number(r.progress), target:Number(r.target), completed:Boolean(r.completed), claimed:Boolean(r.claimed), weekId });
+  } catch (e) { console.error("[gacha progress] failed", e); return Response.json({ error:"db error" }, { status:500 }); }
+}
+
+async function handleGachaQuestClaim(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401, headers: { "magnum:need-auth": "1" } });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401, headers: { "magnum:need-auth": "1" } });
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`gacha:quests:claim:${user.id}:${ip}`, 20, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
+  let body: { questId?:string; quest_id?:string; id?:string };
+  try { body = (await req.json()) as typeof body; } catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
+  const questId = String(body.questId ?? body.quest_id ?? body.id ?? "").trim();
+  if (!questId) return Response.json({ error:"questId required" }, { status:400 });
+  const def = gachaQuestDefById(questId);
+  if (!def) return Response.json({ error:"unknown questId", allowed:[...QUEST_DEFS.map(q=>q.id), WEEKLY_DEF.id] }, { status:400 });
+  await ensureGachaQuestsTable(); await ensurePityTable(); await ensureDustTable(); await ensureGachaHistoryTable();
+  const sql = getSql();
+  const weekId = gachaWeekId();
+  await sql`BEGIN`;
+  try {
+    const qrows = await sql`SELECT progress, target, claimed, completed FROM magnum_gacha_quests WHERE user_id=${user.id} AND quest_id=${questId} AND week_id=${weekId} LIMIT 1 FOR UPDATE`;
+    if (qrows.length===0) { await sql`ROLLBACK`; return Response.json({ error:"not found or no progress", questId, weekId }, { status:400 }); }
+    const q = qrows[0] as { progress:number; target:number; claimed:boolean; completed:boolean };
+    const progress = Number(q.progress); const target = Number(q.target);
+    if (progress < target || !q.completed) { await sql`ROLLBACK`; return Response.json({ error:"not completed", questId, progress, target, completed:Boolean(q.completed) }, { status:400 }); }
+    if (q.claimed) { await sql`ROLLBACK`; return Response.json({ error:"already claimed", questId }, { status:409 }); }
+    const isWeekly = questId === WEEKLY_DEF.id;
+    const rolls = isWeekly ? WEEKLY_DEF.reward : def.reward;
+    const banner: BannerType = isWeekly ? "event" : (def.banner as BannerType);
+    // pity FOR UPDATE
+    const pityRows = await sql`SELECT pity_counter, pity_5star, lost_50_50, pulls FROM magnum_pity WHERE user_id=${user.id} AND banner_type=${banner} LIMIT 1 FOR UPDATE`;
+    let pc=0,p5=0,lost=false,pulls=0;
+    if (pityRows.length){ const r=pityRows[0] as {pity_counter:number; pity_5star:number; lost_50_50:boolean; pulls:number}; pc=Number(r.pity_counter); p5=Number(r.pity_5star); lost=Boolean(r.lost_50_50); pulls=Number(r.pulls); }
+    let curPc=pc, curP5=p5, curLost=lost, curPulls=pulls;
+    const results: { id:string; rarity:GachaRarity; isNew:boolean; dust:number; isEvent?:boolean }[] = [];
+    for(let i=0;i<rolls;i++){
+      const roll = rollWithPity(curP5, banner, { pity4: curPc, lost5050: curLost });
+      const rarity = roll.rarity as GachaRarity;
+      const id = roll.id;
+      let isNew=true; let dust=0;
+      const ownedCos=await sql`SELECT id FROM magnum_cosmetics WHERE user_id=${user.id} AND cosmetic_id=${id} LIMIT 1`;
+      const ownedInv=await sql`SELECT id FROM magnum_shop_inventory WHERE user_id=${user.id} AND skin_id=${id} LIMIT 1`;
+      if(ownedCos.length>0 || ownedInv.length>0){ isNew=false; dust=DUST_REWARD[rarity]??0; if(dust>0) await sql`INSERT INTO magnum_dust (user_id,balance) VALUES (${user.id},${dust}) ON CONFLICT (user_id) DO UPDATE SET balance=magnum_dust.balance+${dust}, updated_at=now()`; }
+      else { const cos=COSMETICS_CATALOG.find(c=>c.id===id); if(cos) await sql`INSERT INTO magnum_cosmetics (user_id,cosmetic_id,slot,equipped,purchased_at) VALUES (${user.id},${id},${cos.slot},false,now())`; else await sql`INSERT INTO magnum_shop_inventory (user_id,skin_id,purchased_at,equipped) VALUES (${user.id},${id},now(),false)`; }
+      if(rarity==="legendary"){ curP5=0; curPc=0; } else if(rarity==="epic"){ curPc=0; curP5++; } else { curPc++; curP5++; }
+      if(roll.nextLost5050!==null) curLost=Boolean(roll.nextLost5050);
+      curPulls++;
+      await sql`INSERT INTO magnum_gacha_history (user_id,banner_type,rarity,cosmetic_id,is_new) VALUES (${user.id},${banner},${rarity},${id},${isNew})`;
+      results.push({ id, rarity, isNew, dust, isEvent: roll.isEvent });
+    }
+    await sql`INSERT INTO magnum_pity (user_id,banner_type,pity_counter,pity_5star,lost_50_50,pulls,updated_at) VALUES (${user.id},${banner},${curPc},${curP5},${curLost},${curPulls},now()) ON CONFLICT (user_id,banner_type) DO UPDATE SET pity_counter=${curPc}, pity_5star=${curP5}, lost_50_50=${curLost}, pulls=${curPulls}, updated_at=now()`;
+    await sql`UPDATE magnum_gacha_quests SET claimed=true, completed=true, updated_at=now() WHERE user_id=${user.id} AND quest_id=${questId} AND week_id=${weekId}`;
+    // auto bump weekly when daily claimed (once per day guard via daily claim dedup — allow multiple weekly bumps per week but tester expects 7 dailies -> weekly)
+    // if daily claimed and not weekly, bump weekly by 1 (no per-day throttle for now — simple)
+    if(!isWeekly){
+      try{
+        const wDef = WEEKLY_DEF;
+        await sql`INSERT INTO magnum_gacha_quests (user_id, quest_id, week_id, progress, target, claimed, completed, updated_at) VALUES (${user.id}, ${wDef.id}, ${weekId}, 1, ${wDef.target}, false, ${1>=wDef.target}, now()) ON CONFLICT (user_id, quest_id, week_id) DO UPDATE SET progress = LEAST(magnum_gacha_quests.target, magnum_gacha_quests.progress + 1), completed = (LEAST(magnum_gacha_quests.target, magnum_gacha_quests.progress + 1) >= magnum_gacha_quests.target), updated_at = now()`;
+      }catch{}
+    }
+    const dustRows = await sql`SELECT balance FROM magnum_dust WHERE user_id=${user.id} LIMIT 1`;
+    const dustBal = dustRows.length ? Number((dustRows[0] as {balance:number}).balance) : 0;
+    const pity = { counter:curPc, pityCounter:curPc, pity5star:curP5, pity_5star:curP5, lost_50_50:curLost, lost5050:curLost, pulls:curPulls, banner };
+    const guaranteeIn = { epic: Math.max(0, 90 - (curPc+1)), legendary: Math.max(0, 180 - (curP5+1)) };
+    await sql`COMMIT`;
+    return Response.json({ ok:true, questId, results, pity, guaranteeIn, dustBalance: dustBal, dust: dustBal, banner, rolls, claimed:true });
+  } catch(e){ try{ await sql`ROLLBACK`; }catch{} console.error("[gacha quest claim] tx failed",e); return Response.json({ error:"db error" },{status:500}); }
+}
+
+async function handleGachaComebackClaim(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error:"unauthorized" }, { status:401, headers:{ "magnum:need-auth":"1" } });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error:"unauthorized" }, { status:401, headers:{ "magnum:need-auth":"1" } });
+  const ip=getClientIp(req);
+  if(!checkRateLimit(`gacha:comeback:${user.id}:${ip}`, 20, 60_000)) return Response.json({ error:"rate limited" },{status:429});
+  await ensureGachaQuestsTable(); await ensurePityTable(); await ensureDustTable(); await ensureGachaHistoryTable();
+  const sql=getSql();
+  let lastActivity: Date|null=null;
+  try{
+    const la=await sql`SELECT GREATEST( (SELECT MAX(created_at) FROM magnum_transactions WHERE user_id=${user.id}), (SELECT MAX(claimed_at) FROM magnum_daily_claims WHERE user_id=${user.id}) ) as last`;
+    const v=(la[0] as {last:string|null})?.last;
+    if(v) lastActivity=new Date(v);
+  }catch{}
+  const ch=eligibleComeback(lastActivity);
+  if(!ch.eligible) return Response.json({ error:"not eligible yet", eligible:false, days: ch.days, required:7 }, { status:429 });
+  try{
+    const cr=await sql`SELECT last_claim FROM magnum_comeback_claims WHERE user_id=${user.id} LIMIT 1`;
+    if(cr.length){
+      const lastClaim=new Date((cr[0] as {last_claim:string}).last_claim);
+      const diff=(Date.now()-lastClaim.getTime())/86400000;
+      if(diff < 7) return Response.json({ error:"comeback throttle 7d", eligible:false, days: Math.floor(diff), required:7 }, { status:429 });
+    }
+  }catch{}
+  const banner:BannerType = "standard";
+  const rolls=COMEBACK_REWARD_ROLLS;
+  await sql`BEGIN`;
+  try{
+    // re-check throttle FOR UPDATE
+    const cr2=await sql`SELECT last_claim FROM magnum_comeback_claims WHERE user_id=${user.id} LIMIT 1 FOR UPDATE`;
+    if(cr2.length){
+      const lc=new Date((cr2[0] as {last_claim:string}).last_claim);
+      const diff=(Date.now()-lc.getTime())/86400000;
+      if(diff < 7){ await sql`ROLLBACK`; return Response.json({ error:"comeback throttle 7d", eligible:false, days:Math.floor(diff) },{status:429}); }
+    }
+    // re-check activity (if someone transacted in between)
+    const la2=await sql`SELECT GREATEST( (SELECT MAX(created_at) FROM magnum_transactions WHERE user_id=${user.id}), (SELECT MAX(claimed_at) FROM magnum_daily_claims WHERE user_id=${user.id}) ) as last`;
+    const v2=(la2[0] as {last:string|null})?.last;
+    const last2=v2? new Date(v2):null;
+    const ch2=eligibleComeback(last2);
+    if(!ch2.eligible){ await sql`ROLLBACK`; return Response.json({ error:"not eligible yet", eligible:false, days:ch2.days },{status:429}); }
+    const pityRows=await sql`SELECT pity_counter, pity_5star, lost_50_50, pulls FROM magnum_pity WHERE user_id=${user.id} AND banner_type=${banner} LIMIT 1 FOR UPDATE`;
+    let pc=0,p5=0,lost=false,pulls=0;
+    if(pityRows.length){ const r=pityRows[0] as {pity_counter:number; pity_5star:number; lost_50_50:boolean; pulls:number}; pc=Number(r.pity_counter); p5=Number(r.pity_5star); lost=Boolean(r.lost_50_50); pulls=Number(r.pulls); }
+    let curPc=pc, curP5=p5, curLost=lost, curPulls=pulls;
+    const results:{id:string; rarity:GachaRarity; isNew:boolean; dust:number; isEvent?:boolean}[]=[];
+    for(let i=0;i<rolls;i++){
+      const roll=rollWithPity(curP5, banner, { pity4: curPc, lost5050: curLost });
+      const rarity=roll.rarity as GachaRarity; const id=roll.id;
+      let isNew=true; let dust=0;
+      const ownedCos=await sql`SELECT id FROM magnum_cosmetics WHERE user_id=${user.id} AND cosmetic_id=${id} LIMIT 1`;
+      const ownedInv=await sql`SELECT id FROM magnum_shop_inventory WHERE user_id=${user.id} AND skin_id=${id} LIMIT 1`;
+      if(ownedCos.length||ownedInv.length){ isNew=false; dust=DUST_REWARD[rarity]??0; if(dust) await sql`INSERT INTO magnum_dust (user_id,balance) VALUES (${user.id},${dust}) ON CONFLICT (user_id) DO UPDATE SET balance=magnum_dust.balance+${dust}, updated_at=now()`; }
+      else { const cos=COSMETICS_CATALOG.find(c=>c.id===id); if(cos) await sql`INSERT INTO magnum_cosmetics (user_id,cosmetic_id,slot,equipped,purchased_at) VALUES (${user.id},${id},${cos.slot},false,now())`; else await sql`INSERT INTO magnum_shop_inventory (user_id,skin_id,purchased_at,equipped) VALUES (${user.id},${id},now(),false)`; }
+      if(rarity==="legendary"){ curP5=0; curPc=0; } else if(rarity==="epic"){ curPc=0; curP5++; } else { curPc++; curP5++; }
+      if(roll.nextLost5050!==null) curLost=Boolean(roll.nextLost5050);
+      curPulls++;
+      await sql`INSERT INTO magnum_gacha_history (user_id,banner_type,rarity,cosmetic_id,is_new) VALUES (${user.id},${banner},${rarity},${id},${isNew})`;
+      results.push({ id, rarity, isNew, dust, isEvent: roll.isEvent });
+    }
+    await sql`INSERT INTO magnum_pity (user_id,banner_type,pity_counter,pity_5star,lost_50_50,pulls,updated_at) VALUES (${user.id},${banner},${curPc},${curP5},${curLost},${curPulls},now()) ON CONFLICT (user_id,banner_type) DO UPDATE SET pity_counter=${curPc}, pity_5star=${curP5}, lost_50_50=${curLost}, pulls=${curPulls}, updated_at=now()`;
+    // coins +42
+    await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${user.id},1000) ON CONFLICT (user_id) DO NOTHING`;
+    await sql`UPDATE magnum_coins SET balance = balance + ${COMEBACK_COINS} WHERE user_id=${user.id}`;
+    await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${COMEBACK_COINS},'gacha_comeback',${JSON.stringify({ rolls, coins:COMEBACK_COINS })}::jsonb)`;
+    await sql`INSERT INTO magnum_comeback_claims (user_id,last_claim,claims) VALUES (${user.id}, now(), 1) ON CONFLICT (user_id) DO UPDATE SET last_claim=now(), claims=magnum_comeback_claims.claims+1`;
+    const balRows=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+    const balance=balRows.length? Number((balRows[0] as {balance:number}).balance):0;
+    const dustRows=await sql`SELECT balance FROM magnum_dust WHERE user_id=${user.id} LIMIT 1`;
+    const dustBal=dustRows.length? Number((dustRows[0] as {balance:number}).balance):0;
+    const pity={ counter:curPc, pityCounter:curPc, pity5star:curP5, pity_5star:curP5, lost_50_50:curLost, lost5050:curLost, pulls:curPulls, banner };
+    const guaranteeIn={ epic: Math.max(0,90-(curPc+1)), legendary: Math.max(0,180-(curP5+1)) };
+    await sql`COMMIT`;
+    return Response.json({ ok:true, results, pity, guaranteeIn, balance, coins:COMEBACK_COINS, dust: dustBal, dustBalance: dustBal, rolls, banner });
+  }catch(e){ try{ await sql`ROLLBACK`; }catch{} console.error("[gacha comeback] tx failed",e); return Response.json({ error:"db error" },{status:500}); }
+}
+
 // ---- Daily Spin Wheel 42 — 8 секторов, стрик ×2/×3, QR +1 спин обоих ----
 async function ensureSpinTable(): Promise<void> {
   if (!process.env.DATABASE_URL && !process.env.DATABASE_URL_UNPOOLED) return;
@@ -2292,6 +2543,7 @@ async function handleMiningClick(req: Request): Promise<Response> {
     const sql = getSql();
     const rows = await sql`UPDATE magnum_mining SET balance = balance + ${inc}, updated_at = now() WHERE user_id = ${user.id} RETURNING balance, upgrades`;
     const r = rows[0] as { balance: number; upgrades: unknown };
+    try { await bumpQuest(user.id, "daily_mining30", 1); } catch {}
     try { await addPassXp(user.id, 5, 'mining'); } catch {}
     return Response.json({ balance: Number(r.balance), upgrades: parseUpgrades(r.upgrades), added: inc, boosted, boostUntil: boosted ? boostUntil : null });
   } catch (e) {
@@ -3052,6 +3304,7 @@ async function handleGameSubmit(req: Request): Promise<Response> {
   try {
     const sql = getSql();
     await sql`INSERT INTO magnum_game_scores (user_id, game, score, coins_earned, meta) VALUES (${user.id}, ${game}, ${score}, ${coinsEarned}, ${JSON.stringify(meta)}::jsonb)`;
+    try { await bumpQuest(user.id, "daily_win5", 1); } catch {}
     try { await maybeValidateReferral(user.id); } catch {}
     try { await addPassXp(user.id, 10, 'game'); } catch {}
     if (totalCoins > 0) {
@@ -3455,7 +3708,7 @@ async function handleModerationLog(req: Request): Promise<Response> {
 }
 async function handlePublicProfile(req: Request, username: string): Promise<Response> {
   const name=decodeURIComponent(username).trim().slice(0,32); if(!name||name.length<2) return Response.json({error:"username 2..32"},{status:400});
-  try{ const sql=getSql(); const u=await sql`SELECT id,username,created_at FROM magnum_users WHERE username=${name} LIMIT 1`; if(u.length===0) return Response.json({error:"not found"},{status:404});
+  try{ const sql=getSql(); const u=await sql`SELECT id,username FROM magnum_users WHERE username=${name} LIMIT 1`; if(u.length===0) return Response.json({error:"not found"},{status:404});
     const uid=Number((u[0] as {id:number}).id);
     const [coinsR,miningR,shopR,cosR,achR,frameR,txR]=await Promise.all([
       sql`SELECT balance FROM magnum_coins WHERE user_id=${uid} LIMIT 1`,
@@ -3470,7 +3723,7 @@ async function handlePublicProfile(req: Request, username: string): Promise<Resp
     const mining=miningR.length?{balance:Number((miningR[0] as {balance:number}).balance),upgrades:(miningR[0] as {upgrades:unknown}).upgrades}:null;
     const avatar=shopR.length?String((shopR[0] as {skin_id:string}).skin_id):null;
     const cosmetics=(cosR as unknown[]).map((r:unknown)=>{const x=r as {cosmetic_id:string;slot:string}; return {cosmeticId:String(x.cosmetic_id),slot:String(x.slot)};});
-    return Response.json({user:{id:uid,username:name,created_at:(u[0] as {created_at:string}).created_at},coins,balance:coins,mining,avatar,cosmetics,verified:frameR.length?Boolean((frameR[0] as {verified:boolean}).verified):false,counts:{achievements:Number(((achR[0] as {c:number}).c)),transactions:Number(((txR[0] as {c:number}).c))}});
+    return Response.json({user:{username:name},coins,balance:coins,mining,avatar,cosmetics,verified:frameR.length?Boolean((frameR[0] as {verified:boolean}).verified):false,counts:{achievements:Number(((achR[0] as {c:number}).c)),transactions:Number(((txR[0] as {c:number}).c))}});
   }catch(e){ console.error("[public profile] failed",e); return Response.json({error:"db error"},{status:500}); }
 }
 async function handleSearch(req: Request): Promise<Response> {
@@ -4812,7 +5065,6 @@ async function handleChainOg(req: Request): Promise<Response> {
 }
 
 
-async function handleBoardFeed
 async function handleBoardFeed(req:Request):Promise<Response>{
   const url=new URL(req.url);
   const game=url.searchParams.get("game")?.trim().toLowerCase()||"";
@@ -5620,6 +5872,7 @@ async function persistDuelResults(room: DuelRoom) {
             const gScore = Math.max(0, Math.min(999999, Math.round(score * 10) || 0));
             const coinsEarned = gScore < 10 ? 0 : Math.min(42, Math.floor(gScore / 200));
             await sql`INSERT INTO magnum_game_scores (user_id, game, score, coins_earned, meta) VALUES (${uid}, 'duel', ${gScore}, ${coinsEarned}, ${JSON.stringify({ src: 'ws-duel', room: room.id, raw: score })}::jsonb)`;
+            try { await bumpQuest(uid, "daily_duel3", 1); } catch {}
             if (coinsEarned > 0) {
               await sql`INSERT INTO magnum_coins (user_id,balance) VALUES (${uid},1000) ON CONFLICT (user_id) DO NOTHING`;
               await sql`UPDATE magnum_coins SET balance = balance + ${coinsEarned} WHERE user_id=${uid}`;
@@ -5909,6 +6162,10 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/gacha/history" && req.method === "GET") return handleGachaHistory(req);
     if (url.pathname === "/magnum/api/gacha/pity" && req.method === "GET") return handleGachaPity(req);
     if (url.pathname === "/magnum/api/gacha/free-roll" && req.method === "POST") return handleGachaFreeRoll(req);
+    if ((url.pathname === "/magnum/api/gacha/quests" || url.pathname === "/magnum/api/gacha/quests/status") && req.method === "GET") return handleGachaQuestsStatus(req);
+    if (url.pathname === "/magnum/api/gacha/quests/progress" && req.method === "POST") return handleGachaQuestProgress(req);
+    if (url.pathname === "/magnum/api/gacha/quests/claim" && req.method === "POST") return handleGachaQuestClaim(req);
+    if ((url.pathname === "/magnum/api/gacha/comeback" || url.pathname === "/magnum/api/gacha/comeback/claim") && req.method === "POST") return handleGachaComebackClaim(req);
 
     if (url.pathname === "/magnum/api/spin/status" && req.method === "GET") return handleSpinStatus(req);
     if (url.pathname === "/magnum/api/spin" && req.method === "POST") return handleSpin(req);

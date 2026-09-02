@@ -427,4 +427,19 @@ export const magnumFlashmobShares = pgTable("magnum_flashmob_shares", {
   day: text("day").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (t) => [primaryKey({ columns: [t.userId, t.day] })]);
+export const magnumGachaQuests = pgTable("magnum_gacha_quests", {
+  userId: integer("user_id").notNull().references(() => magnumUsers.id, { onDelete: "cascade" }),
+  questId: text("quest_id").notNull(),
+  weekId: text("week_id").notNull(),
+  progress: integer("progress").default(0).notNull(),
+  target: integer("target").notNull(),
+  claimed: boolean("claimed").default(false).notNull(),
+  completed: boolean("completed").default(false).notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => [primaryKey({ columns: [t.userId, t.questId, t.weekId] })]);
+export const magnumComebackClaims = pgTable("magnum_comeback_claims", {
+  userId: integer("user_id").primaryKey().references(() => magnumUsers.id, { onDelete: "cascade" }),
+  lastClaim: timestamp("last_claim").defaultNow().notNull(),
+  claims: integer("claims").default(0).notNull(),
+});
 
