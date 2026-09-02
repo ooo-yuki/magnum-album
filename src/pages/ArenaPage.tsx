@@ -23,7 +23,6 @@ function weekIdNow(): string {
 function StreakCalendar({ streak, weekId }: { streak: number; weekId: string }) {
   return (
     <div className={styles.streakWrap} data-testid="streak-calendar">
-      <GuestGate action="драться в Арене и попадать в рейтинг" />
       {Array.from({ length: 7 }, (_, i) => (
         <span key={i} className={`${styles.dot} ${i < streak ? styles.dotOn : ""}`}>{i < streak ? "✓" : i + 1}</span>
       ))}
@@ -156,6 +155,7 @@ export function ArenaPage() {
 
   return (
     <div ref={wrapRef} className={styles.wrap}>
+      <GuestGate action="драться в Арене и попадать в рейтинг" />
       <h1 className={styles.title}>VOLCANO SEASON 42 <span style={{color:"#ff5722"}}>🌋</span></h1>
       <p className={styles.sub}>ELO 7дн • <span style={{color:"#ff5722",fontWeight:800}}>volcano-crown топ-3 👑</span> + pulse {VOLCANO_PULSE} + stagger y10 0.05 volcano-bar • /magnum/arena • StreakCalendar GSAP</p>
 

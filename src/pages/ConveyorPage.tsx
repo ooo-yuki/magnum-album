@@ -59,7 +59,7 @@ function Onboarding(){
   const goAuth=()=>window.dispatchEvent(new CustomEvent("magnum:need-auth"));
 
   return <div ref={pageRef} className={s.page}>
-    <GuestGate action="качать конвейер и попадать в топ" />
+  <GuestGate action="качать конвейер и попадать в топ" />
     <div className={s.onboard}>
       <h1>КОНВЕЙЕР 42</h1>
       <p className={s.onboardSub}>
@@ -238,6 +238,7 @@ export function ConveyorPage(){
   const incomeLabel=`+${st.perMin}/мин${st.bonusX2?" x2 пресейв":""}`;
   const canPrestige=st.dust>=st.prestigeNeed;
   return <div ref={pageRef} className={s.page}>
+    <GuestGate action="качать конвейер и попадать в топ" />
     <h1 style={{fontSize:28,fontWeight:900}}>КОНВЕЙЕР 42 — Idle-завод Кузбасса</h1>
     <p style={{opacity:.7}}>6 цехов · оффлайн-накопление видно сразу (+N/мин) · пресейв-бонус x2 · кап 4ч</p>
     <div ref={beltRef} className={s.belt}><div className={s.beltTrack}>{Array.from({length:22}).map((_,i)=><div key={i} className={s.beltItem}/>)}</div></div>
