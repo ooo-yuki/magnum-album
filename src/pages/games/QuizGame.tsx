@@ -332,7 +332,9 @@ export function QuizGame() {
       gsap.set(ch, { y: 14, opacity: 0 });
       gsap.to(ch, { y: 0, opacity: 1, stagger: 0.09, duration: 0.44, ease: "power2.out", delay: 0.18 });
     }, resultRef);
-  
+    return () => ctx.revert();
+  }, [finished]);
+
   useEffect(() => {
     const root: HTMLElement | null = document.querySelector<HTMLElement>("[data-gsap-root]") || (document.body as unknown as HTMLElement);
     if (!root) return;
@@ -359,9 +361,6 @@ export function QuizGame() {
     }, root);
     return () => ctx.revert();
   }, []);
-
-  return () => ctx.revert();
-  }, [finished]);
 
   // timer 15s per question
   useEffect(() => {
