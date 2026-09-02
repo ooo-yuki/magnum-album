@@ -3,13 +3,13 @@ import { ZAVRI_ROSTER, ZAVRI_ROTATION_MS, zavriBannerIndex, zavriBannerSlotStart
 import { ZAVRI_SHARDS_DUPE, ZAVRI_ASCEND_COST, ZAVRI_BEG_MAX_PER_DAY, rollRarity, rollZavri, zavriBuffPct, breedChildSpecies, isBegIntent, begRollGranted } from "../src/lib/zavri/gacha";
 
 describe("Zavri 42 — ротация баннеров", () => {
-  it("30 мин слот, 12 персонажей, детерминированная", () => {
+  it("30 мин слот, 13 персонажей, детерминированная", () => {
     expect(ZAVRI_ROTATION_MS).toBe(30 * 60 * 1000);
-    expect(ZAVRI_ROSTER.length).toBe(12);
+    expect(ZAVRI_ROSTER.length).toBe(13);
     const t0 = 0, t1 = ZAVRI_ROTATION_MS;
     expect(zavriBannerIndex(t0)).toBe(0);
     expect(zavriBannerIndex(t1)).toBe(1);
-    expect(zavriBannerIndex(ZAVRI_ROTATION_MS * 12)).toBe(0);
+    expect(zavriBannerIndex(ZAVRI_ROTATION_MS * 13)).toBe(0);
     expect(zavriBannerSlotStart(12345)).toBe(0);
     expect(zavriBannerSlotStart(ZAVRI_ROTATION_MS + 1)).toBe(ZAVRI_ROTATION_MS);
   });
@@ -17,12 +17,12 @@ describe("Zavri 42 — ротация баннеров", () => {
     expect(zavriBannerDef(0).id).toBe(ZAVRI_ROSTER[0]!.id);
     expect(zavriBannerDef(ZAVRI_ROTATION_MS).id).toBe(ZAVRI_ROSTER[1]!.id);
   });
-  it("редкости распределены 2/4/2/4", () => {
+  it("редкости распределены 2/4/3/4", () => {
     const counts = { legendary: 0, epic: 0, rare: 0, common: 0 } as Record<string, number>;
     for (const z of ZAVRI_ROSTER) counts[z.rarity]!++;
     expect(counts.legendary).toBe(2);
     expect(counts.epic).toBe(4);
-    expect(counts.rare).toBe(2);
+    expect(counts.rare).toBe(3);
     expect(counts.common).toBe(4);
   });
 });

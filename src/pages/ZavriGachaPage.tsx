@@ -4,6 +4,7 @@ import gsap from "gsap";
 import { ZAVRI_ROSTER, ZAVRI_BY_ID, RARITY_COLOR } from "../lib/zavri/catalog";
 import { ZAVRI_PRICE } from "../lib/zavri/gacha";
 import { ZavriCanvas } from "../components/ZavriCanvas";
+import { ZavriTerrarium } from "../components/ZavriTerrarium";
 import { ZavriReveal, type ZavriRevealItem } from "../components/ZavriReveal";
 import styles from "./ZavriGachaPage.module.css";
 
@@ -52,6 +53,9 @@ export function ZavriGachaPage() {
   const [selectedB, setSelectedB] = useState<number | null>(null);
   const [renameId, setRenameId] = useState<number | null>(null);
   const [renameVal, setRenameVal] = useState("");
+  const [eatTicks, setEatTicks] = useState<Record<number, number>>({});
+  const [breedWalkPair, setBreedWalkPair] = useState<[number, number] | null>(null);
+  const [walkEatId, setWalkEatId] = useState<number | null>(null);
 
   const fetchBanner = useCallback(async () => {
     try { const r = await fetch("/magnum/api/zavri/banner", { credentials: "include" }); if (r.ok) setBanner(await r.json() as BannerResp); } catch {}
@@ -114,7 +118,7 @@ export function ZavriGachaPage() {
 
   const doFeed = async (id: number) => {
     setLoading(`feed${id}`);
-    try { const r = await fetch("/magnum/api/zavri/feed", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) }); const j = await r.json() as { error?: string; balance?: number }; if (!r.ok) { setMsg(j.error || "ошибка"); return; } setBalance(j.balance ?? null); await fetchColl(); } finally { setLoading(null); }
+    try { const r = await fetch("/magnum/api/zavri/feed", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) }); const j = await r.json() as { error?: string; balance?: number }; if (!r.ok) { setMsg(j.error || "ошибка"); return; } setBalance(j.balance ?? null); setEatTicks((m) => ({ ...m, [id]: (m[id] ?? 0) + 1 })); setWalkEatId(id); window.setTimeout(() => setWalkEatId(null), 900); await fetchColl(); } finally { setLoading(null); }
   };
   const doPet = async (id: number) => {
     try { const r = await fetch("/magnum/api/zavri/pet", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) }); const j = await r.json() as { error?: string }; if (!r.ok && j.error !== "cooldown") setMsg(j.error || "ошибка"); else await fetchColl(); } catch {}
@@ -129,8 +133,9 @@ export function ZavriGachaPage() {
   };
   const startBreed = async () => {
     if (!selectedA || !selectedB) { setMsg("выбери двух завров разного пола"); return; }
+    const a = selectedA, b = selectedB;
     setLoading("breed");
-    try { const r = await fetch("/magnum/api/zavri/breed/start", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ a: selectedA, b: selectedB }) }); const j = await r.json() as { error?: string }; if (!r.ok) { setMsg(j.error || "ошибка"); return; } setSelectedA(null); setSelectedB(null); await fetchColl(); } finally { setLoading(null); }
+    try { const r = await fetch("/magnum/api/zavri/breed/start", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ a, b }) }); const j = await r.json() as { error?: string }; if (!r.ok) { setMsg(j.error || "ошибка"); return; } setBreedWalkPair([a, b]); window.setTimeout(() => setBreedWalkPair(null), 1600); setSelectedA(null); setSelectedB(null); await fetchColl(); } finally { setLoading(null); }
   };
   const claimBreed = async (breedId: number, rush = false) => {
     setLoading(`claim${breedId}`);
@@ -151,6 +156,7 @@ export function ZavriGachaPage() {
   const activeBreed = breeds.find((b) => !b.claimed) ?? null;
 
   const pickSpecies = (id: string) => ZAVRI_BY_ID.get(id) ?? ZAVRI_ROSTER.find((z) => z.id === id) ?? null;
+  const selectedNerenolBlocked = [selectedA, selectedB].some((id) => id != null && collection.find((c) => c.id === id)?.speciesId === "nerenol");
 
   return (
     <div ref={wrapRef} className={styles.wrap}>
@@ -217,10 +223,29 @@ export function ZavriGachaPage() {
         )}
       </section>
 
+      {/* WALK-TERRARIUM — общий выгул, завры ходят */}
+      <section data-stagger>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <h2 className={styles.h2}>Выгул · завры гуляют</h2>
+          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.52)" }}>клик по завру — погладить · ходят сами</span>
+        </div>
+        <ZavriTerrarium
+          items={collection.map((c) => ({ id: c.id, speciesId: c.speciesId, hunger: c.hunger, happiness: c.happiness, ascension: c.ascension }))}
+          eatId={walkEatId}
+          breedPair={breedWalkPair}
+          onPet={(id) => void doPet(id)}
+          onPick={(id) => {
+            if (!selectedA) setSelectedA(id);
+            else if (!selectedB && id !== selectedA) setSelectedB(id);
+            else { setSelectedA(id); setSelectedB(null); }
+          }}
+        />
+      </section>
+
       {/* TERRARIUM */}
       <section data-stagger>
         <div className={styles.terrariumHead}>
-          <h2 className={styles.h2}>Террариум · твои завры ({collection.length}/12 видов)</h2>
+          <h2 className={styles.h2}>Террариум · твои завры ({collection.length}/{ZAVRI_ROSTER.length} видов)</h2>
           <div className={styles.buffBar}>
             <span className={styles.pill}>+{buff.mining}% майнинг</span>
             <span className={styles.pill}>+{buff.conveyor}% конвейер</span>
@@ -265,6 +290,7 @@ export function ZavriGachaPage() {
                       <span>{def?.name ?? c.speciesId}</span>
                       <span className={styles.badge} style={{ color: RARITY_COLOR[def?.rarity as never] ?? "#9aa4b2", borderColor: RARITY_COLOR[def?.rarity as never] ?? "#9aa4b2" }}>{def?.rarity ?? "—"}</span>
                       <span className={styles.pill} style={{ padding: "3px 7px", fontSize: 10 }}>{c.gender === "m" ? "♂" : "♀"} · gen{c.generation} · ☆{c.ascension}</span>
+                      {c.speciesId === "nerenol" ? <span className={styles.pill} style={{ fontSize: 9, padding: "3px 6px", borderColor: "rgba(255,120,120,0.5)", color: "#ffb3b3", background: "rgba(255,60,60,0.08)" }}>🚫 бесплоден</span> : null}
                     </div>
                     {def ? <div style={{ fontSize: 11, color: "rgba(255,255,255,0.66)" }}>{def.title} · {c.nickname ? `«${c.nickname}»` : "без клички"}</div> : null}
                     <div className={styles.bars} aria-label="голод и счастье">
@@ -302,11 +328,11 @@ export function ZavriGachaPage() {
       <section className={styles.Incubator ?? (styles as unknown as Record<string, string>).Incubator} data-stagger style={{ display: "grid", gap: 10 }}>
         <div className={(styles as unknown as Record<string, string>).Incubator ? undefined : styles.history as unknown as string} style={{ border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, background: "rgba(18,18,22,0.86)", padding: 14, display: "grid", gap: 10 }}>
           <h2 className={styles.h2}>Инкубатор</h2>
-          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.62)" }}>Выбери двух завров разного пола в террариуме (клик по карточке) · размножение — пара прыжков вместе, без откровенщины · яйцо зреет 30 мин · ускорение 420 монет</div>
+          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.62)" }}>Выбери двух завров разного пола в террариуме (клик по карточке) · размножение — пара прыжков вместе, без откровенщины · яйцо зреет 30 мин · ускорение 420 монет{selectedNerenolBlocked ? <span style={{ color: "#ff8a8a", marginLeft: 8 }}>· Неренол 🚫 бесплоден</span> : null}</div>
           <div className={styles.begRow}>
             <span className={styles.pill}>A: {selectedA ?? "—"}</span>
             <span className={styles.pill}>B: {selectedB ?? "—"}</span>
-            <button className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSmall}`} disabled={!!loading || !selectedA || !selectedB} onClick={() => void startBreed()}>{loading === "breed" ? "…" : "Размножить"}</button>
+            <button className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSmall}`} disabled={!!loading || !selectedA || !selectedB || selectedNerenolBlocked} onClick={() => void startBreed()}>{loading === "breed" ? "…" : selectedNerenolBlocked ? "Неренол не размножается" : "Размножить"}</button>
             <button className={`${styles.btn} ${styles.btnGhost} ${styles.btnSmall}`} onClick={() => { setSelectedA(null); setSelectedB(null); }}>Сброс</button>
           </div>
           {activeBreed ? (

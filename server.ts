@@ -4913,6 +4913,7 @@ async function handleZavriBreedStart(req: Request): Promise<Response> {
   const pb = rows.find((r: unknown) => Number((r as { id: number }).id) === b) as { id: number; species_id: string; gender: string; last_breed_at: string | null };
   const ga = String(pa.gender), gb = String(pb.gender);
   if (ga === gb) return Response.json({ error: "need m+f", genders: [ga, gb] }, { status: 400 });
+  if (String(pa.species_id) === "nerenol" || String(pb.species_id) === "nerenol") return Response.json({ error: "nerenol cannot breed — милая какашка не размножается", code: "nerenol_sterile" }, { status: 400 });
   const cd = 24 * 3600 * 1000;
   for (const p of [pa, pb] as Array<{ last_breed_at: string | null }>) { if (p.last_breed_at) { const diff = Date.now() - new Date(String(p.last_breed_at)).getTime(); if (diff < cd) return Response.json({ error: "cooldown", remainingMs: cd - diff }, { status: 429 }); } }
   const active = await sql`SELECT id FROM magnum_zavri_breeds WHERE user_id=${user.id} AND claimed=false LIMIT 1`;

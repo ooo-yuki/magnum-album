@@ -13,11 +13,13 @@ type Props = {
   size?: number;
   interactive?: boolean;
   onPet?: () => void;
+  eatTick?: number;
 };
 
-export function ZavriCanvas({ speciesId, seed = 0, hunger = 100, happiness = 100, size = 180, interactive, onPet }: Props) {
+export function ZavriCanvas({ speciesId, seed = 0, hunger = 100, happiness = 100, size = 180, interactive, onPet, eatTick }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const groupRef = useRef<THREE.Group | null>(null);
+  const eatTickRef = useRef<number>(eatTick ?? 0);
 
   useEffect(() => {
     const el = wrapRef.current;
@@ -69,6 +71,7 @@ export function ZavriCanvas({ speciesId, seed = 0, hunger = 100, happiness = 100
     }
     scene.add(group);
     groupRef.current = group;
+    (group as unknown as { userData: Record<string, unknown> }).userData = { zavriId: seed };
 
     const cam = new THREE.PerspectiveCamera(28, 1, 0.1, 100);
     cam.position.set(0, 0.28, 5.2);
@@ -137,6 +140,26 @@ export function ZavriCanvas({ speciesId, seed = 0, hunger = 100, happiness = 100
       renderer.dispose();
     };
   }, [speciesId, seed, size, hunger, happiness, interactive, onPet]);
+
+  useEffect(() => {
+    if (eatTick == null || eatTick === eatTickRef.current) return;
+    eatTickRef.current = eatTick;
+    const g = groupRef.current;
+    const el = wrapRef.current;
+    if (!g || !el) return;
+    import("gsap").then(({ default: gsap }) => {
+      gsap.killTweensOf(g.scale); gsap.killTweensOf(g.position);
+      const tl = gsap.timeline();
+      tl.to(g.scale, { x: 1.1, y: 1.18, z: 1.1, duration: 0.14, ease: "power2.out" })
+        .to(g.scale, { x: 1, y: 1, z: 1, duration: 0.22, ease: "back.out(1.4)" });
+      for (let i = 0; i < 3; i++) {
+        const d = document.createElement("div");
+        d.textContent = "●"; d.style.position = "absolute"; d.style.left = "50%"; d.style.top = "38%"; d.style.color = "#ffcc66"; d.style.fontSize = "10px"; d.style.pointerEvents = "none";
+        el.appendChild(d);
+        gsap.to(d, { y: -16, x: (Math.random() - 0.5) * 28, opacity: 0, duration: 0.4, delay: i * 0.07, ease: "power2.out", onComplete: () => d.remove() });
+      }
+    });
+  }, [eatTick]);
 
   return (
     <div

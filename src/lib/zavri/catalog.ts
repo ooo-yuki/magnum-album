@@ -277,11 +277,29 @@ export const ZAVRI_ROSTER: ZavryDef[] = [
       { geo: { kind: "sphere", r: 0.12 }, pos: [0.55, 0.62, 0.1], scale: [0.5, 1, 0.7], color: "#5b6774" },
     ],
   },
+  {
+    id: "nerenol", name: "Неренол", title: "МИЛАЯ КАКАШКА", rarity: "rare", gender: "f",
+    quote: "Пахну мило. Не размножаюсь.",
+    buff: { kind: "coins", pct: 2 },
+    body: { color: "#7a4a2e", belly: "#d8c4a6", scale: 0.97, eyes: "normal", brows: true },
+    traits: [
+      // завиток какашки (3 яруса)
+      { geo: { kind: "sphere", r: 0.42 }, pos: [0, 0.78, 0], scale: [1, 0.52, 1], color: "#6b3e26" },
+      { geo: { kind: "sphere", r: 0.32 }, pos: [0, 1.02, 0.04], scale: [1, 0.62, 1], color: "#8b5a2b" },
+      { geo: { kind: "sphere", r: 0.22 }, pos: [0, 1.22, 0.08], color: "#9c6b4a" },
+      { geo: { kind: "cone", r: 0.14, h: 0.22 }, pos: [0, 1.42, 0.08], color: "#a67c52" },
+      // румянец для милоты
+      { geo: { kind: "sphere", r: 0.07 }, pos: [-0.28, 0.05, 0.88], scale: [1, 0.7, 0.5], color: "#ffb3c6" },
+      { geo: { kind: "sphere", r: 0.07 }, pos: [0.28, 0.05, 0.88], scale: [1, 0.7, 0.5], color: "#ffb3c6" },
+      // блик
+      { geo: { kind: "sphere", r: 0.06 }, pos: [0.16, 1.26, 0.18], color: "#fff7e6" },
+    ],
+  },
 ];
 
 export const ZAVRI_BY_ID: ReadonlyMap<string, ZavryDef> = new Map(ZAVRI_ROSTER.map((z) => [z.id, z]));
 
-/** Порядок ротации баннеров: 12 слотов × 30 мин = круг 6 часов */
+/** Порядок ротации баннеров: 13 слотов × 30 мин = круг 6.5 часов */
 export const ZAVRI_ROTATION_MS = 30 * 60 * 1000;
 export function zavriBannerIndex(now = Date.now()): number {
   return Math.floor(now / ZAVRI_ROTATION_MS) % ZAVRI_ROSTER.length;
