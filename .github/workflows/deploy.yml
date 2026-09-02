@@ -19,14 +19,14 @@ jobs:
       - name: Type check
         run: bunx tsc --noEmit
 
-      - name: Tests
-        run: bun test
-
       - name: Build
         run: bun run build.ts
 
       - name: Copy images
         run: cp -r public/images dist/
+
+      - name: Tests
+        run: bun test
 
       - name: Deploy to server
         uses: appleboy/scp-action@v0.1.7
