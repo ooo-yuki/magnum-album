@@ -1026,6 +1026,15 @@ export async function backfillSubscriptionsFromCosmetics(): Promise<{ scanned: n
 // startup ensure + backfill (non-blocking, logged)
 void ensureDustTable().then(()=> console.log("[startup] magnum_dust ensured")).catch(e=> console.error("[startup] ensureDustTable failed", e));
 void ensurePityTable().then(()=> console.log("[startup] magnum_pity ensured")).catch(e=> console.error("[startup] ensurePityTable failed", e));
+async function ensureLeaderboardAccounts(): Promise<void> {
+  const sql = getSql();
+  await sql`CREATE TABLE IF NOT EXISTS magnum_leaderboard (id serial PRIMARY KEY, player text NOT NULL, score integer NOT NULL, game text NOT NULL, created_at timestamp DEFAULT now())`;
+  await sql`ALTER TABLE magnum_leaderboard ADD COLUMN IF NOT EXISTS user_id integer REFERENCES magnum_users(id) ON DELETE CASCADE`;
+  // связываем исторические строки с аккаунтами по имени, остальные остаются без user_id и в топы не попадают
+  await sql`UPDATE magnum_leaderboard l SET user_id = u.id FROM magnum_users u WHERE l.user_id IS NULL AND lower(u.username) = lower(l.player)`;
+  await sql`CREATE INDEX IF NOT EXISTS magnum_leaderboard_user_game_idx ON magnum_leaderboard (user_id, game, score DESC)`;
+}
+void ensureLeaderboardAccounts().then(()=> console.log("[startup] leaderboard accounts ensured")).catch(e=> console.error("[startup] ensureLeaderboardAccounts failed", e));
 void ensureCosmeticsIndexes().then(()=> console.log("[startup] cosmetics indexes ensured")).catch(e=> console.error("[startup] ensureCosmeticsIndexes failed", e));
 void ensureSubscriptionTable().then(()=> console.log("[startup] magnum_subscriptions ensured")).catch(e=> console.error("[startup] ensureSubscriptionTable failed", e));
 void backfillSubscriptionsFromCosmetics().then(r=> { if(r.backfilled) console.log(`[startup] subscriptions backfill ${r.backfilled}/${r.scanned}`); }).catch(e=> console.error("[startup] backfill failed", e));
@@ -4089,7 +4098,7 @@ async function handleDuel42Leaderboard(req: Request): Promise<Response> {
     const url=new URL(req.url);
     const limit=Math.min(30,Math.max(1,Number(url.searchParams.get("limit")||20)));
     // season 7d: game=duel42 + created_at > now-7d
-    const rows=await sql`SELECT l.player, l.score, l.created_at, s.skin_id as avatar FROM magnum_leaderboard l LEFT JOIN magnum_users u ON u.username=l.player LEFT JOIN magnum_shop_inventory s ON s.user_id=u.id AND s.equipped=true WHERE l.game='duel42' AND l.created_at > now() - interval '7 days' ORDER BY l.score DESC, l.created_at ASC LIMIT ${limit}`;
+    const rows=await sql`SELECT u.username as player, l.score, l.created_at, s.skin_id as avatar FROM magnum_leaderboard l JOIN magnum_users u ON u.id=l.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id=u.id AND s.equipped=true WHERE l.game='duel42' AND l.created_at > now() - interval '7 days' ORDER BY l.score DESC, l.created_at ASC LIMIT ${limit}`;
     const mapped=rows.map((r:unknown)=>{const x=r as {player:string;score:number;created_at:string;avatar:string|null}; return {player:String(x.player),username:String(x.player),score:Number(x.score),created_at:x.created_at,avatar:x.avatar||null};});
     const board=await decorateWithCosmetics(mapped);
     // top 3 volcano-crown bonus + pulse 1.2s (VOLCANO SEASON 42 spec)
@@ -4104,8 +4113,9 @@ async function handleLeaderboard(req: Request): Promise<Response> {
     if(game==="duel42" || game==="duel") return handleDuel42Leaderboard(req);
     const sql=getSql();
     const limit=Math.min(30,Math.max(1,Number(url.searchParams.get("limit")||20)));
-    const rows=await sql`SELECT l.player, l.score, l.created_at FROM magnum_leaderboard l WHERE l.game=${game} AND l.created_at > now() - interval '7 days' ORDER BY l.score DESC, l.created_at ASC LIMIT ${limit}`;
-    const board=rows.map((r:unknown)=>{const x=r as {player:string;score:number;created_at:string}; return {player:String(x.player),score:Number(x.score),created_at:x.created_at};});
+    const rows=await sql`SELECT u.username as player, l.score, l.created_at, s.skin_id as avatar FROM magnum_leaderboard l JOIN magnum_users u ON u.id=l.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id=u.id AND s.equipped=true WHERE l.game=${game} AND l.created_at > now() - interval '7 days' ORDER BY l.score DESC, l.created_at ASC LIMIT ${limit}`;
+    const mapped=rows.map((r:unknown)=>{const x=r as {player:string;score:number;created_at:string;avatar:string|null}; return {player:String(x.player),username:String(x.player),score:Number(x.score),created_at:x.created_at,avatar:x.avatar||null};});
+    const board=await decorateWithCosmetics(mapped);
     return Response.json({ leaderboard:board, season:"7d", game, count:board.length });
   } catch(e){ console.error("[leaderboard] failed",e); return Response.json({error:"db error"},{status:500}); }
 }
@@ -4291,7 +4301,11 @@ async function handleConveyorState(req:Request):Promise<Response>{
     const balance=coinsR.length?Number((coinsR[0] as {balance:number}).balance):1000;
     // leaderboard top 10 conveyor
     let top:unknown[]=[];
-    try{ const r=await sql`SELECT player, score, created_at FROM magnum_leaderboard WHERE game='conveyor' ORDER BY score DESC LIMIT 10`; top=r as unknown[]; }catch{}
+    try{
+      const r=await sql`SELECT u.username as player, l.score, l.created_at, s.skin_id as avatar FROM magnum_leaderboard l JOIN magnum_users u ON u.id=l.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id=u.id AND s.equipped=true WHERE l.game='conveyor' ORDER BY l.score DESC LIMIT 10`;
+      const m=r.map((x0:unknown)=>{const x=x0 as {player:string;score:number;created_at:string;avatar:string|null}; return {player:String(x.player),username:String(x.player),score:Number(x.score),created_at:x.created_at,avatar:x.avatar||null};});
+      top=await decorateWithCosmetics(m);
+    }catch{}
     return Response.json({ ok:true, levels, prestige, dust, lastClaim:row.last_claim, perMin, basePerMin, bonusX2:bonus===2, pending, elapsedMin:Math.floor(elapsedMin), capMin:CONVEYOR_CAP_MIN, balance, catalog:CONVEYOR_CATALOG, prestigeNeed:CONVEYOR_PRESTIGE_NEED, prestigeBonus:`+${prestige*15}%`, top });
   }catch(e){ console.error("[conveyor state] failed",e); return Response.json({error:"db error"},{status:500}); }
 }
@@ -4322,7 +4336,7 @@ async function handleConveyorClaim(req:Request):Promise<Response>{
     try{ await ensureDustTable(); await sql`INSERT INTO magnum_dust (user_id,balance) VALUES (${user.id},${pending}) ON CONFLICT (user_id) DO UPDATE SET balance=magnum_dust.balance+${pending}, updated_at=now()`; }catch{}
     await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${pending},'conveyor_claim',${JSON.stringify({pending, perMin, elapsedMin:Math.floor(elapsedMin)})}::jsonb)`;
     // leaderboard update — best dust
-    try{ await sql`INSERT INTO magnum_leaderboard (player,score,game,created_at) VALUES (${user.username},${newDust},'conveyor',now())`; }catch{}
+    try{ await sql`INSERT INTO magnum_leaderboard (player,score,game,created_at,user_id) VALUES (${user.username},${newDust},'conveyor',now(),${user.id})`; }catch{}
     return Response.json({ok:true, claimed:pending, pending:0, dust:newDust, balance, perMin});
   }catch(e){ console.error("[conveyor claim] failed",e); return Response.json({error:"db error"},{status:500}); }
 }
@@ -4373,7 +4387,7 @@ async function handleConveyorPrestige(req:Request):Promise<Response>{
     const newDust=dust; // keep dust for shop
     await sql`UPDATE magnum_conveyor_state SET levels='{0,0,0,0,0,0}'::int[], prestige=${newPrestige}, dust=${newDust} WHERE user_id=${user.id}`;
     // bonus +15% permanent captured via prestige count
-    try{ await sql`INSERT INTO magnum_leaderboard (player,score,game,created_at) VALUES (${user.username},${newDust},'conveyor',now())`; }catch{}
+    try{ await sql`INSERT INTO magnum_leaderboard (player,score,game,created_at,user_id) VALUES (${user.username},${newDust},'conveyor',now(),${user.id})`; }catch{}
     await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},0,'conveyor_prestige',${JSON.stringify({prestige:newPrestige, dust:newDust})}::jsonb)`;
     return Response.json({ok:true, prestige:newPrestige, dust:newDust, bonus:`+${newPrestige*15}%`, levels:[0,0,0,0,0,0]});
   }catch(e){ console.error("[conveyor prestige] failed",e); return Response.json({error:"db error"},{status:500}); }
@@ -4458,7 +4472,7 @@ async function handlePetFeed(req:Request):Promise<Response>{
     await sql`UPDATE magnum_pets SET hunger=${newHunger}, happiness=${happiness}, energy=${energy}, xp=${newXp}, stage=${newStage}, last_tick=now(), updated_at=now() WHERE user_id=${user.id}`;
     await sql`INSERT INTO magnum_transactions (user_id,amount,reason,meta) VALUES (${user.id},${-PET_FEED_COST},'pet_feed',${JSON.stringify({xp:PET_FEED_XP, hunger:PET_FEED_HUNGER, stage:newStage, evolved})}::jsonb)`;
     if(evolved){
-      try{ await sql`INSERT INTO magnum_leaderboard (player,score,game) VALUES (${user.username},${newXp},'pet42')`; }catch{}
+      try{ await sql`INSERT INTO magnum_leaderboard (player,score,game,user_id) VALUES (${user.username},${newXp},'pet42',${user.id})`; }catch{}
     }
     const upd=await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
     const newBal=Number((upd[0] as {balance:number}).balance);
@@ -4483,7 +4497,7 @@ async function handlePetPlay(req:Request):Promise<Response>{
     const evolved=newStage>Number(pet.stage);
     const sql=getSql();
     await sql`UPDATE magnum_pets SET happiness=${newHappy}, hunger=${hunger}, energy=${energy}, xp=${newXp}, stage=${newStage}, last_play_at=now(), last_tick=now(), updated_at=now() WHERE user_id=${user.id}`;
-    if(evolved){ try{ await sql`INSERT INTO magnum_leaderboard (player,score,game) VALUES (${user.username},${newXp},'pet42')`; }catch{} }
+    if(evolved){ try{ await sql`INSERT INTO magnum_leaderboard (player,score,game,user_id) VALUES (${user.username},${newXp},'pet42',${user.id})`; }catch{} }
     return Response.json({ ok:true, pet:{ stage:newStage, xp:newXp, happiness:newHappy, hunger, energy, evolved, stageName:["яйцо","личинка","медуза","титан"][newStage], emoji:["🥚","🐛","🪼","🐉"][newStage], miningBonus:petMiningBonusPct(newStage) }, xpGain:PET_PLAY_XP });
   }catch(e){ console.error("[pet play] failed",e); return Response.json({error:"db error"},{status:500}); }
 }
@@ -4545,8 +4559,9 @@ async function handlePetLeaderboard():Promise<Response>{
   try{
     const sql=getSql();
     await ensurePetTable();
-    const rows=await sql`SELECT player, score, created_at FROM magnum_leaderboard WHERE game='pet42' ORDER BY score DESC, created_at ASC LIMIT 20`;
-    const board=rows.map((r:unknown)=>{ const x=r as {player:string;score:number;created_at:string}; return {player:String(x.player), score:Number(x.score), created_at:x.created_at}; });
+    const rows=await sql`SELECT u.username as player, l.score, l.created_at, s.skin_id as avatar FROM magnum_leaderboard l JOIN magnum_users u ON u.id=l.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id=u.id AND s.equipped=true WHERE l.game='pet42' ORDER BY l.score DESC, l.created_at ASC LIMIT 20`;
+    const mapped=rows.map((r:unknown)=>{ const x=r as {player:string;score:number;created_at:string;avatar:string|null}; return {player:String(x.player), username:String(x.player), score:Number(x.score), created_at:x.created_at, avatar:x.avatar||null}; });
+    const board=await decorateWithCosmetics(mapped);
     return Response.json({ ok:true, leaderboard:board, game:"pet42", count:board.length });
   }catch(e){ console.error("[pet leaderboard] failed",e); return Response.json({error:"db error"},{status:500}); }
 }
@@ -4591,7 +4606,7 @@ async function handleStudioList(_req: Request): Promise<Response> {
   try {
     await ensureStudioTables();
     const sql = getSql();
-    const rows = await sql`SELECT s.id, s.user_id, s.track_slug, s.preset, s.scenes, s.created_at, u.username, COALESCE(l.cnt,0)::int as likes FROM magnum_studio_saves s LEFT JOIN magnum_users u ON u.id=s.user_id LEFT JOIN (SELECT save_id, count(*) as cnt FROM magnum_studio_likes GROUP BY save_id) l ON l.save_id=s.id ORDER BY s.created_at DESC LIMIT 50`;
+    const rows = await sql`SELECT s.id, s.user_id, s.track_slug, s.preset, s.scenes, s.created_at, u.username, COALESCE(l.cnt,0)::int as likes FROM magnum_studio_saves s JOIN magnum_users u ON u.id=s.user_id LEFT JOIN (SELECT save_id, count(*) as cnt FROM magnum_studio_likes GROUP BY save_id) l ON l.save_id=s.id ORDER BY s.created_at DESC LIMIT 50`;
     const saves = rows.map((r: unknown) => {
       const x = r as { id:number; user_id:number; track_slug:string; preset:string; scenes:unknown; created_at:string; username:string|null; likes:number };
       return { id:Number(x.id), userId:Number(x.user_id), username:x.username?String(x.username):"Братуха", trackSlug:String(x.track_slug), track_slug:String(x.track_slug), preset:String(x.preset), scenes:x.scenes, likes:Number(x.likes), created_at:x.created_at };
@@ -4642,7 +4657,7 @@ async function handleStudioLeaderboard(): Promise<Response> {
   try{
     await ensureStudioTables();
     const sql=getSql();
-    const rows=await sql`SELECT s.id, s.user_id, s.track_slug, s.preset, s.scenes, s.created_at, u.username, COALESCE(l.cnt,0)::int as likes FROM magnum_studio_saves s LEFT JOIN magnum_users u ON u.id=s.user_id LEFT JOIN (SELECT save_id, count(*) as cnt FROM magnum_studio_likes WHERE created_at > now() - interval '7 days' GROUP BY save_id) l ON l.save_id=s.id WHERE s.created_at > now() - interval '7 days' ORDER BY likes DESC, s.created_at ASC LIMIT 20`;
+    const rows=await sql`SELECT s.id, s.user_id, s.track_slug, s.preset, s.scenes, s.created_at, u.username, COALESCE(l.cnt,0)::int as likes FROM magnum_studio_saves s JOIN magnum_users u ON u.id=s.user_id LEFT JOIN (SELECT save_id, count(*) as cnt FROM magnum_studio_likes WHERE created_at > now() - interval '7 days' GROUP BY save_id) l ON l.save_id=s.id WHERE s.created_at > now() - interval '7 days' ORDER BY likes DESC, s.created_at ASC LIMIT 20`;
     const top=rows.map((r: unknown)=>{
       const x=r as {id:number; user_id:number; track_slug:string; preset:string; scenes:unknown; created_at:string; username:string|null; likes:number};
       let reward=0; // placeholder: 142/420/1420 for top3 could be claimed via share? leaderboard itself is read-only
@@ -4651,7 +4666,8 @@ async function handleStudioLeaderboard(): Promise<Response> {
     // weekly rewards mapping for display: top1 1420 top2 420 top3 142
     const rewards=[1420,420,142];
     top.forEach((t,idx)=>{ (t as unknown as {reward:number}).reward = idx<3?rewards[idx]!:0; });
-    return Response.json({ leaderboard:top, top, count:top.length, weekRewards:rewards });
+    const decorated=await decorateWithCosmetics(top as unknown as Array<Record<string, unknown>>);
+    return Response.json({ leaderboard:decorated, top:decorated, count:decorated.length, weekRewards:rewards });
   }catch(e){ console.error("[studio leaderboard] failed",e); return Response.json({error:"db error"},{status:500}); }
 }
 async function handleStudioShare(req: Request): Promise<Response> {
@@ -4838,7 +4854,8 @@ async function handleFlashmobLeaderboard(req:Request):Promise<Response>{
     }
     const rows=await sql`SELECT s.user_id, s.score, s.created_at, u.username, inv.skin_id as avatar FROM magnum_flashmob_scores s JOIN magnum_users u ON u.id=s.user_id LEFT JOIN magnum_shop_inventory inv ON inv.user_id=s.user_id AND inv.equipped=true WHERE s.day=${day} ORDER BY s.score DESC, s.created_at ASC LIMIT ${limit}`;
     const items=rows.map((r:unknown, i:number)=>{ const x=r as {user_id:number;score:number;created_at:string;username:string;avatar:string|null}; return { userId:Number(x.user_id), username:String(x.username), score:Number(x.score), rank:i+1, avatar:x.avatar||null, created_at: x.created_at }; });
-    return Response.json({ ok:true, day, items, count, myRank, myScore, limit });
+    const decorated=await decorateWithCosmetics(items as unknown as Array<Record<string, unknown>>);
+    return Response.json({ ok:true, day, items:decorated, count, myRank, myScore, limit });
   }catch(e){ console.error("[flashmob lb] failed",e); return Response.json({error:"db error"},{status:500}); }
 }
 async function handleFlashmobSubmit(req:Request):Promise<Response>{
@@ -5576,7 +5593,7 @@ async function handleFlowJudge(req: Request): Promise<Response>{
   const bi=[86,73,142].indexOf(beat); const botLines=(botLinesArr[bi>=0?bi:0]||botLinesArr[0])!;
   try{
     await sql`INSERT INTO magnum_flow_battles (user_id,opponent,wager,lines,scores,verdict,wpm) VALUES (${user.id},'bot',${wager},${JSON.stringify(lines)}::jsonb,${JSON.stringify(scores)}::jsonb,${verdict},${wpmVal})`;
-    await sql`INSERT INTO magnum_leaderboard (player,score,game) VALUES (${user.username},${final},'flow42')`;
+    await sql`INSERT INTO magnum_leaderboard (player,score,game,user_id) VALUES (${user.username},${final},'flow42',${user.id})`;
   }catch(e){ console.error("[flow persist] failed",e); }
   let reward: {coins:number;elo:number;streak:number;rating:number;balance:number}|null=null;
   try{
@@ -5622,8 +5639,9 @@ async function handleFlowLeaderboard(): Promise<Response>{
   await ensureFlowTables();
   try{
     const sql=getSql();
-    const rows=await sql`SELECT player as username, max(score) as score FROM magnum_leaderboard WHERE game='flow42' GROUP BY player ORDER BY score DESC LIMIT 5`;
-    return Response.json({top: rows.map((r: unknown)=>{ const x=r as {username:string;score:number}; return {username:String(x.username),score:Number(x.score)}; })});
+    const rows=await sql`SELECT u.username as username, max(l.score) as score, max(s.skin_id) as avatar FROM magnum_leaderboard l JOIN magnum_users u ON u.id=l.user_id LEFT JOIN magnum_shop_inventory s ON s.user_id=u.id AND s.equipped=true WHERE l.game='flow42' GROUP BY u.username ORDER BY score DESC LIMIT 5`;
+    const mapped=rows.map((r: unknown)=>{ const x=r as {username:string;score:number;avatar:string|null}; return {username:String(x.username),player:String(x.username),score:Number(x.score),avatar:x.avatar||null}; });
+    return Response.json({top: await decorateWithCosmetics(mapped)});
   }catch(e){ console.error("[flow lb] failed",e); return Response.json({top:[]}); }
 }
 async function handleFlowHistory(req: Request): Promise<Response>{
@@ -5992,11 +6010,13 @@ async function persistDuelResults(room: DuelRoom) {
       const isSuspect = room.suspect.has(ws);
       scoresJson.push({ name, score, suspect: isSuspect });
       // duel42 season: skip suspect from leaderboard, otherwise persist both duel + duel42
-      if (!isSuspect) {
-        await sql`INSERT INTO magnum_leaderboard (player, score, game, created_at) VALUES (${name}, ${score}, 'duel', ${now})`;
-        await sql`INSERT INTO magnum_leaderboard (player, score, game, created_at) VALUES (${name}, ${score}, 'duel42', ${now})`;
+      const duelUid = Number(ws.data.id);
+      const duelRated = Number.isFinite(duelUid) && duelUid > 0;
+      if (!isSuspect && duelRated) {
+        await sql`INSERT INTO magnum_leaderboard (player, score, game, created_at, user_id) VALUES (${name}, ${score}, 'duel', ${now}, ${duelUid})`;
+        await sql`INSERT INTO magnum_leaderboard (player, score, game, created_at, user_id) VALUES (${name}, ${score}, 'duel42', ${now}, ${duelUid})`;
         try {
-          const uid = Number(ws.data.id);
+          const uid = duelUid;
           if (Number.isFinite(uid) && uid > 0) {
             const gScore = Math.max(0, Math.min(999999, Math.round(score * 10) || 0));
             const coinsEarned = gScore < 10 ? 0 : Math.min(42, Math.floor(gScore / 200));
