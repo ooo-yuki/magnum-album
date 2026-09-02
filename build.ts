@@ -1586,7 +1586,9 @@ async function syncPublicAssets(): Promise<void> {
   }
   try {
     const { $ } = await import("bun");
-    await $`cp -r ./public/images ./dist/images 2>/dev/null || true`.quiet();
+    await $`mkdir -p ./dist/images && cp -r ./public/images/. ./dist/images/ 2>/dev/null || true`.quiet();
+    // страховка от старого бага cp -r ./public/images ./dist/images → dist/images/images
+    try { const { $: $2 } = await import("bun"); await $2`sh -c 'if [ -d ./dist/images/images ]; then cp -r ./dist/images/images/* ./dist/images/ 2>/dev/null; rm -rf ./dist/images/images; fi'`.quiet(); } catch {}
     const imgMetrics = await measureDist("./dist/images").catch(() => null);
     if (imgMetrics) console.log(`  ✓ images → dist/images (${imgMetrics.files.length} files, ${fmtBytes(imgMetrics.totalBytes)})`);
   } catch {}
