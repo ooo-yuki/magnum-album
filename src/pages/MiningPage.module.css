@@ -195,3 +195,22 @@
   .digSection { grid-template-columns: 1.15fr 0.85fr; align-items: center; }
   .shopGrid { grid-template-columns: 1fr 1fr; }
 }
+
+/* Лидерборд: колонки ранг · имя+косметика · монеты · дата */
+.boardList { display: grid; grid-template-columns: 1fr; gap: 8px; }
+.boardRow {
+  display: grid; grid-template-columns: 40px minmax(0, 1fr) auto auto; gap: 12px;
+  align-items: center; padding: 10px 12px;
+  border: 1px solid var(--c-line); border-radius: 12px;
+  background: var(--c-card2); font-size: 13px;
+}
+.boardRank { color: var(--c-yellow); font-weight: 900; letter-spacing: 0.02em; }
+.boardName { min-width: 0; font-weight: 700; color: var(--c-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.boardCoins { color: var(--c-green); font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.boardDate { color: var(--c-dim); font-size: 11px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.duelSection { display: block; }
+
+@media (max-width: 520px) {
+  .boardRow { grid-template-columns: 32px minmax(0, 1fr) auto; gap: 8px; padding: 9px 10px; }
+  .boardDate { display: none; }
+}

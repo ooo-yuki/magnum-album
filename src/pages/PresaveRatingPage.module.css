@@ -203,3 +203,12 @@
 @keyframes goldShimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
 @media (max-width: 560px) { .goldMain { font-size: 15px; } .goldCelebrate { padding: 14px 12px 12px; } }
 /* end */
+
+/* Заголовки колонок таблицы: выравнивание под .row */
+.thRank { }
+.thUser { }
+.thMeta { }
+.thStats { }
+.thStatus { justify-self: end; }
+/* Галочка верификации рядом с ником */
+.verifiedBadge { color: var(--c-green); font-weight: 900; }
