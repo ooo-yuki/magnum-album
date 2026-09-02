@@ -4,6 +4,7 @@ import styles from "./DuelVolcano.module.css";
 import { getCoins, addCoins } from "../../lib/coins";
 import { DuelSocket } from "../../lib/ws";
 import { pushDuel } from "../../lib/duelVolcano";
+import { CosmeticIdentity, type LeaderCosmetics } from "../../components/CosmeticBadge";
 
 const WAGERS=[0,42,142,420] as const;
 type Room={id:string;state:string;players:Array<{name:string;score:number;ready:boolean;volcano?:number;magma?:number;suspect?:boolean}>;wager:number};
@@ -18,7 +19,7 @@ export function DuelVolcano(){
   const [suspect,setSuspect]=useState(false);
   const [oppVolcano,setOppVolcano]=useState(0);
   const [elo,setElo]=useState<number|null>(null);
-  const [lb,setLb]=useState<Array<{player:string;score:number}>>([]);
+  const [lb,setLb]=useState<Array<{player:string;score:number;avatar?:string|null} & LeaderCosmetics>>([]);
   const [msg,setMsg]=useState<string|null>(null);
   const [eruption,setEruption]=useState(false);
   const [me,setMe]=useState<{id:number;username:string}|null>(null);
@@ -197,7 +198,7 @@ export function DuelVolcano(){
         <div style={{marginTop:8,display:"grid",gap:6}}>
           {lb.length===0? <span style={{color:"rgba(255,255,255,.45)",fontSize:13}}>Пока пусто — стань первым!</span> : lb.slice(0,8).map((r,i)=>
             <div key={r.player+i} className={styles.leaderRow} style={i<3?{borderColor:"#ff5722",boxShadow:"0 0 0 1px rgba(255,87,34,.22), 0 0 18px rgba(255,87,34,.18)",background:"conic-gradient(from 0deg, #ff5722,#d32f2f,#ff5722)",opacity:0.9} as any:undefined}>
-              <span>#{i+1} {r.player} {i<3?<span className={styles.crown}>🌋</span>:null}</span><b>{Math.round(r.score)}</b>
+              <span style={{display:"inline-flex",alignItems:"center",gap:6,minWidth:0}}>#{i+1} <CosmeticIdentity username={r.player} avatar={r.avatar} frame={r.frame} title={r.title} size={20} /> {i<3?<span className={styles.crown}>🌋</span>:null}</span><b>{Math.round(r.score)}</b>
             </div>
           )}
         </div>

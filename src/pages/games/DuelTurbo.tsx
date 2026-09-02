@@ -6,6 +6,7 @@ import { DuelSocket } from "../../lib/ws";
 import { pushDuel } from "../../lib/duelTurbo";
 import { subscribeMe, type MeUser } from "../../lib/authMe";
 import { AuthStatus } from "../../components/AuthStatus";
+import { CosmeticIdentity, type LeaderCosmetics } from "../../components/CosmeticBadge";
 
 const WAGERS=[0,42,142,420] as const;
 type Room={id:string;state:string;players:Array<{name:string;score:number;ready:boolean;turbo?:number;magma?:number;volcano?:number;suspect?:boolean}>;wager:number};
@@ -20,7 +21,7 @@ export function DuelTurbo(){
   const [oppTurbo,setOppTurbo]=useState(0);
   const [ghostReplay,setGhostReplay]=useState<number[]>([]);
   const [elo,setElo]=useState<number|null>(null);
-  const [lb,setLb]=useState<Array<{player:string;score:number}>>([]);
+  const [lb,setLb]=useState<Array<{player:string;score:number;avatar?:string|null} & LeaderCosmetics>>([]);
   const [msg,setMsg]=useState<string|null>(null);
   const [me,setMe]=useState<MeUser>(null);
   // Соединения нет — матча нет. Локального счёта не существует, играть не даём.
@@ -189,7 +190,7 @@ export function DuelTurbo(){
         <div style={{marginTop:8,display:"grid",gap:6}}>
           {lb.length===0? <span style={{color:"rgba(255,255,255,.45)",fontSize:13}}>Пока пусто — стань первым!</span> : lb.slice(0,8).map((r,i)=>
             <div key={r.player+i} className={styles.leaderRow} style={i<3?{borderColor:"#00d4ff",boxShadow:"0 0 0 1px rgba(0,212,255,.22), 0 0 18px rgba(0,212,255,.18)",background:"conic-gradient(from 0deg, #00d4ff,#7b00ff,#00d4ff)",opacity:0.9} as any:undefined}>
-              <span>#{i+1} {r.player} {i<3?<span className={styles.crown}>⚡</span>:null}</span><b>{Math.round(r.score)}</b>
+              <span style={{display:"inline-flex",alignItems:"center",gap:6,minWidth:0}}>#{i+1} <CosmeticIdentity username={r.player} avatar={r.avatar} frame={r.frame} title={r.title} size={20} /> {i<3?<span className={styles.crown}>⚡</span>:null}</span><b>{Math.round(r.score)}</b>
             </div>
           )}
         </div>
