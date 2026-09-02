@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 const src = readFileSync(resolve(__dirname, "../src/pages/games/RhythmGame.tsx"), "utf8");

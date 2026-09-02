@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 
 // Rhythm42 enhanced features — tape + mute + share + breakdown
 // Unit slice: pure tapeStats helper ported for testability (mirrors src)

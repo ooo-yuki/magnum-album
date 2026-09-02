@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 function genChart(seed: number, totalNotes = 64, bpm = 128) {
   let s = seed; const rnd = () => { s = (s * 1664525 + 1013904223) & 0xffffffff; return (s >>> 0) / 0xffffffff; };
   const chart: { time: number; lane: number }[] = [];

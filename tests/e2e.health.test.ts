@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { resolve, join } from "node:path";
 

@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 const SIZE=4; type Grid=number[][]; type Dir="up"|"down"|"left"|"right";
 function clone(g:Grid):Grid{return g.map(r=>[...r])}
 function slide(row:number[]){const f=row.filter(v=>v!==0);let s=0;const m:number[]=[];for(let i=0;i<f.length;i++){if(i+1<f.length&&f[i]===f[i+1]){m.push(f[i]!*2);s+=f[i]!*2;i++;}else m.push(f[i]!);}while(m.length<SIZE)m.push(0);let mv=false;for(let i=0;i<SIZE;i++)if(m[i]!==row[i])mv=true;return{row:m,score:s,moved:mv};}

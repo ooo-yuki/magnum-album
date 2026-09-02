@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 const ROOT = resolve(__dirname, "..");
@@ -62,15 +62,23 @@ describe("1515: Game2042 TILE_LORE + 2026 lore", () => {
 
 // ── Economy: RARITY + catalog 12 ──
 describe("1515: economy.ts RARITY sync", () => {
-  it("RARITY_PRICE 42/142/420/1420 синхрон с SHOP_CATALOG 12 скинов", () => {
-    const s = read("src/lib/economy.ts");
-    expect(s).toContain("common: 42");
-    expect(s).toContain("rare: 142");
-    expect(s).toContain("epic: 420");
-    expect(s).toContain("legendary: 1420");
-    const catalog = (s.match(/SHOP_CATALOG = \[([\s\S]*?)\] as const/) || ["",""])[1];
-    const items = (catalog.match(/\{ id:/g) || []).length;
-    expect(items, `CATALOG ${items} !=12`).toBe(12);
+  it("RARITY_PRICE 42/142/420/1420 живёт в cosmetics.ts и переиспользуется", () => {
+    const canon = read("src/lib/cosmetics.ts");
+    expect(canon).toContain("export const RARITY_PRICE");
+    expect(canon).toContain("common: 42");
+    expect(canon).toContain("rare: 142");
+    expect(canon).toContain("epic: 420");
+    expect(canon).toContain("legendary: 1420");
+    // economy.ts и shopCatalog.ts не дублируют цены, а импортируют их
+    const eco = read("src/lib/economy.ts");
+    expect(eco).toContain("RARITY_PRICE");
+    expect(eco).toMatch(/from "\.\/cosmetics"/);
+    expect(eco).toContain("SKINS.map");
+    const shop = read("src/lib/shopCatalog.ts");
+    expect(shop).toMatch(/from "\.\/cosmetics"/);
+    const def = (shop.match(/SKINS_DEF[^=]*=\s*\[([\s\S]*?)\n\];/) || ["",""])[1];
+    const items = (def.match(/\{ id:/g) || []).length;
+    expect(items, `SKINS ${items} !=12`).toBe(12);
   });
   it("getItemPrice + isValidShopId + buyItem/equipItem присутствуют", () => {
     const s = read("src/lib/economy.ts");
@@ -81,13 +89,16 @@ describe("1515: economy.ts RARITY sync", () => {
     expect(s).toContain("getCoins()");
     expect(s).toContain("addCoins(-price)");
   });
-  it("ShopPage RARITY_META синхронен с economy (цены 42/142/420/1420)", () => {
-    const eco = read("src/lib/economy.ts");
-    const shop = read("src/pages/ShopPage.tsx");
+  it("ShopPage RARITY_META тянет цены из cosmetics.ts (42/142/420/1420)", () => {
+    const canon = read("src/lib/cosmetics.ts");
     for (const price of ["42","142","420","1420"]) {
-      expect(eco, `eco нет ${price}`).toContain(price);
-      expect(shop, `shop нет ${price}`).toContain(price);
+      expect(canon, `cosmetics нет ${price}`).toContain(price);
     }
+    const meta = read("src/lib/shopCatalog.ts");
+    expect(meta).toContain("RARITY_PRICE.common");
+    expect(meta).toContain("RARITY_PRICE.legendary");
+    const shop = read("src/pages/ShopPage.tsx");
+    expect(shop).toContain("shopCatalog");
   });
 });
 

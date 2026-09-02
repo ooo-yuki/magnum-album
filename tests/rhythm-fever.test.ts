@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 
 // Логика MAGNUM FEVER — 5 perfect подряд = x2, 6с, сброс на miss/good
 const FEVER_NEED = 5;

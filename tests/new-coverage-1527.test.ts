@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 const ROOT = resolve(__dirname, "..");

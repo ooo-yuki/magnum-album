@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { resolve, join } from "node:path";
 const ROOT = resolve(__dirname, "..");
@@ -160,15 +160,14 @@ describe("api/build 1502: server.ts эндпоинты + SPA + build", () => {
     expect(html).toMatch(/<script[^>]+src=/);
     expect(html).toMatch(/chunk-[a-z0-9]+\.js|-[a-z0-9]{4,}\.js/);
   });
-  it("economy.ts RARITY_PRICE синхронен с ShopPage (42/142/420/1420)", () => {
+  it("RARITY_PRICE — один источник (cosmetics.ts), economy/ShopPage его переиспользуют", () => {
+    const canon = read("src/lib/cosmetics.ts");
+    for (const price of ["42","142","420","1420"]) expect(canon).toContain(price);
+    expect(canon).toMatch(/common:\s*42/);
     const eco = read("src/lib/economy.ts");
-    expect(eco).toContain("42");
-    expect(eco).toContain("142");
-    expect(eco).toContain("420");
-    expect(eco).toContain("1420");
-    expect(eco).toMatch(/common.*42|RARITY_PRICE/);
+    expect(eco).toMatch(/RARITY_PRICE/);
     const shop = read("src/pages/ShopPage.tsx");
-    expect(shop).toMatch(/42|142|420|1420/);
+    expect(shop).toMatch(/RARITY_META|shopCatalog/);
   });
   it("sitemap содержит ≥6 игровых URL и https без дублей", () => {
     const candidates = ["public/sitemap.xml","dist/sitemap.xml"];

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll } from "vitest";
+import { describe, it, expect, vi, beforeAll } from "bun:test";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import React from "react";

@@ -1,7 +1,7 @@
 // Kill switch: leaderboard/топы — только реальные данные из Neon, фейк-сиды запрещены (2026-09-01, приказ хозяина).
 // Цели: tests/fake-players-guard.test.ts — не дать кодерам вернуть сиды.
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 

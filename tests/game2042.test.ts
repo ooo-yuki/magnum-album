@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 
 // Test the pure game logic functions by importing the module
 // We test the grid logic independently of React

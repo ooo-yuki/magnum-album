@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 
 // Stack42 v2026 — MAGNUM 5 пуль + pause + coins
 describe("Stack42 2026 — MAGNUM lore", () => {
