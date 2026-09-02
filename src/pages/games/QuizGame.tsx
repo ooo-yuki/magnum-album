@@ -36,6 +36,7 @@ interface Question {
 }
 
 const QUESTIONS: Question[] = [
+  { q: "Что пародирует мем «42, братуха!» (дек. 2023)?", options: ["Фразу «52, братуха» Guacamolemolly / Alblak 52 — объединение «52» из Петербурга", "Фразу «100, братуха» Моргенштерна", "Фразу «42» из фильма «Матрица»", "Фразу «52» из Гарри Поттера"], correct: 0, fact: "«42, братуха! Кемеровская область, сорок два!» — родился в дек. 2023 на стриме 5opka при просмотре «Автостопом по Галактике» (2005). Пародия-ответ на «52, братуха» стримера Guacamolemolly (Alblak 52, петербургское объединение «52»). Жест 4+2 пальца = 42, лозунг «Кринжа не существует». Источники: trends.rbc.ru/trends/social/67d9d9a09a7947c6be91168f (19.03.2025) + cybersport.ru + postium.ru/42-bratuxa-chto-znachit-mem/" },
   { q: "Что означает число 42?", options: ["Ответ на главный вопрос жизни", "Код региона Кемеровской области", "Количество треков в альбоме", "День рождения Пятерки"], correct: 0, fact: "Из «Автостопом по Галактике» — суперкомпьютер назвал 42 ответом на всё." },
   { q: "Как расшифровывается CLAY?", options: ["Cool Life And Youth", "Clowns Laugh At You", "Create Love Always Yours", "Club Level All Year"], correct: 1, fact: "Пасхалка, которую Кирилл прятал в конце видео 10 лет." },
   { q: "Сколько баллов получил трек XXL на РЗТ?", options: ["73", "80", "86", "92"], correct: 2, fact: "Один из самых высокооценённых треков в истории РЗТ." },
@@ -71,6 +72,16 @@ const QUESTIONS: Question[] = [
   { q: "Угадай подарок: что подарил Пятёрка Пушке в интервью 16.08.2025?", options: ["Сливки — «потому что вы приглашаете такие сливки общества, как я»", "Торт", "Книгу", "Футболку 42"], correct: 0, fact: "В студию [аплодисменты]: «А сливки. Сливки. Потому что вы приглашаете такие сливки общества, наконец-то, как я. Я вам дарю.» — ПУШКА 16.08.2025 62k 83:11 (919K VTT, transcript:true) — темы рунет/Minecraft/42/SLAY/свадьба, таймкоды 02:25/11:46/28:53/30:30. Источник: https://www.youtube.com/watch?v=_D_BZuqM_eE" },
   { q: "Сколько просмотров спрогнозировал Пятёрка для интервью ПУШКА?", options: ["42.000 просмотров", "100.000 просмотров", "1.000 просмотров", "62.000 просмотров"], correct: 0, fact: "Дословно VTT: «Это 42.000 просмотров будет на этом.» — мем-число 42, факт 62k на момент дампа 01.09.2026 — канал ПУШКА 16.08.2025 83:11. Источник: https://www.youtube.com/watch?v=_D_BZuqM_eE (transcript:true, duration 4991s)" },
   { q: "Назови таймкоды интервью ПУШКА 16.08.2025 из описания", options: ["02:25 Планы 2025 / 11:46 Сколько зарабатывает / 28:53 патриотизм / 30:30 Ростов", "00:00 интро / 10:00 игра / 20:00 финал", "05:00 донат / 15:00 чат", "01:00 привет / 42:00 прощание"], correct: 0, fact: "Описание ПУШКА 16.08.2025: 02:25 Планы на 2025, 11:46 Сколько зарабатывает, 28:53 патриотизм, 30:30 Ростов — темы рунет/Minecraft/42 братухи/SLAY/свадьба. Ссылки twitch.tv/5opka t.me/joper5 m5.tours, t.me/pushkachanel. Источник: VTT _D_BZuqM_eE.ru.vtt + описание" },
+  { q: "Кто feat на треке «Пожарники» (CLAY трек 4, 02.04.2026)?", options: ["Илюха рэп", "MellSher", "Morgenstern", "OG Buda"], correct: 0, fact: "5opka, Илюха рэп — Пожарники (CLAY трек 4, ФУГА TV 02.04.2026, VTT 27K 1919 симв.) — «На концерте огонь из колонок уже не сбежать никак. Вызывай пожарника на концерт из колонок — бум.» Кроссовер-реплика: «Это Илюха легенда легенд это Кирюха легенда легенд». Источник: https://www.youtube.com/watch?v=eX7hM-t_hLw" },
+  { q: "Угадай трек CLAY по цитате: «На концерте огонь из колонок уже не сбежать никак. Слышите мигалок вой»", options: ["Пожарники — 02.04.2026 feat Илюха рэп", "Слишком много ставок — 02.04.2026", "Дай мне всё — 02.04.2026", "Ебанутый — 03.04.2026"], correct: 0, fact: "Пожарники — CLAY трек 4 (02.04.2026 ФУГА TV, eX7hM-t_hLw, 27K VTT 1919 симв., релиз CLAY 03.04.2026 5 треков Drumedy): рефрен «На концерте огонь из колонок уже не сбежать никак. Вызывай пожарника… Слышите мигалок вой. Гидрант. Мы не дружим с головой.» Источник: VTT eX7hM-t_hLw.ru.vtt + channel dump 20260402" },
+  { q: "Как звучит хайп-кроссовер в «Пожарниках» (02.04.2026, VTT eX7hM-t_hLw)?", options: ["«Это Илюха легенда легенд это Кирюха легенда легенд — техника искренность стиле хайпуля в тандеме сильнейшем»", "«Илюха босс Кирюха босс»", "«Легенда одна — Илюха»", "«Кирюха техника Кирюха стиль»"], correct: 0, fact: "Дословно финал VTT eX7hM-t_hLw (02.04.2026, 27K, 1919 симв., transcript:true): «Это Илюха легенда легенд это Кирюха легенда легенд техника искренность стиле хайпуля в тандеме сильнейшем бьются никем па» — имена чёткие, хайп-кроссовер 5opka (Кирюха) × Илюха рэп, отсылка к CLAY-дружбе (хайпуля = хайп, в тандеме сильнейшем). Источник: https://www.youtube.com/watch?v=eX7hM-t_hLw + report yt-2026-09-01-2320 карточка 18" },
+  // ── Казино 22.10.2025 — yt-2026-09-01-2320 карточка 16 — zOpX0HYRZ8k VTT 1159 — анти-казино + 42.000 баксов/42.000 руб — Вредные советы 16.10 (8 треков)
+  { q: "Сколько депнул и вывел по сюжету клипа Казино 22.10.2025?", options: ["Депнул 42.000 баксов, вывел 42.000 руб", "Депнул 42.000 руб, вывел 42.000 баксов", "Депнул 100.000 баксов, вывел 0", "Депнул 42 бакса, вывел 42 рубля"], correct: 0, fact: "VTT 1159: «Депнул 42.000 баксов, вывел 42.000 руб. Бля, не играйте в казино. Не играйте в казино. Прокручу за вас, лоты и сам себе всё заберу.» — ФУГА TV клип Казино 22.10.2025 (Вредные советы 16.10.2025 — 8 треков) — анти-казино гимн, leitmotiv 42.000. Источник: https://www.youtube.com/watch?v=zOpX0HYRZ8k (transcript:true, VTT /tmp/yt42/zOpX0HYRZ8k.ru.vtt, 15K)" },
+  { q: "Какой месседж клипа Казино?", options: ["Не играйте в казино", "Играйте больше", "Казино — путь к богатству", "Депни ещё"], correct: 0, fact: "Двукратный рефрен: «Не играйте в казино. Не играйте в казино.» + «Летим казик. Это праздник. Много сосок. Это классик.» — ирония + прямой анти-призыв. Источник: VTT zOpX0HYRZ8k.ru.vtt 1159" },
+  { q: "В каком альбоме вышел трек Казино (клип 22.10.2025)?", options: ["Вредные советы — 8 треков 16.10.2025 (Новый P Diddy/Вампир/Слышь Братиш/Казино/Сосочка/Ладушки feat OTURRO/Даже если feat EVEN CUTE) — клип Казино 22.10", "CLAY EP 03.04.2026", "SUPER PUPER NOVA 25.07.2025", "MAGNUM 2026"], correct: 0, fact: "Вредные советы — альбом-серия 16.10.2025 — 8 треков: Новый P Diddy, Вампир, Слышь Братиш, Казино (клип 22.10.2025), Сосочка из гримёрочки, Ладушки feat OTURRO, Даже если feat EVEN CUTE — youtu.be/zOpX0HYRZ8k" },
+  { q: "Какой пик онлайна у 5opka на Twitch по SullyGnome (17.01.2026 14:55)?", options: ["53,264 зрителей", "28,545 зрителей (08.12.2024 StreamsCharts)", "10,414 зрителей (пик 30д StreamsCharts)", "6,459 зрителей (avg SullyGnome)"], correct: 0, fact: "SullyGnome: пик 53,264 зрителей 17.01.2026 14:55 — главный Twitch-пик 5opka, ранг #232. Для сравнения: StreamsCharts all-time peak 28,545 08.12.2024, пик 30д 10,414, avg 6,459/6,010. Источники: sullygnome.com/channel/5opka + streamscharts.com/channels/5opka (P2 t_f1ad12c0)" },
+  { q: "Сколько фолловеров у 5opka на Twitch по SullyGnome / SocialBlade (сент. 2026)?", options: ["SullyGnome 1,021,365 / SocialBlade 1,008,991 (15.06.2026 +11,369/30д)", "923K (старый)", "1,500,000", "500K"], correct: 0, fact: "SullyGnome 1,021,365 (+10,076/30д, 116ч/30д, 17 стримов, 6ч43м avg) • SocialBlade 1,008,991 на 15.06.2026 (+444/день, +11,369/30д). TwitchTracker 12,392,128 часов всего, 134 игры, 172.2 фолл./час. Источники: sullygnome.com/channel/5opka + socialblade.com/twitch/user/5opka + twitchtracker.com/5opka/statistics (P2 t_f1ad12c0)" },
+  { q: "Сколько часов просмотров у 5opka за 30д по SullyGnome vs StreamsCharts (сент. 2026)?", options: ["SullyGnome 750,860ч / StreamsCharts 481,273ч (80ч05м эфира, 2,078,717 live views)", "100K / 100K", "12,392,128ч / 12,392,128ч (всего)", "1M / 1M"], correct: 0, fact: "SullyGnome 750,860 часов/30д (116ч эфира, 17 стримов) vs StreamsCharts 481,273 часов (80ч05м эфира, 4ч26м/день, 2,078,717 live views). Всего по TwitchTracker 12,392,128 часов, 134 игры. Источники: sullygnome.com/channel/5opka + streamscharts.com/channels/5opka + twitchtracker.com/5opka/statistics (P2 t_f1ad12c0)" },
 ];
 
 // ── баланс: стрик-бонус и подсказки ──
@@ -273,7 +284,6 @@ export function QuizGame() {
   const [hintUsed, setHintUsed] = useState(false);
   const [streakFlash, setStreakFlash] = useState(false);
   const [bestScore, setBestScore] = useState(0);
-  // Neon best — progress in magnum_game_scores (SPEC §7), без LS
   useEffect(()=>{ fetch("/magnum/api/games/my",{credentials:"include"}).then(r=>r.ok?r.json():null).then(j=>{ const arr=j?.scores as {game:string;score:number}[]|undefined; if(!arr) return; let m=0; for(const s of arr) if(s.game==="quiz"&&s.score>m) m=s.score; if(m) setBestScore(m); }).catch(()=>{}); },[]);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -323,7 +333,6 @@ export function QuizGame() {
       gsap.to(ch, { y: 0, opacity: 1, stagger: 0.09, duration: 0.44, ease: "power2.out", delay: 0.18 });
     }, resultRef);
   
-  // GSAP spec: y24 stagger 0.12 ScrollTrigger batch + reduced-motion gate + gsap.context cleanup + hover y:-4 RGB glow
   useEffect(() => {
     const root: HTMLElement | null = document.querySelector<HTMLElement>("[data-gsap-root]") || (document.body as unknown as HTMLElement);
     if (!root) return;
@@ -377,7 +386,6 @@ export function QuizGame() {
       });
     }, 1000);
     return () => { if (timerRef.current) window.clearInterval(timerRef.current); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current, finished, showFact]);
 
   const triggerBurst = useCallback((el: HTMLElement | null, good: boolean) => {

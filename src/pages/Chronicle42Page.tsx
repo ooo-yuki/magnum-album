@@ -53,7 +53,6 @@ export function Chronicle42Page() {
 
   // fetch eco/duel status separately via progress already includes
 
-  // GSAP: timeline draw line 1.4s
   useEffect(() => {
     if (!lineRef.current) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -64,7 +63,6 @@ export function Chronicle42Page() {
     return () => ctx.revert();
   }, []);
 
-  // GSAP: карточка flip y16 0.35 stagger 0.08
   useEffect(() => {
     if (!cardsRef.current) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -77,7 +75,6 @@ export function Chronicle42Page() {
     return () => ctx.revert();
   }, [unlocked]);
 
-  // GSAP: progress bar width 0.8s power3
   useEffect(() => {
     if (!progressBarRef.current) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
@@ -133,7 +130,6 @@ export function Chronicle42Page() {
       if (typeof j.balance === "number") setBalance(j.balance);
       if (typeof j.xpSpent === "number") setXpSpent(j.xpSpent);
       if (typeof j.completed === "boolean") setCompleted(j.completed);
-      // GSAP burst 1.4 back.out + confetti 100
       const el = document.querySelector<HTMLElement>(`[data-chapter=\"${id}\"]`);
       if (el && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
         gsap.fromTo(el, { scale: 0.92 }, { scale: 1, duration: 1.4, ease: "back.out(1.4)" });

@@ -18,16 +18,7 @@ const gradient = "linear-gradient(135deg, #ff2d55, #ffcc00, #00ff88)";
 const MAX_RETRIES_DEFAULT = 3;
 const LOG_ENDPOINT = "/magnum/api/log";
 
-/**
- * Global error boundary around routed pages (<Outlet />).
- * Catches render/lifecycle errors so a crashed page never blanks the
- * whole app — shows a 42-style fallback instead.
- *
- * Perf polish:
- * - retryCount with progressive backoff + hard reload after max
- * - GSAP shake on error surface
- * - console.error + fetch(LOG_ENDPOINT) if available
- */
+ 
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   state: ErrorBoundaryState = { hasError: false, message: null, stack: null, retryCount: 0 };
 
@@ -52,7 +43,6 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     };
 
     // console log — always
-    // eslint-disable-next-line no-console
     console.error("[ErrorBoundary] page crashed:", error, payload);
 
     // remote log — best-effort, never throw
@@ -64,12 +54,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           body: JSON.stringify(payload),
           keepalive: true,
         }).catch(() => {
-          // eslint-disable-next-line no-console
           console.warn("[ErrorBoundary] remote log failed (fetch rejected)");
         });
       }
     } catch {
-      // eslint-disable-next-line no-console
       console.warn("[ErrorBoundary] remote log unavailable");
     }
   }
@@ -113,11 +101,9 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     const max = this.props.maxRetries ?? MAX_RETRIES_DEFAULT;
     const next = this.state.retryCount + 1;
 
-    // eslint-disable-next-line no-console
     console.info(`[ErrorBoundary] retry ${next}/${max}`);
 
     if (next >= max) {
-      // eslint-disable-next-line no-console
       console.warn("[ErrorBoundary] max retries reached — hard reload");
       window.location.reload();
       return;
@@ -127,7 +113,6 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   };
 
   private handleReload = () => {
-    // eslint-disable-next-line no-console
     console.info("[ErrorBoundary] hard reload requested", { retryCount: this.state.retryCount });
     window.location.reload();
   };

@@ -55,8 +55,7 @@ const DIFFICULTY = {
   hard: { label: "Хард", survive: 30, bulletMul: 1.6, speedMul: 1.25, win: 6000, hint: "ад 30с" },
 } as const;
 type DiffKey = keyof typeof DIFFICULTY;
-const LS_DIFF = "dodge42-diff"; // LS-UI-only: diff pref, not progress (SPEC §7.1 — progress in Neon)
-
+const LS_DIFF = "dodge42-diff";
 interface Particle {
   x: number; y: number; vx: number; vy: number;
   life: number; color: string; size: number;
@@ -123,7 +122,6 @@ export function Dodge42Game() {
   const [elapsed, setElapsed] = useState(0);
   const [dodged, setDodged] = useState(0);
   const [bestDodged, setBestDodged] = useState(0);
-  // best из Neon magnum_game_scores, diff остаётся в LS_DIFF (SPEC §7.1 разрешает)
   useEffect(()=>{
     fetch("/magnum/api/games/my",{credentials:"include"}).then(r=>r.ok?r.json():null).then(j=>{
       const arr=j?.scores as {game:string;score:number}[]|undefined; if(!arr) return;
@@ -207,7 +205,6 @@ export function Dodge42Game() {
     window.addEventListener("keydown", onDown);
     window.addEventListener("keyup", onUp);
   
-  // GSAP spec: y24 stagger 0.12 ScrollTrigger batch + reduced-motion gate + gsap.context cleanup + hover y:-4 RGB glow
   useEffect(() => {
     const root: HTMLElement | null = document.querySelector<HTMLElement>("[data-gsap-root]") || (document.body as unknown as HTMLElement);
     if (!root) return;

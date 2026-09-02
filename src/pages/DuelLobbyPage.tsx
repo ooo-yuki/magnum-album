@@ -29,7 +29,6 @@ export function DuelLobbyPage() {
     return subscribeMe(setMe);
   }, []);
 
-  // GSAP y24 stagger 0.12 — gate + gsap.context cleanup
   useEffect(() => {
     if (!cardsRef.current) return;
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;

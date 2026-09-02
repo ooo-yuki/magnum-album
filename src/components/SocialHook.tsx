@@ -1,5 +1,7 @@
 import { useCallback, useState } from "react";
 import { drawShareCard, canvasToBlob, shareOrDownload } from "./ShareCard";
+import { CosmeticAvatar, cosmeticName, type LeaderCosmetics } from "./CosmeticBadge";
+import { SKIN_EMOJI } from "../lib/cosmetics";
 
 // ── UTM трекинг для шеринга ──
 export const SOCIAL_UTM = "utm_source=share&utm_medium=42&utm_campaign=presave7";
@@ -26,14 +28,7 @@ function twitterShareUrl(url: string, text: string): string {
   return `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}&hashtags=${encodeURIComponent(SOCIAL_HASHTAG)}`;
 }
 
-type PresaverLite = { username: string; avatar?: string | null; verified?: boolean };
-
-const SKIN_EMOJI: Record<string, string> = {
-  mops: "🐗", rhino: "🦏", monkey: "🐵", frog: "🐸",
-  panda: "🐼", fox: "🦊", owl: "🦉",
-  shark: "🦈", flamingo: "🦩", wolf: "🐺",
-  tiger: "🐯", dragon: "🐉",
-};
+type PresaverLite = { username: string; avatar?: string | null; verified?: boolean } & LeaderCosmetics;
 
 function skinToEmoji(skinId: string | null | undefined): string {
   if (!skinId) return "👤";
@@ -209,7 +204,9 @@ export function SocialHook({
                   overflow: "hidden",
                 }}
               >
-                {skinToEmoji(p.avatar)}
+                {p.frame
+                  ? <CosmeticAvatar avatar={p.avatar} frame={p.frame} size={34} fallback={skinToEmoji(p.avatar)} title={[p.username, cosmeticName(p.title)].filter(Boolean).join(" · ")} />
+                  : skinToEmoji(p.avatar)}
               </div>
             );
           }

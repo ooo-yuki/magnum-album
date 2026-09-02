@@ -112,7 +112,6 @@ export function Stack42Game() {
   const [pts, setPts] = useState(0);
   const [best, setBest] = useState(0);
   const [bestPts, setBestPts] = useState(0);
-  // Neon best — progress in magnum_game_scores (SPEC §7), без LS
   useEffect(()=>{ fetch("/magnum/api/games/my",{credentials:"include"}).then(r=>r.ok?r.json():null).then(j=>{ const arr=j?.scores as {game:string;score:number}[]|undefined; if(!arr) return; let m=0; for(const s of arr) if(s.game==="stack"&&s.score>m) m=s.score; if(m){ setBest(m); setBestPts(m); } }).catch(()=>{}); },[]);
   const [perfectStreak, setPerfectStreak] = useState(0);
   const [coinsEarned, setCoinsEarned] = useState(0);
@@ -142,7 +141,6 @@ export function Stack42Game() {
 
   const start = useCallback(() => { reset(); setState("playing"); }, [reset]);
 
-  // GSAP modal entrance
   useEffect(() => {
     if ((state === "win" || state === "over") && modalRef.current) {
       gsap.fromTo(modalRef.current, { scale: 0.92, opacity: 0, y: 18 }, { scale: 1, opacity: 1, y: 0, duration: 0.42, ease: "back.out(1.6)", overwrite: true });
@@ -422,7 +420,6 @@ export function Stack42Game() {
   const comboLabel = perfectStreak >= MEGA_AT ? `MEGA x2` : comboActive ? `COMBO x2` : `x1`;
   const progressPct = Math.min((pts / WIN_PTS) * 100, 100);
 
-  // GSAP spec batch (keep original ripple)
   useEffect(() => {
     const root: HTMLElement = document.querySelector<HTMLElement>("[data-gsap-root]") || (document.body as unknown as HTMLElement);
     if (!root) return;

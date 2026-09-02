@@ -32,7 +32,6 @@ export function Pet42Page(){
   },[]);
   useEffect(()=>{ fetchPet(); },[fetchPet]);
 
-  // GSAP: яйцо pulse 1.08 1.2s + stagger y14 0.06 + шкалы width 0.4s power2
   useEffect(()=>{
     if(!pageRef.current) return;
     if(window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;

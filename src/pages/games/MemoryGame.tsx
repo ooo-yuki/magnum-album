@@ -291,7 +291,6 @@ export function MemoryGame() {
   const [hints, setHints] = useState(diffData.hint);
   const [score, setScore] = useState(0);
   const [best, setBest] = useState<number>(0);
-  // Neon best — progress in magnum_game_scores (SPEC §7), без LS
   useEffect(()=>{ fetch("/magnum/api/games/my",{credentials:"include"}).then(r=>r.ok?r.json():null).then(j=>{ const arr=j?.scores as {game:string;score:number}[]|undefined; if(!arr) return; let m=0; for(const s of arr) if(s.game==="memory"&&s.score>m) m=s.score; if(m) setBest(m); }).catch(()=>{}); },[]);
   const [focusIdx, setFocusIdx] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
@@ -301,7 +300,6 @@ export function MemoryGame() {
   const burstIdRef = useRef(0);
   const touchStartRef = useRef<{x:number;y:number}|null>(null);
 
-  // intro GSAP
   useEffect(() => {
     if (!ref.current) return;
     if (prefersReducedMotion()) { gsap.set(`.${styles.grid} .${styles.card}`, { scale: 1, opacity: 1, clearProps: "transform" }); return; }
@@ -322,7 +320,6 @@ export function MemoryGame() {
     return () => { if (timerRef.current) window.clearInterval(timerRef.current); };
   }, [won]);
 
-  // GSAP spec: y24 stagger 0.12 ScrollTrigger batch
   useEffect(() => {
     const root: HTMLElement | null = document.querySelector<HTMLElement>("[data-gsap-root]") || (document.body as unknown as HTMLElement);
     if (!root) return;

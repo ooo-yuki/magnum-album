@@ -144,7 +144,6 @@ export function TypingGame() {
   const [wpm, setWpm] = useState(0);
   const [displayWpm, setDisplayWpm] = useState(0);
   const [bestWpm, setBestWpm] = useState(0);
-  // Neon best — progress in magnum_game_scores (SPEC §7)
   useEffect(()=>{ fetch("/magnum/api/games/my",{credentials:"include"}).then(r=>r.ok?r.json():null).then(j=>{ const arr=j?.scores as {game:string;score:number}[]|undefined; if(!arr) return; let m=0; for(const s of arr) if(s.game==="typing"&&s.score>m) m=s.score; if(m) setBestWpm(m); }).catch(()=>{}); },[]);
   const [completed, setCompleted] = useState(0);
   const [totalChars, setTotalChars] = useState(0);

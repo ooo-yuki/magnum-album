@@ -95,21 +95,6 @@ export const ECO_PLAST_QUESTIONS: EcoQuestion[] = [
   },
 ];
 
-export const ECO_PLAST_FACTS: { fact: string; src: string }[] = [
-  { fact: "Пластик 40% мусора Томи PET/PP", src: "EcoPage.tsx:23" },
-  { fact: "Томь 827 км пластик у реки", src: "EcoPage.tsx:31" },
-  { fact: "Кузбасс 95.7k км² 190M угля сортировка", src: "EcoPage.tsx:42" },
-  { fact: "Сортировка 7дн PLAST-стрик", src: "EcoPage.tsx:52" },
-  { fact: "MAGNUM 42 регион 42 эко-код", src: "EcoPage.tsx:78" },
-  { fact: "StreamsCharts 28,545 пик 8K/200K", src: "EcoPage.tsx:89" },
-  { fact: "VPN 28.04 релиз", src: "EcoPage.tsx:102" },
-  { fact: "CLAY73 NOVA80/XXL86", src: "EcoPage.tsx:114" },
-  { fact: "Сосновый бор субботник PLAST", src: "EcoPage.tsx:19" },
-  { fact: "Ранг ЭкоЛегенда >=200 / 7-8 верно", src: "EcoPage.tsx:123" },
-  { fact: "API GET /eco/leaderboard", src: "EcoPage.tsx:132" },
-  { fact: "API POST /eco/submit + challenge claim", src: "EcoPage.tsx:146" },
-  { fact: "Кузбасс 31.08-01.09 эвакуации кардиодиспансер", src: "EcoPage.tsx:kuzbass-chp-3108" },
-];
 
 export function ecoWeekId(d = new Date()): string {
   const jan1 = new Date(d.getFullYear(), 0, 1);

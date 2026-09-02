@@ -19,6 +19,7 @@ export function SquadPage(){
   const [codeInput,setCodeInput]=useState("");
   const [msg,setMsg]=useState<string|null>(null);
   const [potPulse,setPotPulse]=useState(false);
+  const [me,setMe]=useState<{id:number;username:string}|null>(null);
   // WS duel
   const [room,setRoom]=useState<any>(null);
   const [score,setScore]=useState(0);
@@ -43,7 +44,9 @@ export function SquadPage(){
 
   useEffect(()=>{ fetchMy(); fetchBattles(); },[fetchMy,fetchBattles]);
 
-  // GSAP stagger y18 0.08
+  // Auth gate
+  useEffect(()=>{ fetch("/magnum/api/auth/me",{credentials:"include"}).then(r=>r.ok?r.json():null).then(j=>{ if(j?.user) setMe(j.user); }).catch(()=>{}); },[]);
+
   useEffect(()=>{
     if(!pageRef.current) return;
     const prefers=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -71,6 +74,7 @@ export function SquadPage(){
   // WS connect if squad
   useEffect(()=>{
     if(!squad) return;
+    if(!me){ setMsg("Войди, братуха — сквады только для залогиненных"); return; }
     let ws:WebSocket;
     try{ ws=new WebSocket(squadWsUrl()); }catch{ return; }
     wsRef.current=ws;
@@ -87,7 +91,7 @@ export function SquadPage(){
     };
     ws.onclose=()=>{};
     return()=>{ try{ws.close();}catch{}; wsRef.current=null; };
-  },[squad,fetchMy,fetchBattles]);
+  },[squad,me,fetchMy,fetchBattles]);
 
   function spawnConfetti120(){
     if(window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;

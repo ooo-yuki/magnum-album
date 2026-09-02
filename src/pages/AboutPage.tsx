@@ -5,7 +5,6 @@ import styles from "./About42Page.module.css";
 
 gsap.registerPlugin(ScrollTrigger);
 
-// About42 — GSAP 24/7: y24 stagger 0.12, parallax, hover RGB, reduced-motion gate, cleanup
 export function AboutPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
@@ -182,7 +181,6 @@ export function AboutPage() {
     }, containerRef);
 
     return () => {
-      // cleanup: hover listeners + gsap context (kills ScrollTriggers)
       (containerRef.current as unknown as { _cardHoverCleanup?: () => void })?._cardHoverCleanup?.();
       ctx.revert();
     };

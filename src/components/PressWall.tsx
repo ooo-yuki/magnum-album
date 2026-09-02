@@ -1,14 +1,4 @@
-/**
- * perf: presswall lazy — MAGNUM PressWall
- * Perf policy: no images in this component (text-only press wall).
- * If <img> is ever introduced here it MUST include:
- *   loading="lazy" decoding="async" width/height + explicit alt
- * Project rule: картинки запрещены — этот компонент остаётся без <img>.
- * Audited: 2026-09-01 — 0 <img> found, CLS-safe, no LCP image.
- * Build: vendor split via src/vendor.ts + Bun splitting:true (see build.ts)
- * Sitemap: deduplicated via Set<loc> — verified in public/sitemap.xml
- * GSAP: entrance y24 stagger 0.12, hover RGB, reduced-motion gate, cleanup via ctx.revert
- */
+ 
 import { useRef, useEffect } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -29,17 +19,22 @@ type Review = {
 };
 
 const REVIEWS: Review[] = [
+  { source: "Пожарники feat Илюха рэп — легенда легенд хайп-кроссовер", logo: "🚒", score: "02.04", max: ".2026", verdict: "Кроссовер CLAY", quote: "«Это Илюха легенда легенд это Кирюха легенда легенд техника искренность стиле хайпуля в тандеме сильнейшем» — кроссовер 5opka × Илюха рэп, трек №4 CLAY 02.04.2026 (1919 симв. VTT eX7hM-t_hLw, transcript:true). Отсылка к CLAY-дружбе — хайп-тандем в сильнейшем, техника/искренность/стиле → youtube.com/watch?v=eX7hM-t_hLw — 2:38 ФУГА TV, Drumedy", album: "Пожарники feat Илюха рэп", year: "2026", color: "#ff2d55" },
   { source: "ПУШКА интервью 16.08.2025", logo: "ПШК", score: "83:11", max: " 62k", verdict: "Сливки общества • 42k", quote: "«А сливки. Сливки. Потому что вы приглашаете такие сливки общества, наконец-то, как я. Я вам дарю.» + «Это 42.000 просмотров будет на этом.» — ПУШКА 16.08.2025 62k 83:11 (919K VTT, transcript:true, duration 4991s) — темы рунет/Minecraft/42 братухи/SLAY/свадьба, таймкоды 02:25/11:46/28:53/30:30, twitch.tv/5opka t.me/joper5 m5.tours → youtube.com/watch?v=_D_BZuqM_eE", album: "интервью ПУШКА", year: "2025", color: "#ff2d55" },
   { source: "СЛАВА БОССУ — манифест", logo: "БОСС", score: "11.12", max: ".2025", verdict: "Манифест 42", quote: "«Я никогда не был хорошим примером, да и просто хорошим я не был. Я просто стремился быть первым. Этот выбор единственно верный. Не зарекайся от парадайса и до инферно. Мой путь от майнкрафтовой эры. До признания всех ваших премий. Пришло моё время. Со мной моё племя.» — далее «Слава боссу» + «Шрек из Ростова будет коронован» — VTT ZeIFBdoOZXo 1765 симв. frag 2-9, 3:07, 370k/23k, нейро-клип outsideinclub → music.thefence.me/slavabo55u", album: "СЛАВА БОССУ (SLAY DISS)", year: "2025", color: "#ff4500" },
   { source: "БИО-ПАСПОРТ 42", logo: "БИО", score: "05.04", max: ".1996", verdict: "Кирилл Баранов", quote: "Кирилл Александрович Баранов, Ростов-на-Дону, школа №65 (2014) → ДГТУ антикризис (4 курс, не окончил) → YouTube 27.01.2011 «Боб хавальник» → Twitch с 2016 5opka • мем «42 братуха!» • источники Wikipedia + twitch-news.ru/5opka + aboutan.ru", album: "БИО-ПАСПОРТ", year: "1996–2026", color: "#ffcc00" },
+  { source: "Spotify · био 5opka (P2 t_c21320ec)", logo: "SP", score: "2011", max: " →СП", verdict: "1000 жизней", quote: "Начал в 2011 с Minecraft, основатель сервера «СП», дебютный альбом «1000 жизней», гастроли. 42 братухи — субкультура/комьюнити: «эпатаж, сплочённость на концертах/премиях/TikTok». 400K+ Яндекс Музыка, 923K Twitch, ~1M YouTube, 209K Spotify/мес — open.spotify.com/artist/6hSwHa5Se498WfUj6zf4WN", album: "Spotify-био 5opka", year: "2011–2026", color: "#1DB954" },
+  { source: "Афиша Daily · 42 братухи", logo: "АФ", score: "42", max: " субкультура", verdict: "Шуба/НАХ/Хай/Урод", quote: "«Сквады Шуба-сквад (Петербург), НАХ-сквад (Москва), Хай-сквад (Воронеж), Урод-сквад (Ростов) — новая субкультура поколения Альфа. Эпатаж, сплочённость на концертах/премиях/TikTok, фестивали абсурда, свои премии» — afishadaily.ru/relationship/28893 — press-wall факт P2 t_c21320ec", album: "42 братухи субкультура", year: "2024–2025", color: "#ff2d55" },
   { source: "РЗТ", logo: "РЗТ", score: "6.53", max: "/10", verdict: "Золотой", quote: "Дебют, который зацепил — сыро, но честно. Мерси и Глаза львицы уже классика.", album: "SUPERNOVA", year: "2024", color: "#ffcc00" },
   { source: "РЗТ", logo: "РЗТ", score: "80", max: "/100", verdict: "Хит", quote: "Прорыв года. XXL разрывает чарты, Репит — гимн сквадов.", album: "SUPER PUPER NOVA", year: "2025", color: "#ff2d55" },
   { source: "РЗТ", logo: "РЗТ", score: "86", max: "/100", verdict: "Топ", quote: "XXL — отдельный феномен. Трек, который носят на шевронах.", album: "XXL (сингл)", year: "2025", color: "#00ff88" },
   { source: "РЗТ", logo: "РЗТ", score: "73", max: "/100", verdict: "Крепко", quote: "Сольный уровень доказан. 81 рецензия — Пятерка держит планку без фитов.", album: "CLAY", year: "2026", color: "#5865f2" },
   { source: "Twitch • Бан 06.04.2026", logo: "TW", score: "06.04", max: ".2026", verdict: "Временный бан", quote: "Причина «сексуальный контент» — Taverna.gg 06.04.26: «Хорошо, что забанили, потому что завтра мы клип снимаем. Этот вечер не мог закончиться эпичнее.» Временный, сроки не раскрыты. Накануне — женитьба на Sonasheka 05.04. Пара с баном 19.04 «Безопасность несовершеннолетних» 7д.", album: "Бан Twitch 06.04", year: "2026", color: "#ff2d55" },
   { source: "SLAY 2025", logo: "SLAY", score: "×3", max: "", verdict: "03.12.2025", quote: "70% зрители 13–27.11 на сайте +30% жюри • Дворец Ирины Винер, Лужники 03.12.2025 при WINLINE (статуэтки WINLINE SLAY) • 5opka ×3: Minecraft-стример года (впервые, топ-4: mokrivskyi/bratishkinoff/deepins_02), Аудитория года, Трек года XXL feat MellSher. FreakLand — ном. «Проект года».", album: "SLAY 2025×3", year: "2025", color: "#ffcc00" },
-  { source: "Яндекс Музыка", logo: "ЯМ", score: "400K+", max: "", verdict: "Слушателей", quote: "400K+ ежемесячно. От детсада до фанаток Анны Асти — плейлист на всех.", album: "MAGNUM", year: "2026", color: "#ffcc00" },
-  { source: "Twitch", logo: "TW", score: "923K", max: "", verdict: "Фолловеров", quote: "Пик 28K онлайна. Стримы — где родилось 42 и родится MAGNUM тур.", album: "LIVE", year: "2026", color: "#9147ff" },
+  { source: "Яндекс Музыка", logo: "ЯМ", score: "400K+", max: "", verdict: "Слушателей", quote: "400K+ ежемесячно. От детсада до фанаток Анны Асти — плейлист на всех. Spotify-био: «1000 жизней» → гастроли", album: "MAGNUM", year: "2026", color: "#ffcc00" },
+  { source: "Twitch", logo: "TW", score: "923K", max: "", verdict: "Фолловеров", quote: "Пик 28K онлайна. Стримы — где родилось 42 и родится MAGNUM тур. Канал с 2016", album: "LIVE", year: "2026", color: "#9147ff" },
+  { source: "Twitch • 1M+ Sep 2026 — SocialBlade/SullyGnome/StreamsCharts/TwitchTracker (P2 t_f1ad12c0)", logo: "TW", score: "1,021,365", max: "", verdict: "1M+ • пик 53,264", quote: "Twitch-статы 5opka сентябрь 2026: SocialBlade 1,008,991 на 15.06.2026 (+444/день, +11,369/30д) • SullyGnome 1,021,365 (+10,076/30д, 116ч/30д, 17 стримов, 6ч43м avg, 6,459 avg viewers, 750,860 часов/30д, пик 53,264 17.01.2026 14:55, ранг #232) • StreamsCharts 80ч05м/30д, 6,010 avg, 10,414 пик 30д, 481,273 часов, 2,078,717 live views • TwitchTracker 12,392,128 часов всего, 134 игры, 172.2 фолл./час. Источники: socialblade.com/twitch/user/5opka + sullygnome.com/channel/5opka + streamscharts.com/channels/5opka + twitchtracker.com/5opka/statistics", album: "Twitch 1M+ 30д Sep 2026", year: "2026", color: "#9147ff" },
+  { source: "YouTube", logo: "YT", score: "~1M", max: "", verdict: "Подписчиков", quote: "Около миллиона на YouTube — Minecraft с 2011 → «СП» → музыка. Клипы и гастроли собрали комьюнити — см. Spotify-био + About42", album: "YouTube 5opka", year: "2011–2026", color: "#ff0000" },
 ];
 
 export function PressWall() {
@@ -65,7 +60,6 @@ export function PressWall() {
         return;
       }
 
-      // GSAP entrance y24 stagger 0.12 — spec
       gsap.set(headerEl, { y: 24, opacity: 0 });
       gsap.set(cards, { y: 24, opacity: 0, scale: 0.97 });
       if (statsEl) gsap.set(statsEl, { y: 24, opacity: 0 });

@@ -121,7 +121,6 @@ export function NavGrid() {
     return () => ctx.revert();
   }, []);
 
-  // cursor-tracking glow + RGB-neon lift
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const card = e.currentTarget;

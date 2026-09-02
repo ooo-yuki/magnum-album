@@ -99,7 +99,6 @@ export function RouletteGame(){
   const [result, setResult] = useState<number|null>(null);
   const [lastWin, setLastWin] = useState<number>(0);
   const [won, setWon] = useState(false);
-  // Neon баланс + история — без LS (credentials:include)
   useEffect(()=>{
     fetch("/magnum/api/coins",{credentials:"include"}).then(r=>r.ok?r.json():null).then(j=>{
       const v=j?.balance??j?.coins; if(typeof v==="number"&&Number.isFinite(v)) setBalance(Math.round(v));
@@ -118,7 +117,6 @@ export function RouletteGame(){
   // win modal — без LS
   useEffect(()=>{ if(balance>=WIN_BALANCE && !won){ setWon(true); setShowModal(true); playBigWin(); burstConfetti(36); } },[balance, won]);
 
-  // GSAP entrance
   useEffect(()=>{
     if(!wrapRef.current) return;
     if(prefersReducedMotion()) { gsap.set(`.${styles.panel}`, { y:0, opacity:1, clearProps:"transform" }); return; }
@@ -126,7 +124,6 @@ export function RouletteGame(){
     return ()=>ctx.revert();
   },[]);
 
-  // GSAP spec: y24 stagger 0.12 ScrollTrigger batch + reduced-motion gate + gsap.context cleanup + hover y:-4 RGB glow
   useEffect(() => {
     const root: HTMLElement | null = document.querySelector<HTMLElement>("[data-gsap-root]") || (document.body as unknown as HTMLElement);
     if (!root) return;

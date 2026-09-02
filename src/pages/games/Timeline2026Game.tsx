@@ -41,9 +41,11 @@ interface Event {
 // ─── Expanded chronology: 15 events — full 2026 MAGNUM lore + Pushka interview 16.08.2025 yt-2026-09-01-2320 карточка 14-15 ────────────────
 const EVENTS: Event[] = [
   { id: "pushka", date: "16.08.2025", sortKey: 20250816, title: "Интервью ПУШКА — «сливки» + «Мои дети не будут великими как я» + 42.000 лайков вторая часть", detail: "ПУШКА 83:11 62k — сливки «такие сливки общества как я» + цитаты «Мои дети никогда не будут такими великими как я» / «Когда делаю рэп, женщины не должны быть рядом» + 42.000 лайков → вторая часть + плацкарт→купе→«Большой круизный лайнер в Тихом океане, весь бомонт планеты» — youtube.com/watch?v=_D_BZuqM_eE — 02:25/11:46/28:53/30:30 + лор богема/бомонт", emoji: "🎙️", yearHint: "Август 2025 — цитаты + лайнер" },
+  { id: "casino", date: "22.10.2025", sortKey: 20251022, title: "Казино — анти-казино «Не играйте в казино» · 42.000 баксов → 42.000 руб", detail: "ФУГА TV клип Казино 22.10.2025 — Вредные советы 16.10.2025 (8 треков: Новый P Diddy/Вампир/Слышь Братиш/Казино/Сосочка/Ладушки feat OTURRO/Даже если feat EVEN CUTE) — VTT 1159: «Депнул 42.000 баксов, вывел 42.000 руб. Бля, не играйте в казино. Прокручу за вас, лоты и сам себе всё заберу.» — анти-казино гимн, leitmotiv 42.000 — youtube.com/watch?v=zOpX0HYRZ8k", emoji: "🎰", yearHint: "Октябрь 2025 — анти-казино 42k" },
   { id: "slava-bossu", date: "11.12.2025", sortKey: 20251211, title: "СЛАВА БОССУ — нейро-клип SLAY DISS", detail: "ФУГА TV 3:07 370k 23k — outsideinclub + 3 нейрогения (komaclinical/zxseeczs/tenzedit) — music.thefence.me/slavabo55u", emoji: "👑", yearHint: "Декабрь 2025 — дисс" },
   { id: "presave", date: "01.01.2026", sortKey: 20260101, title: "Пресейв MAGNUM открыт", detail: "Bandlink The Fence — один клик и 5 пуль прилетят первыми в личку.", emoji: "🔗", yearHint: "Первый день года" },
   { id: "newyear", date: "12.01.2026", sortKey: 20260112, title: "Тизер MAGNUM в соцсетях", detail: "5opka дропнул чёрный постер с надписью MAGNUM • 5 пуль. Фанаты гадают.", emoji: "👁️", yearHint: "Январь — первые намёки" },
+  { id: "pozharniki", date: "02.04.2026", sortKey: 20260402, title: "Пожарники — концерт-огонь из колонок feat Илюха рэп (CLAY трек 4)", detail: "ФУГА TV 02.04.2026 — ВTT 1919: «На концерте огонь из колонок уже не сбежать никак. Вызывай пожарника на концерт из колонок — бум. Мы не дружим с головой. Слышите мигалок вой. Гидрант.» — Drumedy, CLAY 03.04.2026 — eX7hM-t_hLw", emoji: "🚒", yearHint: "02.04 — огонь из колонок + гидрант" },
   { id: "clay", date: "03.04.2026", sortKey: 20260403, title: "CLAY EP — 5 треков", detail: "РЗТ 73/100. Clowns Laugh At You — пасхалка на 10 лет вместе.", emoji: "🤡", yearHint: "Весна — глина" },
   { id: "gq", date: "18.04.2026", sortKey: 20260418, title: "GQ: интервью 5opka x MellSher", detail: "«Мы не делаем альбом — мы заряжаем обойму». 5 пуль как концепт.", emoji: "📰", yearHint: "После CLAY — пресса" },
   { id: "vpn", date: "15.05.2026", sortKey: 20260515, title: "VPN — второй сингл", detail: "Поп-вайб 2:23. Дежавю-поп от дуэта. Ротация РЗТ, 1.2M стримов за неделю.", emoji: "🔐", yearHint: "Май — сингл №2" },
@@ -62,6 +64,8 @@ const EVENTS: Event[] = [
 const LORE_FACTS: string[] = [
   "16.08.2025 ПУШКА 83:11 62k — подарок «сливки общества» + прогноз 42.000 просмотров — youtube.com/watch?v=_D_BZuqM_eE — таймкоды 02:25/11:46/28:53/30:30.",
   "16.08.2025 ПУШКА цитаты: «Мои дети никогда не будут такими великими как я» / «Когда делаю рэп, женщины не должны быть рядом» + 42.000 лайков → вторая часть + плацкарт→купе→«Большой круизный лайнер в Тихом океане, весь бомонт планеты» — лор богема/бомонт, VTT 00:10/00:40/01:22.",
+  "22.10.2025 Казино анти-казино: «Депнул 42.000 баксов, вывел 42.000 руб. Бля, не играйте в казино.» — Вредные советы 16.10 (8 треков) — leitmotiv 42.000 баксов→руб, «Прокручу за вас, лоты и сам себе всё заберу» — youtube.com/watch?v=zOpX0HYRZ8k — VTT 1159, transcript:true.",
+  "02.04.2026 Пожарники — концерт-огонь из колонок feat Илюха рэп (CLAY трек 4, Drumedy, релиз CLAY 03.04.2026) — ВTT 1919: «На концерте огонь из колонок уже не сбежать никак. Вызывай пожарника на концерт из колонок — бум. Мы не дружим с головой. Слышите мигалок вой. Гидрант.» + кроссовер «Это Илюха легенда легенд это Кирюха легенда легенд» — youtube.com/watch?v=eX7hM-t_hLw — 02.04.2026 топ-20 ФУГА TV.",
   "42 — число движения: 42 участника, 42 винила, 42 клетки змейки.",
   "CLAY — глина: 5opka лепил биты как из глины, 5 треков за 5 дней.",
   "VPN — про связь сквозь стены, как будто сигнал проходит через запреты.",
@@ -177,7 +181,6 @@ export function Timeline2026Game() {
   const [selected, setSelected] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<"ok" | "bad" | null>(null);
   const [best, setBest] = useState<number>(0);
-  // Neon best — progress in magnum_game_scores (SPEC §7), без LS
   useEffect(()=>{ fetch("/magnum/api/games/my",{credentials:"include"}).then(r=>r.ok?r.json():null).then(j=>{ const arr=j?.scores as {game:string;score:number}[]|undefined; if(!arr) return; let m=0; for(const s of arr) if(s.game==="timeline"&&s.score>m) m=s.score; if(m) setBest(m); }).catch(()=>{}); },[]);
   const [streak, setStreak] = useState(0);
   const [hints, setHints] = useState(3);
@@ -247,7 +250,6 @@ export function Timeline2026Game() {
     if (feedback) return;
     setSelected(id);
     if (!muted) playSelect();
-    // GSAP select pop
     if (!prefersReducedMotion()) {
       const el = document.querySelector<HTMLElement>(`[data-card-id="${id}"]`);
       if (el) gsap.fromTo(el, { scale: 0.97 }, { scale: 1, duration: 0.22, ease: "back.out(1.5)", overwrite: true });
@@ -351,7 +353,6 @@ export function Timeline2026Game() {
     return () => window.removeEventListener("keydown", onKey);
   }, [state, cards, placed, placeCard, pickCard, useHint]);
 
-  // GSAP entrance
   useEffect(() => {
     const root: HTMLElement | null = document.querySelector<HTMLElement>("[data-gsap-root]") || (document.body as unknown as HTMLElement);
     if (!root) return;

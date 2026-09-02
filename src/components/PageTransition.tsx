@@ -11,12 +11,10 @@ export function PageTransition({ children }: { children: React.ReactNode }) {
       gsap.set(el, { opacity: 1, y: 0, clearProps: "filter,transform" });
       return;
     }
-    // white-screen safe: set() first, then to() — never from()/fromTo() in IIFE bundle
     const ctx = gsap.context(() => {
       gsap.set(el, { opacity: 0, y: 10, filter: "blur(6px)" });
       gsap.to(el, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.46, ease: "power2.out", overwrite: true });
     }, ref);
-    // failsafe: if GSAP stalls, force visible after 800ms
     const t = window.setTimeout(() => gsap.set(el, { opacity: 1, y: 0, filter: "blur(0px)", clearProps: "filter" }), 800);
     return () => { clearTimeout(t); ctx.revert(); };
   }, []);

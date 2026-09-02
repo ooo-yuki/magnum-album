@@ -2,21 +2,7 @@ import { useState, useRef, useEffect, useMemo, useCallback, memo } from "react";
 import gsap from "gsap";
 import styles from "./AiBot.module.css";
 
-/**
- * БРАТ-БОТ 42 — AI-помощник пресейва на базе Xiaomi MiMo v2.5 (vision).
- * Пользователь кидает скриншот "я поставил пресейв" → бот хвалит.
- * Не поставил / нет скрина → бот всеми способами уговаривает поставить.
- *
- * API вызывается через прокси /magnum/api/ai (Bun.serve в server.ts),
- * ключ не светится в клиентском бандле.
- *
- * Perf polish:
- * - loading="lazy" для аватара и скринов
- * - debounce на input (250ms) — снижает ререндеры при быстром вводе
- * - memo для истории сообщений + useMemo для api history
- * - useCallback для всех хэндлеров
- * - memoized subcomponents (Avatar, MessageRow, MessageList)
- */
+ 
 
 const PRESAVE_URL = "https://music.thefence.me/psmagnum";
 
@@ -42,29 +28,35 @@ const NAGS = [
 
 const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
-// P2-4: GSAP verified flash — FRAME MAGMA GOLD: conic-magma spin 3s + shadow 0 0 16 magma #ff4500 + scale spring glow pulse 2s
-export const MAGMA_GOLD_STYLE = "conic-gradient(from 0deg,#ff4500,#ff8c00,#ffd700,#ff4500)";
-export const MAGMA_SHADOW = "0 0 16px #ff4500";
-export const MAGMA_SPIN = "magmaSpin 3s linear infinite";
+export const NEON_GOLD_STYLE = "conic-gradient(from 0deg,#ffd700,#ffcc00,#ffb700,#ffd700)";
+export const NEON_GOLD_SHADOW = "0 0 16px #ffd700";
+export const NEON_GOLD_SPIN = "goldSpin 3s linear infinite";
+export const GOLD_STYLE = NEON_GOLD_STYLE;
+export const GOLD_SHADOW = NEON_GOLD_SHADOW;
+export const GOLD_SPIN = NEON_GOLD_SPIN;
+export const CONIC_GOLD_STYLE = NEON_GOLD_STYLE;
+export const CONIC_GOLD_SHADOW = NEON_GOLD_SHADOW;
+// legacy magma kept for backward compat — единый источник src/lib/cosmetics.ts
+export { MAGMA_GOLD_STYLE, MAGMA_SHADOW, MAGMA_SPIN } from "../lib/cosmetics";
 function flashVerified(el: HTMLElement | null) {
   if (!el) return;
   if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  // conic-magma spin 3s + lava glow #ff4500 + shadow 0 0 16 magma #ff4500
-  gsap.fromTo(el, { scale: 0.85, boxShadow: "0 0 0 rgba(255,69,0,0)" }, { scale: 1, boxShadow: "0 0 16px #ff4500, 0 0 16px #ff4500", duration: 0.45, ease: "back.out(1.6)" });
-  // glow pulse 2s spring
-  gsap.to(el, { scale: 1.04, boxShadow: "0 0 16px #ff4500, 0 0 28px rgba(255,69,0,0.45)", duration: 0.35, yoyo: true, repeat: 1, ease: "power2.out", delay: 0.45 });
-  // pulse 2s loop for magma frame — scale spring + glow pulse 2s
-  gsap.to(el, { scale: 1.02, duration: 1, yoyo: true, repeat: 1, ease: "sine.inOut", delay: 1.2 });
+  // conic-gold spin 3s + shadow 0 0 16 gold + glow pulse 2s — reduced-motion gate above
+  gsap.fromTo(el, { scale: 0.85, boxShadow: "0 0 0 rgba(255,215,0,0)" }, { scale: 1, boxShadow: "0 0 16px #ffd700, 0 0 16px #ffd700", duration: 0.45, ease: "back.out(1.6)" });
+  // glow pulse 2s spring — gold
+  gsap.to(el, { scale: 1.04, boxShadow: "0 0 16px #ffd700, 0 0 28px rgba(255,215,0,0.45)", duration: 0.35, yoyo: true, repeat: 1, ease: "power2.out", delay: 0.45 });
+  // pulse 2s loop — scale spring + glow pulse 2s
+  gsap.to(el, { scale: 1.02, boxShadow: "0 0 16px #ffd700, 0 0 22px rgba(255,215,0,0.35)", duration: 1, yoyo: true, repeat: 1, ease: "sine.inOut", delay: 1.2 });
 }
-// FRAME MAGMA GOLD — mimo-v2.5 vision heuristic: засчитан/легенда без "не вижу" — Neon magnum_frames + LS magnum-frame-verified=1 + frame-date ISO + conic-magma #ff4500
-function isMagmaVerified(reply: string): boolean {
+function isNeonGoldVerified(reply: string): boolean {
   const lower = reply.toLowerCase();
   const hasPositive = /засчитан|легенда/.test(lower);
   const hasNegative = /не\s*виж|не\s*засчитан|не\s*видно|не вижу|не вижу пресейв/.test(lower);
   return hasPositive && !hasNegative;
 }
-function isVolcanoVerified(reply: string): boolean { return isMagmaVerified(reply); }
-function isGoldVerified(reply: string): boolean { return isMagmaVerified(reply); }
+function isMagmaVerified(reply: string): boolean { return isNeonGoldVerified(reply); }
+function isVolcanoVerified(reply: string): boolean { return isNeonGoldVerified(reply); }
+function isGoldVerified(reply: string): boolean { return isNeonGoldVerified(reply); }
 
 const SHOP_SKINS_FOR_BOT: Array<{id:string;name:string;price:number;emoji:string}> = [
   {id:"mops",name:"Мопс 42",price:42,emoji:"🐗"},
@@ -91,7 +83,6 @@ async function getShopRecommendation(): Promise<string> {
     const cr = await fetch("/magnum/api/coins",{credentials:"include"});
     if(cr.ok){ const d=await cr.json() as {balance?:number;coins?:number}; balance = Number(d.balance ?? d.coins ?? 0); }
   }catch(e){ console.warn("[AiBot coins] failed", e); }
-  // balance только из Neon /magnum/api/coins — без localStorage (консистентность мультитаб)
   try{
     const ir = await fetch("/magnum/api/shop/inventory",{credentials:"include"});
     if(ir.ok){
@@ -275,7 +266,6 @@ export function AiBot() {
     });
   }, []);
 
-  // сжатие скрина до max 1280px + JPEG — чтобы влезть в лимиты MiMo vision
   const compressImage = useCallback((dataUrl: string): Promise<string> => {
     return new Promise((res) => {
       const img = new Image();
@@ -335,12 +325,10 @@ export function AiBot() {
       try {
         const reply = await callAi(text, image);
         setMessages((m) => [...m, { role: "bot", text: reply }]);
-        // FRAME MAGMA GOLD — mimo-v2.5 vision → засчитан/легенда без "не вижу" → Neon magnum_frames + magnum-frame-verified=1 + frame-date ISO + conic-magma spin 3s #ff4500 + shadow 0 0 16 magma + GSAP scale spring glow pulse 2s + cross -42 glacier/duel
         if (image) {
-          const isVerifiedHeuristic = isMagmaVerified(reply);
+          const isVerifiedHeuristic = isNeonGoldVerified(reply);
           const verified = isVerifiedHeuristic;
           const frameDateIso = new Date().toISOString();
-          if (verified) { try { localStorage.setItem("magnum-frame-verified","1"); localStorage.setItem("magnum-frame-date", frameDateIso); } catch {} }
           void fetch("/magnum/api/frame/verify", {
             method: "POST",
             credentials: "include",
@@ -351,17 +339,16 @@ export function AiBot() {
             const el = document.querySelector("[data-verified-badge]") as HTMLElement | null;
             if (verified) flashVerified(el);
             if (verified && el) {
-              // conic-magma spin 3s + shadow 0 0 16 magma #ff4500 + lava glow
-              try { el.style.background = MAGMA_GOLD_STYLE; el.style.boxShadow = MAGMA_SHADOW + ", " + MAGMA_SHADOW; el.style.animation = MAGMA_SPIN; } catch {}
+              // conic-gold spin 3s + shadow 0 0 16 gold #ffd700 + glow
+              try { el.style.background = NEON_GOLD_STYLE; el.style.boxShadow = NEON_GOLD_SHADOW + ", " + NEON_GOLD_SHADOW; el.style.animation = NEON_GOLD_SPIN; } catch {}
             }
           }, 60);
-        } else if (isMagmaVerified(reply)) {
+        } else if (isNeonGoldVerified(reply)) {
           const frameDateIso = new Date().toISOString();
-          try { localStorage.setItem("magnum-frame-verified","1"); localStorage.setItem("magnum-frame-date", frameDateIso); } catch {}
           window.setTimeout(() => {
             const el = document.querySelector("[data-verified-badge]") as HTMLElement | null;
             flashVerified(el);
-            try { if (el) { el.style.background = MAGMA_GOLD_STYLE; el.style.boxShadow = MAGMA_SHADOW + ", " + MAGMA_SHADOW; el.style.animation = MAGMA_SPIN; } } catch {}
+            try { if (el) { el.style.background = NEON_GOLD_STYLE; el.style.boxShadow = NEON_GOLD_SHADOW + ", " + NEON_GOLD_SHADOW; el.style.animation = NEON_GOLD_SPIN; } } catch {}
             try { void fetch("/magnum/api/frame/verify", { method: "POST", credentials: "include", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ verified: true, frame_date: frameDateIso, frameDate: frameDateIso }) }); } catch {}
           }, 50);
         }
@@ -369,17 +356,15 @@ export function AiBot() {
         const fallback = image
           ? pick(PRAISES) + " (бот офлайн, но скрин я запомнил)"
           : pick(NAGS) + " (бот офлайн, но правда не офлайн)";
-        // offline fallback тоже верифицирует если был скрин — FRAME MAGMA GOLD offline = засчитан (Neon + LS magnum-frame-verified=1 + frame-date ISO + conic-magma #ff4500)
         if (image) {
           const frameDateIso = new Date().toISOString();
-          try { localStorage.setItem("magnum-frame-verified","1"); localStorage.setItem("magnum-frame-date", frameDateIso); } catch {}
           void fetch("/magnum/api/frame/verify", {
             method: "POST",
             credentials: "include",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ verified: true, frame_date: frameDateIso, frameDate: frameDateIso }),
           }).catch(()=>{});
-          window.setTimeout(()=>{ const el=document.querySelector("[data-verified-badge]") as HTMLElement|null; flashVerified(el); try { if(el){ el.style.background=MAGMA_GOLD_STYLE; el.style.boxShadow=MAGMA_SHADOW+", "+MAGMA_SHADOW; el.style.animation=MAGMA_SPIN; } }catch{} }, 50);
+          window.setTimeout(()=>{ const el=document.querySelector("[data-verified-badge]") as HTMLElement|null; flashVerified(el); try { if(el){ el.style.background=NEON_GOLD_STYLE; el.style.boxShadow=NEON_GOLD_SHADOW+", "+NEON_GOLD_SHADOW; el.style.animation=NEON_GOLD_SPIN; } }catch{} }, 50);
         }
         setMessages((m) => [...m, { role: "bot", text: fallback }]);
       } finally {

@@ -23,6 +23,8 @@ export function getABVariant(): ABVariant {
 
 export function trackPresaveClick(variant?: string, url?: string): void {
   try { localStorage.setItem("presave_done", "1"); } catch {}
+  try { sessionStorage.setItem("magnum:post-presave-bridge-at", String(Date.now())); } catch {}
+  try { window.dispatchEvent(new CustomEvent("magnum:presave")); } catch {}
   const v = variant ?? getABVariant();
   fetch("/magnum/api/presave/click", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: url ?? "https://music.thefence.me/psmagnum", ts: Date.now(), variant: v }) }).catch(() => {});
 }
@@ -36,6 +38,8 @@ export function usePresaveTracker() {
       const elVariant = (a as HTMLElement).getAttribute("data-variant");
       const variant = elVariant === "return-popup" ? "return-popup" : getABVariant();
       try { localStorage.setItem("presave_done", "1"); } catch {}
+      try { sessionStorage.setItem("magnum:post-presave-bridge-at", String(Date.now())); } catch {}
+      try { window.dispatchEvent(new CustomEvent("magnum:presave")); } catch {}
       fetch("/magnum/api/presave/click", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: (a as HTMLAnchorElement).href, ts: Date.now(), variant }) }).catch(() => {});
     };
     document.addEventListener("click", handler);

@@ -30,7 +30,6 @@ export function ExitIntentPresave() {
     setVisible(true);
   }, [visible]);
 
-  // 45s delay + exit-intent (mouseleave top) only on /magnum, gated by localStorage
   useEffect(() => {
     if (!isMagnumHome) return;
     if (isPresaved()) return;
@@ -103,6 +102,8 @@ export function ExitIntentPresave() {
 
   const handlePresave = useCallback(() => {
     try { localStorage.setItem("presave_done", "1"); } catch {}
+    try { sessionStorage.setItem("magnum:post-presave-bridge-at", String(Date.now())); } catch {}
+    try { window.dispatchEvent(new CustomEvent("magnum:presave")); } catch {}
     fetch("/magnum/api/presave/click", {
       method: "POST",
       credentials: "include",

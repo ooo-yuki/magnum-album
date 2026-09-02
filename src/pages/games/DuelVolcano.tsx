@@ -21,6 +21,9 @@ export function DuelVolcano(){
   const [lb,setLb]=useState<Array<{player:string;score:number}>>([]);
   const [msg,setMsg]=useState<string|null>(null);
   const [eruption,setEruption]=useState(false);
+  const [me,setMe]=useState<{id:number;username:string}|null>(null);
+  // hot-seat: WS не поднялся — играем сами с собой, это не PvP и UI обязан это показать
+  const [demoMode,setDemoMode]=useState(false);
   const wsRef=useRef<DuelSocket|null>(null);
   const pageRef=useRef<HTMLDivElement>(null);
   const stageRef=useRef<HTMLDivElement>(null);
@@ -39,7 +42,9 @@ export function DuelVolcano(){
   },[]);
   useEffect(()=>{ fetchLb(); },[fetchLb]);
 
-  // GSAP LobbyGrid stagger y24 0.12 + gsap.context
+  // Auth gate
+  useEffect(()=>{ fetch("/magnum/api/auth/me",{credentials:"include"}).then(r=>r.ok?r.json():null).then(j=>{ if(j?.user) setMe(j.user); }).catch(()=>{}); },[]);
+
   useEffect(()=>{
     if(!pageRef.current) return;
     const prefers=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -53,6 +58,7 @@ export function DuelVolcano(){
   },[]);
 
   const connect=useCallback((joinCode?:string)=>{
+    if(!me){ setMsg("Войди, братуха — дуэли только для залогиненных"); window.dispatchEvent(new CustomEvent("magnum:need-auth")); return; }
     const ds=new DuelSocket((m:any)=>{
       if(!m) return;
       if(m.type==="room" && m.room){ setRoom(m.room); }
@@ -80,8 +86,9 @@ export function DuelVolcano(){
       if(m.type==="overheat"){ setOverheat(true); setTimeout(()=>setOverheat(false),1500); }
       if(m.type==="wager"){ if(m.wager!=null) setRoom(r=> r?{...r,wager:Number(m.wager)}:r); }
     });
+    ds.onHotSeat=(on)=>{ setDemoMode(on); if(on) setMsg("ДЕМО: соперник не подключился — счёт локальный, в рейтинг не идёт"); };
     wsRef.current=ds; ds.connect(joinCode);
-  },[fetchLb,wager]);
+  },[fetchLb,wager,me]);
 
   useEffect(()=>{ connect(); return()=>wsRef.current?.close(); },[connect]);
 
@@ -159,6 +166,11 @@ export function DuelVolcano(){
       <h1 className={styles.title}>Вулкан-дуэль 2-4 • x11 • eruption</h1>
       <p style={{color:"rgba(255,255,255,.6)",marginTop:6}}>10с кликер • интервал &lt;0.12с +7% капа x11 (1.07→1.77) • x11→ eruption 2.5x + fill 0→100% 0.12s + shake x±9 0.08s • удержание x11 &gt;4с → overheat 1.5с score*0.35 • wager 0/42/142/420 → win +wager*2 +42 ELO • сезон 7дн</p>
     </div>
+    {demoMode && (
+      <div role="status" style={{margin:"10px 0",padding:"10px 12px",borderRadius:12,background:"rgba(255,87,34,.12)",border:"1px solid rgba(255,87,34,.42)",color:"#ffb599",fontSize:13,fontWeight:700}}>
+        ДЕМО-РЕЖИМ — соединение с соперником не установлено. Ты играешь сам с собой: счёт локальный, ELO и ставки не начисляются.
+      </div>
+    )}
     <div className={styles.grid}>
       <div className={styles.card}>
         <strong>Ставка</strong>

@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
+import { CosmeticAvatar, cosmeticName, type LeaderCosmetics } from "./CosmeticBadge";
 
 const DISMISS_KEY = "duel-cta-dismissed";
 const DISMISS_MS = 24 * 60 * 60 * 1000;
@@ -113,7 +114,7 @@ export function DuelCTA() {
 }
 
 export function DuelTeaser() {
-  const [top, setTop] = useState<Array<{ player: string; score: number; avatar?: string | null }>>([]);
+  const [top, setTop] = useState<Array<{ player: string; score: number; avatar?: string | null } & LeaderCosmetics>>([]);
   useEffect(() => {
     fetch("/magnum/api/duel42/leaderboard?limit=3", { credentials: "include" })
       .then(r => r.ok ? r.json() : null)
@@ -151,24 +152,28 @@ export function DuelTeaser() {
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {(hasReal ? top : [{ player: "?" }, { player: "?" }, { player: "?" }]).slice(0, 3).map((p, i) => (
-            <div
-              key={i}
-              style={{
-                width: 36, height: 36, borderRadius: 999,
-                background: i === 0 ? "linear-gradient(135deg,#ffcc00,#ff6b35)" : i === 1 ? "linear-gradient(135deg,#a8b0c0,#6b7280)" : "linear-gradient(135deg,#cd7f32,#8b4513)",
-                border: i === 0 ? "2px solid #ffcc00" : "1px solid rgba(255,255,255,0.18)",
-                boxShadow: i === 0 ? "0 0 14px rgba(255,204,0,0.55), 0 0 0 1px rgba(255,204,0,0.22)" : "0 4px 12px rgba(0,0,0,0.3)",
-                display: "grid", placeItems: "center", fontSize: 11, fontWeight: 800, color: "#fff",
-                overflow: "hidden",
-              }}
-              title={("player" in p ? (p as { player: string }).player : "?") + (i === 0 ? " 👑 volcano-crown" : "")}
-            >
-              {hasReal && (p as { avatar?: string | null }).avatar
-                ? <img src={(p as { avatar?: string | null }).avatar!} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" as const }} />
-                : <span>{i === 0 ? "👑" : i === 1 ? "🥈" : "🥉"}</span>}
-            </div>
-          ))}
+          {(hasReal ? top : [{ player: "?" }, { player: "?" }, { player: "?" }]).slice(0, 3).map((p, i) => {
+            const row = p as { player: string; avatar?: string | null } & LeaderCosmetics;
+            const medal = i === 0 ? "👑" : i === 1 ? "🥈" : "🥉";
+            return (
+              <div
+                key={i}
+                style={{
+                  width: 36, height: 36, borderRadius: 999,
+                  background: i === 0 ? "linear-gradient(135deg,#ffcc00,#ff6b35)" : i === 1 ? "linear-gradient(135deg,#a8b0c0,#6b7280)" : "linear-gradient(135deg,#cd7f32,#8b4513)",
+                  border: i === 0 ? "2px solid #ffcc00" : "1px solid rgba(255,255,255,0.18)",
+                  boxShadow: i === 0 ? "0 0 14px rgba(255,204,0,0.55), 0 0 0 1px rgba(255,204,0,0.22)" : "0 4px 12px rgba(0,0,0,0.3)",
+                  display: "grid", placeItems: "center", fontSize: 11, fontWeight: 800, color: "#fff",
+                  overflow: "hidden",
+                }}
+                title={[row.player ?? "?", cosmeticName(row.title), cosmeticName(row.frame), i === 0 ? "👑 volcano-crown" : null].filter(Boolean).join(" · ")}
+              >
+                {hasReal
+                  ? <CosmeticAvatar avatar={row.avatar} frame={row.frame} size={32} fallback={medal} />
+                  : <span>{medal}</span>}
+              </div>
+            );
+          })}
           {!hasReal && (
             <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "rgba(255,255,255,0.62)", marginLeft: 4 }}>
               ты можешь быть первым

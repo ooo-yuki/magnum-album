@@ -57,6 +57,8 @@ export function StickyPresaveBar() {
 
   const handleClick = useCallback(() => {
     try { localStorage.setItem("presave_done", "1"); } catch {}
+    try { sessionStorage.setItem("magnum:post-presave-bridge-at", String(Date.now())); } catch {}
+    try { window.dispatchEvent(new CustomEvent("magnum:presave")); } catch {}
     // explicit beacon — presaveTracker also catches via delegated click on href, but double-safe
     fetch("/magnum/api/presave/click", {
       method: "POST",

@@ -5,14 +5,7 @@ import styles from "./Timeline.module.css";
 
 gsap.registerPlugin(ScrollTrigger);
 
-/**
- * MAGNUM — Timeline (GSAP 24/7)
- * - ScrollTrigger scrub для spine (progress scaleY)
- * - stagger 0.12 для этапов (cards batch)
- * - parallax для точек (dots yPercent + scale scrub)
- * - reduced-motion gate (prefers-reduced-motion: reduce)
- * - полный cleanup через gsap.context().revert()
- */
+ 
 
 type Milestone = {
   date: string;
@@ -114,7 +107,6 @@ export function Timeline() {
     const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
     const isReduced = mql.matches;
 
-    // gsap.context scopes all ScrollTriggers for clean revert
     const ctx = gsap.context(() => {
       // ── head intro ───────────────────────────────────────────────
       if (headRef.current) {

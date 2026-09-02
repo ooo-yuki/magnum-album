@@ -10,7 +10,6 @@ export function ArtistsPage() {
   const timelineRef = useRef<HTMLDivElement>(null);
   const mediaRef = useRef<HTMLDivElement>(null);
 
-  // ── GSAP entrance y24 stagger 0.12 • reduced-motion • context cleanup
   useEffect(() => {
     if (!containerRef.current) return;
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;

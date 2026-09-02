@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { subscribeMe, type MeUser } from "../lib/authMe";
+import { CosmeticAvatar, CosmeticTitle, cosmeticBannerStyle, type LeaderCosmetics } from "./CosmeticBadge";
 
-type ChatMsg = { id: number; body: string; replyTo: number | null; created_at: string; username: string; avatar: string | null };
+type ChatMsg = { id: number; body: string; replyTo: number | null; created_at: string; username: string; avatar: string | null } & LeaderCosmetics;
 
 export function ChatPanel() {
   const [me, setMe] = useState<MeUser>(null);
@@ -79,10 +80,12 @@ export function ChatPanel() {
 
   return (
     <div style={{ borderRadius: 16, background: "rgba(18,18,22,.86)", border: "1px solid rgba(255,255,255,.08)", overflow: "hidden", display: "flex", flexDirection: "column", maxHeight: 520 }}>
-      <div style={{ padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,.06)", background: "rgba(255,255,255,.02)" }}>
+      <div style={{ padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,.06)", background: "rgba(255,255,255,.02)", flexWrap: "wrap", gap: 8 }}>
         <strong style={{ color: "#fff", fontSize: 13, letterSpacing: ".02em" }}>Чат 42 — общий</strong>
-        <span data-testid="chat-follow-badge" style={{ fontSize: 10, fontWeight: 900, letterSpacing: "0.06em", color: "#ffcc00", background: "rgba(255,204,0,0.12)", border: "1px solid rgba(255,204,0,0.22)", padding: "4px 8px", borderRadius: 999, animation: followBusy ? "none" : "chatBadgePulse 1.6s ease-in-out infinite" }}>Фоллови братух — взаимка</span>
-        <span style={{ fontSize: 11, color: "rgba(255,255,255,.45)" }}>{messages.length}/30 · авто 5с</span>
+        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+          <span data-testid="chat-follow-badge" style={{ fontSize: 10, fontWeight: 900, letterSpacing: "0.06em", color: "#ffcc00", background: "rgba(255,204,0,0.12)", border: "1px solid rgba(255,204,0,0.22)", padding: "4px 8px", borderRadius: 999, animation: followBusy ? "none" : "chatBadgePulse 1.6s ease-in-out infinite" }}>Фоллови братух — жми ник → подписка</span>
+          <span style={{ fontSize: 11, color: "rgba(255,255,255,.45)" }}>{messages.length}/30 · авто 5с</span>
+        </div>
       </div>
       <style>{`@keyframes chatBadgePulse{0%,100%{box-shadow:0 0 10px rgba(255,204,0,0.12)}50%{box-shadow:0 0 18px rgba(255,204,0,0.22)}} @keyframes followPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.02)}}`}</style>
 
@@ -90,23 +93,37 @@ export function ChatPanel() {
         {loading && <div style={{ color: "rgba(255,255,255,.45)", fontSize: 12, textAlign: "center", padding: 16 }}>Загрузка чата…</div>}
         {!loading && messages.length === 0 && <div style={{ color: "rgba(255,255,255,.35)", fontSize: 12, textAlign: "center", padding: 16 }}>Пока пусто — напиши первым, братуха 42</div>}
         {!loading && messages.map(m => (
-          <div key={m.id} style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "7px 8px", borderRadius: 10, background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.05)" }}>
-            <span style={{ width: 26, height: 26, borderRadius: 999, display: "grid", placeItems: "center", fontSize: 12, background: "rgba(255,204,0,.14)", border: "1px solid rgba(255,204,0,.18)", flexShrink: 0 }}>{m.avatar ? "👤" : "🧑‍🎤"}</span>
+          <div key={m.id} style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "7px 8px", borderRadius: 10, background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.05)", ...cosmeticBannerStyle(m.banner) }}>
+            <span style={{ flexShrink: 0 }}><CosmeticAvatar avatar={m.avatar} frame={m.frame} size={26} fallback="🧑‍🎤" title={m.username} /></span>
             <div style={{ minWidth: 0, flex: 1 }}>
               <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
                 <button
                   type="button"
                   data-testid={`chat-nick-${m.username}`}
                   onClick={() => onNickClick(m.username)}
-                  title={me ? `Подписаться на @${m.username}` : "Войди, братуха"}
+                  title={me ? `Подписаться на @${m.username} — взаимка` : "Войди, братуха"}
                   style={{
-                    fontWeight: 800, fontSize: 12, color: "#ffcc00", background: "transparent", border: "1px solid transparent",
-                    padding: "1px 5px", borderRadius: 999, cursor: "pointer", maxWidth: "40vw", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                    fontWeight: 800, fontSize: 12, color: "#ffcc00", background: "rgba(255,204,0,0.10)", border: "1px solid rgba(255,204,0,0.22)",
+                    padding: "1px 6px", borderRadius: 999, cursor: "pointer", maxWidth: "40vw", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                   }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,204,0,.22)"; (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,204,0,.08)"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "transparent"; (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,204,0,.18)"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,204,0,.10)"; }}
                 >
                   @{m.username}
+                </button>
+                <CosmeticTitle title={m.title} />
+                <button
+                  type="button"
+                  data-testid={`chat-follow-${m.username}`}
+                  onClick={() => onNickClick(m.username)}
+                  disabled={!!followBusy}
+                  style={{
+                    fontSize: 10, fontWeight: 900, padding: "2px 7px", borderRadius: 999, cursor: "pointer",
+                    background: "#ffcc00", color: "#0a0a0a", border: "1px solid #ffcc00", opacity: followBusy ? 0.6 : 1,
+                    letterSpacing: "0.02em",
+                  }}
+                >
+                  + Фоллови
                 </button>
                 <Link to={`/magnum/u/${encodeURIComponent(m.username)}`} style={{ fontSize: 11, color: "rgba(125,216,255,.7)", textDecoration: "none" }}>профиль</Link>
                 <span style={{ fontSize: 11, color: "rgba(255,255,255,.32)" }}>{new Date(m.created_at).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}</span>

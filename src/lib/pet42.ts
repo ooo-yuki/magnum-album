@@ -1,4 +1,3 @@
-// PET 42 — constants (single source) — server.ts + Pet42Page.tsx import from here
 export const PET_STAGES = ["яйцо", "личинка", "медуза", "титан"] as const;
 export type PetStage = 0 | 1 | 2 | 3;
 export const PET_STAGE_EMOJI: Record<number, string> = { 0: "🥚", 1: "🐛", 2: "🪼", 3: "🐉" };

@@ -41,7 +41,6 @@ export function Map42Page(){
 
   useEffect(()=>{ void fetchProgress(); }, [fetchProgress]);
 
-  // GSAP: map path draw 1.2s power2.inOut + point pulse + reduced-motion gate
   useEffect(()=>{
     if(!mapRef.current) return;
     if(prefersReduced()) return;
@@ -112,7 +111,6 @@ export function Map42Page(){
         setActivePoint(null);
         if(j.completed===5){
           setConfetti(true); window.setTimeout(()=>setConfetti(false), 2800);
-          // 90 конфетти via GSAP/dom
           if(!prefersReduced()){
             const layer = document.getElementById("map-confetti");
             if(layer){

@@ -1,5 +1,4 @@
 // chronicle42.ts — ХРОНИКИ 42 — 12 глав 2019→2026
-// Single source для Chronicle42Page.tsx и server.ts
 
 export type ChronicleTier = "free" | "xp142" | "xp420_eco" | "xp1420_duel";
 export type ChronicleTrack = "clay" | "vpn" | "nova" | "magnum" | null;

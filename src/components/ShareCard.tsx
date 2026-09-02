@@ -319,7 +319,6 @@ export function ShareCardPage() {
 
   useEffect(() => { void render(); }, [render]);
 
-  // GSAP entrance
   useEffect(() => {
     if (!wrapRef.current || !ready) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;

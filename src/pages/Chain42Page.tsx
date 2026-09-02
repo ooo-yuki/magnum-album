@@ -116,7 +116,6 @@ function ChainMainView(){
     return ()=> window.clearInterval(id);
   },[chain, broken, remainMs]);
 
-  // GSAP chain-link draw 0.9s + stagger y16 0.07
   useEffect(()=>{
     if(!linksRef.current) return;
     if(window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -129,7 +128,6 @@ function ChainMainView(){
     return ()=> ctx.revert();
   },[links]);
 
-  // GSAP feed slide x24 0.3
   useEffect(()=>{
     if(!feedRef.current) return;
     if(window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -142,7 +140,6 @@ function ChainMainView(){
     return ()=> ctx.revert();
   },[feed]);
 
-  // pulse 1.08 on active chain -> via CSS .pulse already, but GSAP pulse loop alternative
   // confetti 120 on +1 звено
   function spawnConfetti(count=120){
     if(!wrapRef.current) return;

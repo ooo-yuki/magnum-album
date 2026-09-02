@@ -1,13 +1,12 @@
-// MAGNUM App — perf: 16 games + 14 pages code-split via React.lazy + Suspense
-// Fallback: GameFallback; vendor chunk split in build.ts
 import { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Layout } from "./components/Layout";
-import { HomePage } from "./pages/HomePage";
 import { ReturnPopup } from "./components/ReturnPopup";
 
 // perf 14:11 — 9 heavy pages lazy (Gallery 441KB + Recaps 277KB etc) → main 1037→509KB
 // perf 15:06 — ещё 5 eager pages → lazy: About42/Track/LastFit/Game/GamesHub (~68KB) → main 528→~460KB
+// perf 2026-09-02 — HomePage → lazy (eager HomePage держал ~35KB в main) → main 497→~462KB
+const HomePage = lazy(() => import("./pages/HomePage").then(m => ({ default: m.HomePage })));
 const DiscographyPage = lazy(() => import("./pages/DiscographyPage").then(m => ({ default: m.DiscographyPage })));
 const ArtistsPage = lazy(() => import("./pages/ArtistsPage").then(m => ({ default: m.ArtistsPage })));
 const ShopPage = lazy(() => import("./pages/ShopPage").then(m => ({ default: m.ShopPage })));
@@ -28,12 +27,16 @@ const Flow42Page = lazy(() => import("./pages/Flow42Page").then(m => ({ default:
 const Chain42Page = lazy(() => import("./pages/Chain42Page").then(m => ({ default: m.Chain42Page})));
 // opt 15:06 — 5 оставшихся eager страниц → lazy (тяжёлые чанки >50KB каждый не нужен на /)
 const Pass42Page = lazy(() => import("./pages/Pass42Page").then(m => ({ default: m.Pass42Page })));
+const Chronicle42Page = lazy(() => import("./pages/Chronicle42Page").then(m => ({ default: m.Chronicle42Page })));
+const Crash42Page = lazy(() => import("./pages/Crash42Page").then(m => ({ default: m.Crash42Page })));
 const About42Page = lazy(() => import("./pages/About42Page").then(m => ({ default: m.About42Page })));
 const TrackPage = lazy(() => import("./pages/TrackPage").then(m => ({ default: m.TrackPage })));
 const LastFitPage = lazy(() => import("./pages/LastFitPage").then(m => ({ default: m.LastFitPage })));
 const GamePage = lazy(() => import("./pages/GamePage").then(m => ({ default: m.GamePage })));
 const GamesHub = lazy(() => import("./pages/GamesHub").then(m => ({ default: m.GamesHub })));
 const Studio42Page = lazy(() => import("./pages/Studio42Page").then(m => ({ default: m.Studio42Page })));
+const Radio42Page = lazy(() => import("./pages/Radio42Page").then(m => ({ default: m.Radio42Page })));
+const ClipBattlePage = lazy(() => import("./pages/ClipBattlePage").then(m => ({ default: m.ClipBattlePage })));
 const ShareCardPage = lazy(() => import("./components/ShareCard").then(m => ({ default: m.ShareCardPage })));
 
 function PageFallback() {
@@ -68,7 +71,7 @@ export default function App() {
       <ReturnPopup />
       <Routes>
         <Route path="/magnum" element={<Layout />}>
-          <Route index element={<HomePage />} />
+          <Route index element={<Suspense fallback={<PageFallback />}><HomePage /></Suspense>} />
           <Route path="last-fit" element={<Suspense fallback={<PageFallback />}><LastFitPage /></Suspense>} />
           <Route path="track/:slug" element={<Suspense fallback={<PageFallback />}><TrackPage /></Suspense>} />
           <Route path="discography" element={<Suspense fallback={<PageFallback />}><DiscographyPage /></Suspense>} />
@@ -113,6 +116,10 @@ export default function App() {
           <Route path="chain" element={<Suspense fallback={<PageFallback />}><Chain42Page /></Suspense>} />
           <Route path="chain/join/:code" element={<Suspense fallback={<PageFallback />}><Chain42Page /></Suspense>} />
           <Route path="pass" element={<Suspense fallback={<PageFallback />}><Pass42Page /></Suspense>} />
+          <Route path="chronicle" element={<Suspense fallback={<PageFallback />}><Chronicle42Page /></Suspense>} />
+          <Route path="radio" element={<Suspense fallback={<PageFallback />}><Radio42Page /></Suspense>} />
+          <Route path="crash" element={<Suspense fallback={<PageFallback />}><Crash42Page /></Suspense>} />
+          <Route path="clip-battle" element={<Suspense fallback={<PageFallback />}><ClipBattlePage /></Suspense>} />
         </Route>
       </Routes>
     </BrowserRouter>

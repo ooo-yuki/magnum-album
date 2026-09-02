@@ -39,7 +39,6 @@ export function Studio42Page() {
     }).catch(()=>{});
   },[]);
 
-  // GSAP scene flip on scenes change
   useEffect(()=>{
     if(!previewRef.current) return;
     const cards = previewRef.current.querySelectorAll("[data-scene]");
@@ -114,7 +113,6 @@ export function Studio42Page() {
         const v = data[i] ?? 60;
         const bh = (v/255)*h*0.62*pulse;
         const x = i*barW;
-        // GSAP bars scaleY spec: we emulate via height; GSAP directive is for DOM bars — also animate DOM bars if present
         c.fillStyle = presetObj.barColor + (presetObj.id==="glitch-42" && i%3===0 ? "" : "");
         if(presetObj.id==="glitch-42" && Math.random()<0.04) c.fillStyle = "#fff";
         c.fillRect(x, h-bh, barW-1, bh);
@@ -134,7 +132,6 @@ export function Studio42Page() {
       c.font="900 18px Inter,system-ui";
       c.textAlign="center";
       c.fillText(`${track.toUpperCase()} • ${bpm} BPM • ${presetObj.name}`, w/2, 24);
-      // GSAP DOM bars scaleY 0.15s power1 — animate .viz-bar if exists
       if(barsRef.current && now%120 < 22){
         const domBars = barsRef.current.querySelectorAll<HTMLElement>("[data-bar]");
         domBars.forEach((el,idx)=>{
@@ -298,7 +295,7 @@ export function Studio42Page() {
       <div style={{display:"grid", gridTemplateColumns:"1fr 360px", gap:"1rem", alignItems:"start"}}>
         <div>
           <canvas ref={canvasRef} width={720} height={360} style={{width:"100%", aspectRatio:"2/1", background: presetObj.bg, borderRadius:16, border:"1px solid rgba(255,255,255,0.08)", display:"block"}} />
-          {/* DOM bars for GSAP spec: 64 bar elements scaleY */}
+          {}
           <div ref={barsRef} style={{display:"flex", gap:1, height:28, marginTop:6, alignItems:"end", opacity:0.9}}>
             {Array.from({length:64}).map((_,i)=>(
               <div key={i} data-bar="" style={{flex:1, height:20, background: presetObj.barColor, borderRadius:2, transformOrigin:"bottom", transform:"scaleY(0.3)"}} />

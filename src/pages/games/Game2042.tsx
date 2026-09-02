@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
+import { StreakReviveBanner } from "../../components/StreakReviveBanner";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import styles from "./Game2042.module.css";
@@ -254,7 +255,6 @@ export function Game2042() {
   const [score, setScore] = useState(0);
   const [best, setBest] = useState(0);
   const [bestTile, setBestTile] = useState(0);
-  // best из Neon /magnum/api/games/my (credentials:include), без LS
   useEffect(() => {
     fetch("/magnum/api/games/my", { credentials: "include" }).then(r=>r.ok?r.json():null).then(j=>{
       if(j?.scores){
@@ -292,12 +292,12 @@ export function Game2042() {
   gridRef.current = grid;
   scoreRef.current = score;
 
-  // submit best to Neon magnum_game_scores (game=2042) — cookie auth, без LS
   async function submitScore(s: number) {
     if (submitted || s < 100) return;
     setSubmitted(true);
     try {
       await fetch("/magnum/api/games/submit", { method: "POST", credentials: "include", headers: { "Content-Type":"application/json" }, body: JSON.stringify({ game:"2042", score:s }) });
+      try { window.dispatchEvent(new CustomEvent("magnum:game-score")); } catch {}
     } catch {}
   }
   async function shareResult() {
@@ -380,7 +380,6 @@ export function Game2042() {
     }
   }, [state, keepPlaying, best, bestTile, moves]);
 
-  // board entrance GSAP — context cleanup prevents white screen on unmount
   useEffect(() => {
     const board = boardRef.current;
     if (!board) return;
@@ -426,7 +425,6 @@ export function Game2042() {
     return () => cancelAnimationFrame(raf);
   }, [confetti]);
 
-  // ── MAGNUM DAAILY CHALLENGE — seed by date, submit to Neon ──
   const DAILY_KEY = "2042-daily"; void DAILY_KEY;
   function dailySeed(): number {
     const d = new Date();
@@ -645,6 +643,7 @@ export function Game2042() {
           <div className={styles.modalCard}>
             <h2>💥 Ходов больше нет!</h2>
             <p>{score} очков • макс {curMax} • рекорд {best} (плитка {bestTile >= WIN_TILE ? "42" : bestTile}) • эффект. {efficiency}</p>
+            <div style={{ margin: "10px 0" }}><StreakReviveBanner surface="GameOver" /></div>
             <div style={{ display:"flex", gap:8, justifyContent:"center", marginBottom:8, flexWrap:"wrap" }}><button className={styles.restartBtn} onClick={shareResult}>⤴ Поделиться</button><button className={styles.restartBtn} onClick={startDaily}>📅 Челлендж</button></div>
             <button className={styles.playBtn} onClick={restart}>Ещё попытка</button>
             <Link to="/magnum/games" className={styles.back}>← К играм</Link>

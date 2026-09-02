@@ -166,7 +166,6 @@ export function Flappy42Game() {
   const [diffId, setDiffId] = useState<DifficultyId>(() => { try { const v = localStorage.getItem("flappy42-diff") as DifficultyId | null; return v && DIFFICULTIES.some(d=>d.id===v) ? v : "norm"; } catch { return "norm"; } }); // LS-UI-only: diff pref
   const [skinId, setSkinId] = useState<string>(() => { try { return localStorage.getItem("flappy42-skin") || "classic"; } catch { return "classic"; } }); // LS-UI-only: skin pref
   const [best, setBest] = useState(0);
-  // Neon best — progress in magnum_game_scores (SPEC §7)
   useEffect(()=>{ fetch("/magnum/api/games/my",{credentials:"include"}).then(r=>r.ok?r.json():null).then(j=>{ const arr=j?.scores as {game:string;score:number}[]|undefined; if(!arr) return; let m=0; for(const s of arr) if(s.game==="flappy"&&s.score>m) m=s.score; if(m) setBest(m); }).catch(()=>{}); },[]);
   const [floats, setFloats] = useState<FloatText[]>([]);
   const floatIdRef = useRef(0);
@@ -263,7 +262,6 @@ export function Flappy42Game() {
     return () => window.removeEventListener("keydown", onKey);
   }, [flap, togglePause]);
 
-  // GSAP spec: y24 stagger 0.12 ScrollTrigger batch + reduced-motion gate + gsap.context cleanup + hover y:-4 RGB glow
   useEffect(() => {
     const root: HTMLElement | null = document.querySelector<HTMLElement>("[data-gsap-root]") || (document.body as unknown as HTMLElement);
     if (!root) return;

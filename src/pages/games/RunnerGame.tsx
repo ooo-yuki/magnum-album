@@ -58,8 +58,7 @@ const DIFFICULTY = {
   hard:   { label: "Хард",   speed: 5.1, gravity: 0.68, jump: -13, win: 6000, hint: "турбо + хардкор" },
 } as const;
 type DiffKey = keyof typeof DIFFICULTY;
-const LS_DIFF = "runner42-diff"; // LS-UI-only: diff pref, not progress (SPEC §7.1)
-const LS_TIP = "runner42-tip-v1"; // LS-UI-only: dismissed tip flag
+const LS_DIFF = "runner42-diff";const LS_TIP = "runner42-tip-v1"; // LS-UI-only: dismissed tip flag
 
 interface Obstacle {
   x: number;
@@ -197,7 +196,6 @@ export function RunnerGame() {
   const [diff, setDiff] = useState<DiffKey>(() => {
     try { const v = localStorage.getItem(LS_DIFF) as DiffKey | null; return v && DIFFICULTY[v] ? v : "normal"; } catch { return "normal"; }
   }); // LS-UI-only
-  // Neon best — без LS (credentials:include), diff остаётся в LS_DIFF per SPEC §7.1
   useEffect(()=>{
     fetch("/magnum/api/games/my",{credentials:"include"}).then(r=>r.ok?r.json():null).then(j=>{
       const arr=j?.scores as {game:string;score:number}[]|undefined; if(!arr) return;
@@ -558,7 +556,6 @@ export function RunnerGame() {
       const sky = ctx.createLinearGradient(0, 0, 0, H);
       sky.addColorStop(0, "#07081e"); sky.addColorStop(0.45, "#1a0a2e"); sky.addColorStop(0.75, "#2a0a2e"); sky.addColorStop(1, "#1a0a2e");
       ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
-      // neon skyline glow
       ctx.fillStyle = "rgba(255,45,85,0.04)"; ctx.fillRect(0, H * 0.35, W, H * 0.4);
       // stars parallax layer 3
       ctx.fillStyle = "rgba(255,255,255,0.55)";
@@ -597,7 +594,6 @@ export function RunnerGame() {
             if ((i + wy + wx) % 2 === 0) ctx.fillRect(x + 8 + wx * 18, groundY - bh + 8 + wy * 14, 8, 6);
           }
         }
-        // neon top
         ctx.fillStyle = "rgba(255,45,85,0.9)"; ctx.fillRect(x, groundY - bh, 50, 2);
       }
       // speed lines
@@ -621,7 +617,6 @@ export function RunnerGame() {
       for (let y = groundY + 20; y < H; y += 22) {
         ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
       }
-      // ground neon strip
       const neonGrad = ctx.createLinearGradient(0, groundY - 2, 0, groundY + 4);
       neonGrad.addColorStop(0, "rgba(255,45,85,0)"); neonGrad.addColorStop(0.5, "rgba(255,45,85,0.9)"); neonGrad.addColorStop(1, "rgba(255,204,0,0)");
       ctx.fillStyle = neonGrad; ctx.fillRect(0, groundY - 2, W, 6);
@@ -645,7 +640,6 @@ export function RunnerGame() {
 
     animId = requestAnimationFrame(gameLoop);
   
-  // GSAP spec: y24 stagger 0.12 ScrollTrigger batch + reduced-motion gate + gsap.context cleanup + hover y:-4 RGB glow
   useEffect(() => {
     const root: HTMLElement | null = document.querySelector<HTMLElement>("[data-gsap-root]") || (document.body as unknown as HTMLElement);
     if (!root) return;

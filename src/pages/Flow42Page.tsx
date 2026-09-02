@@ -52,7 +52,6 @@ export function Flow42Page() {
   }, []);
   useEffect(() => { void loadTop(); }, [loadTop]);
 
-  // GSAP entry stagger y24 0.12
   useEffect(() => {
     if (!wrapRef.current) return;
     if (prefersReducedMotion()) return;
@@ -118,7 +117,6 @@ export function Flow42Page() {
     // reset start for this takt
     startRef.current = Date.now();
     return () => { if (timerRef.current) window.clearInterval(timerRef.current); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [running, takt]);
 
   const totalChars = lines.join(" ").length;
@@ -147,7 +145,6 @@ export function Flow42Page() {
       if (typeof j.balance === "number") setBalance(j.balance);
       if (j.reward) setBalance(j.reward.balance);
       void loadTop();
-      // GSAP burst / shake
       if (!prefersReducedMotion() && wrapRef.current) {
         if (j.verdict === "win") {
           const el = wrapRef.current.querySelector<HTMLElement>("[data-result-card]");

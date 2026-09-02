@@ -17,7 +17,6 @@ export function AuthStatus() {
   const modalRef = useRef<HTMLFormElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
 
-  // GSAP 24/7: entrance y24 stagger 0.08 + reduced-motion gate + context cleanup
   useEffect(() => {
     if (!wrapRef.current) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -34,7 +33,6 @@ export function AuthStatus() {
     return () => ctx.revert();
   }, [loading, me]);
 
-  // GSAP: modal entrance scale 0.96→1 + overlay fade, hover RGB-neon
   useEffect(() => {
     if (!showModal || !overlayRef.current || !modalRef.current) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -53,7 +51,6 @@ export function AuthStatus() {
     return () => ctx.revert();
   }, [showModal]);
 
-  // GSAP hover RGB-неон for auth buttons
   const onBtnEnter = (e: React.MouseEvent<HTMLButtonElement>) => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     gsap.to(e.currentTarget, { scale: 1.04, boxShadow: "0 0 14px rgba(255,45,85,0.35), 0 0 28px rgba(255,45,85,0.15)", duration: 0.22, ease: "power2.out", overwrite: "auto" });
@@ -137,8 +134,12 @@ export function AuthStatus() {
     setError(null);
     const u = form.username.trim();
     const p = form.password;
-    if (u.length < 3) { setError("логин минимум 3 символа"); return; }
-    if (p.length < 3) { setError("пароль минимум 3 символа"); return; }
+    // правила совпадают с сервером (handleRegister): 3-32 [a-z0-9_-], пароль от 8 символов
+    const ul = u.toLowerCase();
+    if (!/^[a-z0-9_-]{3,32}$/.test(ul) || ul.startsWith("-") || ul.endsWith("-") || ul.includes("--")) {
+      setError("логин: 3–32 символа, a-z, 0-9, _ и - (дефис не в начале/конце)"); return;
+    }
+    if (p.length < 8) { setError("пароль минимум 8 символов"); return; }
     setBusy(true);
     try {
       const url = showModal === "register" ? "/magnum/api/auth/register" : "/magnum/api/auth/login";
@@ -248,8 +249,8 @@ export function AuthStatus() {
         <div ref={overlayRef} className={styles.overlay} role="dialog" aria-modal="true" onClick={() => setShowModal(null)}>
           <form ref={modalRef} className={styles.modal} onSubmit={submit} onClick={(ev) => ev.stopPropagation()}>
             <h3 className={styles.modalTitle}>{showModal === "register" ? "Регистрация 42" : "Вход"}</h3>
-            <input className={styles.input} placeholder="логин (3-32)" value={form.username} onChange={(ev) => setForm((p) => ({ ...p, username: ev.target.value }))} maxLength={32} autoFocus />
-            <input className={styles.input} placeholder="пароль (3+)" type="password" value={form.password} onChange={(ev) => setForm((p) => ({ ...p, password: ev.target.value }))} />
+            <input className={styles.input} placeholder="логин (3-32, a-z 0-9 _ -)" value={form.username} onChange={(ev) => setForm((p) => ({ ...p, username: ev.target.value }))} maxLength={32} autoFocus />
+            <input className={styles.input} placeholder="пароль (8+)" type="password" minLength={8} value={form.password} onChange={(ev) => setForm((p) => ({ ...p, password: ev.target.value }))} />
             {showModal === "register" && <input className={styles.input} placeholder="БРАТУХА-КОД 42-XXXX (опц.)" value={form.bratCode} onChange={ev=>setForm(p=>({...p, bratCode: ev.target.value}))} maxLength={7} style={{ textTransform:"uppercase" }} />}
             {error && <span className={styles.error}>{error}</span>}
             <div className={styles.modalActions}>

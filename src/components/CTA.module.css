@@ -30,4 +30,23 @@
 @media (max-width: 560px) { .fomoBadge { font-size: 0.74rem; padding: 0.36rem 0.7rem; } .countdown { font-size: 0.70rem; margin-left: 0; display: flex; margin-top: 0.45rem; } }
 @keyframes rgbShift { 0% { background-position: 0% 50%; } 100% { background-position: 400% 50%; } }
 @media (prefers-reduced-motion: reduce) { .card, .card::before { transition: none !important; animation: none !important; } .shimmer { display: none; } .card:hover { transform: none; } }
+/* GOLD 185/42 celebrate + next 242/420 */
+.goldCelebrate{position:relative;margin-top:14px;padding:18px 16px 16px;border-radius:18px;background:linear-gradient(135deg,rgba(255,204,0,0.16),rgba(255,45,85,0.12) 50%,rgba(255,204,0,0.10));border:1px solid rgba(255,204,0,0.42);box-shadow:0 0 28px rgba(255,204,0,0.22),0 12px 32px rgba(0,0,0,0.45);overflow:hidden;text-align:center;will-change:transform}
+.goldMain{position:relative;z-index:1;font-size:18px;font-weight:900;letter-spacing:0.06em;color:#ffcc00;text-shadow:0 0 14px rgba(255,204,0,0.45)}
+.goldSub{position:relative;z-index:1;margin-top:4px;font-size:12px;font-weight:700;color:rgba(255,255,255,0.78);letter-spacing:0.04em}
+.goldProgressWrap{position:relative;z-index:1;margin:12px auto 0;max-width:520px;display:flex;align-items:center;gap:10px}
+.goldProgressTrack{flex:1;height:14px;border-radius:999px;background:rgba(0,0,0,0.42);border:1px solid rgba(255,204,0,0.22);overflow:hidden;position:relative}
+.goldProgressFill{height:100%;background:linear-gradient(90deg,#ffcc00,#ff2d55 55%,#ffcc00);box-shadow:0 0 12px rgba(255,204,0,0.55);border-radius:999px}
+.goldProgressGlow{position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.22),transparent);animation:goldShimmer 1.6s linear infinite}
+.goldProgressLabel{font-size:12px;font-weight:900;color:#ffcc00;white-space:nowrap}
+.nextGoalRow{position:relative;z-index:1;margin-top:12px;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;font-size:12px;font-weight:800}
+.nextGoalLabel{padding:4px 8px;border-radius:999px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.10);color:rgba(255,255,255,0.72);letter-spacing:0.08em}
+.nextGoalValue{color:#fff;letter-spacing:0.04em}
+.nextGoalReward{padding:4px 8px;border-radius:999px;background:rgba(255,204,0,0.16);border:1px solid rgba(255,204,0,0.32);color:#ffcc00}
+.nextProgressTrack{position:relative;z-index:1;margin:8px auto 0;max-width:520px;height:8px;border-radius:999px;background:rgba(255,255,255,0.08);overflow:hidden}
+.nextProgressFill{height:100%;background:linear-gradient(90deg,#ffcc00,#ff8a00);border-radius:999px;transition:width 0.6s ease}
+.nextHint{position:relative;z-index:1;margin-top:6px;font-size:11px;color:rgba(255,255,255,0.62)}
+.confettiRow{display:flex;gap:6px;justify-content:center;margin-top:10px;font-size:16px;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.35))}
+.goldShareLink{position:relative;z-index:1;margin-top:10px;display:inline-block;padding:8px 12px;border-radius:999px;border:1px solid rgba(255,204,0,0.22);background:rgba(255,255,255,0.04);color:#ffcc00;text-decoration:none;font-weight:800;font-size:13px}
+@keyframes goldShimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
 @media (max-width: 480px) { .card { padding: 1rem 0.9rem; } .heading { font-size: 1.7rem; } }

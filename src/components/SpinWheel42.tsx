@@ -80,7 +80,6 @@ export function SpinWheel42() {
     setSpinning(true);
     setMsg("");
     setResult(null);
-    // GSAP rotation: 2-4 full turns + land on random sector (visual only, server picks actual)
     const targetIdx = Math.floor(Math.random() * SPIN_SECTORS.length);
     const extraTurns = 3 + Math.random() * 2;
     const targetAngle = 360 * extraTurns + targetIdx * 45 + 22.5;

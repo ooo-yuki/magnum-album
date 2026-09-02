@@ -1,4 +1,3 @@
-// map42.ts — единый канон MAP42 5 точек ×2Q + босс — server.ts + Map42Page.tsx
 // Single source of truth для true-ответов. Любой дрифт POINTS между клиентом и сервером = баг/фарм.
 
 export type MapOpt = { id: string; label: string; correct: boolean; hint: string };

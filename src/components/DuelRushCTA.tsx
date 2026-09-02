@@ -32,7 +32,6 @@ export function DuelRushCTA({ score, game = "clicker", durationSec = 42, compact
     fetch("/magnum/api/duel42/elo",{credentials:"include"}).then(r=>r.json()).then(j=> setElo(typeof j.elo==="number"?j.elo:null)).catch(()=>{});
   }, []);
 
-  // GSAP y24 stagger 0.12
   useEffect(() => {
     if (!wrapRef.current) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;

@@ -1,5 +1,4 @@
 // DUEL KOMBO 42 — WS-арена 2-4 + код ABCD + kombo x4 +25%
-// Файл требуемый спеками t_20be47f8 (lobby) + t_2c038be9 (kombo)
 // Используется клиентом (MiningPage/DuelLobbyPage) и частично сервером (константы wager).
 
 export const WAGER_OPTIONS = [0, 42, 142, 420] as const;

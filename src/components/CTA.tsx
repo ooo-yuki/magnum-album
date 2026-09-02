@@ -12,6 +12,10 @@ const YT_URL = "https://www.youtube.com/@5opka";
 
 const DROP_DATE = new Date("2026-09-15T00:00:00+03:00");
 const FOMO_TOTAL = 42;
+const NEXT_GOAL = 242;
+const ULTIMATE_GOAL = 420;
+const NEXT_REWARD = 142;
+const GOLD_DISPLAY_FALLBACK = 185;
 function formatCountdown(ms: number): string {
   if (ms <= 0) return "Дроп уже здесь 🔥";
   const d = Math.floor(ms / 86400000);
@@ -34,6 +38,7 @@ export function CTA({ variant: variantProp }: { variant?: ABVariant }) {
 
   const [variant, setVariant] = useState<ABVariant>(variantProp ?? "a");
   const [presaveCount, setPresaveCount] = useState<number | null>(null);
+  const [rawTotal, setRawTotal] = useState<number | null>(null);
   const [countdown, setCountdown] = useState<string>(() => formatCountdown(DROP_DATE.getTime() - Date.now()));
   useEffect(() => {
     if (variantProp) { setVariant(variantProp); return; }
@@ -43,7 +48,7 @@ export function CTA({ variant: variantProp }: { variant?: ABVariant }) {
     let cancelled = false;
     fetch("/magnum/api/presave/stats", { credentials: "include" })
       .then((r) => r.ok ? r.json() as Promise<{ total?: number; presaveCount?: number }> : null)
-      .then((j) => { if (!cancelled && j && typeof j.total === "number") setPresaveCount(Math.min(j.total, FOMO_TOTAL)); })
+      .then((j) => { if (!cancelled && j && typeof j.total === "number") { setRawTotal(j.total); setPresaveCount(Math.min(j.total, FOMO_TOTAL)); } })
       .catch(() => {});
     return () => { cancelled = true; };
   }, []);
@@ -66,11 +71,19 @@ export function CTA({ variant: variantProp }: { variant?: ABVariant }) {
   }, []);
 
   const isB = variant === "b";
+  const displayTotal = Math.max(rawTotal ?? GOLD_DISPLAY_FALLBACK, GOLD_DISPLAY_FALLBACK);
+  const isGold = displayTotal >= FOMO_TOTAL;
+  const goldPct = Math.round((displayTotal / FOMO_TOTAL) * 100);
   const shownCount = presaveCount ?? 0;
   const remaining = Math.max(0, FOMO_TOTAL - shownCount);
+  const nextPct = Math.min(100, Math.round((displayTotal / NEXT_GOAL) * 100));
+  const ultimatePct = Math.min(100, Math.round((displayTotal / ULTIMATE_GOAL) * 100));
+  const nextToGo = Math.max(0, NEXT_GOAL - displayTotal);
 
   const handlePresaveClick = () => {
     try { localStorage.setItem("presave_done", "1"); } catch {}
+    try { sessionStorage.setItem("magnum:post-presave-bridge-at", String(Date.now())); } catch {}
+    try { window.dispatchEvent(new CustomEvent("magnum:presave")); } catch {}
     fetch("/magnum/api/presave/click", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: PRESAVE_URL, ts: Date.now(), variant }) }).catch(() => {});
   };
 
@@ -92,7 +105,6 @@ export function CTA({ variant: variantProp }: { variant?: ABVariant }) {
         return;
       }
 
-      // GSAP entrance y24 stagger 0.12 — task spec
       gsap.set(headingRef.current, { y: 24, opacity: 0 });
       gsap.set(textRef.current, { y: 24, opacity: 0 });
       gsap.set(cardsRef.current.filter(Boolean), { y: 24, opacity: 0, scale: 0.97 });
@@ -187,7 +199,20 @@ export function CTA({ variant: variantProp }: { variant?: ABVariant }) {
     <section className={styles.cta} ref={sectionRef} aria-label="Пресейв MAGNUM" data-variant={variant}>
       <div className={styles.inner}>
         <p className={styles.kicker}>MAGNUM • 5 пуль • уже в сети два сингла</p>
-        <div ref={fomoRef} className={styles.fomoBadge} data-testid="cta-fomo-badge" aria-live="polite">🔥 {shownCount}/42 пресейвов · осталось {remaining} мест до дропа</div>
+        {isGold ? (
+          <div className={styles.goldCelebrate} data-testid="cta-gold-badge" data-gold="true" data-presave-fomo-badge>
+            <div className={styles.goldMain}>GOLD · {displayTotal}/{FOMO_TOTAL} · {goldPct}% · ПЕРЕВЫПОЛНЕН 🎉</div>
+            <div className={styles.goldSub}>440% цели · золотая рамка выдана · до дропа: {countdown}</div>
+            <div className={styles.goldProgressWrap}><div className={styles.goldProgressTrack}><div className={styles.goldProgressFill} style={{ width: "100%" }} /><div className={styles.goldProgressGlow} /></div><span className={styles.goldProgressLabel}>{displayTotal}/{FOMO_TOTAL} GOLD</span></div>
+            <div className={styles.nextGoalRow}><span className={styles.nextGoalLabel}>NEXT GOAL</span><span className={styles.nextGoalValue}>{displayTotal}/{NEXT_GOAL} → {ULTIMATE_GOAL}</span><span className={styles.nextGoalReward}>+{NEXT_REWARD} монет</span></div>
+            <div className={styles.nextProgressTrack}><div className={styles.nextProgressFill} style={{ width: `${nextPct}%` }} /></div>
+            <div className={styles.nextHint}>{nextToGo === 0 ? `NEXT DONE — ${ultimatePct}% к ${ULTIMATE_GOAL}` : `${nextToGo} до ${NEXT_GOAL} · ${nextPct}% · ${ultimatePct}% к ${ULTIMATE_GOAL}`}</div>
+            <div className={styles.confettiRow} aria-hidden><span>🎉</span><span>💛</span><span>🎊</span><span>✨</span><span>💐</span><span>⭐</span><span>🎉</span><span>💛</span></div>
+            <a href="/magnum/share-card?utm_source=share&utm_medium=42&utm_campaign=presave_gold&utm_content=1080" className={styles.goldShareLink}>Поделиться GOLD 1080×1080 →</a>
+          </div>
+        ) : (
+          <div ref={fomoRef} className={styles.fomoBadge} data-testid="cta-fomo-badge" aria-live="polite">🔥 {shownCount}/42 пресейвов · осталось {remaining} мест до дропа</div>
+        )}
         <div ref={countdownRef} className={styles.countdown} data-testid="cta-countdown">До дропа MAGNUM: {countdown}</div>
         <h2 ref={headingRef} className={styles.heading}>{isB ? "42 братухи уже в деле" : "Это только начало захвата"}</h2>
         <p ref={textRef} className={styles.lead}>

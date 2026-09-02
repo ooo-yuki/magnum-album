@@ -78,7 +78,6 @@ export function Flashmob42Page(){
     if(typeof today?.count==="number") setTotalCount(today.count);
   },[today]);
 
-  // GSAP: leaderboard stagger y14 0.05
   useEffect(()=>{
     if(!lbRef.current) return;
     if(window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -91,7 +90,6 @@ export function Flashmob42Page(){
     return ()=> ctx.revert();
   },[leaderboard]);
 
-  // GSAP: score tick 0.05s
   useEffect(()=>{
     if(!scoreRef.current) return;
     if(window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -111,7 +109,6 @@ export function Flashmob42Page(){
       i++;
       if(i<seq.length){
         setCountdown(seq[i]!);
-        // GSAP scale 0.6→1.4 back.out stagger 0.15
         if(countdownRef.current && !window.matchMedia("(prefers-reduced-motion: reduce)").matches){
           const el = countdownRef.current;
           gsap.set(el,{scale:0.6});

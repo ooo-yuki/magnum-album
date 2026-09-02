@@ -31,7 +31,6 @@ export function FirstInvitePopup({ triggerKey }: { triggerKey?: number }) {
     setOpen(true);
   }, []);
 
-  // external trigger via custom event "magnum:first-invite" from ReferralQR
   useEffect(() => {
     const h = () => { show(); };
     window.addEventListener("magnum:first-invite", h as EventListener);
@@ -43,7 +42,6 @@ export function FirstInvitePopup({ triggerKey }: { triggerKey?: number }) {
     if (triggerKey != null && triggerKey > 0) show();
   }, [triggerKey, show]);
 
-  // GSAP entrance — use set()+to() for Bun IIFE (from() doesn't animate)
   useEffect(() => {
     if (!open || !cardRef.current) return;
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -70,7 +68,6 @@ export function FirstInvitePopup({ triggerKey }: { triggerKey?: number }) {
       if (ov) gsap.to(ov, { opacity: 0, duration: 0.22, ease: "power2.in" });
       gsap.to(el, { y: 18, opacity: 0, scale: 0.97, duration: 0.28, ease: "power2.in", onComplete: doClose });
     });
-    // fallback close if gsap stalls
     window.setTimeout(doClose, 600);
     void ctx;
   }, []);

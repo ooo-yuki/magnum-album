@@ -515,11 +515,14 @@
 .bundleOrig{font-size:12px;color:var(--c-dim);text-decoration:line-through}
 .cosmetics{margin-top:32px} .cosHead{text-align:center;margin-bottom:16px} .cosTitle{font-size:20px;font-weight:900;letter-spacing:.04em} .cosSub{color:var(--c-dim);font-size:13px}
 .cosTabs{display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap} .cosTab{padding:7px 14px;border-radius:999px;border:1px solid var(--c-line);background:transparent;color:var(--c-dim);font-weight:800;cursor:pointer} .cosTabOn{border-color:var(--c-red);color:var(--c-red)}
-.cosGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px} .cosCard{border:1px solid var(--c-line);border-radius:14px;padding:12px;background:var(--c-card2);display:flex;flex-direction:column;gap:8px;transition:transform 0.2s,box-shadow 0.2s} .cosCard:hover{transform:translateY(-4px);box-shadow:0 12px 28px rgba(0,0,0,.4)} .cosCardGlacier{border-color:rgba(165,243,252,0.35)} .cosCardGlacier:hover{box-shadow:0 0 18px rgba(6,182,212,0.35),0 0 28px rgba(224,250,255,0.18)} .cosCardFrost{animation:frostSpin 3s linear infinite} .cosCardPrism{border-color:rgba(255,68,204,0.25)} .cosCardCrystal{border-color:rgba(56,189,248,0.40);backdrop-filter:blur(6px)} .cosCardCrystal:hover{box-shadow:0 0 16px #38bdf8, 0 0 28px rgba(56,189,248,0.22)} .cosCardCrystalSpin{animation:crystalSpin 3s linear infinite, frostSpin 3s ease-in-out infinite} .cosCardVolcano{border-color:rgba(255,87,34,0.40);backdrop-filter:blur(6px)} .cosCardVolcano:hover{box-shadow:0 0 16px #ff5722, 0 0 28px rgba(255,87,34,0.22)} .cosCardVolcanoGold{animation:volcanoSpin 3s linear infinite, volcanoPulse 2s ease-in-out infinite} .cosCardObsidian{border-color:rgba(255,69,0,0.40);backdrop-filter:blur(6px)} .cosCardObsidian:hover{box-shadow:0 0 16px #ff4500, 0 0 28px rgba(255,69,0,0.22)} .cosCardObsidianGold{animation:obsidianSpin 3s linear infinite, obsidianPulse 2s ease-in-out infinite} .cosCardVolcano[data-volcano="1"]{box-shadow:0 0 0 transparent} .cosCardEq[data-volcano="1"]{box-shadow:0 0 16px #ff5722, 0 0 28px rgba(255,87,34,0.35); border-color:#ff5722} .cosCardObsidian[data-obsidian="1"]{box-shadow:0 0 0 transparent} .cosCardEq[data-obsidian="1"]{box-shadow:0 0 16px #ff4500, 0 0 28px rgba(255,69,0,0.35); border-color:#ff4500} .cosCardGlacier[data-crystal="1"], .cosCardCrystal{box-shadow:0 0 0 transparent} .cosCardEq[data-crystal="1"]{box-shadow:0 0 24px #38bdf8; border-color:#38bdf8}
+.cosGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px} .cosCard{border:1px solid var(--c-line);border-radius:14px;padding:12px;background:var(--c-card2);display:flex;flex-direction:column;gap:8px;transition:transform 0.2s,box-shadow 0.2s} .cosCard:hover{transform:translateY(-4px);box-shadow:0 12px 28px rgba(0,0,0,.4)} .cosCardGlacier{border-color:rgba(165,243,252,0.35)} .cosCardGlacier:hover{box-shadow:0 0 18px rgba(6,182,212,0.35),0 0 28px rgba(224,250,255,0.18)} .cosCardFrost{animation:frostSpin 3s linear infinite} .cosCardPrism{border-color:rgba(255,68,204,0.25)} .cosCardCrystal{border-color:rgba(56,189,248,0.40);backdrop-filter:blur(6px)} .cosCardCrystal:hover{box-shadow:0 0 16px #38bdf8, 0 0 28px rgba(56,189,248,0.22)} .cosCardCrystalSpin{animation:crystalSpin 3s linear infinite, frostSpin 3s ease-in-out infinite} .cosCardVolcano{border-color:rgba(255,87,34,0.40);backdrop-filter:blur(6px)} .cosCardVolcano:hover{box-shadow:0 0 16px #ff5722, 0 0 28px rgba(255,87,34,0.22)} .cosCardVolcanoGold{animation:volcanoSpin 3s linear infinite, volcanoPulse 2s ease-in-out infinite} .cosCardObsidian{border-color:rgba(255,69,0,0.40);backdrop-filter:blur(6px)} .cosCardObsidian:hover{box-shadow:0 0 16px #ff4500, 0 0 28px rgba(255,69,0,0.22)} .cosCardObsidianGold{animation:obsidianSpin 3s linear infinite, obsidianPulse 2s ease-in-out infinite} .cosCardForge{border-color:rgba(145,71,255,0.40);backdrop-filter:blur(6px)} .cosCardForge:hover{box-shadow:0 0 16px #9147ff, 0 0 28px rgba(145,71,255,0.22)} .cosCardForgeGold{animation:forgeSpin 3s linear infinite, forgePulse 2s ease-in-out infinite} .cosCardVolcano[data-volcano="1"]{box-shadow:0 0 0 transparent} .cosCardEq[data-volcano="1"]{box-shadow:0 0 16px #ff5722, 0 0 28px rgba(255,87,34,0.35); border-color:#ff5722} .cosCardObsidian[data-obsidian="1"]{box-shadow:0 0 0 transparent} .cosCardEq[data-obsidian="1"]{box-shadow:0 0 16px #ff4500, 0 0 28px rgba(255,69,0,0.35); border-color:#ff4500} .cosCardForge[data-forge="1"]{box-shadow:0 0 0 transparent} .cosCardEq[data-forge="1"]{box-shadow:0 0 16px #9147ff, 0 0 28px rgba(145,71,255,0.35); border-color:#9147ff} .cosCardGlacier[data-crystal="1"], .cosCardCrystal{box-shadow:0 0 0 transparent} .cosCardEq[data-crystal="1"]{box-shadow:0 0 24px #38bdf8; border-color:#38bdf8}
 @keyframes frostSpin{0%{box-shadow:0 0 14px rgba(6,182,212,0.25)}50%{box-shadow:0 0 24px rgba(224,250,255,0.45),0 0 28px rgba(6,182,212,0.35)}100%{box-shadow:0 0 14px rgba(6,182,212,0.25)}}
 @keyframes crystalSpin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
 @keyframes volcanoSpin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
 @keyframes obsidianSpin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+@keyframes forgeSpin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+@keyframes forgePulse{0%{box-shadow:0 0 14px rgba(145,71,255,0.25)}50%{box-shadow:0 0 24px rgba(145,71,255,0.45),0 0 28px rgba(145,71,255,0.35)}100%{box-shadow:0 0 14px rgba(145,71,255,0.25)}}
+@keyframes forgeHoloShimmer{0%{box-shadow:0 0 12px rgba(145,71,255,0.30)}50%{box-shadow:0 0 20px rgba(145,71,255,0.55),0 0 32px rgba(0,255,204,0.22)}100%{box-shadow:0 0 12px rgba(145,71,255,0.30)}}
 @keyframes volcanoPulse{0%{box-shadow:0 0 14px rgba(255,87,34,0.25)}50%{box-shadow:0 0 24px rgba(255,87,34,0.45),0 0 28px rgba(255,87,34,0.35)}100%{box-shadow:0 0 14px rgba(255,87,34,0.25)}}
 @keyframes obsidianPulse{0%{box-shadow:0 0 14px rgba(255,69,0,0.25)}50%{box-shadow:0 0 24px rgba(255,69,0,0.45),0 0 28px rgba(255,69,0,0.35)}100%{box-shadow:0 0 14px rgba(255,69,0,0.25)}}
 @keyframes crystalPulse{0%{box-shadow:0 0 14px rgba(56,189,248,0.25)}50%{box-shadow:0 0 24px rgba(168,232,255,0.45),0 0 28px rgba(56,189,248,0.35)}100%{box-shadow:0 0 14px rgba(56,189,248,0.25)}}
@@ -569,7 +572,12 @@
   .cosCardFrost,
   .cosCardCrystalSpin,
   .cosCardVolcanoGold,
-  .cosCardObsidianGold {
+  .cosCardObsidianGold,
+  .modalContent,
+  .previewFace,
+  .equippedFrame,
+  .equippedGlow,
+  .skinCard {
     animation: none !important;
     transform: none !important;
   }
@@ -578,3 +586,149 @@
     animation: none;
   }
 }
+
+/* ── SHOP PREVIEW 42 — модалка 200px + InventoryBar скролл + SkinCard/EquippedFrame conic-gradient ───────────────── */
+
+.skinCard { cursor: pointer; }
+.skinCard:focus-visible { outline: 2px solid #ffcc00; outline-offset: 2px; }
+
+/* EquippedFrame glow conic-gradient */
+.equippedFrame {
+  position: relative;
+  border: 3px solid transparent !important;
+  background-clip: padding-box;
+  box-shadow: 0 0 0 2px rgba(255,204,0,0.35), 0 0 24px rgba(255,204,0,0.45), 0 0 32px rgba(255,45,85,0.25) !important;
+}
+.equippedFrame::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  padding: 3px;
+  background: conic-gradient(from 0deg,#ff2d55,#ffcc00,#00ff88,#00c2ff,#ff2d55);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  animation: equippedSpin 3s linear infinite;
+}
+.equippedGlow {
+  position: relative;
+  border-color: #ffcc00 !important;
+  box-shadow: 0 0 0 2px rgba(255,204,0,0.35), 0 0 24px rgba(255,204,0,0.45), 0 0 32px rgba(255,45,85,0.18) !important;
+}
+.equippedGlow::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 12px;
+  background: conic-gradient(from 0deg,#ff2d55,#ffcc00,#00ff88,#00c2ff,#ff2d55);
+  opacity: 0.18;
+  pointer-events: none;
+  z-index: -1;
+}
+@keyframes equippedSpin { to { transform: rotate(360deg); } }
+
+/* InventoryBar скролл */
+.inventoryBar {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 8px 4px 12px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,204,0,0.35) transparent;
+  -webkit-overflow-scrolling: touch;
+}
+.inventoryBar::-webkit-scrollbar { height: 6px; }
+.inventoryBar::-webkit-scrollbar-thumb { background: rgba(255,204,0,0.35); border-radius: 999px; }
+.inventoryBar::-webkit-scrollbar-track { background: transparent; }
+.inventoryBar > * { scroll-snap-align: start; flex: 0 0 auto; }
+
+/* модалка 200px */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0,0,0,0.72);
+  backdrop-filter: blur(6px);
+  animation: modalFadeIn 0.2s ease;
+}
+@keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.modalContent {
+  position: relative;
+  width: min(92vw, 420px);
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 20px;
+  border-radius: 18px;
+  background: #121216;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,204,0,0.12);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.modalClose {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.modalClose:hover { background: rgba(255,45,85,0.18); border-color: rgba(255,45,85,0.35); }
+
+.previewFace {
+  width: 200px;
+  height: 200px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  border: 2px solid rgba(255,255,255,0.08);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.45);
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.previewFace::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.12), transparent 45%);
+  pointer-events: none;
+}
+.previewFace[data-rarity="epic"] { animation: shimmerEpic 2s ease-in-out infinite; }
+.previewFace[data-rarity="legendary"] { animation: shimmerEpic 1.6s ease-in-out infinite, legendaryPulse 2s ease-in-out infinite; }
+@keyframes shimmerEpic {
+  0% { filter: brightness(1); }
+  50% { filter: brightness(1.14); box-shadow: 0 0 24px rgba(255,204,0,0.35), 0 0 36px rgba(145,71,255,0.22); }
+  100% { filter: brightness(1); }
+}
+@keyframes legendaryPulse {
+  0% { box-shadow: 0 0 20px rgba(255,204,0,0.25); }
+  50% { box-shadow: 0 0 28px rgba(255,204,0,0.45), 0 0 40px rgba(255,204,0,0.18); }
+  100% { box-shadow: 0 0 20px rgba(255,204,0,0.25); }
+}
+
+.previewMeta { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; }
+.previewName { font-size: 18px; font-weight: 900; }
+.previewTagline { margin: 0; font-size: 12.5px; color: var(--c-dim); }
+.previewPrice { font-size: 16px; font-weight: 900; color: var(--c-yellow); }
+
+.modalInventoryBarWrap { width: 100%; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.06); }
+.modalInventoryLabel { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; color: var(--c-dim); margin-bottom: 8px; text-transform: uppercase; }
+

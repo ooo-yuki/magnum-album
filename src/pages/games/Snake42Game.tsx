@@ -160,7 +160,6 @@ export function Snake42Game() {
   const [state, setState] = useState<"menu" | "playing" | "win" | "over">("menu");
   const [score, setScore] = useState(0);
   const [best, setBest] = useState(0);
-  // Neon best — progress in magnum_game_scores (SPEC §7)
   useEffect(()=>{ fetch("/magnum/api/games/my",{credentials:"include"}).then(r=>r.ok?r.json():null).then(j=>{ const arr=j?.scores as {game:string;score:number}[]|undefined; if(!arr) return; let m=0; for(const s of arr) if(s.game==="snake"&&s.score>m) m=s.score; if(m) setBest(m); }).catch(()=>{}); },[]);
   const [shake, setShake] = useState(0);
   const [combo, setCombo] = useState(0);
@@ -198,7 +197,6 @@ export function Snake42Game() {
     requestAnimationFrame(decay);
   }, []);
 
-  // combo GSAP burst
   useEffect(() => {
     if (combo < 2) return;
     if (prefersReducedMotion()) return;
@@ -236,7 +234,6 @@ export function Snake42Game() {
     };
     window.addEventListener("keydown", onKey);
   
-  // GSAP spec: y24 stagger 0.12 ScrollTrigger batch + reduced-motion gate + gsap.context cleanup + hover y:-4 RGB glow
   useEffect(() => {
     const root: HTMLElement | null = document.querySelector<HTMLElement>("[data-gsap-root]") || (document.body as unknown as HTMLElement);
     if (!root) return;

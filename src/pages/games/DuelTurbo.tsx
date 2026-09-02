@@ -23,6 +23,8 @@ export function DuelTurbo(){
   const [lb,setLb]=useState<Array<{player:string;score:number}>>([]);
   const [msg,setMsg]=useState<string|null>(null);
   const [me,setMe]=useState<MeUser>(null);
+  // hot-seat: WS не поднялся — играем сами с собой, это не PvP и UI обязан это показать
+  const [demoMode,setDemoMode]=useState(false);
   useEffect(()=>subscribeMe(setMe as any),[]);
   const wsRef=useRef<DuelSocket|null>(null);
   const pageRef=useRef<HTMLDivElement>(null);
@@ -80,6 +82,7 @@ export function DuelTurbo(){
       if(m.type==="suspect"){ setSuspect(true); setMsg(m.toast || "братуха, ты турбо-призрак? 👻"); }
       if(m.type==="wager"){ if(m.wager!=null) setRoom(r=> r?{...r,wager:Number(m.wager)}:r); }
     });
+    ds.onHotSeat=(on)=>{ setDemoMode(on); if(on) setMsg("ДЕМО: соперник не подключился — счёт локальный, в рейтинг не идёт"); };
     wsRef.current=ds; ds.connect(joinCode);
   },[fetchLb,wager,me]);
 
@@ -154,6 +157,11 @@ export function DuelTurbo(){
       <h1 className={styles.title}>Турбо-дуэль 2-4 • x8 • ghost</h1>
       <p style={{color:"rgba(255,255,255,.6)",marginTop:6}}>10с кликер • интервал &lt;0.2с +10% капа x8 (1.0→1.7) • ghost trail x5+ • pulse • wager 0/42/142/420 → win +wager*2 +42 ELO • сезон 7дн</p>
     </div>
+    {demoMode && (
+      <div role="status" style={{margin:"10px 0",padding:"10px 12px",borderRadius:12,background:"rgba(255,87,34,.12)",border:"1px solid rgba(255,87,34,.42)",color:"#ffb599",fontSize:13,fontWeight:700}}>
+        ДЕМО-РЕЖИМ — соединение с соперником не установлено. Ты играешь сам с собой: счёт локальный, ELO и ставки не начисляются.
+      </div>
+    )}
     {!me && <div style={{margin:"12px 0",padding:"12px 14px",borderRadius:12,background:"rgba(0,212,255,.10)",border:"1px solid rgba(0,212,255,.28)",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}><span style={{color:"#00d4ff",fontWeight:900}}>Войди, братуха — дуэли только для залогиненных</span><span style={{display:"inline-flex"}}><AuthStatus /></span><button onClick={()=>window.dispatchEvent(new CustomEvent("magnum:need-auth"))} style={{padding:".5rem .9rem",borderRadius:999,background:"#00d4ff",color:"#111",fontWeight:900,border:"none",cursor:"pointer"}}>Войти</button></div>}
     <div className={styles.grid}>
       <div className={styles.card}>

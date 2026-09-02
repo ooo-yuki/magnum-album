@@ -236,7 +236,6 @@ export function ClickerGame() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [])
-  // GSAP spec batch
   useEffect(() => {
     const root: HTMLElement = document.querySelector<HTMLElement>("[data-gsap-root]") || (document.body as unknown as HTMLElement);
     if (!root) return;

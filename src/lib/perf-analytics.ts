@@ -1,7 +1,5 @@
 // @ts-nocheck
-/**
- * MAGNUM · perf-analytics.ts — 2500 строк перф-метрик, Web Vitals, bundle budget
- */
+ 
 export type WebVital = "CLS" | "FID" | "LCP" | "FCP" | "TTFB" | "INP";
 export type PerfEntry = { name: WebVital; value: number; rating: "good" | "needs-improvement" | "poor"; ts: number };
 const perfLog: PerfEntry[] = [];

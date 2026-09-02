@@ -217,7 +217,6 @@ export function BlackjackGame(){
   const pageRef = useRef<HTMLDivElement>(null);
   const [balance,setBalance]=useState<number>(START_BALANCE);
   const [best,setBest]=useState<number>(START_BALANCE);
-  // Neon — баланс из /magnum/api/coins, best из /magnum/api/games/my (credentials:include)
   useEffect(()=>{
     fetch("/magnum/api/coins",{credentials:"include"}).then(r=>r.ok?r.json():null).then(j=>{
       const v=j?.balance??j?.coins; if(typeof v==="number"&&Number.isFinite(v)) { setBalance(Math.round(v)); setBest(b=>Math.max(b,Math.round(v))); }
@@ -254,7 +253,6 @@ export function BlackjackGame(){
   const cardRowRef=useRef<HTMLDivElement>(null);
   const noBustStreakRef=useRef(0);
 
-  // best — максимум баланса, без LS (Neon единый источник)
   useEffect(()=>{ const nb=Math.max(best,balance); if(nb!==best) setBest(nb); },[balance,best]);
 
   // rotating tip
@@ -563,7 +561,6 @@ export function BlackjackGame(){
 
   const betChips = [10,25,50,100,250];
 
-  // ── управление: клавиатура H/S/D/N/P/Space + свайп + GSAP раздача ──
   useEffect(()=>{
     const onKey=(e:KeyboardEvent)=>{
       const k=e.key.toLowerCase();
@@ -580,7 +577,6 @@ export function BlackjackGame(){
     return ()=>window.removeEventListener("keydown", onKey);
   },[phase, bet, balance, canDouble, deal, hit, stand, doubleDown, nextRound]);
 
-  // GSAP: карты влетают стаггером при раздаче
   useEffect(()=>{
     if(!dealt || !cardRowRef.current) return;
     if(prefersReducedMotion()) return;
@@ -602,7 +598,6 @@ export function BlackjackGame(){
     if(dx<0) hit(); else stand();
   },[phase, hit, stand]);
 
-  // GSAP spec: y24 stagger 0.12 ScrollTrigger batch + reduced-motion gate + gsap.context cleanup + hover y:-4 RGB glow
   useEffect(() => {
     const root: HTMLElement | null = document.querySelector<HTMLElement>("[data-gsap-root]") || (document.body as unknown as HTMLElement);
     if (!root) return;

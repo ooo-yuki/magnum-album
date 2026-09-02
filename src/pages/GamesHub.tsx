@@ -3,6 +3,7 @@ import { useRef, useEffect, useCallback } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import styles from "./GamesHub.module.css";
+import { FirstGameBanner } from "../components/FirstGameBanner";
 
 gsap.registerPlugin(ScrollTrigger);
 const RGB_GLOW="0 12px 36px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,45,85,0.22), 0 0 28px rgba(255,45,85,0.22), 0 0 28px rgba(0,255,136,0.14), 0 0 32px rgba(255,204,0,0.10)";
@@ -30,7 +31,6 @@ export function GamesHub() {
   const ref = useRef<HTMLDivElement>(null);
   const badgeRef = useRef<HTMLDivElement>(null);
 
-  // GSAP 24/7: y24 stagger 0.12 • ScrollTrigger • reduced-motion • context cleanup
   useEffect(() => {
     if (!ref.current) return;
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -68,7 +68,6 @@ export function GamesHub() {
     return () => ctx.revert();
   }, []);
 
-  // Magnetic 3D tilt + RGB-neon hover (tri-shadow)
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const card = e.currentTarget;
@@ -99,14 +98,40 @@ export function GamesHub() {
     });
   }, []);
 
+  // P0 presave bridge: ?from=presave → показать хинт + подсветить
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const from = params.get("from");
+      const hash = window.location.hash;
+      const isPresave = from === "presave" || hash === "#gameshub";
+      if (!isPresave) {
+        const raw = sessionStorage.getItem("magnum:post-presave-bridge-at") || localStorage.getItem("magnum:post-presave-bridge-at");
+        if (!raw || Date.now() - Number(raw) > 5 * 60 * 1000) return;
+      }
+      const hint = document.getElementById("presave-bridge-hint");
+      if (hint) {
+        hint.style.display = "block";
+        if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          gsap.fromTo(hint, { y: 10, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: "power2.out" });
+          gsap.to(hint, { boxShadow: "0 0 18px rgba(255,204,0,0.22)", duration: 1.2, repeat: 1, yoyo: true, ease: "sine.inOut" });
+        }
+      }
+    } catch {}
+  }, []);
+
   return (
-    <div className={styles.page} ref={ref}>
+    <div className={styles.page} ref={ref} id="gameshub">
       <div className={styles.header}>
         <div className={styles.badge} ref={badgeRef}>Мини-игры</div>
         <h1>Играй и выигрывай</h1>
         <p className={styles.subtitle}>16 игр — победи в любой и получи пресейв MAGNUM</p>
+        <FirstGameBanner />
+        <div data-testid="presave-bridge-hint" style={{ margin: "12px auto 0", maxWidth: 520, padding: "8px 12px", borderRadius: 12, background: "rgba(255,204,0,0.08)", border: "1px solid rgba(255,204,0,0.18)", fontSize: "0.78rem", color: "rgba(255,255,255,0.62)", display: "none" }} id="presave-bridge-hint">
+          🔥 Пресейв сохранён — сыграй первую игру и получи <b style={{ color: "#ffcc00" }}>+42 dust</b>!
+        </div>
       </div>
-      <div className={styles.grid}>
+      <div className={styles.grid} data-testid="gameshub-grid">
         {GAMES.map((g) => (
           <div key={g.to} className={styles.cardWrap}>
             <Link

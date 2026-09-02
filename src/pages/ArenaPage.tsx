@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import styles from "./ArenaPage.module.css";
+import { CosmeticIdentity, cosmeticBannerStyle, type LeaderCosmetics } from "../components/CosmeticBadge";
 
 gsap.registerPlugin(useGSAP as never);
 
-type LbRow = { player: string; score: number; created_at: string; avatar: string | null };
+type LbRow = { player: string; score: number; created_at: string; avatar: string | null } & LeaderCosmetics;
+type DuelStats = { plays: number; wins: number; streak: number };
 type LbRes = { leaderboard: LbRow[]; season: string; game: string; count: number; top3Bonus: number; crown: string; pulse: string };
 type EloRes = { elo: number; top: Array<{ username: string; elo: number }> };
 type SeasonRow = { id: number; name: string; startsAt: string; endsAt: string | null };
@@ -56,7 +58,12 @@ export function ArenaPage() {
       else if(s && typeof s.id==="number") setSeason(String(s.id));
       // else keep weekIdNow() fallback already set
     }).catch(()=>{});
-    // claimed flags via Neon transactions (idempotent check) — server returns already:true on duplicate
+    // wins/streak — реальные данные из magnum_duel_history, а не локальный счётчик
+    fetch("/magnum/api/duel42/stats",{credentials:"include"}).then(r=> r.ok? r.json(): null).then((j:DuelStats|null)=>{
+      if(cancel||!j) return;
+      setWins(Number(j.wins)||0);
+      setStreak(Math.min(7, Number(j.streak)||0));
+    }).catch(()=>{});
     fetch("/magnum/api/transactions?limit=50",{credentials:"include"}).then(r=> r.ok? r.json(): null).then((j:{transactions?:Array<{reason:string;meta:unknown}>}|null)=>{
       if(cancel||!j||!Array.isArray(j.transactions)) return;
       const currentSeason = weekIdNow(); // use computed until server season fetched; will re-evaluate via season state effect below
@@ -69,10 +76,6 @@ export function ArenaPage() {
         streak3: has("streak3", currentSeason),
         crown: has("crown", currentSeason),
       });
-      // wins/streak derived from transactions count for demo (Neon source, not LS)
-      const winCount = j.transactions!.filter(t=> t.reason==="arena_win").length;
-      // streak inferred from consecutive wins not stored; keep 0 and let bumpStreak handle live session
-      if(winCount) setWins(winCount);
     }).catch(()=>{});
     return ()=>{ cancel=true; };
   }, []);
@@ -88,7 +91,6 @@ export function ArenaPage() {
     return ()=>{ cancel=true; };
   }, [season]);
 
-  // GSAP stagger y10 0.05 volcano-bar
   useGSAP(()=>{
     if(!wrapRef.current) return;
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -134,17 +136,20 @@ export function ArenaPage() {
         const c = wrapRef.current.querySelector<HTMLElement>("[data-crown]");
         if(c) { gsap.fromTo(c,{scale:0.8},{scale:1.08,duration:0.18,ease:"back.out(2)",yoyo:true,repeat:1}); }
       }
-      // server is source of truth — mark claimed in React state
       setClaimed(prev=> ({...prev, [kind==="win"?"win":kind==="streak3"?"streak3":"crown"]: true}));
       if(kind==="win") setWins(v=> v+1);
     }catch{ setMsg("Сеть недоступна"); }
   }
 
-  function bumpStreak() {
-    const ns = Math.min(7, streak+1);
-    setStreak(ns);
-    setWins(v=> v+1);
-    setMsg(`Стрик ${ns}/7 • +1 win — нажми «Забрать +142» на 3-м`);
+  async function refreshStats() {
+    try{
+      const r = await fetch("/magnum/api/duel42/stats",{credentials:"include"});
+      if(!r.ok){ setMsg(r.status===401? "Войди, братуха — стрик считается по аккаунту" : "Не удалось обновить статистику"); return; }
+      const j = await r.json() as DuelStats;
+      setWins(Number(j.wins)||0);
+      setStreak(Math.min(7, Number(j.streak)||0));
+      setMsg(`Побед ${j.wins} • стрик ${j.streak}/7 — данные из дуэлей, не локальные`);
+    }catch{ setMsg("Сеть недоступна"); }
   }
 
   return (
@@ -170,13 +175,13 @@ export function ArenaPage() {
               const pct = Math.max(6, Math.round((r.score / maxScore)*100));
               const isTop = i<3;
               return (
-                <div key={`${r.player}-${i}`} data-arena-row className={`${styles.row} ${isTop?styles.rowTop:""}`}>
+                <div key={`${r.player}-${i}`} data-arena-row className={`${styles.row} ${isTop?styles.rowTop:""}`} style={cosmeticBannerStyle(r.banner)}>
                   <div className={`${styles.crown} ${isTop?styles.crownVolcano:""}`} data-crown={isTop?1:0} style={isTop?{animation:"volcanoSpin 3s linear infinite, volcanoPulse 1.2s ease-in-out infinite"} as never:undefined} title={isTop?"volcano-crown 42 • conic-volcano + pulse 1.2s":""}>
                     {isTop ? "👑" : `#${i+1}`}
                   </div>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontWeight:800,fontSize:13,display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
-                      <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.player}</span>
+                      <CosmeticIdentity username={r.player} avatar={r.avatar} frame={r.frame} title={r.title} size={22} />
                       {isTop && <span className={styles.badge} style={{fontSize:10}}>TOP {i+1} • +{crownBonus}</span>}
                       <span className={styles.meta} style={{marginLeft:"auto"}}>{r.score} pts</span>
                     </div>
@@ -188,7 +193,7 @@ export function ArenaPage() {
           </div>
           <div style={{marginTop:12,display:"flex",gap:8,flexWrap:"wrap"}}>
             <a href="/magnum/games/duel-volcano" className={`${styles.btn} ${styles.btnPrimary}`}>ИГРАТЬ VOLCANO →</a>
-            <button type="button" className={styles.btn} onClick={bumpStreak}>+1 win (стрик)</button>
+            <button type="button" className={styles.btn} onClick={refreshStats}>Обновить стрик</button>
           </div>
         </div>
 

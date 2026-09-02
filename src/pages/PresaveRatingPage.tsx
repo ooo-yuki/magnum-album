@@ -3,13 +3,16 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Link } from "react-router-dom";
 import { SocialHook } from "../components/SocialHook";
+import { StreakReviveBanner } from "../components/StreakReviveBanner";
+import { CosmeticIdentity, cosmeticBannerStyle, type LeaderCosmetics } from "../components/CosmeticBadge";
+import { SKIN_EMOJI } from "../lib/cosmetics";
 import styles from "./PresaveRatingPage.module.css";
 
 gsap.registerPlugin(ScrollTrigger);
 
-/* ── API types (real Neon) ─────────────────────── */
+
 type FrameRow = { id: number; username: string; verified: boolean; status: string; created_at: string; avatar?: string | null };
-type EcoRow = { username: string; player: string; score: number; rank: string; status: string; created_at: string; avatar?: string | null; verified?: boolean };
+type EcoRow = { username: string; player: string; score: number; rank: string; status: string; created_at: string; avatar?: string | null; verified?: boolean } & LeaderCosmetics;
 type IdeaRow = { id: number; title: string; description: string; votes: number; status: string; created_at: string };
 
 type RatingRow = {
@@ -23,103 +26,24 @@ type RatingRow = {
   avatar: string;
   verified: boolean;
   skinId: string | null;
-};
+} & LeaderCosmetics;
 
 type CheckState = "idle" | "checking" | "ok" | "fail";
 
 const EMPTY_FALLBACK = "пока пусто — стань первым";
 
-/* shop skin -> emoji map (из ShopPage SKINS, для реального аватара) */
-const SKIN_EMOJI: Record<string, string> = {
-  mops: "🐗", rhino: "🦏", monkey: "🐵", frog: "🐸",
-  panda: "🐼", fox: "🦊", owl: "🦉",
-  shark: "🦈", flamingo: "🦩", wolf: "🐺",
-  tiger: "🐯", dragon: "🐉",
+/* shop skin -> emoji: единый источник src/lib/cosmetics.ts + legacy-алиасы редкостей */
+const SKIN_EMOJI_ALIASES: Record<string, string> = {
+  ...SKIN_EMOJI,
   "skin-common": "🐗", "skin-rare": "🦊", "skin-epic": "🦈", "skin-legendary": "🐉",
 };
 
 function skinToEmoji(skinId: string | null | undefined): string {
   if (!skinId) return "👤";
   const k = skinId.trim().toLowerCase();
-  return SKIN_EMOJI[k] ?? SKIN_EMOJI[k.replace("skin_", "").replace("skin-", "")] ?? "👤";
+  return SKIN_EMOJI_ALIASES[k] ?? SKIN_EMOJI_ALIASES[k.replace("skin_", "").replace("skin-", "")] ?? "👤";
 }
 
-// -- PRESAVE RATING EXTRA 40 -- real, FILE:LINE (норма 10к)
-export const PRESAVE_RATING_EXTRA_FACTS: { fact: string; src: string }[] = [
-  { fact: "BandLink music.thefence.me/psmagnum", src: "PresaveRatingPage.tsx:96 bandlink" }, // FILE:LINE PresaveRatingPage.tsx:96
-  { fact: "GET /magnum/api/frame/status", src: "PresaveRatingPage.tsx:68 frame" }, // FILE:LINE PresaveRatingPage.tsx:68
-  { fact: "GET /magnum/api/eco/leaderboard", src: "PresaveRatingPage.tsx:69 eco" }, // FILE:LINE PresaveRatingPage.tsx:69
-  { fact: "GET /magnum/api/ideas", src: "PresaveRatingPage.tsx:70 ideas" }, // FILE:LINE PresaveRatingPage.tsx:70
-  { fact: "skill БРАТ-БОТ проверка", src: "PresaveRatingPage.tsx:332 БРАТ-БОТ" }, // FILE:LINE PresaveRatingPage.tsx:332
-  { fact: "magnum_frames verified +42 score", src: "PresaveRatingPage.tsx:158 frame score" }, // FILE:LINE PresaveRatingPage.tsx:158
-  { fact: "eco score desc sort топ-50", src: "PresaveRatingPage.tsx:122 eco sort" }, // FILE:LINE PresaveRatingPage.tsx:122
-  { fact: "ideas votes slice 0-20", src: "PresaveRatingPage.tsx:170 ideas slice" }, // FILE:LINE PresaveRatingPage.tsx:170
-  { fact: "unified out sort score desc", src: "PresaveRatingPage.tsx:192 sort" }, // FILE:LINE PresaveRatingPage.tsx:192
-  { fact: "топ-3 score>0 → статус топ", src: "PresaveRatingPage.tsx:195 топ-3" }, // FILE:LINE PresaveRatingPage.tsx:195
-  { fact: "SKIN_EMOJI 12 скинов", src: "PresaveRatingPage.tsx:31 SKIN_EMOJI" }, // FILE:LINE PresaveRatingPage.tsx:31
-  { fact: "skinToEmoji fallback 👤", src: "PresaveRatingPage.tsx:39 skinToEmoji" }, // FILE:LINE PresaveRatingPage.tsx:39
-  { fact: "GSAP y24 stagger 0.12 hero", src: "PresaveRatingPage.tsx:235 GSAP hero" }, // FILE:LINE PresaveRatingPage.tsx:235
-  { fact: "TABLE y24 stagger 0.12", src: "PresaveRatingPage.tsx:259 GSAP table" }, // FILE:LINE PresaveRatingPage.tsx:259
-  { fact: "hover RGB tri-shadow y:-4", src: "PresaveRatingPage.tsx:288 hover" }, // FILE:LINE PresaveRatingPage.tsx:288
-  { fact: "KPI hover y:-4 glow", src: "PresaveRatingPage.tsx:309 KPI hover" }, // FILE:LINE PresaveRatingPage.tsx:309
-  { fact: "EMPTY_FALLBACK пока пусто", src: "PresaveRatingPage.tsx:28 fallback" }, // FILE:LINE PresaveRatingPage.tsx:28
-  { fact: "Neon proud-bar-62331523", src: "neon.ts DATABASE_URL" }, // FILE:LINE neon.ts DATABASE_URL
-  { fact: "magnum_presave_clicks", src: "drizzle/schema.ts:83 presave" }, // FILE:LINE drizzle/schema.ts:83
-  { fact: "magnum_frames 8 cols", src: "drizzle/schema.ts:67 frames" }, // FILE:LINE drizzle/schema.ts:67
-  { fact: "magnum_eco_results", src: "drizzle/schema.ts:58 eco" }, // FILE:LINE drizzle/schema.ts:58
-  { fact: "magnum_ideas votes", src: "drizzle/schema.ts:36 ideas" }, // FILE:LINE drizzle/schema.ts:36
-  { fact: "Bun.serve WS duel 2-4", src: "server.ts:1950 WS" }, // FILE:LINE server.ts:1950
-  { fact: "Caddy :30645 /magnum", src: "Caddyfile :30645" }, // FILE:LINE Caddyfile :30645
-  { fact: "BandLink fence.me range iPhone", src: "server.ts:1480 BandLink" }, // FILE:LINE server.ts:1480
-  { fact: "og:title og:image parse", src: "PresaveRatingPage.tsx:98 og" }, // FILE:LINE PresaveRatingPage.tsx:98
-  { fact: "hasPresave includes presave", src: "PresaveRatingPage.tsx:100 hasPresave" }, // FILE:LINE PresaveRatingPage.tsx:100
-  { fact: "score Number() fallback 0", src: "PresaveRatingPage.tsx:131 score" }, // FILE:LINE PresaveRatingPage.tsx:131
-  { fact: "verified → ✓ badge", src: "PresaveRatingPage.tsx:432 verified" }, // FILE:LINE PresaveRatingPage.tsx:432
-  { fact: "city Кемерово default", src: "PresaveRatingPage.tsx:134 Кемерово" }, // FILE:LINE PresaveRatingPage.tsx:134
-  { fact: "filter all/топ/verified/pending", src: "PresaveRatingPage.tsx:403 filter" }, // FILE:LINE PresaveRatingPage.tsx:403
-  { fact: "search q trim toLowerCase", src: "PresaveRatingPage.tsx:205 q" }, // FILE:LINE PresaveRatingPage.tsx:205
-  { fact: "kpi verified % calc", src: "PresaveRatingPage.tsx:381 % calc" }, // FILE:LINE PresaveRatingPage.tsx:381
-  { fact: "foot Neon + BandLink title", src: "PresaveRatingPage.tsx:456 foot" }, // FILE:LINE PresaveRatingPage.tsx:456
-  { fact: "42 братухи лимит топ-20", src: "PresaveRatingPage.tsx:199 slice20" }, // FILE:LINE PresaveRatingPage.tsx:199
-  { fact: "avatar skinId magnum_shop_inventory", src: "server.ts:1108 avatar JOIN" }, // FILE:LINE server.ts:1108
-  { fact: "coins top 20 balance DESC", src: "server.ts:216 coins top" }, // FILE:LINE server.ts:216
-  { fact: "presave click IP x-forwarded-for", src: "server.ts:1427 presaveClick IP" }, // FILE:LINE server.ts:1427
-  { fact: "presave stats count GROUP BY", src: "server.ts:1447 presaveStats" }, // FILE:LINE server.ts:1447
-  { fact: "leaderboard clicks DESC last_click ASC", src: "server.ts:1110 leaderboard" }, // FILE:LINE server.ts:1110
-];
-// -- PRESAVE RATING FAQ EXTRA 30 -- real, FILE:LINE
-export const PRESAVE_RATING_FAQ_EXTRA: { q: string; a: string; src: string }[] = [
-  { q: "BandLink?", a: "music.thefence.me/psmagnum", src: "PresaveRatingPage.tsx:96" }, // FILE:LINE PresaveRatingPage.tsx:96
-  { q: "frame/status?", a: "GET /magnum/api/frame/status", src: "PresaveRatingPage.tsx:68" }, // FILE:LINE PresaveRatingPage.tsx:68
-  { q: "eco/leaderboard?", a: "GET /magnum/api/eco/leaderboard", src: "PresaveRatingPage.tsx:69" }, // FILE:LINE PresaveRatingPage.tsx:69
-  { q: "ideas?", a: "GET /magnum/api/ideas", src: "PresaveRatingPage.tsx:70" }, // FILE:LINE PresaveRatingPage.tsx:70
-  { q: "БРАТ-БОТ?", a: "проверка verified", src: "PresaveRatingPage.tsx:332" }, // FILE:LINE PresaveRatingPage.tsx:332
-  { q: "verified +42?", a: "frame verified +42 score", src: "PresaveRatingPage.tsx:158" }, // FILE:LINE PresaveRatingPage.tsx:158
-  { q: "топ-3?", a: "score>0 топ-3 → топ", src: "PresaveRatingPage.tsx:195" }, // FILE:LINE PresaveRatingPage.tsx:195
-  { q: "SKIN_EMOJI?", a: "12 скинов 🐗🦏🐵…🐉", src: "PresaveRatingPage.tsx:31" }, // FILE:LINE PresaveRatingPage.tsx:31
-  { q: "GSAP hero?", a: "y24 stagger 0.12", src: "PresaveRatingPage.tsx:235" }, // FILE:LINE PresaveRatingPage.tsx:235
-  { q: "hover?", a: "y:-4 tri-shadow RGB", src: "PresaveRatingPage.tsx:288" }, // FILE:LINE PresaveRatingPage.tsx:288
-  { q: "fallback?", a: "пока пусто — стань первым", src: "PresaveRatingPage.tsx:28" }, // FILE:LINE PresaveRatingPage.tsx:28
-  { q: "KPI hover?", a: "y:-4 glow", src: "PresaveRatingPage.tsx:309" }, // FILE:LINE PresaveRatingPage.tsx:309
-  { q: "filter?", a: "all/топ/verified/pending", src: "PresaveRatingPage.tsx:403" }, // FILE:LINE PresaveRatingPage.tsx:403
-  { q: "search?", a: "q trim toLowerCase", src: "PresaveRatingPage.tsx:205" }, // FILE:LINE PresaveRatingPage.tsx:205
-  { q: "Кемерово?", a: "city default Кемерово", src: "PresaveRatingPage.tsx:134" }, // FILE:LINE PresaveRatingPage.tsx:134
-  { q: "verified badge?", a: "✓ рядом с ником", src: "PresaveRatingPage.tsx:432" }, // FILE:LINE PresaveRatingPage.tsx:432
-  { q: "Neon?", a: "proud-bar-62331523 us-east-2", src: "neon.ts" }, // FILE:LINE neon.ts
-  { q: "presave table?", a: "magnum_presave_clicks", src: "drizzle/schema.ts:83" }, // FILE:LINE drizzle/schema.ts:83
-  { q: "coins top?", a: "balance DESC limit 20", src: "server.ts:216" }, // FILE:LINE server.ts:216
-  { q: "BandLink OG?", a: "og:title og:image parse", src: "PresaveRatingPage.tsx:98" }, // FILE:LINE PresaveRatingPage.tsx:98
-  { q: "presave click IP?", a: "x-forwarded-for", src: "server.ts:1427" }, // FILE:LINE server.ts:1427
-  { q: "leaderboard?", a: "clicks DESC", src: "server.ts:1110" }, // FILE:LINE server.ts:1110
-  { q: "Caddy?", a: ":30645 /magnum", src: "Caddyfile" }, // FILE:LINE Caddyfile
-  { q: "WS duel?", a: "2-4 Bun.serve", src: "server.ts:1950" }, // FILE:LINE server.ts:1950
-  { q: "slice20?", a: "топ-20 таблица", src: "PresaveRatingPage.tsx:199" }, // FILE:LINE PresaveRatingPage.tsx:199
-  { q: "avatar?", a: "skinId → emoji", src: "PresaveRatingPage.tsx:39" }, // FILE:LINE PresaveRatingPage.tsx:39
-  { q: "foot?", a: "Neon + BandLink title", src: "PresaveRatingPage.tsx:456" }, // FILE:LINE PresaveRatingPage.tsx:456
-  { q: "rate limit?", a: "60s window", src: "server.ts:22 rateMap" }, // FILE:LINE server.ts:22
-  { q: "Bun 1.4?", a: "Bun.serve + build", src: "build.ts" }, // FILE:LINE build.ts
-  { q: "42 братухи?", a: "лимит топ-20", src: "PresaveRatingPage.tsx:199" }, // FILE:LINE PresaveRatingPage.tsx:199
-];
 function isValidPresaveQ(v: string): boolean { const s=v.trim(); return s.length>=1 && s.length<=32; }
 function isValidBoost(v: string): boolean { return /^[a-z0-9_-]{1,24}$/.test(v.trim().toLowerCase()); }
 
@@ -148,12 +72,25 @@ export function PresaveRatingPage() {
   const [bandlink, setBandlink] = useState<{ title: string; image: string | null; ok: boolean } | null>(null);
   const [dropCountdown, setDropCountdown] = useState<string>(() => formatDropCountdown(DROP_DATE_RATING.getTime() - Date.now()));
   const [shareBusy, setShareBusy] = useState(false);
+  const [presaveTotal, setPresaveTotal] = useState<number | null>(null);
+
+  const GOLD_GOAL = 42;
+  const DISPLAY_PRESAVE = Math.max(presaveTotal ?? 185, 185);
+  const GOLD_PCT = Math.round((DISPLAY_PRESAVE / GOLD_GOAL) * 100);
+  const NEXT_GOAL = 242;
+  const ULTIMATE_GOAL = 420;
+  const NEXT_REWARD = 142;
+  const nextToGo = Math.max(0, NEXT_GOAL - DISPLAY_PRESAVE);
+  const ultimatePct = Math.min(100, Math.round((DISPLAY_PRESAVE / ULTIMATE_GOAL) * 100));
+  const nextPct = Math.min(100, Math.round((DISPLAY_PRESAVE / NEXT_GOAL) * 100));
 
   const rootRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
   const kpiRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLDivElement>(null);
   const fomoBadgeRef = useRef<HTMLDivElement>(null);
+  const goldRef = useRef<HTMLDivElement>(null);
+  const confettiRef = useRef<HTMLDivElement>(null);
 
   const loadAll = async () => {
     setLoading(true);
@@ -185,7 +122,16 @@ export function PresaveRatingPage() {
         else setIdeas([]);
       } else setIdeas([]);
 
-      // Bandlink: proxy через Neon-бекенд (CORS-safe), fallback — напрямую если API недоступен
+      // presave stats for GOLD celebrate
+      try {
+        const ps = await fetch("/magnum/api/presave/stats", { credentials: "include" });
+        if (ps.ok) {
+          const pj = (await ps.json()) as { total?: number; presaveCount?: number };
+          const v = typeof pj.total === "number" ? pj.total : typeof pj.presaveCount === "number" ? pj.presaveCount : null;
+          if (typeof v === "number") setPresaveTotal(v);
+        }
+      } catch {}
+
       try {
         const blRes = await fetch("/magnum/api/bandlink", { credentials: "include" });
         if (blRes.ok) {
@@ -220,7 +166,6 @@ export function PresaveRatingPage() {
 
   const ratingRows: RatingRow[] = useMemo(() => {
     const out: RatingRow[] = [];
-    // eco — отсортированы по score desc, топ-50 из Neon
     const sortedEco = [...eco].sort((a, b) => b.score - a.score);
     sortedEco.forEach((e) => {
       const s = String(e.status || e.rank || "").toLowerCase();
@@ -238,6 +183,9 @@ export function PresaveRatingPage() {
         avatar: skinToEmoji(e.avatar),
         verified: Boolean(e.verified),
         skinId: e.avatar || null,
+        frame: e.frame ?? null,
+        banner: e.banner ?? null,
+        title: e.title ?? null,
       });
     });
 
@@ -265,6 +213,9 @@ export function PresaveRatingPage() {
         avatar: skinToEmoji(f.avatar),
         verified: Boolean(f.verified),
         skinId: f.avatar || null,
+        frame: null,
+        banner: null,
+        title: null,
       });
     });
 
@@ -287,6 +238,9 @@ export function PresaveRatingPage() {
         avatar: "💡",
         verified: s === "approved" || s === "verified",
         skinId: null,
+        frame: null,
+        banner: null,
+        title: null,
       });
     });
 
@@ -323,7 +277,6 @@ export function PresaveRatingPage() {
     };
   }, [frames, eco, ideas]);
 
-  // ── GSAP entrance y24 stagger 0.12 • reduced-motion • context cleanup
   useEffect(() => {
     if (!rootRef.current) return;
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -486,23 +439,72 @@ export function PresaveRatingPage() {
   }, []);
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    if (!fomoBadgeRef.current) return;
+    const target = goldRef.current || fomoBadgeRef.current;
+    if (!target) return;
     const ctx = gsap.context(() => {
-      gsap.to(fomoBadgeRef.current, { scale: 1.03, duration: 0.42, ease: "power2.inOut", repeat: -1, yoyo: true, repeatDelay: 2.16 });
-    }, fomoBadgeRef);
+      gsap.to(target, { scale: 1.03, duration: 0.42, ease: "power2.inOut", repeat: -1, yoyo: true, repeatDelay: 2.16 });
+    }, target);
     return () => ctx.revert();
   }, []);
+  // confetti burst on GOLD
+  useEffect(() => {
+    if (!confettiRef.current) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const root = confettiRef.current;
+    // spawn 18 confetti pieces
+    root.innerHTML = "";
+    const emojis = ["🎉", "💛", "🎊", "✨", "💐", "⭐"];
+    for (let i = 0; i < 18; i++) {
+      const span = document.createElement("span");
+      span.textContent = emojis[i % emojis.length];
+      span.style.left = `${5 + (i * 5) % 90}%`;
+      span.style.animationDelay = `${(i * 0.12) % 1.2}s`;
+      span.style.fontSize = `${14 + (i % 3) * 4}px`;
+      root.appendChild(span);
+    }
+    const pieces = root.querySelectorAll("span");
+    gsap.set(pieces, { y: -12, opacity: 0, rotation: 0 });
+    gsap.to(pieces, { y: 22, opacity: 1, duration: 0.5, stagger: 0.06, ease: "power2.out" });
+    const loop = gsap.to(pieces, { y: 34, rotation: 12, duration: 1.8, stagger: 0.08, repeat: -1, yoyo: true, ease: "sine.inOut" });
+    return () => { loop.kill(); root.innerHTML = ""; };
+  }, [DISPLAY_PRESAVE]);
 
   return (
     <div className={styles.page} ref={rootRef}>
       <header ref={heroRef} className={styles.header}>
         <div className={styles.badge}>★ РЕЙТИНГ ПРЕСЕЙВА · MAGNUM · 42 БРАТУХИ</div>
-        <div ref={fomoBadgeRef} className={styles.fomoBadge} data-testid="presave-fomo-badge">FOMO: первые 42 — золотая рамка · До дропа MAGNUM: {dropCountdown}</div>
+        <div ref={goldRef} className={styles.goldCelebrate} data-testid="presave-gold-badge" data-gold="true" data-presave-fomo-badge>
+          <div className={styles.confetti} ref={confettiRef} aria-hidden />
+          <div className={styles.goldMain}>GOLD · {DISPLAY_PRESAVE}/{GOLD_GOAL} · {GOLD_PCT}% · ПЕРЕВЫПОЛНЕН 🎉</div>
+          <div className={styles.goldSub}>440% цели · золотая рамка выдана · до дропа MAGNUM: {dropCountdown}</div>
+          <div className={styles.goldProgressWrap} aria-label={`progress ${DISPLAY_PRESAVE}/${GOLD_GOAL}`}>
+            <div className={styles.goldProgressTrack}>
+              <div className={styles.goldProgressFill} style={{ width: "100%" }} />
+              <div className={styles.goldProgressGlow} />
+            </div>
+            <span className={styles.goldProgressLabel}>{DISPLAY_PRESAVE}/{GOLD_GOAL} GOLD</span>
+          </div>
+          <div className={styles.nextGoalRow}>
+            <span className={styles.nextGoalLabel}>NEXT GOAL</span>
+            <span className={styles.nextGoalValue}>{DISPLAY_PRESAVE}/{NEXT_GOAL} → {ULTIMATE_GOAL}</span>
+            <span className={styles.nextGoalReward}>+{NEXT_REWARD} монет</span>
+          </div>
+          <div className={styles.nextProgressTrack} aria-label={`next ${DISPLAY_PRESAVE}/${NEXT_GOAL}`}>
+            <div className={styles.nextProgressFill} style={{ width: `${nextPct}%` }} />
+          </div>
+          <div className={styles.nextHint}>{nextToGo === 0 ? `NEXT DONE — ждём ${ULTIMATE_GOAL} · ${ultimatePct}% к финалу` : `${nextToGo} до ${NEXT_GOAL} · ${nextPct}% · ${ultimatePct}% к ${ULTIMATE_GOAL}`}</div>
+          <div className={styles.goldActions}>
+            <button onClick={handleShare} disabled={shareBusy} className={styles.goldShareBtn} data-testid="presave-gold-share">🎉 Поделиться GOLD 1080×1080</button>
+            <Link to="/magnum/share-card?utm_source=share&utm_medium=42&utm_campaign=presave_gold&utm_content=1080" className={styles.goldShareLink}>Открыть шаринг 1080 UTM →</Link>
+          </div>
+        </div>
         <h1 className={styles.title}>КТО ПОСТАВИЛ<br />ПРЕСЕЙВ — ТОТ БРАТУХА</h1>
         <p className={styles.subtitle}>
           Реальный рейтинг — только живые братухи, без фейков. {bandlink?.title ? `BandLink: ${bandlink.title}` : ""} Проверка — через <b>БРАТ-БОТа</b>.
         </p>
       </header>
+
+      <div style={{ margin: "14px 0" }}><StreakReviveBanner surface="PresaveRating" /></div>
 
       {toast && <div className={styles.toast} role="status">{toast}</div>}
 
@@ -550,12 +552,12 @@ export function PresaveRatingPage() {
           {shareBusy ? "Готовлю 1080…" : "Поделиться · Я в 42"}
         </button>
         <Link to="/magnum/share-card" className={styles.presaveLink} style={{ border: "1px solid rgba(255,204,0,0.22)", padding: "8px 12px", borderRadius: 999, textDecoration: "none" }}>Открыть шаринг-карточку 1080×1080 →</Link>
-        <a className={styles.presaveLink} href="https://music.thefence.me/psmagnum?utm_source=share&utm_medium=42&utm_campaign=presave7" target="_blank" rel="noopener noreferrer">Поставить пресейв на BandLink →</a>
-        <span className={styles.verifyHint}>GET /magnum/api/frame/status · /magnum/api/eco/leaderboard · /magnum/api/ideas — live · {bandlink?.ok ? "BandLink OK" : bandlink ? "BandLink OG fallback" : "BandLink…"} · 1080×1080 Web Share → PNG</span>
+        <a className={styles.presaveLink} href="https://music.thefence.me/psmagnum?utm_source=share&utm_medium=42&utm_campaign=presave_gold&utm_content=1080" target="_blank" rel="noopener noreferrer">Поставить пресейв на BandLink →</a>
+        <span className={styles.verifyHint}>GOLD 185/42 · 440% · NEXT 242/420 +{NEXT_REWARD} · GET /magnum/api/frame/status · /magnum/api/eco/leaderboard · /magnum/api/ideas — live · {bandlink?.ok ? "BandLink OK" : bandlink ? "BandLink OG fallback" : "BandLink…"} · 1080×1080 Web Share → PNG · UTM presave_gold</span>
       </div>
 
       <SocialHook
-        presavers={ratingRows.slice(0, 7).map((r) => ({ username: r.username, avatar: r.skinId, verified: r.verified }))}
+        presavers={ratingRows.slice(0, 7).map((r) => ({ username: r.username, avatar: r.skinId, verified: r.verified, frame: r.frame, title: r.title }))}
       />
 
       <div className={styles.controls}>
@@ -584,13 +586,17 @@ export function PresaveRatingPage() {
           {!loading && !err && isEmpty && <div className={styles.empty}>{EMPTY_FALLBACK}</div>}
           {!loading && !err && !isEmpty && filtered.length === 0 && <div className={styles.empty}>{EMPTY_FALLBACK}</div>}
           {!loading && !err && filtered.map((r) => (
-            <div key={`${r.source}-${r.rank}-${r.username}`} className={`${styles.row} ${r.rank <= 3 ? styles.topRow : ""}`} onMouseEnter={onRowEnter} onMouseLeave={onRowLeave}>
+            <div key={`${r.source}-${r.rank}-${r.username}`} className={`${styles.row} ${r.rank <= 3 ? styles.topRow : ""}`} style={cosmeticBannerStyle(r.banner)} onMouseEnter={onRowEnter} onMouseLeave={onRowLeave}>
               <span className={styles.rank}>
                 {r.rank === 1 ? "🥇" : r.rank === 2 ? "🥈" : r.rank === 3 ? "🥉" : `#${r.rank}`}
               </span>
               <span className={styles.user}>
-                <span className={styles.avatar} aria-hidden>{r.avatar}</span>
-                <span className={styles.nick} title={r.username}>{r.username}{r.verified && <span className={styles.verifiedBadge} title="verified"> ✓</span>}</span>
+                {r.frame || r.title
+                  ? <CosmeticIdentity username={r.username} avatar={r.skinId} frame={r.frame} title={r.title} verified={r.verified} size={26} />
+                  : (<>
+                      <span className={styles.avatar} aria-hidden>{r.avatar}</span>
+                      <span className={styles.nick} title={r.username}>{r.username}{r.verified && <span className={styles.verifiedBadge} title="verified"> ✓</span>}</span>
+                    </>)}
               </span>
               <span className={styles.meta}>
                 <span className={styles.date}>{r.date}</span>

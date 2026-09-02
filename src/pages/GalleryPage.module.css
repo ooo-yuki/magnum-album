@@ -1,7 +1,4 @@
-/* ════════════════════════════════════════════════════════════════
-   GALERIA 42 — RGB-неон #0a0a0a #ff2d55
-   3×2 сетка, фильтр-пилюли, лайтбокс GSAP scale, мок-генерация
-   ════════════════════════════════════════════════════════════════ */
+ 
 
 .page {
   --c-bg: #0a0a0a;
@@ -590,7 +587,7 @@
   text-align: center;
 }
 
-/* ── lightbox (GSAP scale) ─────────────────────────────── */
+
 
 .lightbox {
   position: fixed;
@@ -669,7 +666,7 @@
     0 0 0 1px color-mix(in srgb, var(--accent42) 18%, transparent),
     0 0 36px color-mix(in srgb, var(--accent42) 16%, transparent);
   cursor: auto;
-  /* GSAP управляет scale/opacity */
+  
 }
 
 .lbArt {

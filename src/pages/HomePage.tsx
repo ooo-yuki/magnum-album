@@ -11,8 +11,9 @@ import { lazy, Suspense } from "react";
 import { getABVariant, type ABVariant } from "../lib/presaveTracker";
 import { ReferralCard } from "../components/ReferralCard";
 import { TamagotchiWidget } from "../components/TamagotchiWidget";
+import { FirstGameBanner } from "../components/FirstGameBanner";
+import { DuelCTA, DuelTeaser } from "../components/DuelCTA";
 // perf 16:34 — lazy below-fold (Timeline 576L + PressWall 207L + News2026 242L + CTA) — main 466→~340K eager
-// perf 2026-09-01 — Singles lazy (162L, GSAP/ScrollTrigger, 2 covers) → main -~12KB (chunk split)
 const Singles = lazy(() => import("../components/Singles").then(m => ({ default: m.Singles })));
 const Timeline = lazy(() => import("../components/Timeline").then(m => ({ default: m.Timeline })));
 const PressWall = lazy(() => import("../components/PressWall").then(m => ({ default: m.PressWall })));
@@ -272,7 +273,6 @@ function PopupBanner() {
   const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // без localStorage: показываем один раз за сессию (in-memory), 3с delay — Neon-стейт для пресейва отдельно
     const t = window.setTimeout(() => setVisible(true), 3000);
     return () => window.clearTimeout(t);
   }, []);
@@ -422,6 +422,9 @@ export function HomePage() {
       <Suspense fallback={<div style={{minHeight:200}} /> }><PressWall /></Suspense>
       <Suspense fallback={<div style={{minHeight:160}} /> }><News2026 /></Suspense>
       <PromoBanners />
+      <FirstGameBanner />
+      <DuelTeaser />
+      <DuelCTA />
       <div style={{ maxWidth:1120, margin:"0 auto", padding:"0.8rem 1rem" }}><ReferralCard /></div>
       <TamagotchiWidget />
       <Suspense fallback={<div style={{minHeight:220}} />}><Singles /></Suspense>

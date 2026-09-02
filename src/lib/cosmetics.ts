@@ -1,56 +1,65 @@
 // cosmetics.ts — единый источник COSMETICS + GLACIER/CRYSTAL/PRISM 12/12/12
-// Single source for server.ts and ShopPage.tsx to avoid drift.
 // GLACIER 12: frame-glacier-matte … title-rgb-glacier (включая kuzbass-ice, tom-glacier)
 
 export type CosmeticSlot = "frame" | "banner" | "title";
-export type CosmeticItem = { id: string; slot: CosmeticSlot; name: string; price: number; rarity: "common"|"rare"|"epic"|"legendary"; style: string };
+export type Rarity = "common" | "rare" | "epic" | "legendary";
+export type CosmeticItem = { id: string; slot: CosmeticSlot; name: string; price: number; rarity: Rarity; style: string };
+
+// ── Единственный источник цен по редкости для всего проекта ──────────────────
+// Импортируется economy.ts (RARITY_PRICE), shopCatalog.ts (RARITY_META.price)
+export const RARITY_PRICE: Record<Rarity, number> = {
+  common: 42,
+  rare: 142,
+  epic: 420,
+  legendary: 1420,
+};
 
 export const COSMETICS_CATALOG: CosmeticItem[] = [
   { id: "frame-neon42", slot: "frame", name: "Неон 42", price: 42, rarity: "common", style: "2px solid #ff44cc" },
   { id: "frame-gold", slot: "frame", name: "Золото 42", price: 142, rarity: "rare", style: "3px solid #ffcc00" },
   { id: "frame-rgb", slot: "frame", name: "RGB-пульс", price: 420, rarity: "epic", style: "3px solid #00ffcc" },
   { id: "frame-dragon", slot: "frame", name: "Драконьи когти", price: 1420, rarity: "legendary", style: "4px solid #ff2d55" },
-  { id: "frame-ice", slot: "frame", name: "Лёд MAGNUM", price: 84, rarity: "common", style: "2px solid #7dd8ff" },
-  { id: "frame-fire", slot: "frame", name: "Пламя", price: 184, rarity: "rare", style: "3px solid #ff6a00" },
-  { id: "frame-toxic", slot: "frame", name: "Токсик", price: 390, rarity: "epic", style: "3px solid #7cff00" },
+  { id: "frame-ice", slot: "frame", name: "Лёд MAGNUM", price: 42, rarity: "common", style: "2px solid #7dd8ff" },
+  { id: "frame-fire", slot: "frame", name: "Пламя", price: 142, rarity: "rare", style: "3px solid #ff6a00" },
+  { id: "frame-toxic", slot: "frame", name: "Токсик", price: 420, rarity: "epic", style: "3px solid #7cff00" },
   { id: "frame-void", slot: "frame", name: "Войд", price: 1420, rarity: "legendary", style: "4px solid #7a1ecb" },
   { id: "frame-paper", slot: "frame", name: "Бумажный", price: 42, rarity: "common", style: "2px dashed #aaa" },
   { id: "frame-pixel", slot: "frame", name: "Пиксель 42", price: 142, rarity: "rare", style: "3px solid #5865f2" },
-  { id: "frame-holo", slot: "frame", name: "Голо-рамка", price: 520, rarity: "epic", style: "3px solid #9147ff" },
-  { id: "frame-crown", slot: "frame", name: "Корона", price: 2042, rarity: "legendary", style: "4px solid #ffd700" },
+  { id: "frame-holo", slot: "frame", name: "Голо-рамка", price: 420, rarity: "epic", style: "3px solid #9147ff" },
+  { id: "frame-crown", slot: "frame", name: "Корона", price: 1420, rarity: "legendary", style: "4px solid #ffd700" },
   { id: "banner-42wave", slot: "banner", name: "Волна 42", price: 42, rarity: "common", style: "linear-gradient(90deg,#ff44cc,#00ffcc)" },
   { id: "banner-magnum", slot: "banner", name: "MAGNUM fire", price: 142, rarity: "rare", style: "linear-gradient(90deg,#ff2d55,#ffcc00)" },
   { id: "banner-glitch", slot: "banner", name: "Глитч", price: 420, rarity: "epic", style: "linear-gradient(90deg,#5865f2,#9147ff)" },
   { id: "banner-voidstar", slot: "banner", name: "Звезда войда", price: 1420, rarity: "legendary", style: "linear-gradient(90deg,#0a0a0a,#7a1ecb 50%,#ff44cc)" },
-  { id: "banner-ocean", slot: "banner", name: "Океан", price: 84, rarity: "common", style: "linear-gradient(90deg,#0c2e57,#2b7fd4)" },
-  { id: "banner-sunset", slot: "banner", name: "Закат", price: 184, rarity: "rare", style: "linear-gradient(90deg,#ff7b00,#ff44cc)" },
-  { id: "banner-forest", slot: "banner", name: "Лес 42", price: 390, rarity: "epic", style: "linear-gradient(90deg,#14401a,#8fe06a)" },
+  { id: "banner-ocean", slot: "banner", name: "Океан", price: 42, rarity: "common", style: "linear-gradient(90deg,#0c2e57,#2b7fd4)" },
+  { id: "banner-sunset", slot: "banner", name: "Закат", price: 142, rarity: "rare", style: "linear-gradient(90deg,#ff7b00,#ff44cc)" },
+  { id: "banner-forest", slot: "banner", name: "Лес 42", price: 420, rarity: "epic", style: "linear-gradient(90deg,#14401a,#8fe06a)" },
   { id: "banner-nebula", slot: "banner", name: "Туманность", price: 1420, rarity: "legendary", style: "linear-gradient(90deg,#1b0a3a,#ff2d55)" },
-  { id: "banner-grid", slot: "banner", name: "Сетка", price: 62, rarity: "common", style: "linear-gradient(90deg,#2e3238,#b8bcc4)" },
-  { id: "banner-tiger", slot: "banner", name: "Тигр", price: 520, rarity: "epic", style: "linear-gradient(90deg,#8a3c00,#ffd76a)" },
+  { id: "banner-grid", slot: "banner", name: "Сетка", price: 42, rarity: "common", style: "linear-gradient(90deg,#2e3238,#b8bcc4)" },
+  { id: "banner-tiger", slot: "banner", name: "Тигр", price: 420, rarity: "epic", style: "linear-gradient(90deg,#8a3c00,#ffd76a)" },
   { id: "title-bra", slot: "title", name: "Братуха", price: 42, rarity: "common", style: "#9aa4b2" },
   { id: "title-42", slot: "title", name: "42 навсегда", price: 142, rarity: "rare", style: "#5865f2" },
   { id: "title-magnum", slot: "title", name: "MAGNUM", price: 420, rarity: "epic", style: "#ff44cc" },
-  { id: "title-legend", slot: "title", name: "Легенда", price: 2042, rarity: "legendary", style: "#ffcc00" },
-  { id: "title-neon", slot: "title", name: "Неоновый", price: 84, rarity: "common", style: "#00ffcc" },
-  { id: "title-hype", slot: "title", name: "Хайп", price: 184, rarity: "rare", style: "#9147ff" },
-  { id: "title-toxic", slot: "title", name: "Токсичный", price: 390, rarity: "epic", style: "#7cff00" },
+  { id: "title-legend", slot: "title", name: "Легенда", price: 1420, rarity: "legendary", style: "#ffcc00" },
+  { id: "title-neon", slot: "title", name: "Неоновый", price: 42, rarity: "common", style: "#00ffcc" },
+  { id: "title-hype", slot: "title", name: "Хайп", price: 142, rarity: "rare", style: "#9147ff" },
+  { id: "title-toxic", slot: "title", name: "Токсичный", price: 420, rarity: "epic", style: "#7cff00" },
   { id: "title-vip", slot: "title", name: "VIP 42", price: 1420, rarity: "legendary", style: "#ff2d55" },
-  { id: "title-noob", slot: "title", name: "Новичок", price: 22, rarity: "common", style: "#aaa" },
-  { id: "title-god", slot: "title", name: "Бог 42", price: 4242, rarity: "legendary", style: "#ffd700" },
+  { id: "title-noob", slot: "title", name: "Новичок", price: 42, rarity: "common", style: "#aaa" },
+  { id: "title-god", slot: "title", name: "Бог 42", price: 1420, rarity: "legendary", style: "#ffd700" },
   // ── PRISM 12
   { id: "frame-prism-rose", slot: "frame", name: "Призма Роза", price: 42, rarity: "common", style: "conic-gradient(from 0deg,#ff44cc,#ffcc00,#00ffcc,#5865f2,#ff44cc)" },
   { id: "frame-prism-ice", slot: "frame", name: "Призма Лёд", price: 142, rarity: "rare", style: "conic-gradient(from 45deg,#7dd8ff,#00ffcc,#9147ff,#7dd8ff)" },
   { id: "frame-prism-toxic", slot: "frame", name: "Призма Токсик", price: 420, rarity: "epic", style: "conic-gradient(from 90deg,#7cff00,#00ffcc,#ffcc00,#7cff00)" },
   { id: "frame-prism-void", slot: "frame", name: "Призма Войд", price: 1420, rarity: "legendary", style: "conic-gradient(from 180deg,#7a1ecb,#ff44cc,#0a0a0a,#7a1ecb)" },
-  { id: "banner-prism-aurora", slot: "banner", name: "Аврора Призм", price: 84, rarity: "common", style: "linear-gradient(90deg,#00ffcc,#5865f2 35%,#ff44cc 70%,#ffcc00)" },
-  { id: "banner-prism-neon", slot: "banner", name: "Неон Призм", price: 184, rarity: "rare", style: "linear-gradient(90deg,#ff44cc,#9147ff 40%,#00ffcc)" },
-  { id: "banner-prism-sunset", slot: "banner", name: "Призм Закат", price: 390, rarity: "epic", style: "linear-gradient(90deg,#ff7b00,#ff44cc 40%,#7a1ecb)" },
+  { id: "banner-prism-aurora", slot: "banner", name: "Аврора Призм", price: 42, rarity: "common", style: "linear-gradient(90deg,#00ffcc,#5865f2 35%,#ff44cc 70%,#ffcc00)" },
+  { id: "banner-prism-neon", slot: "banner", name: "Неон Призм", price: 142, rarity: "rare", style: "linear-gradient(90deg,#ff44cc,#9147ff 40%,#00ffcc)" },
+  { id: "banner-prism-sunset", slot: "banner", name: "Призм Закат", price: 420, rarity: "epic", style: "linear-gradient(90deg,#ff7b00,#ff44cc 40%,#7a1ecb)" },
   { id: "banner-prism-abyss", slot: "banner", name: "Призм Бездна", price: 1420, rarity: "legendary", style: "linear-gradient(90deg,#0a0a0a,#7a1ecb 30%,#ffcc00 70%,#ff44cc)" },
-  { id: "title-prism-novice", slot: "title", name: "Призм Новичок", price: 22, rarity: "common", style: "#7dd8ff" },
+  { id: "title-prism-novice", slot: "title", name: "Призм Новичок", price: 42, rarity: "common", style: "#7dd8ff" },
   { id: "title-prism-hype", slot: "title", name: "Призм Хайп", price: 142, rarity: "rare", style: "#ff44cc" },
   { id: "title-prism-aurora", slot: "title", name: "Аврора", price: 420, rarity: "epic", style: "#9147ff" },
-  { id: "title-prism-legend", slot: "title", name: "Призм Легенда", price: 2042, rarity: "legendary", style: "conic-gradient(from 0deg,#ffcc00,#ff44cc,#00ffcc,#ffcc00)" },
+  { id: "title-prism-legend", slot: "title", name: "Призм Легенда", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#ffcc00,#ff44cc,#00ffcc,#ffcc00)" },
   // ── GLACIER VAULT 12
   { id: "frame-glacier-matte", slot: "frame", name: "Гляйшер Матт", price: 42, rarity: "common", style: "2px solid #e0faff" },
   { id: "banner-snow-dust", slot: "banner", name: "Снежная Пыль", price: 42, rarity: "common", style: "linear-gradient(90deg,#ffffff,#e0faff)" },
@@ -103,6 +112,19 @@ export const COSMETICS_CATALOG: CosmeticItem[] = [
   { id: "frame-gold-obsidian-spin", slot: "frame", name: "Голд Обсидиан Спин", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#1a1a1a,#ff4500,#ffcc00,#ffd700,#1a1a1a)" },
   { id: "banner-obsidian-gold", slot: "banner", name: "Золото Обсидиана", price: 1420, rarity: "legendary", style: "linear-gradient(90deg,#1a1a1a,#ffcc00)" },
   { id: "title-obsidian-gold", slot: "title", name: "Обсидиан Голд", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#ff4500,#ffcc00,#ffd700,#ff4500)" },
+  // ── SKIN FORGE 42 — vault 12 скинов + крафт + holo epic (hype-queue #16) ── clay-73-brown 142 meduza-holo 420 gold-42-conic epic 1420 spin 3s
+  { id: "frame-forge-iron", slot: "frame", name: "Кузня Железо", price: 42, rarity: "common", style: "2px solid #8d6e3e" },
+  { id: "banner-forge-dust", slot: "banner", name: "Кузнечная Пыль", price: 42, rarity: "common", style: "linear-gradient(90deg,#3a2a18,#8d6e3e)" },
+  { id: "title-forge-spark", slot: "title", name: "Искра 42", price: 42, rarity: "common", style: "#c9a86a" },
+  { id: "frame-clay-73-brown", slot: "frame", name: "Глина 73 Браун", price: 142, rarity: "rare", style: "3px solid #a67c52" },
+  { id: "banner-forge-anvil", slot: "banner", name: "Наковальня 42", price: 142, rarity: "rare", style: "linear-gradient(90deg,#4a2510,#d17a22)" },
+  { id: "title-forge-ember", slot: "title", name: "Уголёк 42", price: 142, rarity: "rare", style: "#d17a22" },
+  { id: "frame-meduza-holo", slot: "frame", name: "Медуза Холо", price: 420, rarity: "epic", style: "conic-gradient(from 0deg,#9147ff,#00ffcc,#ff44cc,#9147ff)" },
+  { id: "banner-forge-holo", slot: "banner", name: "Кузня Холо", price: 420, rarity: "epic", style: "linear-gradient(90deg,#9147ff,#00ffcc)" },
+  { id: "title-forge-prism", slot: "title", name: "Призма Кузни", price: 420, rarity: "epic", style: "#9147ff" },
+  { id: "frame-gold-42-conic", slot: "frame", name: "Голд 42 Коник", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#ffcc00,#9147ff,#00ffcc,#ff44cc,#ffcc00)" },
+  { id: "banner-gold-forge", slot: "banner", name: "Голд Кузня", price: 1420, rarity: "legendary", style: "linear-gradient(90deg,#ffcc00,#9147ff)" },
+  { id: "title-holo-forge", slot: "title", name: "Холо Кузня", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#ffcc00,#9147ff,#00ffcc,#ff44cc,#ffcc00)" },
 ];
 
 // Явный список 12 GLACIER id — не substring, чтобы не дрифтить (kuzbass-ice, tom-glacier входят)
@@ -120,7 +142,6 @@ export const PRISM_IDS = new Set(COSMETICS_CATALOG.filter(c=>c.id.includes("pris
 export function isPrismCosmetic(id:string):boolean{ return PRISM_IDS.has(id); }
 export const PRISM_CATALOG = COSMETICS_CATALOG.filter(c=>PRISM_IDS.has(c.id));
 export const PRISM_IDS_SET = PRISM_IDS;
-// NEON_PRISM 42 stubs — alias for PrismVaultPage (aurora vault)
 export const NEON_PRISM_CATALOG = PRISM_CATALOG;
 export const NEON_PRISM_IDS_SET = PRISM_IDS_SET;
 export function isNeonPrismCosmetic(id:string):boolean{ return isPrismCosmetic(id); }
@@ -166,6 +187,24 @@ export const OBSIDIAN_GOLD_FRAME_ID = "frame-gold-obsidian-spin";
 export const OBSIDIAN_GOLD_STYLE = "conic-gradient(from 0deg,#1a1a1a,#ff4500,#ffcc00,#ffd700,#1a1a1a)";
 export const OBSIDIAN_SHADOW = "0 0 16px #ff5722";
 export const OBSIDIAN_SPIN = "obsidianSpin 3s linear infinite";
+
+// ── SKIN FORGE 42 — vault 12 (hype-queue #16) clay-73-brown 142 meduza-holo 420 gold-42-conic epic 1420 spin 3s holo ──
+export const FORGE_IDS_LIST = [
+  "frame-forge-iron","banner-forge-dust","title-forge-spark",
+  "frame-clay-73-brown","banner-forge-anvil","title-forge-ember",
+  "frame-meduza-holo","banner-forge-holo","title-forge-prism",
+  "frame-gold-42-conic","banner-gold-forge","title-holo-forge",
+] as const;
+export const FORGE_IDS = new Set<string>(FORGE_IDS_LIST as unknown as string[]);
+export function isForgeCosmetic(id:string):boolean{ return FORGE_IDS.has(id); }
+export const FORGE_CATALOG = COSMETICS_CATALOG.filter(c=> FORGE_IDS.has(c.id));
+export const FORGE_IDS_SET = FORGE_IDS;
+export const FORGE = FORGE_CATALOG;
+export const FORGE_GOLD_FRAME_ID = "frame-gold-42-conic";
+export const FORGE_GOLD_STYLE = "conic-gradient(from 0deg,#ffcc00,#9147ff,#00ffcc,#ff44cc,#ffcc00)";
+export const FORGE_SHADOW = "0 0 16px #9147ff";
+export const FORGE_SPIN = "forgeSpin 3s linear infinite";
+export const FORGE_HOLO_STYLE = "conic-gradient(from 0deg,#9147ff,#00ffcc,#ff44cc,#9147ff)";
 
 // ── MAGMA GOLD 42 — 12 magma: conic-magma #ff4500 spin 3s + lava glow — cross -42 glacier/duel ──
 export const MAGMA_IDS_LIST = [

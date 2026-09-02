@@ -41,7 +41,6 @@ export function Charts42Page() {
   const sorted = [...rows].sort((a,b)=> sort==="plays" ? b.plays - a.plays : b.views - a.views);
   const max = Math.max(1, ...sorted.map(r=> sort==="plays"?r.plays:r.views));
 
-  // GSAP bars + rank flip
   useEffect(()=>{
     if (!wrapRef.current) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;

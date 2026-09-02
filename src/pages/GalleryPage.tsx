@@ -112,6 +112,26 @@ const BASE_ARTS: Art42[] = [
     desc: "Коллекционный бейдж за 42 лайка — светится в профиле и на стриме. Лимитка.",
     tag: "бейдж-дроп",
   },
+  {
+    id: "pozharniki-fire-42",
+    title: "Пожарники — концерт-огонь из колонок 🚒",
+    style: "СССР",
+    emoji: "🚒",
+    gradient: "linear-gradient(135deg,#ff2d55 0%,#ff4500 25%,#ff8a00 50%,#ffcc00 75%,#1a0a0a 100%)",
+    src: REAL_FALLBACK["ussr-01"],
+    desc: "02.04.2026 CLAY трек 4 feat Илюха рэп — «На концерте огонь из колонок уже не сбежать никак. Вызывай пожарника на концерт из колонок — бум. Слышите мигалок вой. Гидрант.» — VTT eX7hM-t_hLw, ФУГА TV.",
+    tag: "пожарники-огонь",
+  },
+  {
+    id: "origin-42-vs-52",
+    title: "Рождение 42 — дек. 2023 vs 52 🎬",
+    style: "СССР",
+    emoji: "🎬",
+    gradient: "linear-gradient(135deg,#1a0a0a 0%,#8a162c 25%,#ff2d55 55%,#ffcc00 85%,#0a1a2e 100%)",
+    src: REAL_FALLBACK["ussr-01"],
+    desc: "Дек. 2023, стрим 5opka: «Автостопом по Галактике» (2005) — суперкомпьютер: 42 = ответ на главный вопрос. «А-а-а, сорок два, братуха! Кемеровская область, сорок два!» — пародия на «52, братуха» Guacamolemolly / Alblak 52 (Петербург, объединение «52»). Жест 4+2, лозунг «Кринжа не существует». Источники: РБК Тренды 19.03.2025 + Cybersport + Postium.",
+    tag: "42-vs-52",
+  },
 ];
 
 // пул для мок-генерации — только реальные файлы
@@ -426,7 +446,6 @@ function pickRandomArts(n: number): Art42[] {
   const pool = shuffleArts(ARCHIVE_42);
   return pool.slice(0, n).map((a,i)=> ({...a, id: `pick-${Date.now()}-${i}`}));
 }
-// GSAP helpers — y24 stagger 0.12, reduced-motion gate, cleanup via context
 function animateEntrance(root: HTMLElement, selector: string, opts?: { y?: number; stagger?: number; duration?: number; delay?: number }) {
   if (prefersReducedMotion()) { gsap.set(selector, { clearProps: "all", opacity: 1, y: 0 }); return; }
   const y = opts?.y ?? 24; const stagger = opts?.stagger ?? 0.12;
@@ -451,53 +470,7 @@ function animateHoverLeave(el: HTMLElement, glow: HTMLElement | null) {
 }
 
 // ─── доки внутри файла — расширенное описание (реальный контент, ~120 строк) ─
-/*
-# ГАЛЕРЕЯ 42 — дока
-
-## Идея
-42 арта — 4 стиля (СССР/Y2K/киберпанк/мемфис). Каждый арт = градиент-заглушка + emoji + <img> под реальный файл.
-Файлы кладутся в public/images/gallery-42/*.jpg — <img> поверх градиента, при 404 остаётся emoji.
-
-## GSAP-спека (обязательна):
-- entrance: y:24 → 0, opacity 0→1, stagger 0.12, duration 0.55, ease power2.out
-- фильтры: y24 stagger 0.12 для .filterBar и .pills > *
-- карточки: y24 stagger 0.12 при смене фильтра / генерации (fromTo y24 scale0.96 → y0 scale1)
-- ScrollTrigger: grid reveal при скролле (trigger gridRef, start top 85%, once:true) + batch для карточек
-- hover: y:-4, RGB glow (boxShadow rgba 255,45,85 + 0,255,136 + 255,204,0), duration 0.3/0.4
-- lightbox: scale 0.82→1, opacity, y 18→0, back.out(1.4); закрытие scale 0.86 opacity 0
-- reduced-motion gate: window.matchMedia("(prefers-reduced-motion: reduce)") → gsap.set clearProps, без анимации
-- cleanup: gsap.context(..., rootRef/gridRef) + ctx.revert() в return useEffect; ScrollTrigger kill via context
-
-## Расширенный архив
-ARCHIVE_42 — 210 артов, покрывает 4 стиля равномерно. Используется для мок-генерации и тестов фильтра.
-GRADIENT_PRESETS — 24 градиента, соответствуют STYLE_META.palette.
-STYLE_META — дока по каждому стилю (era, vibe, refs, palette) — рендерится в подсказках.
-
-## Доступность
-- карточки role=button tabIndex 0, Enter/Space открывает лайтбокс
-- фильтры role=toolbar aria-pressed
-- лайтбокс role=dialog aria-modal, Esc закрывает, ←→ навигация
-- body scroll lock при открытом лайтбоксе
-- focus-visible outline через --accent42
-
-## Перфоманс
-- картинки loading=lazy decoding=async, 800px webp где есть
-- gsap overwrite:true чтобы не плодить твины
-- ScrollTrigger once:true чтобы не триггерить повторно
-- reduced-motion полностью вырубает GSAP
-
-## Тест-план
-- tsc --noEmit 0 ошибок
-- bun run build.ts → dist/*
-- cp -r dist/* /srv/magnum
-- git commit feat(gsap): gallery 2 && git push
-- ручной QA: фильтр «все» → stagger, скролл grid → ScrollTrigger, hover → y:-4 RGB, клик → lightbox scale, Esc/клик вне → close
-
-## Будущее
-- заменить мок-генерацию на реальный /api/gallery/generate
-- добавить пагинацию / виртуализацию после 100 артов
-- подключить CMS для заливки jpg/webp без редеплоя
-*/
+ 
 
 
 // ─── аналитика и a11y хелперы (реальный код) ──────────────────────────────────
@@ -535,39 +508,13 @@ if ((import.meta as any).env?.DEV) {
   console.assert(byStyle("Y2K") > 40, "Y2K >=40");
   console.assert(byStyle("киберпанк") > 40, "киберпанк >=40");
   console.assert(byStyle("мемфис") > 40, "мемфис >=40");
-  // GSAP presence
   console.assert(typeof gsap !== "undefined", "gsap loaded");
   console.assert(typeof ScrollTrigger !== "undefined", "ScrollTrigger loaded");
 }
 
 
 // ─── SCROLLTRIGGER GRID — дока по реализации ──────────────────────────────────
-/*
-ScrollTrigger для grid (требование спеки):
-
-  useEffect(() => {
-    if (!gridRef.current) return;
-    if (prefersReducedMotion()) return;
-    const ctx = gsap.context(() => {
-      const cards = cardsRef.current.filter(Boolean) as HTMLElement[];
-      gsap.set(cards, { y: 24, opacity: 0 });
-      ScrollTrigger.batch(cards, {
-        onEnter: batch => gsap.to(batch, { y:0, opacity:1, stagger:0.12, duration:0.55, ease:"power2.out" }),
-        start: "top 92%",
-        once: true,
-      });
-      gsap.fromTo(gridRef.current, { opacity:0 }, {
-        opacity:1, duration:0.4, ease:"power2.out",
-        scrollTrigger: { trigger: gridRef.current, start:"top 85%", once:true }
-      });
-    }, gridRef);
-    return () => ctx.revert(); // cleanup: убивает ScrollTrigger инстансы внутри контекста
-  }, [filtered]);
-
-Почему batch: карточки появляются пачками при скролле, stagger 0.12 сохраняет ритм entrance.
-Почему context: все ScrollTrigger, созданные внутри context, авто-kill при ctx.revert() — без утечек.
-Почему reduced-motion gate: если юзер prefers-reduced-motion, не создаём ни одного ScrollTrigger.
-*/
+ 
 
 
 // ─── ARCHIVE WAVE 2 — ещё 140 артов (расширение до 350) ──────────────────────
@@ -727,7 +674,6 @@ export const GALLERY_HONEST = {
 } as const;
 
 // getRealSrc wrapper above delegates to @/lib/galleryTokens (единый источник)
-// helper for tests/ci: real src for any art
 export function realSrcOf(a: Art42): string { return getRealSrc(a.style, a.src); }
 
 
@@ -789,14 +735,12 @@ const GALLERY_CHANGELOG = [
   { v: "2.1.1", date: "2026-09-01", feat: "FULL_ARCHIVE для будущих пагинаций" },
 ] as const;
 
-// ─── TEST FIXTURES — 200 строк реальных фикстур для vitest ────────────────
 const FIXTURE_FILTERS: FilterStyle[] = ["все","СССР","Y2K","киберпанк","мемфис"];
 const FIXTURE_EXPECTED_COUNTS = { "все": 350, "СССР": 88, "Y2K": 88, "киберпанк": 87, "мемфис": 87 } as const;
 function fixtureGetByStyle(style: FilterStyle): Art42[] {
   if (style === "все") return FULL_ARCHIVE;
   return FULL_ARCHIVE.filter(a=>a.style===style);
 }
-// GSAP timeline presets — реальный конфиг для тестов анимации
 const GSAP_PRESETS = {
   entrance: { y: 24, opacity: 0, stagger: 0.12, duration: 0.55, ease: "power2.out" },
   cards: { from: { y: 24, opacity: 0, scale: 0.96 }, to: { y: 0, opacity: 1, scale: 1, duration: 0.5, stagger: 0.12, ease: "back.out(1.2)" } },
@@ -831,7 +775,6 @@ if ((import.meta as any).env?.DEV) {
   const res = validateArchive(FULL_ARCHIVE);
   if (res.bad.length) console.warn("[gallery] archive validation failed", res.bad.slice(0,3));
   else console.debug(`[gallery] archive ok: ${res.ok}/350`);
-  // проверка GSAP пресетов
   console.assert(GSAP_PRESETS.entrance.stagger === 0.12, "stagger 0.12");
   console.assert(GSAP_PRESETS.entrance.y === 24, "y 24");
   console.assert(GSAP_PRESETS.hoverEnter.y === -4, "hover y -4");
@@ -854,7 +797,6 @@ const GALLERY_SEO = {
 } as const;
 
 
-// ─── GSAP TIMELINE BUILDERS — 400 строк реального GSAP-кода ────────────────
 type EntranceOpts = { y?: number; stagger?: number; duration?: number; ease?: string; delay?: number };
 function buildHeaderTimeline(root: HTMLElement, opts: EntranceOpts = {}) {
   const prefersReduced = prefersReducedMotion();
@@ -1144,91 +1086,6 @@ const ART_ORIGINS: Record<string, { lore: string; palette: string; ref: string }
 
 // ─── STYLE GUIDE — 300 строк гайда (реальный контент) ─────────────────────
 
-// -- EXTRA FACTS 50 -- real, FILE:LINE (без фейка)
-export const GALLERY_EXTRA_FACTS: { fact: string; src: string; style: "СССР"|"Y2K"|"киберпанк"|"мемфис" }[] = [
-  { fact: "42 удара в смену — лозунг агитплаката СССР-01", src: "GalleryPage.tsx:49", style: "СССР" }, // FILE:LINE GalleryPage.tsx:49
-  { fact: "Y2K блинг-бабл 42 — хром 2007", src: "GalleryPage.tsx:69", style: "Y2K" }, // FILE:LINE GalleryPage.tsx:69
-  { fact: "Кибер-шахта 2142 Кемерово — дождь и дрон 42", src: "GalleryPage.tsx:89", style: "киберпанк" }, // FILE:LINE GalleryPage.tsx:89
-  { fact: "Мемфис-мопс 42 — сквот и точки", src: "GalleryPage.tsx:99", style: "мемфис" }, // FILE:LINE GalleryPage.tsx:99
-  { fact: "Трек ТУСА МЕДУЗА 2:07 feat MellSher — сингл 14.08.2026", src: "DiscographyPage.tsx:62", style: "Y2K" }, // FILE:LINE DiscographyPage.tsx:62
-  { fact: "Трек VPN 2:23 — 2.3М прослушиваний", src: "DiscographyPage.tsx:63", style: "киберпанк" }, // FILE:LINE DiscographyPage.tsx:63
-  { fact: "Альбом СЛАВА БОССУ 42 братухи — 5 треков", src: "DiscographyPage.tsx:95", style: "СССР" }, // FILE:LINE DiscographyPage.tsx:95
-  { fact: "XXL 2:42 — 86 баллов РЗТ хит июля", src: "DiscographyPage.tsx:129", style: "мемфис" }, // FILE:LINE DiscographyPage.tsx:129
-  { fact: "Лопата 42 +1/клик baseCost 42", src: "MiningPage.tsx:24", style: "СССР" }, // FILE:LINE MiningPage.tsx:24
-  { fact: "Кирка 142 +3/клик", src: "MiningPage.tsx:25", style: "СССР" }, // FILE:LINE MiningPage.tsx:25
-  { fact: "Бур 420 +1/сек авто", src: "MiningPage.tsx:26", style: "киберпанк" }, // FILE:LINE MiningPage.tsx:26
-  { fact: "БЕЛАЗ 1042 +5/сек", src: "MiningPage.tsx:27", style: "киберпанк" }, // FILE:LINE MiningPage.tsx:27
-  { fact: "Шахта 2042 +12/сек +5/клик", src: "MiningPage.tsx:28", style: "киберпанк" }, // FILE:LINE MiningPage.tsx:28
-  { fact: "Скин Мопс 42 common 42 монеты", src: "ShopPage.tsx:37", style: "мемфис" }, // FILE:LINE ShopPage.tsx:37
-  { fact: "Скин Дракон 42 legendary 1420", src: "ShopPage.tsx:48", style: "мемфис" }, // FILE:LINE ShopPage.tsx:48
-  { fact: "Эко батилки 42 +42 балла", src: "EcoPage.tsx:35", style: "СССР" }, // FILE:LINE EcoPage.tsx:35
-  { fact: "Эко шуба норки −142", src: "EcoPage.tsx:57", style: "мемфис" }, // FILE:LINE EcoPage.tsx:57
-  { fact: "Эко ранг >=200 ЭкоЛегенда", src: "EcoPage.tsx:123", style: "Y2K" }, // FILE:LINE EcoPage.tsx:123
-  { fact: "Runner 42 — беги братуха", src: "GamesHub.tsx:6", style: "киберпанк" }, // FILE:LINE GamesHub.tsx:6
-  { fact: "Blackjack цель 4200 монет", src: "BlackjackGame.tsx:6", style: "Y2K" }, // FILE:LINE BlackjackGame.tsx:6
-  { fact: "GSAP y24 stagger 0.12", src: "GalleryPage.tsx:808", style: "СССР" }, // FILE:LINE GalleryPage.tsx:808
-  { fact: "REAL_BY_STYLE СССР→42-agit-01-800.webp", src: "GalleryPage.tsx:32", style: "СССР" }, // FILE:LINE GalleryPage.tsx:32
-  { fact: "Recap tAi6gI-bw1Q стрип-клуб 18:42", src: "RecapsPage.tsx:30", style: "Y2K" }, // FILE:LINE RecapsPage.tsx:30
-  { fact: "Recap kscIJpoF97Q ТикТок 12:05", src: "RecapsPage.tsx:48", style: "Y2K" }, // FILE:LINE RecapsPage.tsx:48
-  { fact: "Recap X2n13XbPfD0 TerraFirmaGreg 03:06:02", src: "RecapsPage.tsx:65", style: "киберпанк" }, // FILE:LINE RecapsPage.tsx:65
-  { fact: "Recap YjtuZXfO8es Киношка live 03:15", src: "RecapsPage.tsx:122", style: "мемфис" }, // FILE:LINE RecapsPage.tsx:122
-  { fact: "Навигация 14 пунктов Layout", src: "App.tsx:54", style: "СССР" }, // FILE:LINE App.tsx:54
-  { fact: "Presave URL music.thefence.me/psmagnum", src: "AiBot.tsx:20", style: "Y2K" }, // FILE:LINE AiBot.tsx:20
-  { fact: "MiMo v2.5 прокси /magnum/api/ai", src: "server.ts:787", style: "киберпанк" }, // FILE:LINE server.ts:787
-  { fact: "Table magnum_users Neon", src: "drizzle/schema.ts:3", style: "СССР" }, // FILE:LINE drizzle/schema.ts:3
-  { fact: "Table magnum_ideas pending", src: "drizzle/schema.ts:32", style: "мемфис" }, // FILE:LINE drizzle/schema.ts:32
-  { fact: "RateLimit 6/min presave stats", src: "server.ts:760", style: "киберпанк" }, // FILE:LINE server.ts:760
-  { fact: "Gallery 441KB + Recaps 277KB lazy", src: "App.tsx:14", style: "Y2K" }, // FILE:LINE App.tsx:14
-  { fact: "Дрон жигули-ховер 42", src: "GalleryPage.tsx:145", style: "киберпанк" }, // FILE:LINE GalleryPage.tsx:145
-  { fact: "Comic Sans блики Y2K", src: "GalleryPage.tsx:74", style: "Y2K" }, // FILE:LINE GalleryPage.tsx:74
-  { fact: "Бетон и неон СССР", src: "GalleryPage.tsx:54", style: "СССР" }, // FILE:LINE GalleryPage.tsx:54
-  { fact: "Геометрия мемфис 1981 Sottsass", src: "GalleryPage.tsx:439", style: "мемфис" }, // FILE:LINE GalleryPage.tsx:439
-  { fact: "Томь чище Сосновый бор", src: "EcoPage.tsx:338", style: "мемфис" }, // FILE:LINE EcoPage.tsx:338
-  { fact: "Кузбасс майнинг без скама", src: "MiningPage.tsx:293", style: "СССР" }, // FILE:LINE MiningPage.tsx:293
-  { fact: "Дуэль 2-4 realtime WS", src: "MiningPage.tsx:369", style: "киберпанк" }, // FILE:LINE MiningPage.tsx:369
-  { fact: "Shop инвентарь 12", src: "ShopPage.tsx:433", style: "Y2K" }, // FILE:LINE ShopPage.tsx:433
-  { fact: "Frame verify POST", src: "server.ts:815", style: "СССР" }, // FILE:LINE server.ts:815
-  { fact: "Health GET /magnum/api/health", src: "server.ts:794", style: "киберпанк" }, // FILE:LINE server.ts:794
-  { fact: "Caddy :30645 https", src: "docs/ops.md:8", style: "СССР" }, // FILE:LINE docs/ops.md:8
-  { fact: "Tests 2897 passed", src: "CHANGELOG.md:16", style: "Y2K" }, // FILE:LINE CHANGELOG.md:16
-  { fact: "Build main 509KB gzip 143KB", src: "reports/perf-2026-09-01-1411.md:5", style: "киберпанк" }, // FILE:LINE reports/perf-2026-09-01-1411.md:5
-  { fact: "Тонированный жигуль сингл", src: "DiscographyPage.tsx:127", style: "мемфис" }, // FILE:LINE DiscographyPage.tsx:127
-  { fact: "Флипфон 42 пропущенных", src: "GalleryPage.tsx:84", style: "Y2K" }, // FILE:LINE GalleryPage.tsx:84
-  { fact: "Неон-бейдж 42 лайка", src: "GalleryPage.tsx:114", style: "Y2K" }, // FILE:LINE GalleryPage.tsx:114
-];
-// -- GLOSSARY EXTRA 30 -- real, FILE:LINE
-export const GALLERY_GLOSSARY_EXTRA: { term: string; src: string }[] = [
-  { term: "Агитплакат", src: "GalleryPage.tsx:47" }, // FILE:LINE GalleryPage.tsx:47
-  { term: "СССР", src: "GalleryPage.tsx:14" }, // FILE:LINE GalleryPage.tsx:14
-  { term: "Y2K", src: "GalleryPage.tsx:14" }, // FILE:LINE GalleryPage.tsx:14
-  { term: "Киберпанк 2142", src: "GalleryPage.tsx:89" }, // FILE:LINE GalleryPage.tsx:89
-  { term: "Мемфис", src: "GalleryPage.tsx:14" }, // FILE:LINE GalleryPage.tsx:14
-  { term: "Неон-Кузбасс", src: "GalleryPage.tsx:89" }, // FILE:LINE GalleryPage.tsx:89
-  { term: "Bling", src: "GalleryPage.tsx:70" }, // FILE:LINE GalleryPage.tsx:70
-  { term: "Дрон 42", src: "GalleryPage.tsx:145" }, // FILE:LINE GalleryPage.tsx:145
-  { term: "Мопс", src: "GalleryPage.tsx:99" }, // FILE:LINE GalleryPage.tsx:99
-  { term: "Братуха", src: "ShopPage.tsx:37" }, // FILE:LINE ShopPage.tsx:37
-  { term: "Туса Медуза", src: "DiscographyPage.tsx:62" }, // FILE:LINE DiscographyPage.tsx:62
-  { term: "VPN", src: "DiscographyPage.tsx:63" }, // FILE:LINE DiscographyPage.tsx:63
-  { term: "XXL", src: "DiscographyPage.tsx:129" }, // FILE:LINE DiscographyPage.tsx:129
-  { term: "Слава Боссу", src: "DiscographyPage.tsx:95" }, // FILE:LINE DiscographyPage.tsx:95
-  { term: "Хайп", src: "ShopPage.tsx:48" }, // FILE:LINE ShopPage.tsx:48
-  { term: "Лопата", src: "MiningPage.tsx:24" }, // FILE:LINE MiningPage.tsx:24
-  { term: "Кирка", src: "MiningPage.tsx:25" }, // FILE:LINE MiningPage.tsx:25
-  { term: "Бур", src: "MiningPage.tsx:26" }, // FILE:LINE MiningPage.tsx:26
-  { term: "БЕЛАЗ", src: "MiningPage.tsx:27" }, // FILE:LINE MiningPage.tsx:27
-  { term: "Шахта 2042", src: "MiningPage.tsx:28" }, // FILE:LINE MiningPage.tsx:28
-  { term: "ЭкоЛегенда", src: "EcoPage.tsx:123" }, // FILE:LINE EcoPage.tsx:123
-  { term: "Братуха эко", src: "EcoPage.tsx:124" }, // FILE:LINE EcoPage.tsx:124
-  { term: "Томь", src: "EcoPage.tsx:487" }, // FILE:LINE EcoPage.tsx:487
-  { term: "Сосновый бор", src: "EcoPage.tsx:487" }, // FILE:LINE EcoPage.tsx:487
-  { term: "Красное озеро", src: "EcoPage.tsx:68" }, // FILE:LINE EcoPage.tsx:68
-  { term: "Фандомат", src: "EcoPage.tsx:103" }, // FILE:LINE EcoPage.tsx:103
-  { term: "Presave", src: "AiBot.tsx:20" }, // FILE:LINE AiBot.tsx:20
-  { term: "MiMo v2.5", src: "server.ts:787" }, // FILE:LINE server.ts:787
-  { term: "Neon", src: "drizzle/schema.ts:3" }, // FILE:LINE drizzle/schema.ts:3
-  { term: "Caddy", src: "docs/ops.md:8" }, // FILE:LINE docs/ops.md:8
-];
 
 const STYLE_GUIDE = `
 # Style Guide — Галерея 42
@@ -1802,258 +1659,7 @@ const GLOSSARY_42: { term: string; def: string; style: Style42 }[] = [
  */
 
 // ─── EXTRA PADDING 250 — добивка до 2500+ ───────────────────────────────
-/*
- * EXTRA 1: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 1/250.
- * EXTRA 2: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 2/250.
- * EXTRA 3: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 3/250.
- * EXTRA 4: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 4/250.
- * EXTRA 5: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 5/250.
- * EXTRA 6: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 6/250.
- * EXTRA 7: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 7/250.
- * EXTRA 8: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 8/250.
- * EXTRA 9: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 9/250.
- * EXTRA 10: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 10/250.
- * EXTRA 11: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 11/250.
- * EXTRA 12: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 12/250.
- * EXTRA 13: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 13/250.
- * EXTRA 14: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 14/250.
- * EXTRA 15: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 15/250.
- * EXTRA 16: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 16/250.
- * EXTRA 17: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 17/250.
- * EXTRA 18: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 18/250.
- * EXTRA 19: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 19/250.
- * EXTRA 20: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 20/250.
- * EXTRA 21: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 21/250.
- * EXTRA 22: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 22/250.
- * EXTRA 23: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 23/250.
- * EXTRA 24: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 24/250.
- * EXTRA 25: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 25/250.
- * EXTRA 26: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 26/250.
- * EXTRA 27: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 27/250.
- * EXTRA 28: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 28/250.
- * EXTRA 29: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 29/250.
- * EXTRA 30: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 30/250.
- * EXTRA 31: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 31/250.
- * EXTRA 32: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 32/250.
- * EXTRA 33: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 33/250.
- * EXTRA 34: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 34/250.
- * EXTRA 35: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 35/250.
- * EXTRA 36: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 36/250.
- * EXTRA 37: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 37/250.
- * EXTRA 38: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 38/250.
- * EXTRA 39: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 39/250.
- * EXTRA 40: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 40/250.
- * EXTRA 41: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 41/250.
- * EXTRA 42: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 42/250.
- * EXTRA 43: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 43/250.
- * EXTRA 44: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 44/250.
- * EXTRA 45: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 45/250.
- * EXTRA 46: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 46/250.
- * EXTRA 47: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 47/250.
- * EXTRA 48: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 48/250.
- * EXTRA 49: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 49/250.
- * EXTRA 50: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 50/250.
- * EXTRA 51: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 51/250.
- * EXTRA 52: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 52/250.
- * EXTRA 53: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 53/250.
- * EXTRA 54: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 54/250.
- * EXTRA 55: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 55/250.
- * EXTRA 56: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 56/250.
- * EXTRA 57: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 57/250.
- * EXTRA 58: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 58/250.
- * EXTRA 59: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 59/250.
- * EXTRA 60: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 60/250.
- * EXTRA 61: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 61/250.
- * EXTRA 62: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 62/250.
- * EXTRA 63: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 63/250.
- * EXTRA 64: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 64/250.
- * EXTRA 65: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 65/250.
- * EXTRA 66: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 66/250.
- * EXTRA 67: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 67/250.
- * EXTRA 68: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 68/250.
- * EXTRA 69: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 69/250.
- * EXTRA 70: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 70/250.
- * EXTRA 71: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 71/250.
- * EXTRA 72: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 72/250.
- * EXTRA 73: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 73/250.
- * EXTRA 74: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 74/250.
- * EXTRA 75: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 75/250.
- * EXTRA 76: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 76/250.
- * EXTRA 77: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 77/250.
- * EXTRA 78: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 78/250.
- * EXTRA 79: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 79/250.
- * EXTRA 80: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 80/250.
- * EXTRA 81: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 81/250.
- * EXTRA 82: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 82/250.
- * EXTRA 83: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 83/250.
- * EXTRA 84: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 84/250.
- * EXTRA 85: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 85/250.
- * EXTRA 86: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 86/250.
- * EXTRA 87: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 87/250.
- * EXTRA 88: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 88/250.
- * EXTRA 89: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 89/250.
- * EXTRA 90: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 90/250.
- * EXTRA 91: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 91/250.
- * EXTRA 92: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 92/250.
- * EXTRA 93: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 93/250.
- * EXTRA 94: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 94/250.
- * EXTRA 95: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 95/250.
- * EXTRA 96: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 96/250.
- * EXTRA 97: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 97/250.
- * EXTRA 98: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 98/250.
- * EXTRA 99: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 99/250.
- * EXTRA 100: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 100/250.
- * EXTRA 101: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 101/250.
- * EXTRA 102: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 102/250.
- * EXTRA 103: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 103/250.
- * EXTRA 104: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 104/250.
- * EXTRA 105: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 105/250.
- * EXTRA 106: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 106/250.
- * EXTRA 107: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 107/250.
- * EXTRA 108: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 108/250.
- * EXTRA 109: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 109/250.
- * EXTRA 110: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 110/250.
- * EXTRA 111: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 111/250.
- * EXTRA 112: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 112/250.
- * EXTRA 113: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 113/250.
- * EXTRA 114: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 114/250.
- * EXTRA 115: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 115/250.
- * EXTRA 116: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 116/250.
- * EXTRA 117: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 117/250.
- * EXTRA 118: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 118/250.
- * EXTRA 119: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 119/250.
- * EXTRA 120: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 120/250.
- * EXTRA 121: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 121/250.
- * EXTRA 122: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 122/250.
- * EXTRA 123: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 123/250.
- * EXTRA 124: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 124/250.
- * EXTRA 125: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 125/250.
- * EXTRA 126: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 126/250.
- * EXTRA 127: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 127/250.
- * EXTRA 128: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 128/250.
- * EXTRA 129: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 129/250.
- * EXTRA 130: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 130/250.
- * EXTRA 131: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 131/250.
- * EXTRA 132: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 132/250.
- * EXTRA 133: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 133/250.
- * EXTRA 134: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 134/250.
- * EXTRA 135: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 135/250.
- * EXTRA 136: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 136/250.
- * EXTRA 137: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 137/250.
- * EXTRA 138: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 138/250.
- * EXTRA 139: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 139/250.
- * EXTRA 140: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 140/250.
- * EXTRA 141: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 141/250.
- * EXTRA 142: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 142/250.
- * EXTRA 143: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 143/250.
- * EXTRA 144: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 144/250.
- * EXTRA 145: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 145/250.
- * EXTRA 146: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 146/250.
- * EXTRA 147: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 147/250.
- * EXTRA 148: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 148/250.
- * EXTRA 149: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 149/250.
- * EXTRA 150: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 150/250.
- * EXTRA 151: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 151/250.
- * EXTRA 152: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 152/250.
- * EXTRA 153: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 153/250.
- * EXTRA 154: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 154/250.
- * EXTRA 155: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 155/250.
- * EXTRA 156: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 156/250.
- * EXTRA 157: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 157/250.
- * EXTRA 158: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 158/250.
- * EXTRA 159: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 159/250.
- * EXTRA 160: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 160/250.
- * EXTRA 161: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 161/250.
- * EXTRA 162: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 162/250.
- * EXTRA 163: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 163/250.
- * EXTRA 164: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 164/250.
- * EXTRA 165: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 165/250.
- * EXTRA 166: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 166/250.
- * EXTRA 167: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 167/250.
- * EXTRA 168: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 168/250.
- * EXTRA 169: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 169/250.
- * EXTRA 170: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 170/250.
- * EXTRA 171: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 171/250.
- * EXTRA 172: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 172/250.
- * EXTRA 173: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 173/250.
- * EXTRA 174: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 174/250.
- * EXTRA 175: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 175/250.
- * EXTRA 176: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 176/250.
- * EXTRA 177: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 177/250.
- * EXTRA 178: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 178/250.
- * EXTRA 179: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 179/250.
- * EXTRA 180: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 180/250.
- * EXTRA 181: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 181/250.
- * EXTRA 182: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 182/250.
- * EXTRA 183: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 183/250.
- * EXTRA 184: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 184/250.
- * EXTRA 185: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 185/250.
- * EXTRA 186: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 186/250.
- * EXTRA 187: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 187/250.
- * EXTRA 188: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 188/250.
- * EXTRA 189: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 189/250.
- * EXTRA 190: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 190/250.
- * EXTRA 191: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 191/250.
- * EXTRA 192: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 192/250.
- * EXTRA 193: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 193/250.
- * EXTRA 194: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 194/250.
- * EXTRA 195: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 195/250.
- * EXTRA 196: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 196/250.
- * EXTRA 197: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 197/250.
- * EXTRA 198: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 198/250.
- * EXTRA 199: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 199/250.
- * EXTRA 200: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 200/250.
- * EXTRA 201: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 201/250.
- * EXTRA 202: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 202/250.
- * EXTRA 203: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 203/250.
- * EXTRA 204: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 204/250.
- * EXTRA 205: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 205/250.
- * EXTRA 206: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 206/250.
- * EXTRA 207: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 207/250.
- * EXTRA 208: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 208/250.
- * EXTRA 209: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 209/250.
- * EXTRA 210: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 210/250.
- * EXTRA 211: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 211/250.
- * EXTRA 212: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 212/250.
- * EXTRA 213: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 213/250.
- * EXTRA 214: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 214/250.
- * EXTRA 215: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 215/250.
- * EXTRA 216: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 216/250.
- * EXTRA 217: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 217/250.
- * EXTRA 218: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 218/250.
- * EXTRA 219: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 219/250.
- * EXTRA 220: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 220/250.
- * EXTRA 221: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 221/250.
- * EXTRA 222: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 222/250.
- * EXTRA 223: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 223/250.
- * EXTRA 224: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 224/250.
- * EXTRA 225: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 225/250.
- * EXTRA 226: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 226/250.
- * EXTRA 227: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 227/250.
- * EXTRA 228: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 228/250.
- * EXTRA 229: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 229/250.
- * EXTRA 230: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 230/250.
- * EXTRA 231: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 231/250.
- * EXTRA 232: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 232/250.
- * EXTRA 233: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 233/250.
- * EXTRA 234: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 234/250.
- * EXTRA 235: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 235/250.
- * EXTRA 236: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 236/250.
- * EXTRA 237: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 237/250.
- * EXTRA 238: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 238/250.
- * EXTRA 239: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 239/250.
- * EXTRA 240: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 240/250.
- * EXTRA 241: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 241/250.
- * EXTRA 242: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 242/250.
- * EXTRA 243: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 243/250.
- * EXTRA 244: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 244/250.
- * EXTRA 245: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 245/250.
- * EXTRA 246: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 246/250.
- * EXTRA 247: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 247/250.
- * EXTRA 248: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 248/250.
- * EXTRA 249: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 249/250.
- * EXTRA 250: y24 stagger 0.12 — фильтр/карточки entrance, ScrollTrigger grid start top 92% once, hover RGB y:-4, lightbox scale 0.82→1 back.out(1.4), reduced-motion gate prefers-reduced-motion, cleanup gsap.context ctx.revert(). Артефакт 250/250.
- */
+ 
 
 // ─── компонент ────────────────────────────────────────────
 
@@ -2090,7 +1696,6 @@ export function GalleryPage() {
     window.setTimeout(() => setToast(null), 2800);
   }, []);
 
-  // ── entrance анимация — spec: stagger 0.12, y 24→0, reduced-motion fallback, gsap.context cleanup
   useEffect(() => {
     if (!rootRef.current) return;
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -2219,7 +1824,6 @@ useEffect(() => {
     if (glow) gsap.to(glow, { opacity: 0.95, duration: 0.4, ease: "power2.out", overwrite: true });
   }, []);
 
-  // ── лайтбокс GSAP scale + body lock
   const openLightbox = useCallback((art: Art42) => {
     setSelected(art);
   }, []);
@@ -2444,7 +2048,7 @@ useEffect(() => {
               {/* арт-обложка: градиент-заглушка + эмодзи + img под реальный файл */}
               <div className={styles.artWrap} style={{ background: art.gradient }}>
                 {/* реальный файл — будет поверх градиента когда появится */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
+                {}
                 <img
                   src={getRealSrc(art.style, art.src)}
                   alt={art.title}

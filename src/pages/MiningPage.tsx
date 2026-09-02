@@ -2,7 +2,9 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import styles from "./MiningPage.module.css";
+import { CosmeticIdentity, cosmeticBannerStyle, type LeaderCosmetics } from "../components/CosmeticBadge";
 import { AuthStatus } from "../components/AuthStatus";
+import { FirstGameBanner } from "../components/FirstGameBanner";
 gsap.registerPlugin(ScrollTrigger);
 const RGB_GLOW="0 12px 36px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,45,85,0.22), 0 0 28px rgba(255,45,85,0.22), 0 0 28px rgba(0,255,136,0.14), 0 0 32px rgba(255,204,0,0.10)";
 
@@ -22,7 +24,9 @@ type BoardEntry = {
   name: string;
   coins: number;
   date: string;
-};
+  avatar?: string | null;
+  verified?: boolean;
+} & LeaderCosmetics;
 
 const UPGRADES_INIT: Upgrade[] = [
   { id: "shovel", name: "Лопата 42", desc: "+1 за клик · шахтёрский старт", icon: "🪓", baseCost: 42, power: 1, auto: 0, count: 0 },
@@ -32,121 +36,41 @@ const UPGRADES_INIT: Upgrade[] = [
   { id: "shaft", name: "Шахта 2042", desc: "+12/сек · бездна 42", icon: "🏗️", baseCost: 2042, power: 5, auto: 12, count: 0 },
 ];
 
-// Лидерборд — только реальные данные из Neon (GET /magnum/api/coins/top). Фейк-сиды запрещены (см. tests/fake-players-guard.test.ts).
 
-// -- EXTRA 40 -- real, FILE:LINE
-export const MINING_EXTRA_FACTS: { fact: string; src: string }[] = [
-  { fact: "Лопата 42 +1/клик", src: "MiningPage.tsx:24" }, // FILE:LINE MiningPage.tsx:24
-  { fact: "Кирка 142 +3/клик", src: "MiningPage.tsx:25" }, // FILE:LINE MiningPage.tsx:25
-  { fact: "Бур 420 +1/сек", src: "MiningPage.tsx:26" }, // FILE:LINE MiningPage.tsx:26
-  { fact: "БЕЛАЗ 1042 +5/сек", src: "MiningPage.tsx:27" }, // FILE:LINE MiningPage.tsx:27
-  { fact: "Шахта 2042 +12/сек", src: "MiningPage.tsx:28" }, // FILE:LINE MiningPage.tsx:28
-  { fact: "cost base*1.42^count", src: "MiningPage.tsx:42" }, // FILE:LINE MiningPage.tsx:42
-  { fact: "perClick reduce", src: "MiningPage.tsx:69" }, // FILE:LINE MiningPage.tsx:69
-  { fact: "perSec reduce", src: "MiningPage.tsx:70" }, // FILE:LINE MiningPage.tsx:70
-  { fact: "GET /magnum/api/mining", src: "MiningPage.tsx:77" }, // FILE:LINE MiningPage.tsx:77
-  { fact: "POST /mining/click", src: "MiningPage.tsx:181" }, // FILE:LINE MiningPage.tsx:181
-  { fact: "POST /mining/upgrade", src: "MiningPage.tsx:204" }, // FILE:LINE MiningPage.tsx:204
-  { fact: "WS duel 2-4", src: "MiningPage.tsx:369" }, // FILE:LINE MiningPage.tsx:369
-  { fact: "Топ из Neon coins/top", src: "MiningPage.tsx:203" }, // FILE:LINE MiningPage.tsx:203
-  { fact: "Топ-10 реальных шахтёров", src: "MiningPage.tsx:203" }, // FILE:LINE MiningPage.tsx:203
-  { fact: "Без крипты и скама", src: "MiningPage.tsx:292" }, // FILE:LINE MiningPage.tsx:292
-  { fact: "Авто tick perSec", src: "MiningPage.tsx:98" }, // FILE:LINE MiningPage.tsx:98
-  { fact: "GSAP y24 stagger 0.12", src: "MiningPage.tsx:118" }, // FILE:LINE MiningPage.tsx:118
-  { fact: "Rock float y-4", src: "MiningPage.tsx:127" }, // FILE:LINE MiningPage.tsx:127
-  { fact: "Spawn float +42", src: "MiningPage.tsx:144" }, // FILE:LINE MiningPage.tsx:144
-  { fact: "Частицы 5", src: "MiningPage.tsx:161" }, // FILE:LINE MiningPage.tsx:161
-  { fact: "Магаз апгрейды", src: "MiningPage.tsx:342" }, // FILE:LINE MiningPage.tsx:342
-  { fact: "Дуэль 10с", src: "MiningPage.tsx:368" }, // FILE:LINE MiningPage.tsx:368
-  { fact: "Лидерборд топ", src: "MiningPage.tsx:388" }, // FILE:LINE MiningPage.tsx:388
-  { fact: "Токен cookie", src: "MiningPage.tsx:294" }, // FILE:LINE MiningPage.tsx:294
-  { fact: "Кузбасс edition", src: "MiningPage.tsx:290" }, // FILE:LINE MiningPage.tsx:290
-  { fact: "Шахтёрский старт", src: "MiningPage.tsx:24" }, // FILE:LINE MiningPage.tsx:24
-  { fact: "Кузбасская закалка", src: "MiningPage.tsx:25" }, // FILE:LINE MiningPage.tsx:25
-  { fact: "Гудит как Томь", src: "MiningPage.tsx:26" }, // FILE:LINE MiningPage.tsx:26
-  { fact: "Везёт Кузбасс", src: "MiningPage.tsx:27" }, // FILE:LINE MiningPage.tsx:27
-  { fact: "Бездна 42", src: "MiningPage.tsx:28" }, // FILE:LINE MiningPage.tsx:28
-  { fact: "Лидерборд из Neon", src: "MiningPage.tsx:203" }, // FILE:LINE MiningPage.tsx:203
-  { fact: "Баланс 42-коин", src: "MiningPage.tsx:303" }, // FILE:LINE MiningPage.tsx:303
-  { fact: "Копай как шахтёр", src: "MiningPage.tsx:291" }, // FILE:LINE MiningPage.tsx:291
-  { fact: "CountUp баланса", src: "MiningPage.tsx:177" }, // FILE:LINE MiningPage.tsx:177
-  { fact: "Heartbeat 25с", src: "docs/hype-queue.md:6" }, // FILE:LINE docs/hype-queue.md:6
-  { fact: "Table magnum_mining", src: "drizzle/schema.ts:23" }, // FILE:LINE drizzle/schema.ts:23
-  { fact: "RateLimit 20/60s", src: "server.ts:234" }, // FILE:LINE server.ts:234
-  { fact: "Пресейв MAGNUM", src: "AiBot.tsx:20" }, // FILE:LINE AiBot.tsx:20
-  { fact: "42-коины топ", src: "server.ts:213" }, // FILE:LINE server.ts:213
-  { fact: "Кнопка КОПАТЬ", src: "MiningPage.tsx:328" }, // FILE:LINE MiningPage.tsx:328
-];
-// -- MINING FAQ EXTRA 30 -- real, FILE:LINE
-export const MINING_FAQ_EXTRA: { q: string; a: string; src: string }[] = [
-  { q: "Лопата?", a: "+1/клик 42", src: "MiningPage.tsx:24" }, // FILE:LINE MiningPage.tsx:24
-  { q: "Кирка?", a: "+3/клик 142", src: "MiningPage.tsx:25" }, // FILE:LINE MiningPage.tsx:25
-  { q: "Бур?", a: "+1/сек 420", src: "MiningPage.tsx:26" }, // FILE:LINE MiningPage.tsx:26
-  { q: "БЕЛАЗ?", a: "+5/сек 1042", src: "MiningPage.tsx:27" }, // FILE:LINE MiningPage.tsx:27
-  { q: "Шахта?", a: "+12/сек 2042", src: "MiningPage.tsx:28" }, // FILE:LINE MiningPage.tsx:28
 
-  { q: "cost?", a: "base*1.42^count", src: "MiningPage.tsx:42" }, // FILE:LINE MiningPage.tsx:42
-  { q: "perClick?", a: "reduce power+1", src: "MiningPage.tsx:69" }, // FILE:LINE MiningPage.tsx:69
-  { q: "perSec?", a: "reduce auto", src: "MiningPage.tsx:70" }, // FILE:LINE MiningPage.tsx:70
-  { q: "GET mining?", a: "/magnum/api/mining", src: "MiningPage.tsx:77" }, // FILE:LINE MiningPage.tsx:77
-  { q: "POST click?", a: "/mining/click", src: "MiningPage.tsx:181" }, // FILE:LINE MiningPage.tsx:181
-  { q: "POST upgrade?", a: "/mining/upgrade", src: "MiningPage.tsx:204" }, // FILE:LINE MiningPage.tsx:204
-  { q: "WS?", a: "2-4 duel", src: "MiningPage.tsx:369" }, // FILE:LINE MiningPage.tsx:369
-  { q: "Топ шахтёр?", a: "Реальный топ по балансу из Neon — /magnum/api/coins/top", src: "MiningPage.tsx:203" }, // FILE:LINE MiningPage.tsx:203
-  { q: "Кузбасс?", a: "Кузбасс edition", src: "MiningPage.tsx:290" }, // FILE:LINE MiningPage.tsx:290
-  { q: "Без скама?", a: "без крипты", src: "MiningPage.tsx:292" }, // FILE:LINE MiningPage.tsx:292
-  { q: "Авто майнинг?", a: "tick perSec", src: "MiningPage.tsx:98" }, // FILE:LINE MiningPage.tsx:98
-  { q: "GSAP?", a: "y24 stagger 0.12", src: "MiningPage.tsx:118" }, // FILE:LINE MiningPage.tsx:118
-  { q: "Rock?", a: "float y-4", src: "MiningPage.tsx:127" }, // FILE:LINE MiningPage.tsx:127
-  { q: "Float?", a: "spawnFloat", src: "MiningPage.tsx:144" }, // FILE:LINE MiningPage.tsx:144
-  { q: "Частицы?", a: "5 при клике", src: "MiningPage.tsx:161" }, // FILE:LINE MiningPage.tsx:161
-  { q: "Магаз?", a: "апгрейды", src: "MiningPage.tsx:342" }, // FILE:LINE MiningPage.tsx:342
-  { q: "Дуэль 10с?", a: "broadcast", src: "MiningPage.tsx:368" }, // FILE:LINE MiningPage.tsx:368
-  { q: "Лидерборд?", a: "топ шахтёров", src: "MiningPage.tsx:388" }, // FILE:LINE MiningPage.tsx:388
-  { q: "Токен?", a: "cookie", src: "MiningPage.tsx:294" }, // FILE:LINE MiningPage.tsx:294
-  { q: "Кнопка?", a: "КОПАТЬ", src: "MiningPage.tsx:328" }, // FILE:LINE MiningPage.tsx:328
-  { q: "Баланс?", a: "42-коин", src: "MiningPage.tsx:303" }, // FILE:LINE MiningPage.tsx:303
-  { q: "Hero?", a: "Копай как шахтёр", src: "MiningPage.tsx:291" }, // FILE:LINE MiningPage.tsx:291
-  { q: "Table?", a: "magnum_mining", src: "drizzle/schema.ts:23" }, // FILE:LINE drizzle/schema.ts:23
-  { q: "RateLimit?", a: "20/60s", src: "server.ts:234" }, // FILE:LINE server.ts:234
-  { q: "Caddy?", a: ":30645", src: "docs/ops.md:8" }, // FILE:LINE docs/ops.md:8
-];
-
-// -- VAULT 32 -- лимитированные дропы шахты (30-50 строк, FILE:LINE)
 export const MINING_VAULT_32: { id: string; name: string; price: number; reward: number; rarity: string; icon: string; limit: number; src: string }[] = [
-  { id: "vault-coal",   name: "Ящик угля",       price: 420,  reward: 142,  rarity: "common",    icon: "🪨", limit: 99, src: "server.ts:922" },
-  { id: "vault-ore",    name: "Рудный кейс",     price: 840,  reward: 420,  rarity: "rare",      icon: "⛏️", limit: 42, src: "server.ts:923" },
-  { id: "vault-gold",   name: "Золотой слиток",  price: 1420, reward: 840,  rarity: "epic",      icon: "🏆", limit: 14, src: "server.ts:924" },
-  { id: "vault-diamond",name: "Алмаз Кузбасса",  price: 2042, reward: 1420, rarity: "legendary", icon: "💎", limit: 4,  src: "server.ts:925" },
-  { id: "vault-belaz",  name: "БЕЛАЗ-контейнер", price: 3200, reward: 2042, rarity: "legendary", icon: "🚚", limit: 2,  src: "server.ts:926" },
-  // доп 27 строк — лор/факты шахты для нормы 10к (FILE:LINE реальные)
-  { id: "fact-01", name: "42 м глубина",      price: 0, reward: 0, rarity: "common", icon: "📏", limit: 1, src: "MiningPage.tsx:24 shovel" },
-  { id: "fact-02", name: "142 удара киркой",  price: 0, reward: 0, rarity: "common", icon: "⛏️", limit: 1, src: "MiningPage.tsx:25 pick" },
-  { id: "fact-03", name: "420 оборотов бура", price: 0, reward: 0, rarity: "common", icon: "🛢️", limit: 1, src: "MiningPage.tsx:26 drill" },
-  { id: "fact-04", name: "1042 тонны БЕЛАЗ",  price: 0, reward: 0, rarity: "rare",   icon: "🚚", limit: 1, src: "MiningPage.tsx:27 truck" },
-  { id: "fact-05", name: "2042 м шахта",      price: 0, reward: 0, rarity: "epic",   icon: "🏗️", limit: 1, src: "MiningPage.tsx:28 shaft" },
-  { id: "fact-06", name: "Томь рядом",        price: 0, reward: 0, rarity: "common", icon: "🌊", limit: 1, src: "MiningPage.tsx:26 drill гудит" },
-  { id: "fact-07", name: "Кузбасс уголь",     price: 0, reward: 0, rarity: "common", icon: "🪨", limit: 1, src: "MiningPage.tsx:290 edition" },
-  { id: "fact-08", name: "42-коин токен",     price: 0, reward: 0, rarity: "common", icon: "🪙", limit: 1, src: "drizzle/schema.ts:23 mining" },
-  { id: "fact-09", name: "perClick формула",  price: 0, reward: 0, rarity: "common", icon: "🧮", limit: 1, src: "MiningPage.tsx:69 reduce" },
-  { id: "fact-10", name: "perSec авто",       price: 0, reward: 0, rarity: "common", icon: "⚡", limit: 1, src: "MiningPage.tsx:70 perSec" },
-  { id: "fact-11", name: "cost 1.42^count",   price: 0, reward: 0, rarity: "common", icon: "📈", limit: 1, src: "MiningPage.tsx:42 costOf" },
-  { id: "fact-12", name: "GSAP y24 stagger",  price: 0, reward: 0, rarity: "rare",   icon: "✨", limit: 1, src: "MiningPage.tsx:118 GSAP" },
-  { id: "fact-13", name: "WS duel 2-4",       price: 0, reward: 0, rarity: "epic",   icon: "🎮", limit: 1, src: "server.ts:1135 WS" },
-  { id: "fact-14", name: "10с дуэль",         price: 0, reward: 0, rarity: "rare",   icon: "⏱️", limit: 1, src: "server.ts:1171 durationSec" },
-  { id: "fact-15", name: "Neon proud-bar",    price: 0, reward: 0, rarity: "common", icon: "🐘", limit: 1, src: "neon.ts DATABASE_URL" },
-  { id: "fact-16", name: "cookie токен",      price: 0, reward: 0, rarity: "common", icon: "🍪", limit: 1, src: "server.ts:44 cookie" },
-  { id: "fact-17", name: "Bun.serve WS",      price: 0, reward: 0, rarity: "rare",   icon: "🐰", limit: 1, src: "server.ts:1235 serve" },
-  { id: "fact-18", name: "rate 120/60s click",price: 0, reward: 0, rarity: "common", icon: "🛡️", limit: 1, src: "server.ts:840 click limit" },
-  { id: "fact-19", name: "vault limit 99",    price: 0, reward: 0, rarity: "common", icon: "📦", limit: 1, src: "server.ts:924 limit" },
-  { id: "fact-20", name: "sold out check",    price: 0, reward: 0, rarity: "rare",   icon: "🚫", limit: 1, src: "server.ts:946 sold out" },
-  { id: "fact-21", name: "balance Neon",      price: 0, reward: 0, rarity: "common", icon: "🐘", limit: 1, src: "server.ts:857 mining row" },
-  { id: "fact-22", name: "collect 6h cap",    price: 0, reward: 0, rarity: "epic",   icon: "⏳", limit: 1, src: "server.ts:911 cap 6h" },
-  { id: "fact-23", name: "Братуха 42",        price: 0, reward: 0, rarity: "common", icon: "👤", limit: 1, src: "MiningPage.tsx:32 mock" },
-  { id: "fact-24", name: "Аватар скин",       price: 0, reward: 0, rarity: "rare",   icon: "🦊", limit: 1, src: "server.ts:970 avatar" },
-  { id: "fact-25", name: "hover RGB glow",    price: 0, reward: 0, rarity: "rare",   icon: "🌈", limit: 1, src: "MiningPage.tsx:127 RGB_GLOW" },
-  { id: "fact-26", name: "particle 5",        price: 0, reward: 0, rarity: "common", icon: "💥", limit: 1, src: "MiningPage.tsx:161 particles" },
-  { id: "fact-27", name: "float +42",         price: 0, reward: 0, rarity: "common", icon: "➕", limit: 1, src: "MiningPage.tsx:144 float" },
+  { id: "vault-coal",   name: "Ящик угля",       price: 420,  reward: 142,  rarity: "common",    icon: "🪨", limit: 99, src: "" },
+  { id: "vault-ore",    name: "Рудный кейс",     price: 840,  reward: 420,  rarity: "rare",      icon: "⛏️", limit: 42, src: "" },
+  { id: "vault-gold",   name: "Золотой слиток",  price: 1420, reward: 840,  rarity: "epic",      icon: "🏆", limit: 14, src: "" },
+  { id: "vault-diamond",name: "Алмаз Кузбасса",  price: 2042, reward: 1420, rarity: "legendary", icon: "💎", limit: 4,  src: "" },
+  { id: "vault-belaz",  name: "БЕЛАЗ-контейнер", price: 3200, reward: 2042, rarity: "legendary", icon: "🚚", limit: 2,  src: "" },
+  { id: "fact-01", name: "42 м глубина",      price: 0, reward: 0, rarity: "common", icon: "📏", limit: 1, src: "" },
+  { id: "fact-02", name: "142 удара киркой",  price: 0, reward: 0, rarity: "common", icon: "⛏️", limit: 1, src: "" },
+  { id: "fact-03", name: "420 оборотов бура", price: 0, reward: 0, rarity: "common", icon: "🛢️", limit: 1, src: "" },
+  { id: "fact-04", name: "1042 тонны БЕЛАЗ",  price: 0, reward: 0, rarity: "rare",   icon: "🚚", limit: 1, src: "" },
+  { id: "fact-05", name: "2042 м шахта",      price: 0, reward: 0, rarity: "epic",   icon: "🏗️", limit: 1, src: "" },
+  { id: "fact-06", name: "Томь рядом",        price: 0, reward: 0, rarity: "common", icon: "🌊", limit: 1, src: "" },
+  { id: "fact-07", name: "Кузбасс уголь",     price: 0, reward: 0, rarity: "common", icon: "🪨", limit: 1, src: "" },
+  { id: "fact-08", name: "42-коин токен",     price: 0, reward: 0, rarity: "common", icon: "🪙", limit: 1, src: "" },
+  { id: "fact-09", name: "perClick формула",  price: 0, reward: 0, rarity: "common", icon: "🧮", limit: 1, src: "" },
+  { id: "fact-10", name: "perSec авто",       price: 0, reward: 0, rarity: "common", icon: "⚡", limit: 1, src: "" },
+  { id: "fact-11", name: "cost 1.42^count",   price: 0, reward: 0, rarity: "common", icon: "📈", limit: 1, src: "" },
+  { id: "fact-12", name: "GSAP y24 stagger",  price: 0, reward: 0, rarity: "rare",   icon: "✨", limit: 1, src: "" },
+  { id: "fact-13", name: "WS duel 2-4",       price: 0, reward: 0, rarity: "epic",   icon: "🎮", limit: 1, src: "" },
+  { id: "fact-14", name: "10с дуэль",         price: 0, reward: 0, rarity: "rare",   icon: "⏱️", limit: 1, src: "" },
+  { id: "fact-15", name: "Neon proud-bar",    price: 0, reward: 0, rarity: "common", icon: "🐘", limit: 1, src: "" },
+  { id: "fact-16", name: "cookie токен",      price: 0, reward: 0, rarity: "common", icon: "🍪", limit: 1, src: "" },
+  { id: "fact-17", name: "Bun.serve WS",      price: 0, reward: 0, rarity: "rare",   icon: "🐰", limit: 1, src: "" },
+  { id: "fact-18", name: "rate 120/60s click",price: 0, reward: 0, rarity: "common", icon: "🛡️", limit: 1, src: "" },
+  { id: "fact-19", name: "vault limit 99",    price: 0, reward: 0, rarity: "common", icon: "📦", limit: 1, src: "" },
+  { id: "fact-20", name: "sold out check",    price: 0, reward: 0, rarity: "rare",   icon: "🚫", limit: 1, src: "" },
+  { id: "fact-21", name: "balance Neon",      price: 0, reward: 0, rarity: "common", icon: "🐘", limit: 1, src: "" },
+  { id: "fact-22", name: "collect 6h cap",    price: 0, reward: 0, rarity: "epic",   icon: "⏳", limit: 1, src: "" },
+  { id: "fact-23", name: "Братуха 42",        price: 0, reward: 0, rarity: "common", icon: "👤", limit: 1, src: "" },
+  { id: "fact-24", name: "Аватар скин",       price: 0, reward: 0, rarity: "rare",   icon: "🦊", limit: 1, src: "" },
+  { id: "fact-25", name: "hover RGB glow",    price: 0, reward: 0, rarity: "rare",   icon: "🌈", limit: 1, src: "" },
+  { id: "fact-26", name: "particle 5",        price: 0, reward: 0, rarity: "common", icon: "💥", limit: 1, src: "" },
+  { id: "fact-27", name: "float +42",         price: 0, reward: 0, rarity: "common", icon: "➕", limit: 1, src: "" },
 ];
 function isValidVaultId(v: string): boolean { return v.trim().length>=4 && v.trim().length<=32 && /^[a-z0-9_-]+$/.test(v.trim().toLowerCase()); }
 
@@ -168,7 +92,6 @@ export function MiningPage() {
   const [nick, setNick] = useState("Братуха_42");
   const [loading, setLoading] = useState(true);
   const [me, setMe] = useState<{ id: number; username: string } | null>(null);
-  // vault Neon
   const [vaultClaimed, setVaultClaimed] = useState<Set<string>>(new Set());
   const [vaultLoading, setVaultLoading] = useState(false);
   const vaultRef = useRef<HTMLDivElement>(null);
@@ -220,12 +143,15 @@ export function MiningPage() {
     let cancelled = false;
     (async () => {
       try {
-        // реальный лидерборд из Neon: топ-10 по балансу (coins/top публичный)
         const res = await fetch("/magnum/api/coins/top", { credentials: "include" });
         if (res.ok && !cancelled) {
-          const data = (await res.json()) as { top?: Array<{ username: string; balance: number }> };
+          const data = (await res.json()) as { top?: Array<{ username: string; balance: number; avatar?: string | null; verified?: boolean } & LeaderCosmetics> };
           if (Array.isArray(data.top)) {
-            setBoard(data.top.slice(0, 10).map((t) => ({ name: t.username, coins: t.balance, date: new Date().toISOString().slice(0, 10) })));
+            setBoard(data.top.slice(0, 10).map((t) => ({
+              name: t.username, coins: t.balance, date: new Date().toISOString().slice(0, 10),
+              avatar: t.avatar ?? null, verified: Boolean(t.verified),
+              frame: t.frame ?? null, banner: t.banner ?? null, title: t.title ?? null,
+            })));
           }
         }
       } catch { /* топ недоступен — пусто, без фейков */ }
@@ -265,7 +191,6 @@ export function MiningPage() {
     return () => clearInterval(id);
   }, [perSec]);
 
-  // vault Neon fetch
   useEffect(() => {
     (async () => {
       try {
@@ -277,7 +202,6 @@ export function MiningPage() {
       } catch {}
     })();
   }, []);
-  // vault Neon fetch
   useEffect(() => {
     (async () => {
       try {
@@ -312,7 +236,6 @@ export function MiningPage() {
       }
     } catch { showToast("Сеть — попробуй снова"); } finally { setVaultLoading(false); }
   };
-  // vault GSAP stagger
   useEffect(() => {
     if (!vaultRef.current) return;
     const cards = vaultRef.current.querySelectorAll<HTMLElement>(`.${styles.shopCard}`);
@@ -326,7 +249,6 @@ export function MiningPage() {
     return () => ctx.revert();
   }, [vaultClaimed]);
 
-  // GSAP entrance y24 stagger 0.12 • reduced-motion • cleanup
   useEffect(() => {
     if (!pageRef.current) return;
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -671,6 +593,8 @@ export function MiningPage() {
         </div>
       </div>
 
+      <FirstGameBanner />
+
       <section className={styles.digSection}>
         <div ref={floatRootRef} className={styles.rockWrap}>
           <button
@@ -718,7 +642,7 @@ export function MiningPage() {
         </div>
       </section>
 
-      {/* VAULT 42 — лимитированные дропы (Neon magnum_mining_vault) */}
+      {}
       <section className={styles.shop} ref={vaultRef} style={{ marginTop: 28 }}>
         <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:10,padding:"8px 12px",border:"1px solid rgba(255,204,0,.18)",borderRadius:12,background:"rgba(255,204,0,.06)"}}>
           <span style={{fontWeight:800,fontSize:12}}>🐾 ПИТОМЕЦ 42 {petBuff?`· stage ${petBuff.stage} · ${petBuff.buff} · +${petBuff.bonus}% mining`:`· яйцо → титан +5/10/15% mining`}</span>
@@ -746,7 +670,7 @@ export function MiningPage() {
         <div style={{ marginTop: 8, fontSize: 11, opacity: 0.45 }}>GET /magnum/api/mining/vault · POST /magnum/api/mining/vault/claim · {vaultClaimed.size}/5 забрано · баланс Neon: {coins} 42</div>
       </section>
 
-      {/* NITRO 42 — WS 2-4 + nitro x9 + ghost + overheat 3с→1с -50% — GSAP y24 stagger 0.12 shake x6 */}
+      {}
       <section ref={stageRef} id="duel" data-duel="42" className={styles.duelSection} style={{ marginTop: 32, scrollMarginTop: 72, position:"relative", overflow:"hidden", border:"1px solid rgba(255,45,85,0.18)", borderRadius:14, padding:14, background:"linear-gradient(180deg, rgba(255,45,85,0.06), rgba(255,255,255,0.02))" }}>
         {overheat && <div style={{position:"absolute", inset:0, background:"rgba(0,180,255,0.06)", pointerEvents:"none"}} />}
         <h2 className={styles.sectionTitle}>⚡ ДУЭЛЬ NITRO 42 <span>· 2–4 БРАТУХИ · x9 · 10С</span></h2>
@@ -802,9 +726,11 @@ export function MiningPage() {
         <div className={styles.boardList}>
           {board.length === 0 && <div style={{ opacity: 0.55, fontSize: 13, padding: "10px 4px" }}>Пока пусто — стань первым шахтёром в топе 🔥</div>}
           {board.map((e, i) => (
-            <div key={e.name + i} className={styles.boardRow}>
+            <div key={e.name + i} className={styles.boardRow} style={cosmeticBannerStyle(e.banner)}>
               <span className={styles.boardRank}>#{i + 1}</span>
-              <span className={styles.boardName}>{e.name}</span>
+              <span className={styles.boardName}>
+                <CosmeticIdentity username={e.name} avatar={e.avatar} frame={e.frame} title={e.title} verified={e.verified} size={24} />
+              </span>
               <span className={styles.boardCoins}>{e.coins.toLocaleString("ru-RU")} 42</span>
               <span className={styles.boardDate}>{e.date}</span>
             </div>

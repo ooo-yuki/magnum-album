@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import gsap from "gsap";
 import styles from "./GamePage.module.css";
+import { subscribeMe, type MeUser } from "../lib/authMe";
 
 const PRESAVE_URL = "https://music.thefence.me/psmagnum";
 
@@ -202,7 +203,6 @@ function shareText(score: number, bestStreak: number) {
   return `Квиз 42 — ${score}/20 · ${r.title} · стрик ${bestStreak} 🔥 Проверь себя на oooyuki.zomb.top/magnum/games/quiz #MAGNUM #42`;
 }
 
-// GSAP пресеты для переиспользования
 const GSAP_PRESETS = {
   cardIn: { scale: 0.96, y: 12, opacity: 0 },
   cardOut: { scale: 1, y: 0, opacity: 1, duration: 0.35, ease: "back.out(1.4)" },
@@ -222,6 +222,15 @@ export function GamePage() {
   const [timeLeft, setTimeLeft] = useState(TIME_BY_DIFF[QUESTIONS[0]!.difficulty]!);
   const [hints, setHints] = useState(2);
   const [eliminated, setEliminated] = useState<number[]>([]);
+  // P0 funnel: autosave + CTA toast/popup — first game → +10 coins +42 dust
+  const [funnelState, setFunnelState] = useState<{ bonus: number; dust: number; coinsEarned: number } | null>(null);
+  const [funnelError, setFunnelError] = useState<string | null>(null);
+  const [funnelPending, setFunnelPending] = useState(false);
+  // Квиз доступен гостю, но результат сохраняется только у аккаунта — говорим об этом
+  // до прохождения, а не после (иначе 20 вопросов уходят впустую).
+  const [me, setMe] = useState<MeUser | undefined>(undefined);
+  const submittedRef = useRef(false);
+  const finishScoreRef = useRef<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const optionsRef = useRef<HTMLDivElement>(null);
@@ -230,6 +239,8 @@ export function GamePage() {
   const confettiRef = useRef<HTMLDivElement>(null);
 
   const q = QUESTIONS[current]!;
+
+  useEffect(() => subscribeMe(setMe), []);
 
   // timer
   useEffect(() => {
@@ -268,7 +279,6 @@ export function GamePage() {
     gsap.to(buttons, { x: 0, opacity: 1, stagger: 0.06, duration: 0.35, ease: "power2.out", delay: 0.08 });
   }, [current, finished]);
 
-  // progress bar GSAP width
   useEffect(() => {
     const fill = containerRef.current?.querySelector(`.${styles.progressFill}`) as HTMLElement | null;
     if (!fill) return;
@@ -312,6 +322,49 @@ export function GamePage() {
     return () => ctx.revert();
   }, [finished, score]);
 
+  // P0 funnel: autosave score -> magnum_game_scores INSERT (0 flat fix) + toast/CTA +10/42 dust
+  useEffect(() => {
+    if (!finished) return;
+    if (submittedRef.current) return;
+    submittedRef.current = true;
+    const finalScore = finishScoreRef.current || score;
+    setFunnelPending(true);
+    setFunnelError(null);
+    const submitScore = Math.max(0, Math.min(999999, Math.round(finalScore * 50)));
+    (async () => {
+      try {
+        const res = await fetch("/magnum/api/games/submit", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ game: "quiz", score: submitScore, meta: { src: "quiz42-first-game", finished: true, raw: finalScore } }),
+        });
+        const j = await res.json().catch(() => ({})) as { ok?: boolean; funnelBonus?: number; funnelDust?: number; coinsEarned?: number; error?: string };
+        if (!res.ok) {
+          if (res.status === 401) {
+            setFunnelError("guest");
+          } else {
+            setFunnelError(j.error || "submit " + res.status);
+          }
+          setFunnelPending(false);
+          return;
+        }
+        if (j.ok) {
+          setFunnelState({ bonus: Number(j.funnelBonus || 0), dust: Number(j.funnelDust || 0), coinsEarned: Number(j.coinsEarned || 0) });
+          if (j.funnelBonus || j.funnelDust) {
+            try { sessionStorage.setItem("magnum:first-game-banner-dismissed", "1"); } catch {}
+          }
+        } else {
+          setFunnelError(j.error || "unknown");
+        }
+      } catch (e) {
+        setFunnelError(String(e).slice(0, 120));
+      } finally {
+        setFunnelPending(false);
+      }
+    })();
+  }, [finished, score]);
+
   // keyboard 1-4 + Enter/Space
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -344,7 +397,6 @@ export function GamePage() {
     if (wrong.length > 0) {
       const pick = wrong[Math.floor(Math.random() * wrong.length)]!;
       setEliminated((e) => [...e, pick]);
-      // GSAP fade out eliminated
       requestAnimationFrame(() => {
         const btns = optionsRef.current?.querySelectorAll(`.${styles.option}`);
         const el = btns?.[pick] as HTMLElement | undefined;
@@ -390,6 +442,7 @@ export function GamePage() {
       setSelected(null);
       setShowFact(false);
     } else {
+      finishScoreRef.current = score;
       setFinished(true);
     }
   };
@@ -399,6 +452,9 @@ export function GamePage() {
     setCurrent(0); setScore(0); setSelected(null); setShowFact(false); setFinished(false);
     setStreak(0); setBestStreak(0); setHints(2); setEliminated([]);
     setTimeLeft(TIME_BY_DIFF[QUESTIONS[0]!.difficulty]!);
+    submittedRef.current = false;
+    finishScoreRef.current = 0;
+    setFunnelState(null); setFunnelError(null); setFunnelPending(false);
   };
 
   const handleCopy = async () => {
@@ -417,6 +473,17 @@ export function GamePage() {
         <h1>Квиз 42</h1>
         <p className={styles.subtitle}>20 вопросов про 42, MAGNUM и лор. Таймер, стрик, подсказки — проверь, братуха ли ты.</p>
       </div>
+
+      {me === null && !finished && (
+        <div
+          data-testid="quiz-guest-notice"
+          role="status"
+          style={{ margin: "0 auto 14px", maxWidth: 680, padding: "10px 14px", borderRadius: 12, background: "rgba(255,204,0,0.08)", border: "1px solid rgba(255,204,0,0.26)", fontSize: 13, color: "rgba(255,255,255,0.82)", display: "flex", gap: 10, alignItems: "center", justifyContent: "center", flexWrap: "wrap" }}
+        >
+          <span>Ты играешь как гость — результат <b>не сохранится</b> и не попадёт в топ.</span>
+          <a href="/magnum#auth" style={{ fontWeight: 900, padding: "5px 12px", borderRadius: 999, background: "#ffcc00", color: "#111", textDecoration: "none", fontSize: 12 }}>Войти →</a>
+        </div>
+      )}
 
       {!finished ? (
         <div className={styles.gameArea}>
@@ -470,6 +537,42 @@ export function GamePage() {
                 </div>
               ))}
             </div>
+            {funnelPending && (
+              <div data-testid="funnel-pending" style={{ margin: "10px 0", padding: "10px 12px", borderRadius: 12, background: "rgba(255,204,0,0.08)", border: "1px solid rgba(255,204,0,0.22)", fontSize: 12, color: "rgba(255,255,255,0.82)", textAlign: "center" }}>
+                Сохраняю результат… ⏳
+              </div>
+            )}
+            {funnelState && (
+              <div data-testid="funnel-toast" role="status" aria-label="Первая игра — награда" style={{ margin: "10px 0", padding: "12px 14px", borderRadius: 14, background: funnelState.bonus || funnelState.dust ? "linear-gradient(135deg, rgba(255,204,0,0.14), rgba(0,255,136,0.10))" : "rgba(255,255,255,0.06)", border: "1px solid " + (funnelState.bonus || funnelState.dust ? "rgba(255,204,0,0.32)" : "rgba(255,255,255,0.08)"), textAlign: "center" as const }}>
+                {funnelState.bonus > 0 || funnelState.dust > 0 ? (
+                  <>
+                    <div style={{ fontWeight: 900, color: "#ffcc00", fontSize: 14, marginBottom: 4 }}>🎉 Первая игра! +{funnelState.bonus} монет +{funnelState.dust} dust</div>
+                    <div style={{ fontSize: 12, color: "rgba(240,240,240,0.78)" }}>Награда зачислена — пыль на FORGE/PRISM крафт. Сыграй ещё и копи пыль!</div>
+                    <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 8, flexWrap: "wrap" }}>
+                      <a href="/magnum/mining" style={{ fontSize: 12, fontWeight: 800, padding: "6px 12px", borderRadius: 999, background: "#ffcc00", color: "#111", textDecoration: "none" }}>Майнинг →</a>
+                      <a href="/magnum/shop" style={{ fontSize: 12, fontWeight: 800, padding: "6px 12px", borderRadius: 999, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", color: "#fff", textDecoration: "none" }}>Магазин</a>
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ fontSize: 12, color: "rgba(240,240,240,0.7)" }}>Счёт сохранён ✓ +{funnelState.coinsEarned} монет {funnelState.coinsEarned ? "" : "(сыграй лучше — больше монет за высокий скор)"}</div>
+                )}
+              </div>
+            )}
+            {funnelError === "guest" && (
+              <div data-testid="funnel-guest-cta" role="region" aria-label="Войди чтобы получить 42 dust" style={{ margin: "10px 0", padding: "12px 14px", borderRadius: 14, background: "rgba(16,16,18,0.96)", border: "1px solid rgba(255,204,0,0.28)", boxShadow: "0 8px 24px rgba(0,0,0,0.35)", textAlign: "center" }}>
+                <div style={{ fontWeight: 900, color: "#fff", fontSize: 14, marginBottom: 4 }}>Сыграй 1 игру → <span style={{ color: "#ffcc00" }}>42 dust</span> · <span style={{ border: "1px solid rgba(255,204,0,0.35)", borderRadius: 999, padding: "1px 6px", fontSize: 11 }}>+10 монет бонус</span></div>
+                <div style={{ fontSize: 12, color: "rgba(240,240,240,0.62)", marginBottom: 8 }}>Этот результат не сохранён — в топ попадают только аккаунты. Войди, чтобы забрать пыль на первую победу.</div>
+                <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+                  <a href="/magnum#auth" style={{ fontSize: 12, fontWeight: 900, padding: "7px 14px", borderRadius: 999, background: "#ffcc00", color: "#111", textDecoration: "none" }}>Войти →</a>
+                  <a href="/magnum/games/dodge?from=guest-funnel" style={{ fontSize: 12, fontWeight: 800, padding: "7px 14px", borderRadius: 999, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "#fff", textDecoration: "none" }}>Играть как гость</a>
+                </div>
+              </div>
+            )}
+            {funnelError && funnelError !== "guest" && (
+              <div data-testid="funnel-error" style={{ margin: "10px 0", padding: "10px 12px", borderRadius: 12, background: "rgba(255,45,85,0.08)", border: "1px solid rgba(255,45,85,0.22)", fontSize: 11, color: "rgba(255,255,255,0.78)", textAlign: "center" }}>
+                Не сохранилось: {funnelError} — попробуй ещё раз или перезагрузи.
+              </div>
+            )}
             <div className={styles.resultActions}>
               <a href={PRESAVE_URL} target="_blank" className={styles.presaveBtn}>Пресейв MAGNUM →</a>
               <button className={styles.restartBtn} onClick={handleRestart}>Попробовать ещё раз</button>

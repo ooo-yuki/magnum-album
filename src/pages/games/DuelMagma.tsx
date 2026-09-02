@@ -20,6 +20,9 @@ export function DuelMagma(){
   const [elo,setElo]=useState<number|null>(null);
   const [lb,setLb]=useState<Array<{player:string;score:number}>>([]);
   const [msg,setMsg]=useState<string|null>(null);
+  const [me,setMe]=useState<{id:number;username:string}|null>(null);
+  // hot-seat: WS не поднялся — играем сами с собой, это не PvP и UI обязан это показать
+  const [demoMode,setDemoMode]=useState(false);
   const wsRef=useRef<DuelSocket|null>(null);
   const pageRef=useRef<HTMLDivElement>(null);
   const stageRef=useRef<HTMLDivElement>(null);
@@ -36,7 +39,9 @@ export function DuelMagma(){
   },[]);
   useEffect(()=>{ fetchLb(); },[fetchLb]);
 
-  // GSAP y24 stagger 0.12
+  // Auth gate
+  useEffect(()=>{ fetch("/magnum/api/auth/me",{credentials:"include"}).then(r=>r.ok?r.json():null).then(j=>{ if(j?.user) setMe(j.user); }).catch(()=>{}); },[]);
+
   useEffect(()=>{
     if(!pageRef.current) return;
     const prefers=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -51,6 +56,7 @@ export function DuelMagma(){
 
   // WS connect
   const connect=useCallback((joinCode?:string)=>{
+    if(!me){ setMsg("Войди, братуха — дуэли только для залогиненных"); window.dispatchEvent(new CustomEvent("magnum:need-auth")); return; }
     const ds=new DuelSocket((m:any)=>{
       if(!m) return;
       if(m.type==="room" && m.room){ setRoom(m.room); }
@@ -73,8 +79,9 @@ export function DuelMagma(){
       if(m.type==="overheat"){ setOverheat(true); setTimeout(()=>setOverheat(false),1200); }
       if(m.type==="wager"){ if(m.wager!=null) setRoom(r=> r?{...r,wager:Number(m.wager)}:r); }
     });
+    ds.onHotSeat=(on)=>{ setDemoMode(on); if(on) setMsg("ДЕМО: соперник не подключился — счёт локальный, в рейтинг не идёт"); };
     wsRef.current=ds; ds.connect(joinCode);
-  },[fetchLb,wager]);
+  },[fetchLb,wager,me]);
 
   useEffect(()=>{ connect(); return()=>wsRef.current?.close(); },[connect]);
 
@@ -112,7 +119,6 @@ export function DuelMagma(){
     let add=1*Math.min(1.8, 1+(nm-1)*0.08); if(nm>=10) add*=2;
     if(willOverheat){ setOverheat(true); overheatUntilRef.current=now+1200; heldMaxRef.current=null; setScore(s=> Math.max(0, s*0.4)); setTimeout(()=>setOverheat(false),1200); }
     else setScore(s=> s+add);
-    // GSAP shake x±7 0.08 + scale 1.18 0.1, magma bar width, ghost trail, lava-fill, vibrate
     const prefers=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if(!prefers){
       if(stageRef.current) gsap.to(stageRef.current,{x: (Math.random()-0.5)*14, duration:0.08, yoyo:true, repeat:1, ease:"power1.inOut", onComplete:()=>gsap.set(stageRef.current!,{x:0})});
@@ -128,7 +134,6 @@ export function DuelMagma(){
     wsRef.current?.send({type:"tick",magma:nm} as unknown as Record<string,unknown> as any);
   };
 
-  // animate bars via gsap.context width tweak
   useEffect(()=>{
     if(!magmaRef.current) return;
     const w=`${Math.min(100,(magma/10)*100)}%`;
@@ -148,6 +153,11 @@ export function DuelMagma(){
       <h1 className={styles.title}>Магма-дуэль 2-4 • x10 • lava-spike 2x</h1>
       <p style={{color:"rgba(255,255,255,.6)",marginTop:6}}>10с кликер • интервал &lt;0.15с +8% капа x10 • удержание x10 3.5с → overheat 1.2с -60% • wager 0/42/142/420 → win +wager*2 +42 ELO • сезон 7дн</p>
     </div>
+    {demoMode && (
+      <div role="status" style={{margin:"10px 0",padding:"10px 12px",borderRadius:12,background:"rgba(255,87,34,.12)",border:"1px solid rgba(255,87,34,.42)",color:"#ffb599",fontSize:13,fontWeight:700}}>
+        ДЕМО-РЕЖИМ — соединение с соперником не установлено. Ты играешь сам с собой: счёт локальный, ELO и ставки не начисляются.
+      </div>
+    )}
     <div className={styles.grid}>
       <div className={styles.card}>
         <strong>Ставка</strong>

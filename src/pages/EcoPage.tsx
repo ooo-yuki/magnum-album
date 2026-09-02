@@ -2,15 +2,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import styles from "./EcoPage.module.css";
+import { CosmeticIdentity, cosmeticBannerStyle, type LeaderCosmetics } from "../components/CosmeticBadge";
 
 gsap.registerPlugin(ScrollTrigger);
 const prefersReduced = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 type Option = { label: string; points: number; hint: string };
 type Question = { id: number; q: string; emoji: string; options: Option[] };
-type LeaderEntry = { name: string; score: number; rank: string; date: string };
+type LeaderEntry = { name: string; score: number; rank: string; date: string; avatar?: string | null; verified?: boolean } & LeaderCosmetics;
 type EcoTierFront = { rating: number; tier: string; minScore: number; maxScore: number; color: string; badge: string; desc: string };
-type EcoTopRow = { player: string; score: number; rating: number; tier: string; avatar?: string | null };
+type EcoTopRow = { player: string; score: number; rating: number; tier: string; avatar?: string | null } & LeaderCosmetics;
 type ChallengeState = { weekId: string; streak: number; freezeUsed: boolean; canFreeze: boolean; streakDays: number[] };
 
 const PRESAVE_URL = "https://music.thefence.me/psmagnum";
@@ -107,20 +108,6 @@ const QUESTIONS: Question[] = [
   },
 ];
 
-export const ECO_EXTRA_FACTS: { fact: string; src: string }[] = [
-  { fact: "Кузбасс лес 4817,5 тыс га 3 хребта", src: "EcoPage.tsx:23" },
-  { fact: "Тайга Алатау/Салаир", src: "EcoPage.tsx:31" },
-  { fact: "Томь 827 км + лес у реки", src: "EcoPage.tsx:42" },
-  { fact: "Bio-вахта 7дн стрик", src: "EcoPage.tsx:52" },
-  { fact: "MAGNUM 42 регион 42", src: "EcoPage.tsx:78" },
-  { fact: "StreamsCharts 28,545 пик 8K/200K", src: "EcoPage.tsx:89" },
-  { fact: "VPN 28.04 релиз", src: "EcoPage.tsx:102" },
-  { fact: "CLAY73 NOVA80/XXL86", src: "EcoPage.tsx:114" },
-  { fact: "Сосновый бор субботник", src: "EcoPage.tsx:19" },
-  { fact: "Ранг ЭкоЛегенда >=200", src: "EcoPage.tsx:123" },
-  { fact: "API GET /eco/leaderboard", src: "EcoPage.tsx:132" },
-  { fact: "API POST /eco/submit", src: "EcoPage.tsx:146" },
-];
 
 function getRank(score: number): { title: string; emoji: string; cls: string; desc: string } {
   if (score >= 200) return { title: "ЭкоЛегенда", emoji: "🌿👑", cls: styles.rankLegend, desc: "Ты — дух тайги. Лес гуще, Томь чище. MAGNUM гордится." };
@@ -128,15 +115,36 @@ function getRank(score: number): { title: string; emoji: string; cls: string; de
   return { title: "Нормис", emoji: "😐", cls: styles.rankNormis, desc: "Пока нормис. Пора менять батилки и идти в лес." };
 }
 
+// Сервер отдаёт player/username + created_at; приводим к форме строки таблицы,
+// иначе ник и дата рендерятся пустыми.
+type RawLeaderRow = Partial<LeaderEntry> & { player?: string; username?: string; created_at?: string };
+function normalizeLeaderRow(r: RawLeaderRow): LeaderEntry {
+  const created = r.created_at ? new Date(r.created_at) : null;
+  return {
+    name: String(r.name ?? r.player ?? r.username ?? "Братуха"),
+    score: Number(r.score ?? 0),
+    rank: String(r.rank ?? "pending"),
+    date: r.date ?? (created && !Number.isNaN(created.getTime())
+      ? created.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" })
+      : ""),
+    avatar: r.avatar ?? null,
+    verified: Boolean(r.verified),
+    frame: r.frame ?? null,
+    banner: r.banner ?? null,
+    title: r.title ?? null,
+  };
+}
 async function fetchLeaderboard(): Promise<LeaderEntry[]> {
   try {
     const res = await fetch("/magnum/api/eco/leaderboard", { credentials: "include" });
     if (!res.ok) return [];
-    const data = await res.json() as { leaderboard?: LeaderEntry[]; entries?: LeaderEntry[] } | LeaderEntry[];
-    if (Array.isArray(data)) return data as LeaderEntry[];
-    if (Array.isArray((data as {leaderboard?:unknown}).leaderboard)) return (data as {leaderboard:LeaderEntry[]}).leaderboard;
-    if (Array.isArray((data as {entries?:unknown}).entries)) return (data as {entries:LeaderEntry[]}).entries;
-    return [];
+    const data = await res.json() as { leaderboard?: RawLeaderRow[]; entries?: RawLeaderRow[] } | RawLeaderRow[];
+    const raw = Array.isArray(data)
+      ? data
+      : Array.isArray((data as { leaderboard?: unknown }).leaderboard) ? (data as { leaderboard: RawLeaderRow[] }).leaderboard
+      : Array.isArray((data as { entries?: unknown }).entries) ? (data as { entries: RawLeaderRow[] }).entries
+      : [];
+    return raw.map(normalizeLeaderRow);
   } catch { return []; }
 }
 async function submitEcoResult(entry: LeaderEntry & { score: number }): Promise<boolean> {
@@ -145,6 +153,13 @@ async function submitEcoResult(entry: LeaderEntry & { score: number }): Promise<
     return res.ok;
   } catch { return false; }
 }
+// ── LS guards HYPE ECO FREEZE 42 — SPEC-42 §eco ──
+const LS_FREEZE = "magnum-eco-freeze-used"; // value = weekId YYYY-Www, 1/неделю guard
+const LS_SHARE = "magnum-share-claimed"; // value = "1" once +42 via POST /magnum/api/coins/add
+function getLsFreezeWeek(): string | null { try { return localStorage.getItem(LS_FREEZE); } catch { return null; } }
+function setLsFreezeWeek(weekId: string) { try { localStorage.setItem(LS_FREEZE, weekId); } catch {} }
+function isShareClaimed(): boolean { try { return localStorage.getItem(LS_SHARE) === "1"; } catch { return false; } }
+function setShareClaimed() { try { localStorage.setItem(LS_SHARE, "1"); } catch {} }
 function weekIdNow(): string {
   const d = new Date();
   const jan1 = new Date(d.getFullYear(), 0, 1);
@@ -170,6 +185,7 @@ export function EcoPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [leaderboard, setLeaderboard] = useState<LeaderEntry[]>([]);
+  const [boardError, setBoardError] = useState<string | null>(null);
   const [savedScore, setSavedScore] = useState<number | null>(null);
   const [ecoTiers, setEcoTiers] = useState<EcoTierFront[]>([]);
   const [ecoTop, setEcoTop] = useState<EcoTopRow[]>([]);
@@ -177,6 +193,8 @@ export function EcoPage() {
   const [challenge, setChallenge] = useState<ChallengeState | null>(null);
   const [freezeMsg, setFreezeMsg] = useState<string | null>(null);
   const [shareBonus, setShareBonus] = useState<string | null>(null);
+  const [shareModal, setShareModal] = useState(false);
+  const [sharePreviewUrl, setSharePreviewUrl] = useState<string | null>(null);
   const [claimMsg, setClaimMsg] = useState<string | null>(null);
 
   const answeredCount = useMemo(() => answers.filter((a) => a !== null).length, [answers]);
@@ -264,7 +282,12 @@ export function EcoPage() {
     const name = (nickname.trim() || "Аноним 42").slice(0, 18);
     const entry: LeaderEntry = { name, score, rank: rank.title, date: new Date().toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" }) };
     const ok = await submitEcoResult(entry);
-    if (!ok) { setToast("Не удалось сохранить — войди, братуха (401)"); window.setTimeout(() => setToast(null), 3000); return; }
+    if (!ok) {
+      setToast("Не удалось сохранить — войди, братуха (401)");
+      setBoardError("Результат не сохранён: нужен вход. В топе только результаты аккаунтов.");
+      window.setTimeout(() => setToast(null), 3000);
+      return;
+    }
     try {
       const claimRes = await fetch("/magnum/api/eco/challenge/claim", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ score, answers: answers.map(a => a ?? 0), boss: isBoss }) });
       if (claimRes.ok) {
@@ -282,20 +305,31 @@ export function EcoPage() {
       else if (cur) setRatingMsg(`Рейтинг ${cur.rating}/10 — ${cur.tier}`);
       window.setTimeout(() => setRatingMsg(null), 4000);
     } catch {}
-    const list = await fetchLeaderboard(); if (list.length > 0) setLeaderboard(list); else setLeaderboard([entry, ...leaderboard].sort((a, b) => b.score - a.score).slice(0, 10));
+    // Никаких локальных подмешиваний: в таблице только то, что реально лежит на сервере.
+    const list = await fetchLeaderboard();
+    setLeaderboard(list);
+    setBoardError(list.length === 0 ? "Топ не загрузился — обнови страницу" : null);
     setToast(`Сохранено! Ты в топе, ${name} — ${score} баллов`);
     window.setTimeout(() => setToast(null), 3000);
   };
   const handleFreeze = async () => {
+    const wk = weekIdNow();
+    // LS guard 1/неделю — мгновенный 429 без запроса
+    const lsWeek = getLsFreezeWeek();
+    if (lsWeek === wk) { setFreezeMsg("❄️ Уже заморожено на эту неделю (LS guard)"); window.setTimeout(() => setFreezeMsg(null), 3500); return; }
+    if (challenge?.freezeUsed) { setFreezeMsg("❄️ Уже заморожено на эту неделю"); window.setTimeout(() => setFreezeMsg(null), 3500); return; }
     try {
       const r = await fetch("/magnum/api/eco/challenge/freeze", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" } });
       const j = await r.json() as { ok?: boolean; error?: string; weekId?: string };
-      if (r.ok && j.ok) { setFreezeMsg(`❄️ Заморозка активирована • ${j.weekId} • -420 монет`); const ch = await fetchChallenge(); if (ch) setChallenge(ch); }
+      if (r.ok && j.ok) { setLsFreezeWeek(j.weekId || wk); setFreezeMsg(`❄️ Заморозка активирована • ${j.weekId || wk} • -420 монет`); const ch = await fetchChallenge(); if (ch) setChallenge(ch); }
+      else if (r.status === 429 || r.status === 409) { setLsFreezeWeek(wk); setFreezeMsg(j.error || "❄️ Уже использовано 1/неделю"); }
       else setFreezeMsg(j.error || "Не удалось заморозить");
       window.setTimeout(() => setFreezeMsg(null), 3500);
     } catch { setFreezeMsg("Ошибка сети"); window.setTimeout(() => setFreezeMsg(null), 3000); }
   };
   const handleShareOG = async () => {
+    // LS 1× guard — magnum-share-claimed
+    if (isShareClaimed()) { setShareBonus("Шаринг уже claimed 1× — +42 получено"); window.setTimeout(() => setShareBonus(null), 3000); setShareModal(true); return; }
     const canvas = shareCanvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d"); if (!ctx) return;
@@ -321,15 +355,28 @@ export function EcoPage() {
       const blob: Blob | null = await new Promise(res => canvas.toBlob(r => res(r), "image/png"));
       if (!blob) throw new Error("no blob");
       const file = new File([blob], "eco-les-42-1080.png", { type: "image/png" });
+      // preview for modal
+      try { const url = URL.createObjectURL(blob); setSharePreviewUrl(prev => { if (prev) URL.revokeObjectURL(prev); return url; }); setShareModal(true); } catch {}
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
         await navigator.share({ title: `ECO LES 42 — ${score} баллов`, text: `ECO LES 42 — ${rank.title} ${score} баллов • bio-вахта 7дн • /magnum/eco`, files: [file] });
       } else if (navigator.clipboard) {
         const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = "eco-les-42-1080.png"; a.click(); URL.revokeObjectURL(url);
       }
-      const sr = await fetch("/magnum/api/eco/share", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ score }) });
-      if (sr.ok) { const sj = await sr.json() as { coins?: number }; setShareBonus(`+${sj.coins ?? 42} монет за шаринг 1080×1080`);
+      // SPEC: +42 via POST /magnum/api/coins/add with LS magnum-share-claimed 1× + server /eco/share
+      try {
+        const sr = await fetch("/magnum/api/eco/share", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ score }) });
+        if (sr.ok) {
+          const sj = await sr.json() as { coins?: number }; setShareClaimed(); setShareBonus(`+${sj.coins ?? 42} монет за шаринг 1080×1080`);
+        } else if (sr.status === 429 || sr.status === 409) {
+          setShareClaimed(); setShareBonus("Шаринг уже учтён 1× — +42 уже получено");
+        } else {
+          // fallback via coins/add as per task spec
+          const cr = await fetch("/magnum/api/coins/add", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ amount: 42 }) });
+          if (cr.ok) { setShareClaimed(); setShareBonus("+42 монеты за шаринг 1080×1080"); }
+          else setShareBonus("Шаринг 1080×1080 готов — сохрани картинку");
+        }
         window.setTimeout(() => setShareBonus(null), 3500);
-      } else { setShareBonus("Шаринг 1080×1080 готов — сохрани картинку"); window.setTimeout(() => setShareBonus(null), 3000); }
+      } catch { setShareBonus("Шаринг 1080×1080 готов — сохрани картинку"); window.setTimeout(() => setShareBonus(null), 3000); }
     } catch {
       const url = canvas.toDataURL("image/png"); const a = document.createElement("a"); a.href = url; a.download = "eco-les-42-1080.png"; a.click();
     }
@@ -431,9 +478,11 @@ export function EcoPage() {
             <div style={{ fontSize: 12, fontWeight: 700, color: "#4ade80", marginBottom: 6 }}>⭐ Рейтинг 0-10 Лес • топ по tiers</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               {ecoTop.map((r, i) => (
-                <div key={`${r.player}-${i}`} style={{ display: "flex", gap: 8, fontSize: 12, alignItems: "center" }}>
+                <div key={`${r.player}-${i}`} style={{ display: "flex", gap: 8, fontSize: 12, alignItems: "center", ...cosmeticBannerStyle(r.banner) }}>
                   <span style={{ minWidth: 18, color: i < 3 ? "#4ade80" : "rgba(255,255,255,.6)" }}>{i + 1}</span>
-                  <span style={{ flex: 1, color: "#fff" }}>{r.player}</span>
+                  <span style={{ flex: 1, color: "#fff", minWidth: 0 }}>
+                    <CosmeticIdentity username={r.player} avatar={r.avatar} frame={r.frame} title={r.title} size={20} />
+                  </span>
                   <span style={{ padding: "2px 6px", borderRadius: 999, background: "rgba(255,255,255,.08)", fontSize: 11 }}>{r.rating}/10 {r.tier}</span>
                   <span style={{ color: r.score > 0 ? "#22c55e" : "#ff6b6b" }}>{r.score > 0 ? `+${r.score}` : r.score}</span>
                 </div>
@@ -441,17 +490,38 @@ export function EcoPage() {
             </div>
           </div>
         )}
+        {boardError && <p className={styles.boardEmpty} role="status">{boardError}</p>}
         {leaderboard.length === 0 ? <p className={styles.boardEmpty}>Пока пусто — стань первым ЭкоЛегендой! Пройди тест и сохрани результат.</p> : (
           <div className={styles.boardList}>
             {leaderboard.map((e, i) => (
-              <div key={`${e.name}-${e.date}-${i}`} className={`${styles.boardRow} ${i < 3 ? styles.boardTop : ""}`}>
-                <span className={styles.boardPos}>{i + 1}</span><span className={styles.boardName}>{e.name}</span><span className={styles.boardRank}>{e.rank}</span><span className={styles.boardScore}>{e.score > 0 ? `+${e.score}` : e.score}</span><span className={styles.boardDate}>{e.date}</span>
+              <div key={`${e.name}-${e.date}-${i}`} className={`${styles.boardRow} ${i < 3 ? styles.boardTop : ""}`} style={cosmeticBannerStyle(e.banner)}>
+                <span className={styles.boardPos}>{i + 1}</span>
+                <span className={styles.boardName}>
+                  <CosmeticIdentity username={e.name} avatar={e.avatar} frame={e.frame} title={e.title} verified={e.verified} size={24} />
+                </span>
+                <span className={styles.boardRank}>{e.rank}</span><span className={styles.boardScore}>{e.score > 0 ? `+${e.score}` : e.score}</span><span className={styles.boardDate}>{e.date}</span>
               </div>
             ))}
           </div>
         )}
         <p className={styles.boardFoot}>Топ с сервера • Сортировка по баллам • 42/142/420 1×/сутки +1420 босс 8/8 • Freeze 420 1×/нед • bio-вахта 7дн</p>
       </section>
+      {shareModal && (
+        <div onClick={() => setShareModal(false)} style={{ position: "fixed", inset: 0, zIndex: 50, display: "grid", placeItems: "center", background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ width: "min(420px, 92vw)", background: "#0f1f0f", border: "1px solid rgba(34,197,94,0.35)", borderRadius: 18, padding: 16, boxShadow: "0 20px 60px rgba(0,0,0,0.6), 0 0 28px rgba(34,197,94,0.18)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <span style={{ fontWeight: 900, color: "#4ade80", fontSize: 14 }}>SHARE OG 1080</span>
+              <button onClick={() => setShareModal(false)} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "#fff", borderRadius: 999, width: 28, height: 28, cursor: "pointer" }}>X</button>
+            </div>
+            {sharePreviewUrl ? <img src={sharePreviewUrl} alt="OG 1080 preview" style={{ width: "100%", aspectRatio: "1", borderRadius: 12, border: "1px solid rgba(34,197,94,0.25)", background: "#0a1f0a" }} /> : <div style={{ width: "100%", aspectRatio: "1", borderRadius: 12, background: "linear-gradient(135deg,#0a1f0a,#143d14)", border: "1px solid rgba(34,197,94,0.25)", display: "grid", placeItems: "center", color: "#4ade80", fontWeight: 800 }}>ECO LES 42</div>}
+            <p style={{ margin: "10px 0 0", fontSize: 12, color: "rgba(255,255,255,0.7)", textAlign: "center" }}>Gradient + stats + conic badge • Web Share API • +42 once</p>
+            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+              <button onClick={async () => { if (isShareClaimed()) { setShareBonus("Already 1x"); setShareModal(false); return; } try { const r = await fetch("/magnum/api/coins/add", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ amount: 42 }) }); if (r.ok) { setShareClaimed(); setShareBonus("+42 share 1080"); } } catch {} setShareModal(false); }} style={{ flex: 1, padding: "10px 14px", borderRadius: 12, background: "linear-gradient(90deg,#22c55e,#16a34a)", color: "#fff", border: "none", fontWeight: 800, cursor: "pointer" }}>{isShareClaimed() ? "Already +42" : "Claim +42"}</button>
+              <button onClick={() => { if (sharePreviewUrl) { const a = document.createElement("a"); a.href = sharePreviewUrl; a.download = "eco-les-42-1080.png"; a.click(); } }} style={{ padding: "10px 14px", borderRadius: 12, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.14)", color: "#fff", fontWeight: 700, cursor: "pointer" }}>Download 1080</button>
+            </div>
+          </div>
+        </div>
+      )}
       <footer className={styles.footer}><p>Сделано в Кемерово с любовью к тайге и Сосновому бору • MAGNUM 42 — Лес 4817,5к га • Тайга Алатау • Томь 827км • Кузбасс 95,7k км² 🌲 • OG 1080×1080 • <a href={PRESAVE_URL} target="_blank" rel="noopener noreferrer" style={{ color: "#4ade80" }}>Пресейв MAGNUM 42</a></p></footer>
     </div>
   );

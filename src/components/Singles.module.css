@@ -64,7 +64,7 @@
   transform-style: preserve-3d;
 }
 
-/* RGB neon border — hidden by default, visible on hover */
+
 .card::before {
   content: "";
   position: absolute;

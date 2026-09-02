@@ -1,5 +1,4 @@
 // studio42.ts — канон СТУДИИ 42: BPM треков + пресеты визуализатора + типы сцен
-// Single source for Studio42Page.tsx и server.ts
 
 export type StudioTrackSlug = "clay" | "vpn" | "nova" | "magnum";
 export type StudioPresetId = "meduza-wave" | "neon-kuzbass" | "glitch-42";

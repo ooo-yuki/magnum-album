@@ -40,7 +40,6 @@ export function GachaReveal({ items, onClose }: { items: RevealItem[]; onClose: 
         } else if (rarity === "epic") {
           gsap.set(card, { y: 32, opacity: 0, scale: 0.9 });
           gsap.to(card, { y: 0, opacity: 1, scale: 1, duration: 0.7, delay, ease: "elastic.out(1,0.5)", overwrite: true });
-          // epic shimmer is CSS linear 1.2s infinite — no extra GSAP needed, but ensure overwrite
         } else if (rarity === "legendary") {
           gsap.set(card, { y: 40, opacity: 0, scale: 0.85 });
           gsap.to(card, { y: 0, opacity: 1, scale: 1, duration: 0.9, delay, ease: "elastic.out(1,0.45)", overwrite: true });

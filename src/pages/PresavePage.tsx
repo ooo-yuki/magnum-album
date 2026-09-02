@@ -9,11 +9,7 @@ export function PresavePage() {
   const [loading, setLoading] = useState(true);
   const frameRef = useRef<HTMLDivElement>(null);
   const verified = (status?.verified ?? 0) > 0;
-  // also LS fallback for immediate UX
-  const lsVerified = (() => {
-    try { return localStorage.getItem("magnum-frame-verified") === "1"; } catch { return false; }
-  })();
-  const showGold = verified || lsVerified;
+  const showGold = verified;
 
   useEffect(() => {
     let cancelled = false;
@@ -30,7 +26,6 @@ export function PresavePage() {
     return () => { cancelled = true; };
   }, []);
 
-  // GSAP scale spring + glow pulse 2s when verified
   useEffect(() => {
     if (!showGold || !frameRef.current) return;
     const el = frameRef.current;
@@ -83,7 +78,7 @@ export function PresavePage() {
       <div style={{ textAlign: "center", marginTop: 12, fontSize: "0.9rem", color: showGold ? "#ffcc00" : "rgba(255,255,255,0.5)" }}>
         {showGold ? "Рамка активна — cross −42 в forge/shop" : "cross " + crossDiscount}
         <div style={{ marginTop: 6, fontSize: "0.78rem", color: "rgba(255,255,255,0.4)" }}>
-          LS magnum-frame-verified={lsVerified ? "1" : "0"} · {showGold ? "verified-gold" : "none"} · {status ? `${status.verified} verified` : "—"}
+          {showGold ? "verified-gold" : "none"} · {status ? `${status.verified} verified` : "—"}
         </div>
       </div>
 

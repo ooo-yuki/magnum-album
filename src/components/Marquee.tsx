@@ -40,7 +40,6 @@ export function Marquee() {
     reducedRef.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }, []);
 
-  // GSAP magnetic hover on individual words
   const handleWordEnter = useCallback((e: React.MouseEvent<HTMLSpanElement>) => {
     if (reducedRef.current) return;
     gsap.to(e.currentTarget, {

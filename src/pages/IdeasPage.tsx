@@ -34,7 +34,6 @@ function isValidDesc(v: string): string | null {
 }
 
 /* ── 50 шаблонов идей — подсказки для формы (для нормы 10к строк) ── */
-// FACT FreakLand 18:23 — добавлено в топ Create42: IP freakland.spworlds.org 29 832 онлайн 18/35 NeoForge 1.21.1 42+ модов — reports/data-2026-09-01-1823.md §3
 const IDEA_TEMPLATES: Array<{ title: string; desc: string; category: IdeaCategory }> = [
   { title: "FreakLand Create — отбор фриков 15-16.07", desc: "Приватка freakland.spworlds.org, NeoForge 1.21.1 42+ мода (Create+Aeronautics+Big Cannons), онлайн 18 пик 35, жюри 5opka/VIPSSS/cacto0o/iray3n/MrEka — живая очередь на СП/СПм + кружочки Telegram. Источник press.bungee.host/kakoi-aipi", category: "game" },
   { title: "Турнир по майнингу 2–4 братух", desc: "Кликер-дуэль на 60 сек, победитель забирает банк 42-коинов комнаты.", category: "game" },
@@ -106,7 +105,6 @@ export function IdeasPage() {
   const [votedIds, setVotedIds] = useState<Set<number>>(new Set());
   const [bookmarked, setBookmarked] = useState<Set<number>>(new Set());
   const [bookmarksOnly, setBookmarksOnly] = useState(false);
-  // ── Комменты Neon magnum_idea_comments — без localStorage, y24 stagger 0.12 ──
   type Comment = { id: number; body: string; created_at: string; username: string };
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [comments, setComments] = useState<Record<number, Comment[]>>({});
@@ -116,6 +114,11 @@ export function IdeasPage() {
   // ── Funnel P1: CTA + чат-промпт после первого голоса (братуха-воронка) ──
   const [chatPrompt, setChatPrompt] = useState(false);
   const [hasVoted, setHasVoted] = useState(false);
+  // ── P1 Vote→comment nudge + шаринг-хук после голосования ──
+  const [nudge, setNudge] = useState<{ id: number; title: string } | null>(null);
+  const [nudgeText, setNudgeText] = useState("");
+  const [nudgeSending, setNudgeSending] = useState(false);
+  const nudgeRef = useRef<HTMLDivElement>(null);
 
   const rootRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -147,7 +150,6 @@ export function IdeasPage() {
 
   useEffect(() => { void load(); void loadBookmarks(); }, []);
 
-  // ── GSAP entrance: stagger 0.12 y 24→0, reduced-motion fallback, context cleanup
   useEffect(() => {
     if (!rootRef.current) return;
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -185,7 +187,6 @@ export function IdeasPage() {
     return () => ctx.revert();
   }, [ideas, loading, catFilter, statusFilter, sortKey, q, bookmarksOnly, bookmarked]);
 
-  // GSAP hover verified 2026-09-01 — Content-резерв 24/7 #2 (y:-4 + glow, reduced-motion guard)
   const onCardEnter = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     gsap.to(e.currentTarget, {
@@ -218,8 +219,17 @@ export function IdeasPage() {
       setIdeas((prev) => prev.map((x) => (x.id === id ? { ...x, votes: x.votes + 1 } : x)));
       setVotedIds((s) => new Set(s).add(id));
       const coins = Number(j.coins ?? j.reward ?? 5);
-      setMsg(`+${coins} монет за голос ✅ Напиши в чат — братухи ждут 💬`);
+      setMsg(`+${coins} монет за голос ✅ Оставь коммент +42 💬`);
       setTimeout(() => setMsg(""), 3000);
+      // ── P1 Vote→comment nudge + шаринг-хук: попап после каждого голоса ──
+      const votedTitle = ideas.find((x) => x.id === id)?.title || `Идея #${id}`;
+      setNudge({ id, title: votedTitle });
+      setNudgeText("");
+      requestAnimationFrame(() => {
+        if (nudgeRef.current && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          gsap.fromTo(nudgeRef.current, { y: 20, opacity: 0, scale: 0.97 }, { y: 0, opacity: 1, scale: 1, duration: 0.32, ease: "back.out(1.4)" });
+        }
+      });
       // ── Funnel P1: чат-промпт после первого голоса — триггерит БРАТ-БОТ/чат ──
       if (!hasVoted) {
         setHasVoted(true);
@@ -236,7 +246,49 @@ export function IdeasPage() {
     } catch { setMsg("Голос не засчитан — войди в аккаунт"); setTimeout(() => setMsg(""), 2000); }
   };
 
-  // ── Закладки Neon: toggle без localStorage, GSAP пульс, валидатор id
+  const submitNudgeComment = async () => {
+    if (!nudge) return;
+    const text = nudgeText.trim();
+    const err = isValidComment(text);
+    if (err) { setMsg(err); setTimeout(() => setMsg(""), 2000); return; }
+    setNudgeSending(true);
+    try {
+      const r = await fetch(`/magnum/api/ideas/${nudge.id}/comments`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ body: text }) });
+      const j = await r.json().catch(() => ({})) as { comment?: Comment; coins?: number; error?: string };
+      if (!r.ok) throw new Error(j.error || String(r.status));
+      if (j.comment) setComments((s) => ({ ...s, [nudge.id]: [...(s[nudge.id] || []), j.comment!] }));
+      setExpandedId(nudge.id);
+      const reward = Number(j.coins ?? 42);
+      setMsg(reward ? `Коммент +${reward} ✅ Братуха, ты в деле!` : "Коммент улетел ✅");
+      setTimeout(() => setMsg(""), 2200);
+      setNudge(null);
+      setNudgeText("");
+    } catch (e) { setMsg(String(e).slice(0, 120) || "Нужен вход — комменты в Neon"); setTimeout(() => setMsg(""), 2000); }
+    finally { setNudgeSending(false); }
+  };
+  const shareNudge = async () => {
+    if (!nudge) return;
+    const url = `${window.location.origin}/magnum/ideas?idea=${nudge.id}&utm_source=share&utm_medium=42&utm_campaign=ideas`;
+    const text = `Зацени идею "${nudge.title}" на MAGNUM 42 — я уже проголосовал!`;
+    try {
+      const nav = navigator as unknown as { share?: (d: { title: string; text: string; url: string }) => Promise<void> };
+      if (nav.share) { await nav.share({ title: "Идея 42 — MAGNUM", text, url }); setMsg("Поделился 🔥 — братухи увидят"); }
+      else { await navigator.clipboard.writeText(url); setMsg("Ссылка скопирована 🔗 Поделись с братухами"); }
+    } catch { try { await navigator.clipboard.writeText(url); setMsg("Ссылка скопирована 🔗"); } catch { setMsg(url); } }
+    setTimeout(() => setMsg(""), 2200);
+  };
+  const shareIdea = async (id: number, title: string) => {
+    const url = `${window.location.origin}/magnum/ideas?idea=${id}&utm_source=share&utm_medium=42&utm_campaign=ideas`;
+    const text = `Зацени идею "${title}" на MAGNUM 42 — я уже проголосовал!`;
+    try {
+      const nav = navigator as unknown as { share?: (d: { title: string; text: string; url: string }) => Promise<void> };
+      if (nav.share) { await nav.share({ title: "Идея 42 — MAGNUM", text, url }); setMsg("Поделился 🔥 — братухи увидят"); }
+      else { await navigator.clipboard.writeText(url); setMsg("Ссылка скопирована 🔗 Поделись с братухами"); }
+    } catch { try { await navigator.clipboard.writeText(url); setMsg("Ссылка скопирована 🔗"); } catch { setMsg(url); } }
+    setTimeout(() => setMsg(""), 2200);
+    window.dispatchEvent(new CustomEvent("ideas:share", { detail: { ideaId: id } }));
+  };
+
   function validateIdeaId(v: number): number | null {
     if (!Number.isInteger(v) || v <= 0 || v > 1_000_000) return null;
     return v;
@@ -252,7 +304,6 @@ export function IdeasPage() {
       if (!r.ok) throw new Error(await r.text());
       const d = (await r.json()) as { bookmarked: boolean };
       setBookmarked((s) => { const n = new Set(s); if (d.bookmarked) n.add(vid); else n.delete(vid); return n; });
-      // GSAP pulse на карточке
       if (gridRef.current) {
         const el = gridRef.current.querySelector(`[data-idea="${vid}"]`) as HTMLElement | null;
         if (el) gsap.fromTo(el, { scale: 1 }, { scale: 1.04, duration: 0.16, yoyo: true, repeat: 1, ease: "power2.inOut" });
@@ -267,7 +318,6 @@ export function IdeasPage() {
     }
   };
 
-  // ── Валидаторы + Neon комменты ──
   function isValidComment(v: string): string | null {
     const tt = v.trim();
     if (tt.length < 2) return "Минимум 2 символа";
@@ -404,6 +454,37 @@ export function IdeasPage() {
         </div>
       )}
 
+      {nudge && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, background: "rgba(0,0,0,.55)", backdropFilter: "blur(6px)" }} onClick={() => setNudge(null)}>
+          <div ref={nudgeRef} onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 440, background: "linear-gradient(180deg, rgba(28,28,36,.98), rgba(16,16,22,.98))", border: "1px solid rgba(255,45,85,.25)", borderRadius: 20, padding: 18, boxShadow: "0 20px 60px rgba(0,0,0,.55), 0 0 32px rgba(255,45,85,.12)", display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: ".06em", textTransform: "uppercase", color: "#00ff88", background: "rgba(0,255,136,.12)", border: "1px solid rgba(0,255,136,.22)", padding: "4px 8px", borderRadius: 999 }}>Голос засчитан ✅ +5</span>
+              <button type="button" onClick={() => setNudge(null)} style={{ width: 28, height: 28, borderRadius: 999, border: "1px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", cursor: "pointer" }}>×</button>
+            </div>
+            <div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: "#fff", lineHeight: 1.2 }}>Оставь коммент +42 🪙</div>
+              <div style={{ fontSize: 13, color: "rgba(255,255,255,.65)", marginTop: 4, lineHeight: 1.4 }}>Идея <span style={{ color: "#ffcc00", fontWeight: 700 }}>"{nudge.title}"</span> — твое мнение увидят братухи. Коммент = <span style={{ color: "#00ff88", fontWeight: 800 }}>+42 монеты</span> в кошелек Neon.</div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <textarea value={nudgeText} onChange={(e) => setNudgeText(e.target.value)} placeholder="Напиши коммент… (2–200 символов, без <> )" maxLength={200} rows={3} style={{ width: "100%", background: "rgba(255,255,255,.06)", border: `1px solid ${isValidComment(nudgeText) && nudgeText.trim().length > 0 ? "rgba(255,107,107,.35)" : "rgba(255,255,255,.12)"}`, borderRadius: 12, color: "#fff", padding: "10px 12px", fontSize: 13, outline: "none", resize: "none" }} />
+              {nudgeText && isValidComment(nudgeText) && <span style={{ fontSize: 11, color: "#ff6b6b" }}>{isValidComment(nudgeText)}</span>}
+              <button type="button" onClick={submitNudgeComment} disabled={nudgeSending || !!isValidComment(nudgeText) || nudgeText.trim().length < 2} style={{ padding: "10px 14px", borderRadius: 999, border: "1px solid rgba(0,255,136,.3)", background: nudgeSending || !!isValidComment(nudgeText) ? "rgba(255,255,255,.06)" : "linear-gradient(90deg,#00ff88,#7affc2)", color: nudgeSending || !!isValidComment(nudgeText) ? "rgba(255,255,255,.4)" : "#003322", fontSize: 13, fontWeight: 800, cursor: nudgeSending ? "wait" : "pointer", opacity: nudgeSending || !!isValidComment(nudgeText) ? 0.6 : 1 }}>{nudgeSending ? "Отправка…" : "Оставить коммент +42 →"}</button>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "2px 0" }}>
+              <span style={{ flex: 1, height: 1, background: "rgba(255,255,255,.08)" }} />
+              <span style={{ fontSize: 11, opacity: 0.4 }}>или</span>
+              <span style={{ flex: 1, height: 1, background: "rgba(255,255,255,.08)" }} />
+            </div>
+            <button type="button" onClick={shareNudge} style={{ padding: "10px 14px", borderRadius: 999, border: "1px solid rgba(120,220,255,.25)", background: "rgba(120,220,255,.1)", color: "#78dcff", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>Поделись идеей 🔗</button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button type="button" onClick={() => setNudge(null)} style={{ flex: 1, padding: "8px 12px", borderRadius: 999, border: "1px solid rgba(255,255,255,.1)", background: "transparent", color: "rgba(255,255,255,.6)", fontSize: 12, cursor: "pointer" }}>Позже</button>
+              <button type="button" onClick={() => { setNudge(null); setExpandedId(nudge.id); if (!comments[nudge.id]) void loadComments(nudge.id); }} style={{ flex: 1, padding: "8px 12px", borderRadius: 999, border: "1px solid rgba(255,204,0,.25)", background: "rgba(255,204,0,.1)", color: "#ffcc00", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Читать комменты →</button>
+            </div>
+            <span style={{ fontSize: 10, opacity: 0.32, textAlign: "center" }}>Neon magnum_idea_comments • ideaId {nudge.id} • +42 за коммент</span>
+          </div>
+        </div>
+      )}
+
       <div className={styles.form} ref={formRef}>
         <h2>Предложить идею</h2>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
@@ -475,6 +556,7 @@ export function IdeasPage() {
                 <button className={styles.vote} onClick={() => vote(it.id)} disabled={votedIds.has(it.id)} style={{ opacity: votedIds.has(it.id) ? 0.5 : 1, flex: 1 }}>{votedIds.has(it.id) ? "✓ Голос засчитан" : "Голосовать"}</button>
                 <button type="button" onClick={() => toggleBookmark(it.id)} title={bookmarked.has(it.id) ? "Убрать из закладок" : "В закладки (Neon)"} style={{ padding: "8px 10px", borderRadius: 10, border: bookmarked.has(it.id) ? "1px solid #ffcc00" : "1px solid rgba(255,255,255,.12)", background: bookmarked.has(it.id) ? "rgba(255,204,0,.18)" : "rgba(255,255,255,.06)", color: bookmarked.has(it.id) ? "#ffcc00" : "#fff", cursor: "pointer", fontSize: 13 }}>{bookmarked.has(it.id) ? "⭐" : "☆"}</button>
                 <button type="button" onClick={() => toggleComments(it.id)} title={expandedId === it.id ? "Скрыть комменты" : "Комменты Neon"} style={{ padding: "8px 10px", borderRadius: 10, border: expandedId === it.id ? "1px solid #00ff88" : "1px solid rgba(255,255,255,.12)", background: expandedId === it.id ? "rgba(0,255,136,.14)" : "rgba(255,255,255,.06)", color: expandedId === it.id ? "#00ff88" : "#fff", cursor: "pointer", fontSize: 13 }}>💬 {comments[it.id]?.length ?? "·"}</button>
+                <button type="button" onClick={() => void shareIdea(it.id, it.title)} title="Поделись идеей" data-testid="idea-share" data-idea-share={it.id} style={{ padding: "8px 10px", borderRadius: 10, border: "1px solid rgba(120,220,255,.18)", background: "rgba(120,220,255,.08)", color: "#78dcff", cursor: "pointer", fontSize: 13 }}>🔗</button>
               </div>
               {expandedId === it.id && (
                 <div data-comments={it.id} style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,.08)", display: "flex", flexDirection: "column", gap: 6 }}>

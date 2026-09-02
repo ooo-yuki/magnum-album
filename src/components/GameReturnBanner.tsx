@@ -3,12 +3,14 @@ import { Link } from "react-router-dom";
 import { getStreakMultiplier } from "../lib/spinRewards";
 
 // Show when user has 0 scores (activation fix: 12 users with daily14 but scores2)
-// No localStorage — SPEC-42 p9 — dismiss in-memory per session only via /magnum/api/coins state
 
-export function shouldShowReturnBanner(streak: number, scoresCount: number): boolean {
-  // Spec: banner if 0 scores for session regardless of streak — activation 14% fix
-  // Keep legacy streak gates as extra visibility but primary is 0 scores
-  if (scoresCount === 0) return true;
+export function shouldShowReturnBanner(streak: number, scoresCount: number, hoursSinceReg: number | null = null): boolean {
+  // P1: banner if 0 scores 24h — activation funnel 0pct (185 presave vs 0 scores)
+  // primary: 0 scores + >24h since registration (or anon unknown → show)
+  if (scoresCount === 0) {
+    if (hoursSinceReg !== null && hoursSinceReg < 24) return false;
+    return true;
+  }
   if (streak >= 7 && scoresCount <= 2) return true;
   if (streak >= 3 && scoresCount <= 1) return true;
   if (streak >= 2 && scoresCount === 0) return true;
@@ -47,6 +49,7 @@ export function StreakChip({ streak, size = "sm" }: { streak: number; size?: "sm
 export function GameReturnBanner({ variant = "banner" }: { variant?: "banner" | "compact" }) {
   const [streak, setStreak] = useState<number | null>(null);
   const [scoresCount, setScoresCount] = useState<number | null>(null);
+  const [hoursSinceReg, setHoursSinceReg] = useState<number | null>(null);
   const [presaveTotal, setPresaveTotal] = useState<number>(4);
   const [loading, setLoading] = useState(true);
   const [dismissed, setDismissed] = useState(false);
@@ -55,10 +58,11 @@ export function GameReturnBanner({ variant = "banner" }: { variant?: "banner" | 
   const fetchState = useCallback(async () => {
     if (dismissed) { setLoading(false); return; }
     try {
-      const [dRes, gRes, pRes] = await Promise.all([
+      const [dRes, gRes, pRes, mRes] = await Promise.all([
         fetch("/magnum/api/daily/status", { credentials: "include" }),
         fetch("/magnum/api/games/my?limit=50", { credentials: "include" }),
         fetch("/magnum/api/presave/stats", { credentials: "include" }),
+        fetch("/magnum/api/auth/me", { credentials: "include" }).catch(() => null as unknown as Response),
       ]);
       let s: number | null = null;
       let c: number | null = null;
@@ -79,10 +83,22 @@ export function GameReturnBanner({ variant = "banner" }: { variant?: "banner" | 
         const j = await pRes.json() as { total?: number };
         if (typeof j.total === "number") setPresaveTotal(j.total);
       }
+      let hrs: number | null = null;
+      if (mRes && mRes.ok) {
+        try {
+          const mj = await mRes.json() as { user?: { hoursSinceReg?: number | null; createdAt?: string | null } };
+          if (typeof mj.user?.hoursSinceReg === "number") hrs = mj.user.hoursSinceReg;
+          else if (mj.user?.createdAt) {
+            const ts = new Date(mj.user.createdAt).getTime();
+            if (Number.isFinite(ts)) hrs = (Date.now() - ts) / 3600000;
+          }
+        } catch {}
+      }
       if (s !== null) setStreak(s);
       if (c !== null) setScoresCount(c);
+      setHoursSinceReg(hrs);
       try {
-        window.dispatchEvent(new CustomEvent("magnum:return-state", { detail: { streak: s, scoresCount: c } }));
+        window.dispatchEvent(new CustomEvent("magnum:return-state", { detail: { streak: s, scoresCount: c, hoursSinceReg: hrs } }));
       } catch {}
     } catch {
       // network fail -> hide silently
@@ -101,18 +117,16 @@ export function GameReturnBanner({ variant = "banner" }: { variant?: "banner" | 
   }, [fetchState]);
 
   const handleDismiss = useCallback(() => {
-    // in-memory only, no localStorage per SPEC-42 p9
     setDismissed(true);
   }, []);
 
   if (loading || dismissed) return null;
   if (streak === null || scoresCount === null) return null;
-  if (!shouldShowReturnBanner(streak, scoresCount)) return null;
+  if (!shouldShowReturnBanner(streak, scoresCount, hoursSinceReg)) return null;
 
   const is7 = streak >= 7;
   const m = getStreakMultiplier(streak);
-  const dustClaim = 142; // SPEC: 142 dust for 1 game — via POST /magnum/api/coins/add or funnel_first_game
-  const dropLabel = `${presaveTotal}/42`;
+  const dustClaim = 42;  const dropLabel = `${presaveTotal}/42`;
 
   if (variant === "compact") {
     return (

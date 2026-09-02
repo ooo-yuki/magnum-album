@@ -48,7 +48,6 @@ export function VipActivatedPopup() {
     };
     const onTierRefresh = () => {
       // tier-refresh without detail: check if we already have VIP tier? Don't auto-show to avoid spam, but allow if seen not set and no recent show.
-      // We treat it as soft trigger: only show if not seen and not recently shown. Try to infer from sessionStorage not set.
       // To avoid false positives, we skip tier-refresh unless it carries vip detail via cosmetic-bought; this listener exists to dedupe single source.
       // No-op: the cosmetic-bought is primary. Keeping listener to satisfy spec single-source without duplicate.
     };
@@ -60,7 +59,6 @@ export function VipActivatedPopup() {
     };
   }, [show]);
 
-  // GSAP: stagger y20 0.08 + shimmer epic 1.5s, prefers-reduced-motion gate, gsap.context
   useEffect(() => {
     if (!visible || !overlayRef.current || !cardRef.current) return;
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;

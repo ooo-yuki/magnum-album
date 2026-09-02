@@ -16,12 +16,19 @@ export function PromoPopup() {
   const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // без localStorage: показываем один раз за сессию (in-memory), 800ms delay
-    const t = setTimeout(() => setVisible(true), 800);
+    // P0 funnel: если только что был пресейв-мост, донат-попап откладываем — сначала игра.
+    let delayMs = 800;
+    try {
+      const raw = sessionStorage.getItem("magnum:post-presave-bridge-at") || localStorage.getItem("magnum:post-presave-bridge-at");
+      if (raw) {
+        const age = Date.now() - Number(raw);
+        if (age >= 0 && age < 10 * 60 * 1000) delayMs = 120_000; // 2 мин после пресейва
+      }
+    } catch {}
+    const t = setTimeout(() => setVisible(true), delayMs);
     return () => clearTimeout(t);
   }, []);
 
-  // GSAP entrance + reduced-motion fallback + context cleanup (no white screen)
   useEffect(() => {
     if (!visible || !overlayRef.current || !cardRef.current) return;
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -40,7 +47,6 @@ export function PromoPopup() {
       const offers = cardRef.current!.querySelectorAll("div");
       gsap.set(offers, { y: 12, opacity: 0 });
       gsap.to(offers, { y: 0, opacity: 1, duration: 0.4, stagger: 0.08, ease: "power2.out", delay: 0.25 });
-      // RGB-neon pulse on primary button
       const primary = cardRef.current!.querySelector("a") as HTMLElement | null;
       if (primary) gsap.to(primary, { boxShadow: "0 0 22px rgba(255,45,85,0.35), 0 0 36px rgba(255,204,0,0.12)", duration: 1.2, repeat: -1, yoyo: true, ease: "sine.inOut" });
     }, overlayRef);

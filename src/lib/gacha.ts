@@ -140,7 +140,6 @@ export function gachaPrice(count: 1 | 10): number {
   return 42;
 }
 
-// ── BANNER 42 — витрина кейсов + GSAP рарити-хиты ──
 export type BannerInfo = { id: string; name: string; type: BannerType; endsAt: string; rateUpId: string | null; priceSingle: number; priceTen: number };
 const BANNER_END_AT_ISO = new Date(Date.now() + 14 * 24 * 3600 * 1000).toISOString();
 export const BANNER_CATALOG: BannerInfo[] = [

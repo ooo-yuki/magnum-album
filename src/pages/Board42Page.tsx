@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import gsap from "gsap";
+import { CosmeticIdentity, cosmeticBannerStyle, type LeaderCosmetics } from "../components/CosmeticBadge";
 
 type FeedItem = { game:string; score:number; username:string; userId:number; avatar:string|null; created_at:string; timeAgo:string };
 type ChallengeItem = { id:number; challengerId:number; challengedId:number; challenger:string; challenged:string; game:string; score:number; status:string; created_at:string; expires_at:string; remainingMs:number; remainingH:string };
-type LbItem = { rank:number; userId:number; username:string; score:number; plays:number; avatar:string|null; reward:number; crown:string; isTop3:boolean };
+type LbItem = { rank:number; userId:number; username:string; score:number; plays:number; avatar:string|null; reward:number; crown:string; isTop3:boolean } & LeaderCosmetics;
 const GAMES = ["all","mining","conveyor","duel","pet","studio"] as const;
 const TABS = ["global","friends","challenges"] as const;
 
@@ -59,7 +60,6 @@ export function Board42Page(){
   useEffect(()=>{ loadFeed(); },[loadFeed]);
   useEffect(()=>{ loadLb(); },[loadLb]);
 
-  // GSAP: feed stagger y16 0.07
   useEffect(()=>{
     if(!feedRef.current) return;
     if(window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -72,7 +72,6 @@ export function Board42Page(){
     return()=>ctx.revert();
   },[feed,tab]);
 
-  // GSAP: incoming challenge slide x24 0.3s + shake x±6
   useEffect(()=>{
     if(tab!=="challenges"||!challenges.length) return;
     if(window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -158,7 +157,6 @@ export function Board42Page(){
       if(r.ok && j.ok){
         setMsg(`+${j.coins} монет за шаринг • баланс ${j.balance}`);
         if(typeof j.globalCount==="number") setGlobalCount(j.globalCount);
-        // GSAP burst scale 0.8→1 back.out 0.5s + confetti 80
         if(wrapRef.current && !window.matchMedia("(prefers-reduced-motion: reduce)").matches){
           const burst=wrapRef.current.querySelector<HTMLElement>("[data-share-burst]");
           if(burst) gsap.fromTo(burst,{scale:0.8},{scale:1,duration:0.5,ease:"back.out(1.7)"});
@@ -185,6 +183,17 @@ export function Board42Page(){
     <div ref={wrapRef} style={{maxWidth:980,margin:"0 auto",padding:"24px 16px",position:"relative"}}>
       <h1 style={{fontSize:28,fontWeight:900,letterSpacing:"-0.02em"}}>ДОСКА 42 <span style={{color:"#ff2d55"}}>— лента рекордов</span></h1>
       <p style={{opacity:0.7,marginTop:6,fontSize:13}}>Глобальные рекорды • друзья • вызовы 24ч • шаринг 1080×1080 +42/день • топ-3 недели +1420 crown conic-gold</p>
+      {}
+      <div style={{marginTop:14,padding:12,borderRadius:12,background:"rgba(145,71,255,0.08)",border:"1px solid rgba(145,71,255,0.22)"}}>
+        <div style={{fontWeight:900,fontSize:13,color:"#9147ff"}}>💜 Twitch 5opka — 1M+ Sep 2026 • 30д стата (P2 t_f1ad12c0)</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:8,marginTop:8}}>
+          <div style={{padding:8,borderRadius:8,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.06)"}}><div style={{fontWeight:800,fontSize:13}}>SocialBlade 1,008,991</div><div style={{opacity:0.65,fontSize:11}}>15.06.2026 • +444/день • +11,369/30д</div></div>
+          <div style={{padding:8,borderRadius:8,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.06)"}}><div style={{fontWeight:800,fontSize:13}}>SullyGnome 1,021,365</div><div style={{opacity:0.65,fontSize:11}}>+10,076/30д • 116ч/30д • 17 стримов • 6ч43м avg • 6,459 avg viewers • 750,860ч/30д • пик 53,264 17.01.2026 14:55 • ранг #232</div></div>
+          <div style={{padding:8,borderRadius:8,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.06)"}}><div style={{fontWeight:800,fontSize:13}}>StreamsCharts 80ч05м</div><div style={{opacity:0.65,fontSize:11}}>6,010 avg • 10,414 пик 30д • 481,273ч • 2,078,717 live views • пик 28,545 08.12.2024</div></div>
+          <div style={{padding:8,borderRadius:8,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.06)"}}><div style={{fontWeight:800,fontSize:13}}>TwitchTracker 12,392,128ч</div><div style={{opacity:0.65,fontSize:11}}>всего • 134 игры • 172.2 фолл./час</div></div>
+        </div>
+        <div style={{opacity:0.5,fontSize:11,marginTop:8,wordBreak:"break-all"}}>Источники: <a href="https://socialblade.com/twitch/user/5opka" target="_blank" rel="noreferrer" style={{color:"#9147ff"}}>socialblade.com/twitch/user/5opka</a> • <a href="https://sullygnome.com/channel/5opka" target="_blank" rel="noreferrer" style={{color:"#9147ff"}}>sullygnome.com/channel/5opka</a> • <a href="https://streamscharts.com/channels/5opka" target="_blank" rel="noreferrer" style={{color:"#9147ff"}}>streamscharts.com/channels/5opka</a> • <a href="https://twitchtracker.com/5opka/statistics" target="_blank" rel="noreferrer" style={{color:"#9147ff"}}>twitchtracker.com/5opka/statistics</a></div>
+      </div>
 
       <div style={{display:"flex",gap:8,marginTop:16,flexWrap:"wrap"}}>
         { (TABS as readonly string[]).map(t=> (
@@ -202,9 +211,12 @@ export function Board42Page(){
       {/* weekly top-3 */}
       <div style={{marginTop:14,display:"flex",gap:10,flexWrap:"wrap"}}>
         {lb.slice(0,3).map((r,i)=> (
-          <div key={r.userId} style={{flex:"1 1 140px",padding:12,borderRadius:12,background:"linear-gradient(135deg, rgba(255,204,0,0.15), rgba(255,45,85,0.12))",border:"1px solid rgba(255,204,0,0.25)",textAlign:"center"}}>
+          <div key={r.userId} style={{flex:"1 1 140px",padding:12,borderRadius:12,background:"linear-gradient(135deg, rgba(255,204,0,0.15), rgba(255,45,85,0.12))",border:"1px solid rgba(255,204,0,0.25)",textAlign:"center",...cosmeticBannerStyle(r.banner)}}>
             <div style={{fontSize:22,animation:"crownPulse 1.2s ease-in-out infinite, conicSpin 3s linear infinite",display:"inline-block"}}>👑</div>
-            <div style={{fontWeight:800,marginTop:4}}>{i+1}. {r.username}</div>
+            <div style={{fontWeight:800,marginTop:4,display:"flex",gap:6,alignItems:"center",justifyContent:"center",flexWrap:"wrap"}}>
+              <span>{i+1}.</span>
+              <CosmeticIdentity username={r.username} avatar={r.avatar} frame={r.frame} title={r.title} size={22} />
+            </div>
             <div style={{opacity:0.7,fontSize:12}}>{r.score} • +{r.reward} crown</div>
             <div style={{marginTop:6,height:6,borderRadius:99,background:"rgba(255,255,255,0.08)",overflow:"hidden"}}><div style={{width: String(Math.max(12,Math.round((r.score/Math.max(1,lb[0]?.score||1))*100))) + "%",height:"100%",background:"conic-gradient(from 0deg, #ffcc00, #ff2d55, #ffcc00)",animation:"conicSpin 3s linear infinite"}} /></div>
           </div>

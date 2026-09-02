@@ -36,7 +36,6 @@ function fallbackGrid(ctx: CanvasRenderingContext2D, x: number, y: number, size:
   }
 }
 
-// trigger for FirstInvitePopup — 1/day guard via localStorage + cookie fallback
 export function triggerFirstInvitePopup(): boolean {
   const key = "magnum:first-invite-popup:date";
   const today = new Date().toISOString().slice(0, 10);
@@ -51,7 +50,6 @@ export function triggerFirstInvitePopup(): boolean {
       document.cookie = `magnum_first_invite=${today}; path=/; max-age=86400; SameSite=Lax`;
     } catch {}
   }
-  // dispatch custom event so popup can react anywhere
   try { window.dispatchEvent(new CustomEvent("magnum:first-invite", { detail: { today } })); } catch {}
   return true;
 }

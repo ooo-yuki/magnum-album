@@ -94,7 +94,6 @@ export function About() {
         overwrite: "auto",
       });
 
-      // RGB-neon hover glow via ScrollTrigger context — extra shimmer on highlights
       highlights.forEach((el) => {
         const enter = () => { if (prefersReduced()) return; gsap.to(el, { y: -4, boxShadow: "0 12px 32px rgba(0,0,0,0.4), 0 0 20px rgba(255,45,85,0.18), 0 0 24px rgba(0,255,136,0.12)", duration: 0.28, ease: "power2.out", overwrite: "auto" }); };
         const leave = () => gsap.to(el, { y: 0, boxShadow: "0 0 0 transparent", duration: 0.4, ease: "power2.out", overwrite: "auto" });

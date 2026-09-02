@@ -5,17 +5,35 @@ export function TamagotchiWidget() {
   const [streak, setStreak] = useState(0);
   const [prestige, setPrestige] = useState(0);
   const [canClaim, setCanClaim] = useState(false);
-  const token = typeof localStorage !== "undefined" ? localStorage.getItem("magnum_token") : null;
+  const [authed, setAuthed] = useState(true);
   useEffect(() => {
-    if (!token) return;
-    fetch("/magnum/api/daily/status", { headers: { Authorization: `Bearer ${token}` } }).then(r=>r.json()).then(j=>{ if(j.streak!=null) setStreak(j.streak||0); if(j.canClaim!=null) setCanClaim(!!j.canClaim); }).catch(()=>{});
-    fetch("/magnum/api/referral/prestige", { headers: { Authorization: `Bearer ${token}` } }).then(r=>r.json()).then(j=>{ if(j.prestige!=null) setPrestige(j.prestige); }).catch(()=>{});
+    fetch("/magnum/api/daily/status", { credentials: "include" })
+      .then((r) => {
+        if (r.status === 401) { setAuthed(false); return null; }
+        return r.json() as Promise<{ streak?: number; canClaim?: boolean }>;
+      })
+      .then((j) => {
+        if (!j) return;
+        if (j.streak != null) setStreak(j.streak || 0);
+        if (j.canClaim != null) setCanClaim(!!j.canClaim);
+      })
+      .catch(() => {});
+    fetch("/magnum/api/referral/prestige", { credentials: "include" })
+      .then((r) => {
+        if (r.status === 401) { setAuthed(false); return null; }
+        return r.json() as Promise<{ prestige?: number }>;
+      })
+      .then((j) => {
+        if (!j) return;
+        if (j.prestige != null) setPrestige(j.prestige);
+      })
+      .catch(() => {});
   }, []);
   const st = getTamagotchiState({ streak, prestige, canClaim });
   const [tick, setTick] = useState(0);
   useEffect(()=>{ const id=setInterval(()=>setTick(t=>t+1),1200); return ()=>clearInterval(id); },[]);
   const y = Math.sin(tick*0.9)*4;
-  if (!token) return null;
+  if (!authed) return null;
   return (
     <div style={{ maxWidth:1120, margin:"0 auto", padding:"0 1rem" }}>
       <div style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 14px", borderRadius:16, background:"rgba(20,20,20,0.9)", border:"1px solid rgba(255,45,85,0.3)" }}>

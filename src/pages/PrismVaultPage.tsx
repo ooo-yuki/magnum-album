@@ -1,7 +1,4 @@
-/* PRISM VAULT 42 — NEON PRISM 12 aurora vault: kemerovo-neon 142 meduza-aurora 420 gold-aurora-spin epic 1420 spin 3s
-   12 neon prism skins 42/142/420/1420 common→epic крафт 42 разбор +100 dust
-   GSAP stagger y20 0.08 aurora epic forge spring, epic spin 3s conic aurora
-*/
+ 
 import { useEffect, useRef, useState, useCallback } from "react";
 import gsap from "gsap";
 import { NEON_PRISM_CATALOG, NEON_PRISM_IDS_SET, isNeonPrismCosmetic, COSMETICS_CATALOG } from "../lib/cosmetics";
@@ -63,7 +60,6 @@ export function PrismVaultPage() {
     return () => { cancelled = true; unsub(); };
   }, []);
 
-  // GSAP stagger y20 0.08 aurora + epic forge spring
   useEffect(() => {
     if (loading) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -127,7 +123,6 @@ export function PrismVaultPage() {
         toast(`Скрафчено ${item.name} за ${item.price} пыли · aurora ✨`);
         return;
       }
-      // common→rare via 3×common +42 coins: use glacier-like craft but for neon prism 142 tier
       // fallback: direct buy via shop/buy
       const r = await fetch("/magnum/api/shop/buy", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cosmeticId: id }) });
       const d = await r.json() as { balance?: number; error?: string };

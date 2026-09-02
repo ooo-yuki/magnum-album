@@ -4,15 +4,13 @@
  * Ранее файл содержал 69 QUEST-заглушек (2500 строк) — удалены, дубли устранены.
  */
 import { getCoins, addCoins } from "./coins";
+import { RARITY_PRICE as CANON_RARITY_PRICE } from "./cosmetics";
+import type { Rarity as CanonRarity } from "./cosmetics";
+import { SKINS } from "./shopCatalog";
 
-// ── Редкости (синхрон с ShopPage.tsx RARITY_META) ──────────────────────────
-export type Rarity = "common" | "rare" | "epic" | "legendary";
-export const RARITY_PRICE: Record<Rarity, number> = {
-  common: 42,
-  rare: 142,
-  epic: 420,
-  legendary: 1420,
-} as const;
+// ── Редкости — единый источник цен в cosmetics.ts (re-export для совместимости)
+export type Rarity = CanonRarity;
+export const RARITY_PRICE: Record<Rarity, number> = CANON_RARITY_PRICE;
 export const RARITY_LABEL: Record<Rarity, string> = {
   common: "COMMON",
   rare: "RARE",
@@ -29,22 +27,11 @@ export const SHOP_ITEMS = [
 ] as const;
 export type ShopItem = (typeof SHOP_ITEMS)[number];
 
-// ── Полный каталог 12 скинов (синхрон с ShopPage SKINS) ────────────────────
-export const SHOP_CATALOG = [
-  { id: "mops", name: "Мопс 42", rarity: "common" as const, price: 42, emoji: "🐗" },
-  { id: "rhino", name: "Носорог 42", rarity: "common" as const, price: 42, emoji: "🦏" },
-  { id: "monkey", name: "Обезьяна 42", rarity: "common" as const, price: 42, emoji: "🐵" },
-  { id: "frog", name: "Лягуха 42", rarity: "common" as const, price: 42, emoji: "🐸" },
-  { id: "panda", name: "Панда 42", rarity: "rare" as const, price: 142, emoji: "🐼" },
-  { id: "fox", name: "Лиса 42", rarity: "rare" as const, price: 142, emoji: "🦊" },
-  { id: "owl", name: "Сова 42", rarity: "rare" as const, price: 142, emoji: "🦉" },
-  { id: "shark", name: "Акула 42", rarity: "epic" as const, price: 420, emoji: "🦈" },
-  { id: "flamingo", name: "Фламинго 42", rarity: "epic" as const, price: 420, emoji: "🦩" },
-  { id: "wolf", name: "Волк 42", rarity: "epic" as const, price: 420, emoji: "🐺" },
-  { id: "tiger", name: "Тигр 42", rarity: "legendary" as const, price: 1420, emoji: "🐯" },
-  { id: "dragon", name: "Дракон 42", rarity: "legendary" as const, price: 1420, emoji: "🐉" },
-] as const;
-export type CatalogItem = (typeof SHOP_CATALOG)[number];
+// ── Полный каталог 12 скинов — единый источник src/lib/shopCatalog.ts (SKINS) ──
+export type CatalogItem = { id: string; name: string; rarity: Rarity; price: number; emoji: string };
+export const SHOP_CATALOG: CatalogItem[] = SKINS.map((s) => ({
+  id: s.id, name: s.name, rarity: s.rarity, price: s.price, emoji: s.emoji,
+}));
 
 export function getItemPrice(id: string): number {
   const found = SHOP_CATALOG.find((x) => x.id === id) ?? SHOP_ITEMS.find((x) => x.id === id);

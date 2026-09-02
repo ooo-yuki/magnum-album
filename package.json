@@ -5,8 +5,8 @@
     "dev": "bun run server.ts",
     "build": "bun run build.ts",
     "start": "NODE_ENV=production bun run server.ts",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "test": "bun test",
+    "test:watch": "bun test --watch"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
@@ -20,14 +20,13 @@
     "react-router-dom": "^7.18.3"
   },
   "devDependencies": {
+    "@happy-dom/global-registrator": "^20.12.2",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
     "@types/bun": "^1.4.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "drizzle-kit": "^0.31.10",
-    "jsdom": "^25.0.1",
-    "typescript": "^7.0.2",
-    "vitest": "^3.1.1"
+    "typescript": "^7.0.2"
   }
 }

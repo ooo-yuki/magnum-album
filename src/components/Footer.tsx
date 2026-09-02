@@ -77,7 +77,6 @@ export function Footer() {
   const e42Ref = useRef<HTMLSpanElement>(null);
   const navigate = useNavigate();
 
-  // GSAP glow pulse on the "42" text
   useEffect(() => {
     if (!e42Ref.current) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;

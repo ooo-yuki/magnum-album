@@ -25,7 +25,6 @@ export const TOKENS = {
 export type TokenColor = keyof typeof TOKENS.color;
 export type TokenShadow = keyof typeof TOKENS.shadow;
 
-// GSAP presets — source: GalleryPage.tsx:857
 export const GSAP_PRESETS = {
   entrance: { y: 24, opacity: 0, stagger: 0.12, duration: 0.55, ease: "power2.out" },
   cards: { from: { y: 24, opacity: 0, scale: 0.96 }, to: { y: 0, opacity: 1, scale: 1, duration: 0.5, stagger: 0.12, ease: "back.out(1.2)" } },

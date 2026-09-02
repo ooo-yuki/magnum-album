@@ -42,7 +42,6 @@ export function Pass42Page() {
 
   useEffect(() => { fetchProgress(); fetchBalance(); }, [fetchProgress, fetchBalance]);
 
-  // GSAP stagger y16 0.06 grid 42 клетки, prefers-reduced-motion gate
   useEffect(() => {
     if (!gridRef.current) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;

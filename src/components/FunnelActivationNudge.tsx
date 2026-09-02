@@ -62,7 +62,6 @@ export function FunnelActivationNudge() {
     return () => window.removeEventListener("magnum:auth" as unknown as string, onAuth as EventListener);
   }, [checkMe, showNudge]);
 
-  // GSAP entrance — set()+to() with reduced-motion guard + context cleanup
   useEffect(() => {
     if (!visible || !cardRef.current) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -137,10 +136,10 @@ export function FunnelActivationNudge() {
           <span style={{ fontSize: 22, lineHeight: 1, filter: "drop-shadow(0 0 8px rgba(255,204,0,0.6))" }}>🎮</span>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 900, fontSize: 14, letterSpacing: 0.2, color: "#fff" }}>
-              Сыграй 1 игру — <span style={{ color: "#ffcc00" }}>+10 монет</span> <span style={{ opacity: 0.6, fontWeight: 700, fontSize: 11, border: "1px solid rgba(255,204,0,0.35)", borderRadius: 999, padding: "2px 6px", marginLeft: 6 }}>P0 активация</span>
+              Сыграй 1 игру — <span style={{ color: "#ffcc00" }}>+42 dust</span> <span style={{ opacity: 0.6, fontWeight: 700, fontSize: 11, border: "1px solid rgba(255,204,0,0.35)", borderRadius: 999, padding: "2px 6px", marginLeft: 6 }}>+10 монет бонус</span>
             </div>
             <div style={{ fontSize: 12, opacity: 0.72, color: "#fff", marginTop: 3, lineHeight: 1.4 }}>
-              Дуэль 2–4 братух — жми <b style={{ color: "#ffcc00" }}>Старт</b> в комнате 1/4, 10с кликов → счёт в health. Или голосуй за идею #65 (142 голоса) → +5 монет.
+              Дуэль 2–4 братух — жми <b style={{ color: "#ffcc00" }}>Старт</b> в комнате 1/4, 10с кликов → счёт в health + dust для FORGE. Или голосуй за идею #65 (142 голоса) → +5 монет.
             </div>
           </div>
           <button type="button" aria-label="Закрыть подсказку" onClick={dismiss} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.7)", borderRadius: 999, width: 28, height: 28, cursor: "pointer", fontSize: 14, flexShrink: 0 }}>×</button>

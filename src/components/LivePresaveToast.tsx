@@ -77,7 +77,6 @@ export function LivePresaveToast() {
     return () => clearInterval(id);
   }, [dismissed, names.length, isDup]);
 
-  // GSAP slide-in on mount and on rotation
   useEffect(() => {
     if (dismissed || isDup || !cardRef.current) return;
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -146,7 +145,7 @@ export function LivePresaveToast() {
         href="https://music.thefence.me/psmagnum"
         target="_blank"
         rel="noopener noreferrer"
-        onClick={() => { try { localStorage.setItem("presave_done","1"); } catch {} }}
+        onClick={() => { try { localStorage.setItem("presave_done","1"); } catch {} try { sessionStorage.setItem("magnum:post-presave-bridge-at", String(Date.now())); } catch {} try { window.dispatchEvent(new CustomEvent("magnum:presave")); } catch {} }}
         style={{ padding: "6px 10px", borderRadius: 999, background: "#ff2d55", color: "#fff", fontWeight: 900, fontSize: 11, textDecoration: "none", whiteSpace: "nowrap", flexShrink: 0 }}
         data-testid="live-toast-cta"
       >Пресейв →</a>

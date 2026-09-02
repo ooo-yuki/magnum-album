@@ -5,7 +5,6 @@ import styles from "./About42Page.module.css";
 
 gsap.registerPlugin(ScrollTrigger);
 
-// About42 — GSAP 24/7: y24 stagger 0.12, parallax, hover RGB, reduced-motion gate, cleanup
 export function About42Page() {
   const containerRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
@@ -184,7 +183,6 @@ export function About42Page() {
     }, containerRef);
 
     return () => {
-      // cleanup: hover listeners + gsap context (kills ScrollTriggers)
       (containerRef.current as unknown as { _cardHoverCleanup?: () => void })?._cardHoverCleanup?.();
       ctx.revert();
     };
@@ -227,6 +225,26 @@ export function About42Page() {
           </div>
         </div>
 
+        {}
+        <div className={styles.section} id="spotify-bio42">
+          <h2>Spotify-био 5opka — от Minecraft к «1000 жизней»</h2>
+          <div className={styles.storyCard} style={{ borderLeft: "3px solid #1DB954" }}>
+            <p><strong>Minecraft 2011 → сервер «СП»:</strong> Кирилл Баранов (5opka) начал в 2011 с летсплеев Minecraft — основатель легендарного сервера <strong>«СП»</strong>. Дебютный альбом — <strong>«1000 жизней»</strong>, далее гастроли и клипы. Био закреплено в Spotify-профиле артиста.</p>
+            <p><strong>42 как субкультура / комьюнити:</strong> в Spotify-био <em>«42 братухи»</em> описаны как <strong>субкультура и комьюнити</strong> — «эпатаж, сплочённость на концертах, премиях и в TikTok». Отзыв: «от детского сада до фанаток Анны Асти — плейлист на всех».</p>
+            <div className={styles.statsRow} style={{ display: "flex", gap: 10, flexWrap: "wrap", margin: "14px 0" }}>
+              <span style={{ padding: "6px 12px", borderRadius: 999, background: "rgba(29,185,84,0.12)", border: "1px solid rgba(29,185,84,0.25)", fontSize: "0.85rem" }}>🎧 400K+ Яндекс Музыка</span>
+              <span style={{ padding: "6px 12px", borderRadius: 999, background: "rgba(145,71,255,0.12)", border: "1px solid rgba(145,71,255,0.28)", fontSize: "0.85rem" }}>💜 923K Twitch</span>
+              <span style={{ padding: "6px 12px", borderRadius: 999, background: "rgba(255,0,0,0.10)", border: "1px solid rgba(255,0,0,0.22)", fontSize: "0.85rem" }}>▶️ ~1M YouTube</span>
+              <span style={{ padding: "6px 12px", borderRadius: 999, background: "rgba(29,185,84,0.08)", border: "1px solid rgba(29,185,84,0.18)", fontSize: "0.85rem" }}>🎵 209K Spotify / мес</span>
+            </div>
+            <div className={styles.trackLinks} style={{ flexWrap: "wrap" }}>
+              <a href="https://open.spotify.com/artist/6hSwHa5Se498WfUj6zf4WN" target="_blank" rel="noreferrer">Spotify 5opka — био и «СП» / «1000 жизней» →</a>
+              <a href="https://afishadaily.ru/relationship/28893-skvady-haypa-shuby-i-malikov-chto-za-42-bratuhi-novaya-subkultura-pokoleniya-alfa/" target="_blank" rel="noreferrer">Афиша Daily: сквады Шуба/НАХ/Хай/Урод — эпатаж и сплочённость →</a>
+            </div>
+            <p style={{ marginTop: 10, opacity: 0.6, fontSize: "0.78rem" }}>Факт P2 t_c21320ec — проверено по Spotify-био + Афиша Daily 28893. Куда: About42 био-блок + PressWall. Цифры: 400K+ Яндекс Музыка, 923K Twitch, YouTube ~1M — без выдумок.</p>
+          </div>
+        </div>
+
         {/* §5 data 18:23 — Лор 42 братуха: субкультура 5opka Spotify-био трек 42 feat 6055 02.2025 рефрен Везде сорок два братуха код 42 Кузбасс эстер-эпиг MAGNUM — sources open.spotify/artist + ru.wikipedia/Баранов + cybersport + ru.wikipedia/Коды субъектов */}
         <div className={styles.section} id="geografia42">
           <h2>География 42 — Кузбасс код 42</h2>
@@ -247,6 +265,38 @@ export function About42Page() {
           </div>
         </div>
 
+        {}
+        <div className={styles.section} id="kuzbass-today-01092026">
+          <h2>Кузбасс сегодня — 01.09.2026 · ЧП: ДТП КамАЗ × автобус + эвакуации</h2>
+          <div className={styles.storyCard} style={{ borderLeft: "3px solid #ff3b30" }}>
+            <p><strong>ДТП Ленинск-Кузнецкий · 01.09.2026 · 14:35 (10:35 мск) · ул. Суворова:</strong> 57-летний водитель КамАЗа выехал на встречную полосу и столкнулся с рейсовым автобусом (в салоне 18 пассажиров) — автобус съехал в кювет. Госпитализированы водитель КамАЗа и 1 пассажир автобуса. Прокуратура Кемеровской области организовала проверку (контроль соблюдения безопасности перевозок).</p>
+            <p><strong>Эвакуации 31.08–01.09 — ложные угрозы:</strong> 31.08 — кардиодиспансер (Кузбасский клинический кардиологический диспансер), 01.09 — больница им. Подгорбунского (ул. Островского, Кемерово) — эвакуация пациентов и персонала из-за анонимных писем об угрозах на электронную почту. Взрывных устройств не обнаружено, угрозы не подтвердились — медучреждения вернулись к штатному режиму. ГУ МВД по Кузбассу напоминает об уголовной ответственности за заведомо ложные сообщения о минировании.</p>
+            <div className={styles.trackLinks} style={{ marginTop: 12, flexWrap: "wrap" }}>
+              <a href="https://ria.ru/20260901/dtp-2114622142.html" target="_blank" rel="noreferrer">РИА Новости 01.09.2026 14:13 — ДТП Ленинск-Кузнецкий →</a>
+              <a href="https://kuzbass.aif.ru/incidents/ugrozy-minirovaniya-v-kuzbasse-1-sentyabrya-2026-poslednie-novosti" target="_blank" rel="noreferrer">АиФ Кузбасс — угрозы минирований 01.09 →</a>
+              <a href="https://www.mk-kuzbass.ru/social/2026/09/01/pacientov-i-personal-evakuirovali-iz-bolnicy-v-kemerove-utrom-1-sentyabrya.html" target="_blank" rel="noreferrer">МК Кузбасс 01.09 — эвакуация Подгорбунского →</a>
+              <a href="/magnum/recaps">→ Лента Recaps</a>
+            </div>
+            <p style={{ marginTop: 10, opacity: 0.6, fontSize: "0.78rem" }}>Факт P2 t_7ed55896 — проверено по первоисточникам РИА/АиФ/МК. ДТП: Ленинск-Кузнецкий, 14:35 местн. (10:35 мск), ул. Суворова, КамАЗ встречка → автобус 18 пасс., кювет, 2 госпитализированы, проверка прокуратуры. Эвакуации: 31.08 кардио + 01.09 Подгорбунского, письма на почту, не подтвердились, штатный режим, ГУ МВД — уголовная ответственность за ложные минирования. Без выдумок.</p>
+          </div>
+          <div className={styles.timeline} style={{ marginTop: 14 }}>
+            <div className={styles.timelineItem}>
+              <div className={styles.timelineDate}>01.09 14:35</div>
+              <div className={styles.timelineCard}>
+                <strong>КамАЗ × автобус — Ленинск-Кузнецкий, ул. Суворова</strong>
+                <p>Водитель КамАЗа 57 лет на встречке → рейсовый автобус (18 пасс.) в кювете. 2 госпитализированы (водитель + 1 пасс.). Прокуратура — проверка.</p>
+              </div>
+            </div>
+            <div className={styles.timelineItem}>
+              <div className={styles.timelineDate}>31.08–01.09</div>
+              <div className={styles.timelineCard}>
+                <strong>Эвакуации — ложные анонимные угрозы</strong>
+                <p>Кардиодиспансер 31.08 + больница Подгорбунского (ул. Островского) 01.09 — письма на почту, эвакуация, не подтвердилось, штатный режим. ГУ МВД: уголовная ответственность за ложные минирования.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* §5 Лор MAGNUM 42: мем 42 братуха как субкультура 5opka — Spotify-био + трек 42 feat 6055 02.2025 2.2M+ рефрен Везде сорок два братуха коррелирует с кодом 42 Кузбасса — эстер-эпиг MAGNUM */}
         <div className={styles.section} id="lor42">
           <h2>Лор MAGNUM 42 — «Везде сорок два, братуха!»</h2>
@@ -262,6 +312,31 @@ export function About42Page() {
               <a href="https://risazatvorchestvo.com/track/42" target="_blank" rel="noreferrer">Трек «42» РЗТ →</a>
             </div>
             <p style={{ marginTop: 10, opacity: 0.6, fontSize: "0.78rem" }}>data 18:23 §5 · куда вставить: прессвол / Recaps SLAY 2025 / Викторина42 / Ритм42 / Галерея 42 — проверено data-seeker 5 запросов только первоисточники</p>
+          </div>
+        </div>
+
+        {}
+        <div className={styles.section} id="kemerovo42-01092026">
+          <h2>Кемерово42 — День знаний 01.09.2026 · 66,8 тыс за партами</h2>
+          <div className={styles.storyCard} style={{ borderLeft: "3px solid #00d4ff" }}>
+            <p><strong>01.09.2026 — 66,8 тыс школьников в Кемерове</strong> сели за парты, из них <strong>5 300 первоклассников</strong> — данные KP.RU 01.09.2026 08:26 («В Кемерове за парты сели более 66 тысяч учеников»). По сводке горадминистрации в онлайн-трансляции NGS42 — ещё <strong>&gt;2 000 первоклашек</strong> по муниципальной разбивке. Код региона — <strong>42 (Кемеровская область, RU-KEM)</strong> — снова в новостях не как мем, а как город.</p>
+            <p><strong>Мэр Дмитрий Анисимов</strong> открыл линейку в <strong>школе №10 после капремонта</strong> — вместе с лицеем №89 обе школы отремонтированы на <strong>750 млн руб.</strong> В школе №10 появились <strong>скалодром и верёвочный парк</strong> (новые спортзоны). Это один из самых дорогих школьных ремонтов Кузбасса в 2026.</p>
+            <p><strong>Школа №36 — 281 первоклассник, 10 первых классов</strong> (рекорд района, NGS42-лента). По городу — волнение, пробки у школ к 8:00, линейки под гимн. Власти уточнили: <strong>без дневников от администрации</strong> — подарков-дневников не выдавали. Сборы в школу — ~15 тыс ₽ на ребёнка (из комментариев родителей в трансляции).</p>
+            <div className={styles.trackLinks} style={{ marginTop: 10, flexWrap: "wrap" }}>
+              <a href="https://www.kem.kp.ru/online/news/7150485/" target="_blank" rel="noreferrer">KP.RU 01.09.2026 08:26 — 66,8k/5 300 →</a>
+              <a href="https://ngs42.ru/text/education/2026/09/01/76616542/" target="_blank" rel="noreferrer">NGS42 онлайн-трансляция 01.09.2026 →</a>
+              <a href="/magnum/recaps">→ Recaps 01.09.2026</a>
+              <a href="/magnum/map">→ Карта 42</a>
+            </div>
+            <p style={{ marginTop: 10, opacity: 0.6, fontSize: "0.78rem" }}>Факт t_fcc28280 — проверено по KP.RU 7150485 + NGS42 76616542. Куда: About42 Кемерово42 + Timeline 01.09 + RecapsPage. Без выдумок.</p>
+          </div>
+          <div className={styles.geoGrid} style={{ marginTop: 14 }}>
+            <div className={styles.geoCard}><span className={styles.geoIcon}>🎒</span><strong>66,8 тыс</strong><p>Школьников Кемерово<br/>01.09.2026</p></div>
+            <div className={styles.geoCard}><span className={styles.geoIcon}>🔔</span><strong>5 300</strong><p>Первоклассников<br/>&gt;2 000 по горадм.</p></div>
+            <div className={styles.geoCard}><span className={styles.geoIcon}>🏫</span><strong>Школа №10</strong><p>Мэр Анисимов<br/>линейка после капремонта</p></div>
+            <div className={styles.geoCard}><span className={styles.geoIcon}>🏗️</span><strong>750 млн ₽</strong><p>Школы №10 + лицей №89<br/>скалодром/верёвочный парк</p></div>
+            <div className={styles.geoCard}><span className={styles.geoIcon}>👶</span><strong>Школа №36</strong><p>281 первоклассник<br/>10 первых классов</p></div>
+            <div className={styles.geoCard}><span className={styles.geoIcon}>📓</span><strong>Без дневников</strong><p>От властей — не выдавали<br/>пробки/волнение</p></div>
           </div>
         </div>
 
@@ -290,8 +365,9 @@ export function About42Page() {
             <div className={styles.timelineItem}>
               <div className={styles.timelineDate}>Дек 2023</div>
               <div className={styles.timelineCard}>
-                <strong>Рождение 42</strong>
-                <p>На стриме 5opka пересматривал «Автостопом по Галактике» (2005): суперкомпьютер назвал 42 ответом на главный вопрос жизни. Кирилл: «А-а-а, сорок два, братуха! Кемеровская область, сорок два, братуха!» Ответ-парирование на «52, братуха» стримера Guacamolemolly (отсылка к рэп-объединению «52» из Петербурга).</p>
+                <strong>Рождение 42 — дек.2023 vs 52</strong>
+                <p>На стриме 5opka пересматривал «Автостопом по Галактике» (2005): суперкомпьютер назвал 42 ответом на главный вопрос жизни, Вселенной и всего такого. Кирилл: «А-а-а, сорок два, братуха! Кемеровская область, сорок два, братуха!» — пародия-ответ на «52, братуха» стримера Guacamolemolly / Alblak 52 (петербургское объединение «52»). Жест 4 пальца + 2 пальца = 42, лозунг «Кринжа не существует».</p>
+                <p style={{ marginTop: 8, fontSize: "0.78rem", opacity: 0.7 }}>Источники: <a href="https://trends.rbc.ru/trends/social/67d9d9a09a7947c6be91168f" target="_blank" rel="noreferrer">РБК Тренды 19.03.2025 →</a> <a href="https://www.cybersport.ru/tags/strimery/5opka-kirill-baranov-biografiya-karera-mem-42-bratukha-i-skandaly" target="_blank" rel="noreferrer">Cybersport →</a> <a href="https://postium.ru/42-bratuxa-chto-znachit-mem/" target="_blank" rel="noreferrer">Postium →</a></p>
               </div>
             </div>
             <div className={styles.timelineItem}>
@@ -327,6 +403,14 @@ export function About42Page() {
               </div>
             </div>
             <div className={styles.timelineItem}>
+              <div className={styles.timelineDate}>01.09.2026</div>
+              <div className={styles.timelineCard}>
+                <strong>День знаний Кемерово42 — 66,8k/5,3k · мэр Анисимов · школа №10 + лицей №89 750 млн</strong>
+                <p>01.09.2026 в Кемерове 66,8 тыс школьников за партами (5 300 первоклассников, &gt;2 000 по горадм.). Мэр Дмитрий Анисимов открыл линейку школы №10 после капремонта (школы №10 + лицей №89 — 750 млн руб., скалодром/верёвочный парк). Школа №36 — 281 первоклассник, 10 первых классов, волнение/пробки, без дневников от властей. Код 42 — снова в новостях как реальный город, не только мем.</p>
+                <p style={{ marginTop: 8, fontSize: "0.78rem", opacity: 0.7 }}>Источники: <a href="https://www.kem.kp.ru/online/news/7150485/" target="_blank" rel="noreferrer">KP.RU 01.09.2026 08:26 →</a> <a href="https://ngs42.ru/text/education/2026/09/01/76616542/" target="_blank" rel="noreferrer">NGS42 онлайн 76616542 →</a> <a href="/magnum/recaps">→ Recaps 01.09</a></p>
+              </div>
+            </div>
+            <div className={styles.timelineItem}>
               <div className={styles.timelineDate}>2026</div>
               <div className={styles.timelineCard}>
                 <strong>CLAY • MAGNUM</strong>
@@ -336,17 +420,18 @@ export function About42Page() {
           </div>
         </div>
 
-        <div className={styles.section}>
-          <h2>Происхождение — дословно</h2>
-          <div className={styles.storyCard}>
+        <div className={styles.section} id="origin42-vs52">
+          <h2>Происхождение — дословно: 42 vs 52 (дек. 2023)</h2>
+          <div className={styles.storyCard} style={{ borderLeft: "3px solid #ff2d55" }}>
             <p>
               <strong>Декабрь 2023.</strong> На стриме 5opka пересматривал фильм «Автостопом по Галактике» (2005), где суперкомпьютер назвал число <strong>42</strong> как «ответ на главный вопрос жизни, Вселенной и всего такого».
             </p>
             <blockquote>
               «А-а-а, сорок два, братуха! Кемеровская область, сорок два, братуха!»
-              <cite>— Пятерка, декабрь 2023</cite>
+              <cite>— Пятерка, декабрь 2023 — пародия на «52, братуха»</cite>
             </blockquote>
-            <p className={styles.storyNote}>Источник: research.md • РБК Тренды, Афиша Daily, Secretmag, Циклопедия.</p>
+            <p><strong>Что пародирует:</strong> фразу «52, братуха» стримера <strong>Guacamolemolly / Alblak 52</strong> — отсылка к петербургскому рэп-объединению <strong>«52»</strong> (Alblak 52). 42 — ответ-парирование, закреплённое жестом <strong>4 пальца + 2 пальца = 42</strong> и лозунгом <strong>«Кринжа не существует»</strong> — свобода самовыражения (РБК, Афиша Daily).</p>
+            <p className={styles.storyNote} style={{ marginTop: 10 }}>Источники — проверено: <a href="https://trends.rbc.ru/trends/social/67d9d9a09a7947c6be91168f" target="_blank" rel="noreferrer">РБК Тренды 19.03.2025 →</a> <a href="https://www.cybersport.ru/tags/strimery/5opka-kirill-baranov-biografiya-karera-mem-42-bratukha-i-skandaly" target="_blank" rel="noreferrer">Cybersport биография →</a> <a href="https://postium.ru/42-bratuxa-chto-znachit-mem/" target="_blank" rel="noreferrer">Postium что значит →</a> · также: Афиша Daily / Secretmag / Циклопедия. Смотри также Викторина42 (вопрос 52 vs 42) и Галерея 42 (арт «Рождение 42»).</p>
           </div>
         </div>
 

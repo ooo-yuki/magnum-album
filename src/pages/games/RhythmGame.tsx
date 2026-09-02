@@ -90,6 +90,8 @@ const SONGS: Song[] = [
   { name: "XXL 🏆 Трек года SLAY 2025 (03.12.2025)", bpm: 132, duration: 42, patternSeed: 2025 },
   { name: "CLAY — СЛАВА БОССУ 🧱", bpm: 118, duration: 42, patternSeed: 73 },
   { name: "42 feat 6055 — «Везде сорок два, братуха!» (02.2025 · 2.2M+)", bpm: 135, duration: 44, patternSeed: 42 },
+  { name: "Пожарники 🚒 feat Илюха рэп — «Огонь из колонок / вызывай пожарника / мигалок вой» (CLAY трек 4 · 02.04.2026)", bpm: 126, duration: 42, patternSeed: 20402 },
+  { name: "Казино 🎰 — «Депнул 42.000 баксов, не играйте в казино» (22.10.2025 · Вредные советы)", bpm: 130, duration: 40, patternSeed: 2210 },
   { name: "MAGNUM — 5 пуль ●", bpm: 108, duration: 50, patternSeed: 99 },
 ];
 // MAGNUM 2026 — лор-цитаты 5 пуль + SLAY 2025 + §5 42 братуха субкультура Spotify-био код 42 эстер-эпиг (крутятся в меню + подсказки)
@@ -103,6 +105,8 @@ const RHYTHM_TIPS: string[] = [
   "SLAY 2025 03.12.2025 — 5opka ×3: Аудитория года, Minecraft-стример года, Трек года XXL feat MellSher (03.12.2025).",
   "XXL — 86 РЗТ и Трек года SLAY 2025. Играй эту пулю на харде — окна 55 мс!",
   "CLAY: 5 треков, 81 рецензия РЗТ. Пасхалка Clowns Laugh At You спрятана в конце видео.",
+  "Пожарники 02.04.2026 — CLAY трек 4 feat Илюха рэп: «На концерте огонь из колонок уже не сбежать никак. Вызывай пожарника — бум. Слышите мигалок вой. Гидрант.» — концерт-огонь из колонок + кроссовер «Илюха легенда легенд / Кирюха легенда легенд» — ФУГА TV eX7hM-t_hLw (VTT 27K).",
+  "Казино 22.10.2025 — анти-казино гимн ФУГА TV «Депнул 42.000 баксов, вывел 42.000 руб. Бля, не играйте в казино. Прокручу за вас, лоты и сам себе всё заберу.» — Вредные советы 16.10 (8 треков) — leitmotiv 42.000 — youtu.be/zOpX0HYRZ8k (VTT 1159, transcript:true).",
   "DRUMEDY + The Fence — продакшн и лейбл всей эры MAGNUM. 5 пуль заряжены!",
   "923K на Twitch, пик 28K онлайна — тур MAGNUM скоро, следи в t.me/NE_5OPKA",
   "Пресейв https://music.thefence.me/psmagnum — один клик и 5 пуль прилетят первыми!",
@@ -110,7 +114,6 @@ const RHYTHM_TIPS: string[] = [
   "Хард — окна уже: Perfect 55 мс. Почувствуй себя на сцене MAGNUM тура!",
   "Легко — окна шире (95 мс). Набей руку и забирай FEVER x2!",
 ];
-// progress → Neon magnum_game_scores; LS-UI-only below (SPEC §7.1)
 const LS_TUT = "rhythm42-tut-v1"; // LS-UI-only: tutorial dismissed
 const LS_MUTED = "rhythm42-muted"; // LS-UI-only: mute pref
 // ─────────────────────────────────────────────────────────────
@@ -118,7 +121,6 @@ const LS_MUTED = "rhythm42-muted"; // LS-UI-only: mute pref
 // ТУСА МЕДУЗА 14.08 (8K TikTok) → VPN (РЗТ) → CLAY 03.04 (81 рецензия)
 // → тур (923K Twitch) → пресейв https://music.thefence.me/psmagnum
 // Ритм: 5 песен × 5 пуль, FEVER 5 Perfect = 5 пуль заряжены
-// Tape 32 + breakdown + mute/share — без localStorage кроме best/muted
 // ─────────────────────────────────────────────────────────────
 // 2026 хронология 5 пуль — breakdown helper
 function tapeStats(tape: Array<string|null>) {
@@ -343,7 +345,6 @@ export function RhythmGame() {
     else if (state === "paused") { pausedTimeRef.current += performance.now() - pauseStartRef.current; setState("playing"); }
   }, [state]);
 
-  // best (Neon) + tut (LS-UI-only) + tip rotation
   useEffect(() => {
     fetch("/magnum/api/games/my",{credentials:"include"}).then(r=>r.ok?r.json():null).then(j=>{ const arr=j?.scores as {game:string;score:number}[]|undefined; if(!arr) return; let m=0; for(const s of arr) if(s.game==="rhythm"&&s.score>m) m=s.score; if(m) setBest(m); }).catch(()=>{});
     try { if (!localStorage.getItem(LS_TUT)) setShowTut(true); } catch {} // LS-UI-only
@@ -382,7 +383,6 @@ export function RhythmGame() {
     return () => { window.removeEventListener("keydown", onKeyDown); window.removeEventListener("keyup", onKeyUp); };
   }, [state, hitNote, togglePause]);
 
-  // GSAP spec: y24 stagger 0.12 ScrollTrigger batch + reduced-motion gate + gsap.context cleanup + hover y:-4 RGB glow
   useEffect(() => {
     const root: HTMLElement | null = document.querySelector<HTMLElement>("[data-gsap-root]") || (document.body as unknown as HTMLElement);
     if (!root) return;

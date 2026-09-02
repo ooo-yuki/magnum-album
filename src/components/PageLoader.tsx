@@ -12,7 +12,6 @@ export function PageLoader() {
   useEffect(() => {
     if (!containerRef.current) return;
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    // failsafe: hide even if GSAP stalls (Obscura / headless / reduced-motion)
     const fallback = window.setTimeout(() => setVisible(false), prefersReduced ? 900 : 2200);
 
     const ctx = gsap.context(() => {

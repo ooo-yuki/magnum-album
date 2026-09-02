@@ -4,7 +4,7 @@ import gsap from "gsap";
 import { fetchMe, subscribeMe, type MeUser } from "../lib/authMe";
 
 type PubProfile = {
-  user: { id: number; username: string; created_at: string };
+  user: { id: number; username: string };
   coins: number;
   balance: number;
   mining: { balance: number; upgrades: unknown } | null;
@@ -67,7 +67,6 @@ export function ProfilePage() {
     return () => { cancelled = true; };
   }, [me, profile]);
 
-  // GSAP entrance y24 stagger 0.08
   useEffect(() => {
     if (!wrapRef.current || loading || err) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -146,7 +145,7 @@ export function ProfilePage() {
             <span>🪙 {profile.coins}</span>
             <span>🏆 ачивок {profile.counts.achievements}</span>
             <span>🧾 транзакций {profile.counts.transactions}</span>
-            <span>📅 {new Date(profile.user.created_at).toLocaleDateString("ru-RU")}</span>
+            <span style={{ opacity: 0.6 }}>#{profile.user.id}</span>
           </div>
           <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
             {!isSelf && (

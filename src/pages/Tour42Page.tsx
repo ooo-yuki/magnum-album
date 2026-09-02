@@ -85,7 +85,6 @@ export function Tour42Page() {
 
   useEffect(() => { void fetchProgress(); }, [fetchProgress]);
 
-  // GSAP: draw path + pulse + progress
   useEffect(() => {
     if (!mapRef.current) return;
     if (prefersReduced()) return;

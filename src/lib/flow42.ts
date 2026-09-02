@@ -66,7 +66,6 @@ export function calcFinal(scores: Omit<FlowScores, "final" | "wpmBonus" | "total
   };
 }
 
-// heuristic fallback when mimo unavailable
 export function heuristicScores(lines: string[]): { rhyme: number; punch: number; flow: number } {
   const joined = lines.join(" ").toLowerCase();
   const words = joined.split(/\s+/).filter(Boolean);

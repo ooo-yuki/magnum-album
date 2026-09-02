@@ -1,6 +1,153 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import gsap from "gsap";
 import s from "./ConveyorPage.module.css";
+
+const CATALOG_PREVIEW = [
+  { icon:"⛏️", name:"Шахта", desc:"Базовая добыча · 4 dust/мин" },
+  { icon:"🪨", name:"Дробилка", desc:"Переработка руды · 14 dust/мин" },
+  { icon:"🚚", name:"Конвейер", desc:"Транспортёр · 42 dust/мин" },
+  { icon:"🏭", name:"Обогатиловка", desc:"Обогащение · 84 dust/мин" },
+  { icon:"⚡", name:"ТЭЦ", desc:"Энергия завода · 142 dust/мин" },
+  { icon:"🔬", name:"Лаборатория", desc:"Наука · 420 dust/мин" },
+];
+
+function Onboarding(){
+  const pageRef=useRef<HTMLDivElement>(null);
+  const beltRef=useRef<HTMLDivElement>(null);
+  const stepsRef=useRef<HTMLDivElement>(null);
+  const cardsRef=useRef<HTMLDivElement>(null);
+  const ctaRef=useRef<HTMLDivElement>(null);
+
+  useEffect(()=>{
+    if(!pageRef.current) return;
+    if(window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const ctx=gsap.context(()=>{
+      // title fade up
+      gsap.from(`.${s.onboard} h1`,{y:30,opacity:0,duration:.7,ease:"power3.out"});
+      gsap.from(`.${s.onboardSub}`,{y:20,opacity:0,duration:.6,delay:.15,ease:"power3.out"});
+      // belt slide in
+      gsap.from(`.${s.previewBelt}`,{scaleX:0,opacity:0,duration:.8,delay:.3,ease:"power2.out",transformOrigin:"left center"});
+      // steps stagger
+      const steps=pageRef.current!.querySelectorAll(`.${s.step}`);
+      gsap.from(steps,{y:24,opacity:0,stagger:.12,duration:.5,delay:.5,ease:"power2.out"});
+      // cards stagger
+      const cards=pageRef.current!.querySelectorAll(`.${s.previewCard}`);
+      gsap.from(cards,{y:20,opacity:0,scale:.92,stagger:.08,delay:.9,duration:.45,ease:"back.out(1.4)"});
+      // CTA pop
+      gsap.from(`.${s.ctaWrap}`,{y:16,opacity:0,duration:.5,delay:1.3,ease:"power2.out"});
+      // FAQ
+      const faq=pageRef.current!.querySelectorAll(`.${s.faqItem}`);
+      gsap.from(faq,{y:16,opacity:0,stagger:.1,delay:1.5,duration:.4,ease:"power2.out"});
+    },pageRef);
+    return()=>ctx.revert();
+  },[]);
+
+  // belt loop animation
+  useEffect(()=>{
+    if(!beltRef.current) return;
+    const track=beltRef.current.querySelector(`.${s.previewBeltTrack}`) as HTMLElement|null;
+    if(!track) return;
+    if(window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const ctx=gsap.context(()=>{
+      gsap.set(track,{x:0});
+      gsap.to(track,{x:-60,duration:2,repeat:-1,ease:"none"});
+    },beltRef);
+    return()=>ctx.revert();
+  },[]);
+
+  const goAuth=()=>window.dispatchEvent(new CustomEvent("magnum:need-auth"));
+
+  return <div ref={pageRef} className={s.page}>
+    <div className={s.onboard}>
+      <h1>КОНВЕЙЕР 42</h1>
+      <p className={s.onboardSub}>
+        Idle-завод Кузбасса. Построй 6 цехов, собирай dust оффлайн,
+        забирай монеты и прокачивай производство. Пресейв → доход x2.
+      </p>
+
+      {/* animated belt */}
+      <div ref={beltRef} className={s.previewBelt}>
+        <div className={s.previewBeltTrack}>
+          {Array.from({length:22}).map((_,i)=><div key={i} className={s.previewBeltItem}/>)}
+        </div>
+      </div>
+
+      {/* how it works */}
+      <div className={s.howSection}>
+        <div className={s.howTitle}>Как играть</div>
+        <div ref={stepsRef} className={s.steps}>
+          <div className={s.step}>
+            <div className={`${s.stepNum} ${s.stepNumBuy}`}>1</div>
+            <div className={s.stepText}>
+              <strong>Построй цеха</strong>
+              <span>6 производств — от Шахты (42 🪙) до Лаборатории (420 🪙). Каждый цех даёт доход в dust/мин.</span>
+            </div>
+          </div>
+          <div className={s.step}>
+            <div className={`${s.stepNum} ${s.stepNumEarn}`}>2</div>
+            <div className={s.stepText}>
+              <strong>Копи оффлайн</strong>
+              <span>Dust накапливается даже когда ты не на сайте. Кап — 4 часа, потом приходи забирать.</span>
+            </div>
+          </div>
+          <div className={s.step}>
+            <div className={`${s.stepNum} ${s.stepNumClaim}`}>3</div>
+            <div className={s.stepText}>
+              <strong>Забери монеты</strong>
+              <span>Преврати dust в монеты 🪙 — трать на апгрейды цехов или скидки в магазине.</span>
+            </div>
+          </div>
+          <div className={s.step}>
+            <div className={`${s.stepNum} ${s.stepNumPrestige}`}>4</div>
+            <div className={s.stepText}>
+              <strong>Смена (престиж)</strong>
+              <span>Накопил 42k dust? Сбрось цеха → +15% к доходу навсегда. Чем больше смен — тем мощнее завод.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* preview cards */}
+      <div className={s.howTitle}>Цеха завода</div>
+      <div ref={cardsRef} className={s.previewGrid}>
+        {CATALOG_PREVIEW.map((c,i)=>(
+          <div key={i} className={s.previewCard}>
+            <div className={s.previewCardIcon}>{c.icon}</div>
+            <div className={s.previewCardName}>{c.name}</div>
+            <div className={s.previewCardDesc}>{c.desc}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* CTA */}
+      <div ref={ctaRef} className={s.ctaWrap}>
+        <button className={`${s.ctaBtn} ${s.ctaLogin}`} onClick={goAuth}>Войти и начать</button>
+        <button className={`${s.ctaBtn} ${s.ctaQuick}`} onClick={goAuth}>⚡ Регистрация 1 клик</button>
+      </div>
+
+      {/* FAQ */}
+      <div className={s.onboardFaq}>
+        <div className={s.faqTitle}>Частые вопросы</div>
+        <div className={s.faqItem}>
+          <div className={s.faqQ}>Нужно ли быть онлайн?</div>
+          <div className={s.faqA}>Нет. Dust копится оффлайн до 4 часов. Заходи, забирай, продолжай.</div>
+        </div>
+        <div className={s.faqItem}>
+          <div className={s.faqQ}>Что даёт пресейв?</div>
+          <div className={s.faqA}>Доход конвейера x2. Один пресейв — и весь завод работает вдвое быстрее.</div>
+        </div>
+        <div className={s.faqItem}>
+          <div className={s.faqQ}>Зачем нужен престиж (Смена)?</div>
+          <div className={s.faqA}>Каждая смена = +15% к базовому доходу навсегда. Цеха сбрасываются, но бонус растёт экспоненциально.</div>
+        </div>
+        <div className={s.faqItem}>
+          <div className={s.faqQ}>Dust и монеты — это одно и то же?</div>
+          <div className={s.faqA}>Dust — ресурс конвейера. Забирая его, ты получаешь монеты 🪙 для апгрейдов и магазина. Dust также даёт скидки в ShopVault.</div>
+        </div>
+      </div>
+    </div>
+  </div>;
+}
 type CatalogItem = { idx:number; id:string; name:string; icon:string; base:number; price:number };
 type State = { levels:number[]; prestige:number; dust:number; perMin:number; pending:number; elapsedMin:number; capMin:number; bonusX2:boolean; balance:number; catalog:CatalogItem[]; prestigeNeed:number; prestigeBonus:string };
 export function ConveyorPage(){
@@ -21,7 +168,6 @@ export function ConveyorPage(){
   useEffect(()=>{ fetchState(); },[fetchState]);
   // poll pending every 5s
   useEffect(()=>{ const id=window.setInterval(fetchState,5000); return()=>clearInterval(id); },[fetchState]);
-  // GSAP belt translateX loop 2s linear
   useEffect(()=>{
     if(!beltRef.current) return;
     const track=beltRef.current.querySelector(`.${s.beltTrack}`) as HTMLElement|null;
@@ -86,7 +232,7 @@ export function ConveyorPage(){
     }catch{ showToast("Сеть"); }
   };
   if(loading) return <div className={s.page}>Загрузка конвейера…</div>;
-  if(!st) return <div className={s.page}>Войди, братуха — конвейер только для залогиненных. <a href="/magnum">/magnum</a></div>;
+  if(!st) return <Onboarding />;
   const incomeLabel=`+${st.perMin}/мин${st.bonusX2?" x2 пресейв":""}`;
   const canPrestige=st.dust>=st.prestigeNeed;
   return <div ref={pageRef} className={s.page}>

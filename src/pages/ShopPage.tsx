@@ -1,4 +1,4 @@
-/* MAGNUM Shop — GSAP polish 2: y24 stagger 0.12 header+cards, hover y:-4 tri-shadow, count-up, reduced-motion gate, cleanup */
+
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import gsap from "gsap";
@@ -6,7 +6,8 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import styles from "./ShopPage.module.css";
 import { getCoins, subscribe } from "../lib/coins";
 import { AuthStatus } from "../components/AuthStatus";
-import { GLACIER_CATALOG, GLACIER, GLACIER_IDS_SET, GLACIER_IDS, PRISM_CATALOG, PRISM_IDS_SET, PRISM_IDS, CRYSTAL_CATALOG, CRYSTAL_IDS_SET, CRYSTAL_IDS, VOLCANO_CATALOG, VOLCANO_IDS_SET, VOLCANO_IDS, OBSIDIAN_CATALOG, OBSIDIAN_IDS_SET, OBSIDIAN_IDS, COSMETICS_CATALOG } from "../lib/cosmetics";
+import { GLACIER_CATALOG, GLACIER, GLACIER_IDS_SET, GLACIER_IDS, PRISM_CATALOG, PRISM_IDS_SET, PRISM_IDS, CRYSTAL_CATALOG, CRYSTAL_IDS_SET, CRYSTAL_IDS, VOLCANO_CATALOG, VOLCANO_IDS_SET, VOLCANO_IDS, OBSIDIAN_CATALOG, OBSIDIAN_IDS_SET, OBSIDIAN_IDS, FORGE_CATALOG, FORGE_IDS_SET, FORGE_IDS, COSMETICS_CATALOG } from "../lib/cosmetics";
+import { SKINS as SHOP_CATALOG_SKINS, RARITY_META as SHOP_RARITY_META, type Skin as ShopSkin, type Rarity as ShopRarity } from "../lib/shopCatalog";
 gsap.registerPlugin(ScrollTrigger);
 const RGB_GLOW="0 12px 36px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,45,85,0.22), 0 0 28px rgba(255,45,85,0.22), 0 0 28px rgba(0,255,136,0.14), 0 0 32px rgba(255,204,0,0.10)";
 
@@ -150,16 +151,22 @@ const COSMETICS: Cosmetic[] = [
   { id: "frame-gold-obsidian-spin", slot: "frame", name: "Голд Обсидиан Спин", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#1a1a1a,#ff4500,#ffcc00,#ffd700,#1a1a1a)" },
   { id: "banner-obsidian-gold", slot: "banner", name: "Золото Обсидиана", price: 1420, rarity: "legendary", style: "linear-gradient(90deg,#1a1a1a,#ffcc00)" },
   { id: "title-obsidian-gold", slot: "title", name: "Обсидиан Голд", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#ff4500,#ffcc00,#ffd700,#ff4500)" },
+  // ── SKIN FORGE 42 — vault 12 + holo epic (hype-queue #16) clay-73-brown 142 meduza-holo 420 gold-42-conic epic 1420 spin 3s
+  { id: "frame-forge-iron", slot: "frame", name: "Кузня Железо", price: 42, rarity: "common", style: "2px solid #8d6e3e" },
+  { id: "banner-forge-dust", slot: "banner", name: "Кузнечная Пыль", price: 42, rarity: "common", style: "linear-gradient(90deg,#3a2a18,#8d6e3e)" },
+  { id: "title-forge-spark", slot: "title", name: "Искра 42", price: 42, rarity: "common", style: "#c9a86a" },
+  { id: "frame-clay-73-brown", slot: "frame", name: "Глина 73 Браун", price: 142, rarity: "rare", style: "3px solid #a67c52" },
+  { id: "banner-forge-anvil", slot: "banner", name: "Наковальня 42", price: 142, rarity: "rare", style: "linear-gradient(90deg,#4a2510,#d17a22)" },
+  { id: "title-forge-ember", slot: "title", name: "Уголёк 42", price: 142, rarity: "rare", style: "#d17a22" },
+  { id: "frame-meduza-holo", slot: "frame", name: "Медуза Холо", price: 420, rarity: "epic", style: "conic-gradient(from 0deg,#9147ff,#00ffcc,#ff44cc,#9147ff)" },
+  { id: "banner-forge-holo", slot: "banner", name: "Кузня Холо", price: 420, rarity: "epic", style: "linear-gradient(90deg,#9147ff,#00ffcc)" },
+  { id: "title-forge-prism", slot: "title", name: "Призма Кузни", price: 420, rarity: "epic", style: "#9147ff" },
+  { id: "frame-gold-42-conic", slot: "frame", name: "Голд 42 Коник", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#ffcc00,#9147ff,#00ffcc,#ff44cc,#ffcc00)" },
+  { id: "banner-gold-forge", slot: "banner", name: "Голд Кузня", price: 1420, rarity: "legendary", style: "linear-gradient(90deg,#ffcc00,#9147ff)" },
+  { id: "title-holo-forge", slot: "title", name: "Холо Кузня", price: 1420, rarity: "legendary", style: "conic-gradient(from 0deg,#ffcc00,#9147ff,#00ffcc,#ff44cc,#ffcc00)" },
 ];
-// GLACIER/PRISM/CRYSTAL/VOLCANO/OBSIDIAN — единый источник ../lib/cosmetics (12×5) — drift fixed, local COSMETICS kept 80 for backwards compat
-export { GLACIER_CATALOG, GLACIER, GLACIER_IDS_SET, GLACIER_IDS, PRISM_CATALOG, PRISM_IDS_SET, CRYSTAL_CATALOG, CRYSTAL_IDS_SET, VOLCANO_CATALOG, VOLCANO_IDS_SET, OBSIDIAN_CATALOG, OBSIDIAN_IDS_SET };
-export const PRISM_FAQ: {q:string;a:string;src:string}[]=[
-  {q:"Призм сколько?",a:"12",src:"ShopPage.tsx:PRISM_CATALOG 12"},
-  {q:"Пыль за разбор?",a:"14/42/142/420",src:"server.ts:prismDismantleReward"},
-  {q:"Крафт призм?",a:"POST /shop/craft dust",src:"ShopPage.tsx:craft"},
-  {q:"GET /shop/prism?",a:"12 призм catalog",src:"server.ts:handlePrismCatalog"},
-  {q:"GET /shop/dust?",a:"баланс пыли Neon",src:"server.ts:handleDustGet"},
-];
+// GLACIER/PRISM/CRYSTAL/VOLCANO/OBSIDIAN/FORGE — единый источник ../lib/cosmetics (12×6) — drift fixed, local COSMETICS kept 92+12 for backwards compat
+export { GLACIER_CATALOG, GLACIER, GLACIER_IDS_SET, GLACIER_IDS, PRISM_CATALOG, PRISM_IDS_SET, CRYSTAL_CATALOG, CRYSTAL_IDS_SET, VOLCANO_CATALOG, VOLCANO_IDS_SET, OBSIDIAN_CATALOG, OBSIDIAN_IDS_SET, FORGE_CATALOG, FORGE_IDS_SET };
 function isValidCosmeticId(v:string):boolean{ return /^[a-z0-9-]{2,64}$/.test(v) && !v.startsWith("-") && !v.endsWith("-") && !v.includes("--"); }
 export function isValidBundleId(v:string):boolean{ const s=v.trim(); return !!s && s.length>=2 && s.length<=40 && /^[a-z0-9-]{2,40}$/.test(s) && !s.startsWith("-") && !s.endsWith("-") && !s.includes("--"); }
 type Bundle = { id:string; name:string; desc:string; emoji:string; items:string[]; slots:string[]; price:number; origPrice:number; rarity:Rarity; tag:string };
@@ -173,119 +180,6 @@ const SHOP_BUNDLES: Bundle[] = [
   { id:"bundle-void", name:"Войд-сет", desc:"Войд + Туманность + VIP", emoji:"🕳️", items:["frame-void","banner-nebula","title-vip"], slots:["frame","banner","title"], price:2800, origPrice:3220, rarity:"legendary", tag:"−13%" },
   { id:"bundle-full42", name:"FULL 42", desc:"Лиса/Сова/Акула + Голо + MAGNUM", emoji:"💎", items:["fox","owl","shark","frame-holo","banner-magnum","title-magnum"], slots:["skin","skin","skin","frame","banner","title"], price:980, origPrice:1168, rarity:"epic", tag:"−16%" },
 ];
-// -- BUNDLE FACTS 30 -- FILE:LINE
-export const SHOP_BUNDLE_FACTS: { fact:string; src:string }[] = [
-  { fact:"Старт 42 84 vs 126 −33%", src:"ShopPage.tsx:bundle-starter" },
-  { fact:"Неон-вайб 520 vs 624 −17%", src:"ShopPage.tsx:bundle-neon" },
-  { fact:"Лёд и Пламя 380 vs 452", src:"ShopPage.tsx:bundle-ice" },
-  { fact:"Охотник 42 740 vs 860", src:"ShopPage.tsx:bundle-hunter" },
-  { fact:"Тигр-легенда 3100 vs 3586", src:"ShopPage.tsx:bundle-tiger" },
-  { fact:"Дракон MAGNUM 5200 vs 6082", src:"ShopPage.tsx:bundle-dragon" },
-  { fact:"Войд-сет 2800 vs 3220", src:"ShopPage.tsx:bundle-void" },
-  { fact:"FULL 42 980 vs 1168 −16%", src:"ShopPage.tsx:bundle-full42" },
-  { fact:"GET /magnum/api/shop/bundles", src:"ShopPage.tsx:bundles GET" },
-  { fact:"POST /magnum/api/shop/bundle/buy", src:"ShopPage.tsx:bundles POST" },
-  { fact:"isValidBundleId 2-40", src:"ShopPage.tsx:isValidBundleId" },
-  { fact:"bundle price Neon skip owned", src:"server.ts:handleShopBundleBuy" },
-  { fact:"bundle Neon баланс Neon", src:"server.ts:handleShopBundleBuy" },
-  { fact:"8 bundles total", src:"ShopPage.tsx:SHOP_BUNDLES 8" },
-  { fact:"GSAP y24 stagger 0.1 bundles", src:"ShopPage.tsx:bundles GSAP" },
-  { fact:"bundle tag −33% starter", src:"ShopPage.tsx:bundle-starter tag" },
-  { fact:"bundle dragon legendary", src:"ShopPage.tsx:bundle-dragon" },
-  { fact:"bundle void legendary", src:"ShopPage.tsx:bundle-void" },
-  { fact:"bundle full42 6 items", src:"ShopPage.tsx:bundle-full42" },
-  { fact:"bundle hunter epic", src:"ShopPage.tsx:bundle-hunter" },
-  { fact:"bundle neon epic", src:"ShopPage.tsx:bundle-neon" },
-  { fact:"bundle ice epic", src:"ShopPage.tsx:bundle-ice" },
-  { fact:"bundle tiger legendary", src:"ShopPage.tsx:bundle-tiger" },
-  { fact:"bundle magnum_transactions", src:"server.ts:bundle tx" },
-  { fact:"bundle rateLimit 10/min", src:"server.ts:bundle rate" },
-  { fact:"bundle without localStorage", src:"ShopPage.tsx:bundles" },
-  { fact:"bundle RGB_GLOW hover", src:"ShopPage.tsx:bundles hover" },
-  { fact:"bundle price vs origPrice", src:"ShopPage.tsx:bundle price" },
-  { fact:"bundle slots skin/frame/banner/title", src:"ShopPage.tsx:bundle slots" },
-  { fact:"bundle emoji 🎒🌃❄️🐺🐯🐉🕳️💎", src:"ShopPage.tsx:bundles emoji" },
-];
-// -- EXTRA 45 -- real, FILE:LINE
-export const SHOP_EXTRA_CATALOG: { id: string; name: string; price: number; rarity: "common"|"rare"|"epic"|"legendary"; src: string }[] = [
-  { id: "frame-neon42", name: "Неон 42", price: 42, rarity: "common", src: "ShopPage.tsx:55" }, // FILE:LINE ShopPage.tsx:55
-  { id: "frame-gold", name: "Золото 42", price: 142, rarity: "rare", src: "ShopPage.tsx:56" }, // FILE:LINE ShopPage.tsx:56
-  { id: "frame-rgb", name: "RGB-пульс", price: 420, rarity: "epic", src: "ShopPage.tsx:57" }, // FILE:LINE ShopPage.tsx:57
-  { id: "frame-dragon", name: "Драконьи когти", price: 1420, rarity: "legendary", src: "ShopPage.tsx:58" }, // FILE:LINE ShopPage.tsx:58
-  { id: "frame-ice", name: "Лёд MAGNUM", price: 84, rarity: "common", src: "ShopPage.tsx:59" }, // FILE:LINE ShopPage.tsx:59
-  { id: "frame-fire", name: "Пламя", price: 184, rarity: "rare", src: "ShopPage.tsx:60" }, // FILE:LINE ShopPage.tsx:60
-  { id: "frame-toxic", name: "Токсик", price: 390, rarity: "epic", src: "ShopPage.tsx:61" }, // FILE:LINE ShopPage.tsx:61
-  { id: "frame-void", name: "Войд", price: 1420, rarity: "legendary", src: "ShopPage.tsx:62" }, // FILE:LINE ShopPage.tsx:62
-  { id: "frame-paper", name: "Бумажный", price: 42, rarity: "common", src: "ShopPage.tsx:63" }, // FILE:LINE ShopPage.tsx:63
-  { id: "frame-pixel", name: "Пиксель 42", price: 142, rarity: "rare", src: "ShopPage.tsx:64" }, // FILE:LINE ShopPage.tsx:64
-  { id: "frame-holo", name: "Голо-рамка", price: 520, rarity: "epic", src: "ShopPage.tsx:65" }, // FILE:LINE ShopPage.tsx:65
-  { id: "frame-crown", name: "Корона", price: 2042, rarity: "legendary", src: "ShopPage.tsx:66" }, // FILE:LINE ShopPage.tsx:66
-  { id: "banner-42wave", name: "Волна 42", price: 42, rarity: "common", src: "ShopPage.tsx:67" }, // FILE:LINE ShopPage.tsx:67
-  { id: "banner-magnum", name: "MAGNUM fire", price: 142, rarity: "rare", src: "ShopPage.tsx:68" }, // FILE:LINE ShopPage.tsx:68
-  { id: "banner-glitch", name: "Глитч", price: 420, rarity: "epic", src: "ShopPage.tsx:69" }, // FILE:LINE ShopPage.tsx:69
-  { id: "banner-voidstar", name: "Звезда войда", price: 1420, rarity: "legendary", src: "ShopPage.tsx:70" }, // FILE:LINE ShopPage.tsx:70
-  { id: "banner-ocean", name: "Океан", price: 84, rarity: "common", src: "ShopPage.tsx:71" }, // FILE:LINE ShopPage.tsx:71
-  { id: "banner-sunset", name: "Закат", price: 184, rarity: "rare", src: "ShopPage.tsx:72" }, // FILE:LINE ShopPage.tsx:72
-  { id: "banner-forest", name: "Лес 42", price: 390, rarity: "epic", src: "ShopPage.tsx:73" }, // FILE:LINE ShopPage.tsx:73
-  { id: "banner-nebula", name: "Туманность", price: 1420, rarity: "legendary", src: "ShopPage.tsx:74" }, // FILE:LINE ShopPage.tsx:74
-  { id: "banner-grid", name: "Сетка", price: 62, rarity: "common", src: "ShopPage.tsx:75" }, // FILE:LINE ShopPage.tsx:75
-  { id: "banner-tiger", name: "Тигр", price: 520, rarity: "epic", src: "ShopPage.tsx:76" }, // FILE:LINE ShopPage.tsx:76
-  { id: "title-bra", name: "Братуха", price: 42, rarity: "common", src: "ShopPage.tsx:77" }, // FILE:LINE ShopPage.tsx:77
-  { id: "title-42", name: "42 навсегда", price: 142, rarity: "rare", src: "ShopPage.tsx:78" }, // FILE:LINE ShopPage.tsx:78
-  { id: "title-magnum", name: "MAGNUM", price: 420, rarity: "epic", src: "ShopPage.tsx:79" }, // FILE:LINE ShopPage.tsx:79
-  { id: "title-legend", name: "Легенда", price: 2042, rarity: "legendary", src: "ShopPage.tsx:80" }, // FILE:LINE ShopPage.tsx:80
-  { id: "title-neon", name: "Неоновый", price: 84, rarity: "common", src: "ShopPage.tsx:81" }, // FILE:LINE ShopPage.tsx:81
-  { id: "title-hype", name: "Хайп", price: 184, rarity: "rare", src: "ShopPage.tsx:82" }, // FILE:LINE ShopPage.tsx:82
-  { id: "title-toxic", name: "Токсичный", price: 390, rarity: "epic", src: "ShopPage.tsx:83" }, // FILE:LINE ShopPage.tsx:83
-  { id: "title-vip", name: "VIP 42", price: 1420, rarity: "legendary", src: "ShopPage.tsx:84" }, // FILE:LINE ShopPage.tsx:84
-  { id: "title-noob", name: "Новичок", price: 22, rarity: "common", src: "ShopPage.tsx:85" }, // FILE:LINE ShopPage.tsx:85
-  { id: "title-god", name: "Бог 42", price: 4242, rarity: "legendary", src: "ShopPage.tsx:86" }, // FILE:LINE ShopPage.tsx:86
-  { id: "mops", name: "Мопс 42", price: 42, rarity: "common", src: "ShopPage.tsx:37" }, // FILE:LINE ShopPage.tsx:37
-  { id: "rhino", name: "Носорог 42", price: 42, rarity: "common", src: "ShopPage.tsx:38" }, // FILE:LINE ShopPage.tsx:38
-  { id: "tiger", name: "Тигр 42", price: 1420, rarity: "legendary", src: "ShopPage.tsx:47" }, // FILE:LINE ShopPage.tsx:47
-  { id: "dragon", name: "Дракон 42", price: 1420, rarity: "legendary", src: "ShopPage.tsx:48" }, // FILE:LINE ShopPage.tsx:48
-  { id: "shark", name: "Акула 42", price: 420, rarity: "epic", src: "ShopPage.tsx:44" }, // FILE:LINE ShopPage.tsx:44
-  { id: "panda", name: "Панда 42", price: 142, rarity: "rare", src: "ShopPage.tsx:41" }, // FILE:LINE ShopPage.tsx:41
-  { id: "fox", name: "Лиса 42", price: 142, rarity: "rare", src: "ShopPage.tsx:42" }, // FILE:LINE ShopPage.tsx:42
-  { id: "wolf", name: "Волк 42", price: 420, rarity: "epic", src: "ShopPage.tsx:46" }, // FILE:LINE ShopPage.tsx:46
-  { id: "monkey", name: "Обезьяна 42", price: 42, rarity: "common", src: "ShopPage.tsx:39" }, // FILE:LINE ShopPage.tsx:39
-  { id: "frog", name: "Лягуха 42", price: 42, rarity: "common", src: "ShopPage.tsx:40" }, // FILE:LINE ShopPage.tsx:40
-  { id: "owl", name: "Сова 42", price: 142, rarity: "rare", src: "ShopPage.tsx:43" }, // FILE:LINE ShopPage.tsx:43
-  { id: "flamingo", name: "Фламинго 42", price: 420, rarity: "epic", src: "ShopPage.tsx:45" }, // FILE:LINE ShopPage.tsx:45
-];
-// -- SHOP FAQ EXTRA 30 -- real, FILE:LINE
-export const SHOP_FAQ_EXTRA: { q: string; a: string; src: string }[] = [
-  { q: "Сколько скинов?", a: "12 скинов SKINS", src: "ShopPage.tsx:36" }, // FILE:LINE ShopPage.tsx:36
-  { q: "Цена common?", a: "42", src: "ShopPage.tsx:19" }, // FILE:LINE ShopPage.tsx:19
-  { q: "Цена legendary?", a: "1420", src: "ShopPage.tsx:19" }, // FILE:LINE ShopPage.tsx:19
-  { q: "Рамок сколько?", a: "12 frame", src: "ShopPage.tsx:55" }, // FILE:LINE ShopPage.tsx:55
-  { q: "Баннеров сколько?", a: "10 banner", src: "ShopPage.tsx:67" }, // FILE:LINE ShopPage.tsx:67
-  { q: "Титулов сколько?", a: "10 title", src: "ShopPage.tsx:77" }, // FILE:LINE ShopPage.tsx:77
-  { q: "Косметика всего?", a: "32", src: "ShopPage.tsx:53" }, // FILE:LINE ShopPage.tsx:53
-  { q: "Где кошелёк?", a: "coins.ts polling 2s", src: "ShopPage.tsx:6" }, // FILE:LINE ShopPage.tsx:6
-  { q: "API buy?", a: "POST /shop/buy", src: "ShopPage.tsx:263" }, // FILE:LINE ShopPage.tsx:263
-  { q: "API equip?", a: "POST /shop/equip", src: "ShopPage.tsx:301" }, // FILE:LINE ShopPage.tsx:301
-  { q: "Инвентарь?", a: "GET /shop/inventory", src: "ShopPage.tsx:91" }, // FILE:LINE ShopPage.tsx:91
-  { q: "Мопс цена?", a: "42 common", src: "ShopPage.tsx:37" }, // FILE:LINE ShopPage.tsx:37
-  { q: "Дракон цена?", a: "1420 legendary", src: "ShopPage.tsx:48" }, // FILE:LINE ShopPage.tsx:48
-  { q: "GSAP entrance?", a: "y24 stagger 0.12", src: "ShopPage.tsx:218" }, // FILE:LINE ShopPage.tsx:218
-  { q: "Hover?", a: "y:-4 tri-shadow", src: "ShopPage.tsx:228" }, // FILE:LINE ShopPage.tsx:228
-  { q: "Тигр редкость?", a: "legendary", src: "ShopPage.tsx:47" }, // FILE:LINE ShopPage.tsx:47
-  { q: "Акула редкость?", a: "epic 420", src: "ShopPage.tsx:44" }, // FILE:LINE ShopPage.tsx:44
-  { q: "Панда редкость?", a: "rare 142", src: "ShopPage.tsx:41" }, // FILE:LINE ShopPage.tsx:41
-  { q: "Баланс?", a: "getCoins subscribe", src: "ShopPage.tsx:6" }, // FILE:LINE ShopPage.tsx:6
-  { q: "Неон рамка?", a: "frame-neon42 42", src: "ShopPage.tsx:55" }, // FILE:LINE ShopPage.tsx:55
-  { q: "Корона?", a: "frame-crown 2042", src: "ShopPage.tsx:66" }, // FILE:LINE ShopPage.tsx:66
-  { q: "Легенда титул?", a: "title-legend 2042", src: "ShopPage.tsx:80" }, // FILE:LINE ShopPage.tsx:80
-  { q: "Бог 42?", a: "title-god 4242", src: "ShopPage.tsx:86" }, // FILE:LINE ShopPage.tsx:86
-  { q: "Магазин где?", a: "/magnum/shop", src: "App.tsx:80" }, // FILE:LINE App.tsx:80
-  { q: "Lazy Shop?", a: "ShopPage lazy 29KB", src: "App.tsx:16" }, // FILE:LINE App.tsx:16
-  { q: "Server prices?", a: "42/142/420/1420", src: "server.ts:258" }, // FILE:LINE server.ts:258
-  { q: "LS ключи?", a: "magnum-coins", src: "ShopPage.tsx:433" }, // FILE:LINE ShopPage.tsx:433
-  { q: "Тост ок?", a: "куплен легенда", src: "ShopPage.tsx:286" }, // FILE:LINE ShopPage.tsx:286
-  { q: "Тост err?", a: "не хватает монет", src: "ShopPage.tsx:258" }, // FILE:LINE ShopPage.tsx:258
-  { q: "Хром эффект?", a: "РГБ glow", src: "ShopPage.tsx:228" }, // FILE:LINE ShopPage.tsx:228
-];
 
 
 
@@ -297,14 +191,19 @@ export function ShopPage() {
   const rootRef = useRef<HTMLDivElement>(null);
   const coinsRef = useRef<HTMLSpanElement>(null);
   const cardsRef = useRef<(HTMLDivElement | null)[]>([]);
+  const previewRef = useRef<HTMLDivElement>(null);
+  const inventoryBarRef = useRef<HTMLDivElement>(null);
 
   const [coins, setCoins] = useState(() => getCoins());
   const [inventory, setInventory] = useState<string[]>([]);
   const [equipped, setEquipped] = useState<string | null>(null);
+  // SHOP PREVIEW 42 — модалка 200px превью
+  const [previewSkin, setPreviewSkin] = useState<Skin | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [cosOwned, setCosOwned] = useState<string[]>([]);
   const [cosEquipped, setCosEquipped] = useState<Record<string,string>>({});
-  const [cosTab, setCosTab] = useState<"all"|CosmeticSlot|"prism"|"glacier"|"crystal"|"volcano"|"obsidian">("all");
-  const filteredCosmetics = useMemo(()=> cosTab==="all"? COSMETICS : cosTab==="prism"? COSMETICS.filter(x=>x.id.includes("prism")) : cosTab==="glacier"? COSMETICS.filter(x=>GLACIER_IDS_SET.has(x.id)) : cosTab==="crystal"? COSMETICS.filter(x=>CRYSTAL_IDS_SET.has(x.id)) : cosTab==="volcano"? COSMETICS.filter(x=>VOLCANO_IDS_SET.has(x.id)) : cosTab==="obsidian"? COSMETICS.filter(x=>OBSIDIAN_IDS_SET.has(x.id)) : COSMETICS.filter(x=>x.slot===cosTab), [cosTab]);
+  const [cosTab, setCosTab] = useState<"all"|CosmeticSlot|"prism"|"glacier"|"crystal"|"volcano"|"obsidian"|"forge">("all");
+  const filteredCosmetics = useMemo(()=> cosTab==="all"? COSMETICS : cosTab==="prism"? COSMETICS.filter(x=>x.id.includes("prism")) : cosTab==="glacier"? COSMETICS.filter(x=>GLACIER_IDS_SET.has(x.id)) : cosTab==="crystal"? COSMETICS.filter(x=>CRYSTAL_IDS_SET.has(x.id)) : cosTab==="volcano"? COSMETICS.filter(x=>VOLCANO_IDS_SET.has(x.id)) : cosTab==="obsidian"? COSMETICS.filter(x=>OBSIDIAN_IDS_SET.has(x.id)) : cosTab==="forge"? COSMETICS.filter(x=>FORGE_IDS_SET.has(x.id)) : COSMETICS.filter(x=>x.slot===cosTab), [cosTab]);
   const [dust, setDust] = useState(0);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const toastId = useRef(0);
@@ -393,7 +292,89 @@ export function ShopPage() {
     return () => { cancelled = true; };
   }, []);
 
-  /* анимация баланса при покупке (GSAP count-up) — reduced-motion: instant */
+  /* SHOP PREVIEW 42 — storage sync вкладок via window storage event */
+  useEffect(() => {
+    const syncFromStorage = () => {
+      try {
+        const invRaw = localStorage.getItem("magnum:shop:inventory");
+        const eqRaw = localStorage.getItem("magnum:shop:equipped");
+        if (invRaw) {
+          const arr = JSON.parse(invRaw) as string[];
+          if (Array.isArray(arr)) setInventory(arr.filter(x => typeof x === "string"));
+        }
+        if (eqRaw !== null) {
+          const v = JSON.parse(eqRaw) as string | null;
+          setEquipped(typeof v === "string" ? v : null);
+        }
+      } catch {}
+    };
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "magnum:shop:inventory" || e.key === "magnum:shop:equipped") syncFromStorage();
+    };
+    window.addEventListener("storage", onStorage);
+    // также sync через custom event для текущей вкладки
+    const onCustom = () => syncFromStorage();
+    window.addEventListener("magnum:shop:sync" as unknown as string, onCustom as EventListener);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("magnum:shop:sync" as unknown as string, onCustom as EventListener);
+    };
+  }, []);
+
+  // SHOP PREVIEW 42 — helpers для storage sync
+  const persistInventory = useCallback((next: string[]) => {
+    try {
+      localStorage.setItem("magnum:shop:inventory", JSON.stringify(next));
+      window.dispatchEvent(new Event("magnum:shop:sync"));
+    } catch {}
+  }, []);
+  const persistEquipped = useCallback((next: string | null) => {
+    try {
+      localStorage.setItem("magnum:shop:equipped", JSON.stringify(next));
+      window.dispatchEvent(new Event("magnum:shop:sync"));
+    } catch {}
+  }, []);
+
+  // SHOP PREVIEW 42 — модалка 200px open/close
+  const openPreview = useCallback((skin: Skin) => {
+    setPreviewSkin(skin);
+    setPreviewOpen(true);
+  }, []);
+  const closePreview = useCallback(() => {
+    setPreviewOpen(false);
+    window.setTimeout(() => setPreviewSkin(null), 220);
+  }, []);
+
+  useEffect(() => {
+    if (!previewOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") closePreview(); };
+    window.addEventListener("keydown", onKey);
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let ctx: gsap.Context | null = null;
+    if (previewRef.current) {
+      if (prefersReduced) {
+        gsap.set(previewRef.current, { y: 0, opacity: 1, clearProps: "transform" });
+      } else {
+        ctx = gsap.context(() => {
+          gsap.set(previewRef.current, { y: 20, opacity: 0, scale: 0.96 });
+          gsap.to(previewRef.current, { y: 0, opacity: 1, scale: 1, duration: 0.34, ease: "back.out(1.2)" });
+          // InventoryBar внутри модалки — stagger y20 0.08
+          gsap.set(`.${styles.inventoryBar} > *`, { y: 20, opacity: 0 });
+          gsap.to(`.${styles.inventoryBar} > *`, { y: 0, opacity: 1, stagger: 0.08, duration: 0.4, ease: "power2.out", delay: 0.12 });
+          // shimmer epic — золотой/фиолет шиммер для epic/legendary preview
+          if (previewSkin && (previewSkin.rarity === "epic" || previewSkin.rarity === "legendary")) {
+            gsap.to(previewRef.current!.querySelector(`.${styles.previewFace}`) as Element, { boxShadow: "0 0 24px rgba(255,204,0,0.45), 0 0 36px rgba(145,71,255,0.25)", duration: 1.1, yoyo: true, repeat: -1, ease: "sine.inOut" });
+          }
+        }, previewRef);
+      }
+    }
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      ctx?.revert();
+    };
+  }, [previewOpen, previewSkin, closePreview]);
+
+  
   useEffect(() => {
     const el = coinsRef.current;
     if (!el) return;
@@ -425,40 +406,50 @@ export function ShopPage() {
     };
   }, [coins]);
 
-  /* вход карточек — y24 stagger 0.12, reduced-motion, cleanup */
+  /* вход карточек — y20 stagger 0.08, reduced-motion, cleanup — SHOP PREVIEW 42 */
   useEffect(() => {
     if (!rootRef.current) return;
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const ctx = gsap.context(() => {
       if (prefersReduced) {
-        ScrollTrigger.batch(document.querySelectorAll('.card'), { onEnter: (batch: Element[]) => gsap.to(batch, { y: 0, opacity: 1, stagger: 0.12, duration: 0.55, ease: "power2.out" }), start: "top 92%", once: true });
+        ScrollTrigger.batch(document.querySelectorAll('.card'), { onEnter: (batch: Element[]) => gsap.to(batch, { y: 0, opacity: 1, stagger: 0.08, duration: 0.45, ease: "power2.out" }), start: "top 92%", once: true });
       gsap.set(`.${styles.header} > *`, { y: 0, opacity: 1, clearProps: "transform" });
         gsap.set(`.${styles.card}`, { y: 0, opacity: 1, clearProps: "transform" });
+        gsap.set(`.${styles.inventoryBar} > *`, { y: 0, opacity: 1, clearProps: "transform" });
         return;
       }
-      gsap.set(`.${styles.header} > *`, { y: 24, opacity: 0 });
-      gsap.to(`.${styles.header} > *`, { y: 0, opacity: 1, stagger: 0.12, duration: 0.55, ease: "power2.out", delay: 0.05 });
-      gsap.set(`.${styles.card}`, { y: 24, opacity: 0 });
-      gsap.to(`.${styles.card}`, { y: 0, opacity: 1, stagger: 0.12, duration: 0.55, ease: "power2.out", delay: 0.28 });
+      gsap.set(`.${styles.header} > *`, { y: 20, opacity: 0 });
+      gsap.to(`.${styles.header} > *`, { y: 0, opacity: 1, stagger: 0.08, duration: 0.5, ease: "power2.out", delay: 0.05 });
+      gsap.set(`.${styles.card}`, { y: 20, opacity: 0 });
+      gsap.to(`.${styles.card}`, { y: 0, opacity: 1, stagger: 0.08, duration: 0.5, ease: "power2.out", delay: 0.22 });
+      gsap.set(`.${styles.inventoryBar} > *`, { y: 20, opacity: 0 });
+      gsap.to(`.${styles.inventoryBar} > *`, { y: 0, opacity: 1, stagger: 0.08, duration: 0.45, ease: "power2.out", delay: 0.35 });
       gsap.set(`.${styles.cosCard}`, { y: 20, opacity: 0 });
       gsap.to(`.${styles.cosCard}`, { y: 0, opacity: 1, stagger: 0.08, duration: 0.5, ease: "power2.out", delay: 0.42 });
+      // SHOP PREVIEW 42 — shimmer epic: золотой/фиолет шиммер для epic/legendary
+      gsap.to(`.${styles.card}[data-rarity="epic"] .${styles.cardFace}, .${styles.card}[data-rarity="legendary"] .${styles.cardFace}`, { filter: "brightness(1.12)", duration: 1.0, yoyo: true, repeat: -1, ease: "sine.inOut", delay: 0.8 });
+      gsap.to(`.${styles.card}[data-rarity="legendary"]`, { boxShadow: "0 0 20px rgba(255,204,0,0.35), 0 0 32px rgba(255,204,0,0.18)", duration: 1.3, yoyo: true, repeat: -1, ease: "sine.inOut", delay: 1.0 });
+      // SKIN FORGE 42 — shimmer epic holo forge spring: conic gold-42-conic epic 1420 spin 3s + holo pulse
+      gsap.to(`[data-forge="1"][data-rarity="epic"], [data-forge="1"][data-rarity="legendary"]`, { boxShadow: "0 0 18px rgba(145,71,255,0.55), 0 0 32px rgba(145,71,255,0.25)", duration: 1.2, yoyo: true, repeat: -1, ease: "sine.inOut", delay: 1.1 });
+      gsap.to(`[data-forge="1"][data-rarity="legendary"]`, { scale: 1.015, duration: 1.6, yoyo: true, repeat: -1, ease: "sine.inOut", delay: 0.9 });
       gsap.set(`.${styles.bundleCard}`, { y: 24, opacity: 0 });
       gsap.to(`.${styles.bundleCard}`, { y: 0, opacity: 1, stagger: 0.1, duration: 0.52, ease: "power2.out", delay: 0.52 });
     }, rootRef);
     return () => ctx.revert();
   }, []);
 
-  /* hover RGB — chromatic lift + molten obsidian + volcano eruption */
+  /* hover RGB — chromatic lift + molten obsidian + volcano eruption + forge holo */
   const onCardEnter = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const isCrystal = (e.currentTarget as HTMLElement).dataset.crystal==="1";
     const isVolcano = (e.currentTarget as HTMLElement).dataset.volcano==="1";
     const isObsidian = (e.currentTarget as HTMLElement).dataset.obsidian==="1";
+    const isForge = (e.currentTarget as HTMLElement).dataset.forge==="1";
     gsap.to(e.currentTarget, {
       y: -4,
       scale: 1.02,
-      boxShadow: isObsidian ? "0 12px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,69,0,0.25), 0 0 22px rgba(255,69,0,0.28), 0 0 28px rgba(255,204,0,0.14)" : isCrystal ? "0 0 16px #38bdf8, 0 12px 32px rgba(0,0,0,0.45)" : isVolcano ? "0 0 16px #ff5722, 0 12px 32px rgba(0,0,0,0.45)" : "0 12px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,45,85,0.20), 0 0 22px rgba(255,45,85,0.20), 0 0 22px rgba(0,255,136,0.12), 0 0 28px rgba(255,204,0,0.10)",
-      borderColor: isObsidian ? "rgba(255,69,0,0.35)" : isCrystal ? "rgba(56,189,248,0.55)" : isVolcano ? "rgba(255,87,34,0.45)" : "rgba(255,45,85,0.35)",
+      boxShadow: isForge ? "0 12px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(145,71,255,0.25), 0 0 22px rgba(145,71,255,0.28), 0 0 28px rgba(255,204,0,0.14)" : isObsidian ? "0 12px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,69,0,0.25), 0 0 22px rgba(255,69,0,0.28), 0 0 28px rgba(255,204,0,0.14)" : isCrystal ? "0 0 16px #38bdf8, 0 12px 32px rgba(0,0,0,0.45)" : isVolcano ? "0 0 16px #ff5722, 0 12px 32px rgba(0,0,0,0.45)" : "0 12px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,45,85,0.20), 0 0 22px rgba(255,45,85,0.20), 0 0 22px rgba(0,255,136,0.12), 0 0 28px rgba(255,204,0,0.10)",
+      borderColor: isForge ? "rgba(145,71,255,0.35)" : isObsidian ? "rgba(255,69,0,0.35)" : isCrystal ? "rgba(56,189,248,0.55)" : isVolcano ? "rgba(255,87,34,0.45)" : "rgba(255,45,85,0.35)",
       duration: 0.28,
       ease: "power2.out",
       overwrite: true,
@@ -481,6 +472,43 @@ export function ShopPage() {
     setToasts((t) => [...t, { id, kind, text }]);
     window.setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3200);
   };
+
+  // SHOP PREVIEW 42 — confetti 80 — prefers-reduced-motion gate
+  const fireConfetti80 = useCallback((rarity: Rarity) => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.style.position = "fixed"; canvas.style.inset = "0"; canvas.style.pointerEvents = "none"; canvas.style.zIndex = "9999";
+      canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+      document.body.appendChild(canvas);
+      const ctx = canvas.getContext("2d")!;
+      const color = rarity === "legendary" ? "#ffcc00" : rarity === "epic" ? "#ffcc00" : "#9147ff";
+      const alt = rarity === "rare" ? "#9147ff" : "#ff2d55";
+      const parts = Array.from({ length: 80 }, () => ({
+        x: window.innerWidth / 2 + (Math.random() - 0.5) * 120,
+        y: window.innerHeight / 2,
+        vx: (Math.random() - 0.5) * 14,
+        vy: (Math.random() - 0.5) * 14 - 5,
+        life: 1, decay: 0.015 + Math.random() * 0.012,
+        c: Math.random() > 0.5 ? color : alt,
+        r: 3 + Math.random() * 3,
+      }));
+      const tick = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        let alive = false;
+        for (const p of parts) {
+          if (p.life <= 0) continue;
+          alive = true;
+          p.x += p.vx; p.y += p.vy; p.vy += 0.28; p.life -= p.decay;
+          ctx.globalAlpha = Math.max(0, p.life);
+          ctx.fillStyle = p.c;
+          ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+        }
+        if (alive) requestAnimationFrame(tick); else canvas.remove();
+      };
+      tick();
+    } catch {}
+  }, []);
 
   const buy = async (skin: Skin) => {
     if (!me) {
@@ -519,10 +547,13 @@ export function ShopPage() {
       const data = await res.json().catch(() => ({})) as { coins?: number; balance?: number; inventory?: string[]; equipped?: string | null };
       if (typeof data.coins === "number") setCoins(data.coins);
       else if (typeof data.balance === "number") setCoins(data.balance);
-      if (Array.isArray(data.inventory)) setInventory(data.inventory);
-      else setInventory((prev) => [...prev, skin.id]);
-      if (data.equipped !== undefined) setEquipped(data.equipped);
+      if (Array.isArray(data.inventory)) { setInventory(data.inventory); persistInventory(data.inventory); }
+      else { const next = [...inventory, skin.id]; setInventory(next); persistInventory(next); }
+      if (data.equipped !== undefined) { setEquipped(data.equipped); persistEquipped(data.equipped); }
       pushToast("ok", `${skin.name} куплен! Легенда в инвентаре.`);
+      // SHOP PREVIEW 42 — confetti 80 при покупке epic/legendary
+      if (skin.rarity === "epic" || skin.rarity === "legendary") fireConfetti80(skin.rarity);
+      closePreview();
     } catch {
       pushToast("err", "Сеть упала — не смогли купить");
     }
@@ -551,7 +582,7 @@ export function ShopPage() {
         return;
       }
       const data = await res.json().catch(() => ({})) as { equipped?: string | null };
-      setEquipped(data.equipped ?? skin.id);
+      setEquipped(data.equipped ?? skin.id); persistEquipped(data.equipped ?? skin.id);
       pushToast("ok", `${skin.name} надет. Братуха, ты красавчик.`);
     } catch {
       pushToast("err", "Сеть упала");
@@ -578,11 +609,11 @@ export function ShopPage() {
           });
         } catch {}
       }
-      setEquipped(null);
+      setEquipped(null); persistEquipped(null);
       pushToast("ok", "Скин снят. Голый магнум — тоже стиль.");
     } catch {
       // оптимистично снимаем даже без сети
-      setEquipped(null);
+      setEquipped(null); persistEquipped(null);
       pushToast("ok", "Скин снят. Голый магнум — тоже стиль.");
     }
   };
@@ -699,7 +730,6 @@ export function ShopPage() {
       const invIds = ((d as any).inventory as string[])||[];
       if(invIds.length) setCosOwned(invIds);
       else setCosOwned(v=>{ const toRemove=((d as any).consumed as string[])||[]; const filtered=v.filter(x=>!toRemove.includes(x)); return [...filtered, co.id]; });
-      // GSAP ForgeReveal: scale 0->1 rotate 5->0 0.5 + crystal pulse + confetti 80 #a8e8ff
       try{
         const el=document.querySelector('[data-forge-reveal]') as HTMLElement;
         if(el && !window.matchMedia("(prefers-reduced-motion: reduce)").matches){
@@ -727,7 +757,6 @@ export function ShopPage() {
       const invIds = ((d as any).inventory as string[])||[];
       if(invIds.length) setCosOwned(invIds);
       else setCosOwned(v=>{ const toRemove=((d as any).consumed as string[])||[]; const filtered=v.filter(x=>!toRemove.includes(x)); return [...filtered, co.id]; });
-      // FRAME VOLCANO GOLD eruption glow — conic-volcano spin 3s #ff5722 + GSAP spring pulse 2s + confetti 80 #ff5722
       try{
         const el=document.querySelector('[data-forge-reveal]') as HTMLElement;
         if(el && !window.matchMedia("(prefers-reduced-motion: reduce)").matches){
@@ -771,6 +800,34 @@ export function ShopPage() {
       pushToast("ok",`Скрафчено ${co.name} за 42 · 3×common ⛏️ molten`);
     }catch{ pushToast("err","Сеть упала"); }
   };
+  const craftForge = async (co: Cosmetic) => {
+    if(!me){ pushToast("err","Войди — нужен логин для крафта"); window.dispatchEvent(new CustomEvent("magnum:need-auth")); return; }
+    if(!FORGE_IDS_SET.has(co.id)){ pushToast("err","Только FORGE крафт 🔨"); return; }
+    if(dust < 42){ pushToast("err",`Нужно 42 пыли, у тебя ${dust} · пыли для FORGE`); return; }
+    try{
+      const r=await fetch("/magnum/api/shop/forge/craft",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({targetId:co.id})});
+      const d=await r.json().catch(()=>({})) as {dust?:number;balance?:number;error?:string;inventory?:string[]};
+      if(!r.ok){ pushToast("err", String((d as any).error||"Крафт не прошёл")); return; }
+      const newDust = (d as any).dust ?? (d as any).balance ?? dust-42;
+      setDust(newDust);
+      const invIds = ((d as any).inventory as string[])||[];
+      if(invIds.length) setCosOwned(invIds);
+      else setCosOwned(v=>[...v,co.id]);
+      try{
+        const el=document.querySelector('[data-forge-reveal]') as HTMLElement;
+        if(el && !window.matchMedia("(prefers-reduced-motion: reduce)").matches){
+          const gs=(await import("gsap")).default;
+          gs.fromTo(el,{scale:0,rotation:5,opacity:0},{scale:1,rotation:0,opacity:1,duration:0.5,ease:"back.out(1.7)"});
+          gs.to(el,{boxShadow:"0 0 16px #9147ff, 0 0 28px rgba(145,71,255,0.45)",duration:0.35,yoyo:true,repeat:1});
+          gs.to(el,{scale:1.04,duration:0.35,yoyo:true,repeat:1,delay:0.5});
+        }
+        const canvas=document.createElement('canvas'); canvas.style.position='fixed'; canvas.style.inset='0'; canvas.style.pointerEvents='none'; canvas.width=window.innerWidth; canvas.height=window.innerHeight; document.body.appendChild(canvas);
+        const ctx=canvas.getContext('2d')!; const parts=Array.from({length:80},()=>({x:window.innerWidth/2,y:window.innerHeight/2,vx:(Math.random()-0.5)*12,vy:(Math.random()-0.5)*12-4,life:1,decay:0.015+Math.random()*0.01}));
+        const tick=()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); let alive=false; for(const p of parts){ if(p.life<=0) continue; alive=true; p.x+=p.vx; p.y+=p.vy; p.vy+=0.25; p.life-=p.decay; ctx.globalAlpha=Math.max(0,p.life); ctx.fillStyle='#9147ff'; ctx.beginPath(); ctx.arc(p.x,p.y,3,0,Math.PI*2); ctx.fill(); } if(alive) requestAnimationFrame(tick); else canvas.remove(); }; tick();
+      }catch{}
+      pushToast("ok",`Скрафчено ${co.name} за 42 пыли 🔨 holo`);
+    }catch{ pushToast("err","Сеть упала"); }
+  };
 
   const equippedSkin = useMemo(
     () => SKINS.find((s) => s.id === equipped) ?? null,
@@ -783,10 +840,11 @@ export function ShopPage() {
     <div className={styles.shop} ref={rootRef}>
       {/* шапка */}
       <header className={styles.header}>
-        <span className={styles.badge}>Магазин • Косметика 42</span>
-        <h1 className={styles.title}>СКИНЫ ДЛЯ БРАТУХ</h1>
+        <span className={styles.badge}>Магазин 42</span>
+        <h1 className={styles.title}>МАГАЗИН БРАТУХ</h1>
         <p className={styles.subtitle}>
-          12 аватаров в стиле 42. Фармим монеты в играх — качаем лук.
+          Два разных вида предметов: <b>аватары</b> — эмодзи-персонаж, у тебя всегда один надетый.
+          <b> Косметика</b> — рамка, баннер и титул: по одному предмету в каждом слоте, они видны в публичных топах.
         </p>
         {!me && (
           <div style={{ margin: "14px 0", padding: 14, border: "1px solid rgba(255,204,0,0.3)", borderRadius: 12, background: "rgba(255,204,0,0.08)" }}>
@@ -812,20 +870,20 @@ export function ShopPage() {
         ))}
       </div>
 
-      {/* текущий сетап */}
-      <section className={styles.setup} aria-label="Текущий аватар">
+      {/* текущий сетап — EquippedFrame glow conic-gradient */}
+      <section className={styles.setup} aria-label="Текущий аватар и надетая косметика">
         <div className={styles.avatarSlot}>
           {equippedSkin ? (
             <div
-              className={styles.avatarFace}
+              className={`${styles.avatarFace} ${styles.equippedFrame}`}
               style={{ background: equippedSkin.bg }}
               data-rarity={equippedSkin.rarity}
             >
-              <span className={styles.avatarEmoji}>{equippedSkin.emoji}</span>
+              <span className={styles.avatarEmoji} style={{ fontSize: "48px" }}>{equippedSkin.emoji}</span>
             </div>
           ) : (
             <div className={`${styles.avatarFace} ${styles.avatarEmpty}`}>
-              <span className={styles.avatarEmoji}>👤</span>
+              <span className={styles.avatarEmoji} style={{ fontSize: "48px" }}>👤</span>
             </div>
           )}
           <span className={styles.slotLabel}>
@@ -838,7 +896,7 @@ export function ShopPage() {
           )}
         </div>
 
-        {/* инвентарь */}
+        {/* InventoryBar скролл + equipped glow conic-gradient — SHOP PREVIEW 42 */}
         <div className={styles.inventory}>
           <h2 className={styles.invTitle}>
             Инвентарь <span className={styles.invCount}>{inventory.length}/{SKINS.length}</span>
@@ -848,17 +906,19 @@ export function ShopPage() {
               Пусто, как в кошельке до зарплаты. Купи первый скин ниже 👇
             </p>
           ) : (
-            <div className={styles.invGrid}>
+            <div className={styles.inventoryBar} ref={inventoryBarRef} role="list" aria-label="InventoryBar — скролл инвентаря">
               {SKINS.filter((s) => owned(s.id)).map((s) => (
                 <button
                   key={s.id}
                   type="button"
-                  className={`${styles.invItem} ${equipped === s.id ? styles.invItemActive : ""}`}
-                  style={{ ["--rc" as string]: RARITY_META[s.rarity].color }}
+                  role="listitem"
+                  className={`${styles.invItem} ${equipped === s.id ? styles.invItemActive : ""} ${equipped === s.id ? styles.equippedGlow : ""}`}
+                  style={{ ["--rc" as string]: RARITY_META[s.rarity].color } as React.CSSProperties}
                   onClick={() => (equipped === s.id ? unequip() : equip(s))}
-                  title={equipped === s.id ? "Снять" : "Надеть"}
+                  title={equipped === s.id ? "Снять" : "Надеть — клик для превью"}
+                  onDoubleClick={() => openPreview(s)}
                 >
-                  <span className={styles.invEmoji}>{s.emoji}</span>
+                  <span className={styles.invEmoji} style={{ fontSize: "48px" }}>{s.emoji}</span>
                   <span className={styles.invName}>{s.name}</span>
                   {equipped === s.id && <span className={styles.invOn}>НАДЕТ</span>}
                 </button>
@@ -868,32 +928,40 @@ export function ShopPage() {
         </div>
       </section>
 
-      {/* сетка магазина */}
-      <section className={styles.grid} aria-label="Скины в продаже">
+      {/* сетка магазина — SkinCard + клик открывает модалку 200px */}
+      <h2 className={styles.cosTitle} style={{ marginTop: 8 }}>1. АВАТАРЫ — 12 эмодзи-персонажей</h2>
+      <p className={styles.cosSub}>Один надетый аватар. Это не рамка и не титул — те ниже, в «Косметике 42».</p>
+      <section className={styles.grid} aria-label="Аватары в продаже — клик открывает превью 200px">
         {SKINS.map((skin, i) => {
           const meta = RARITY_META[skin.rarity];
           const isOwned = owned(skin.id);
           const canAfford = coins >= meta.price;
+          const badgeStyle = skin.rarity === "rare" ? { background: "rgba(145,71,255,0.18)", color: "#9147ff", borderColor: "#9147ff" } : skin.rarity === "epic" || skin.rarity === "legendary" ? { background: "rgba(255,204,0,0.18)", color: "#ffcc00", borderColor: "#ffcc00" } : { background: "rgba(154,164,178,0.18)", color: meta.color, borderColor: meta.color };
           return (
             <div
               key={skin.id}
-              className={styles.card}
+              className={`${styles.card} ${styles.skinCard} ${isOwned && equipped === skin.id ? styles.equippedGlow : ""}`}
               ref={(el) => { cardsRef.current[i] = el; }}
-              style={{ ["--rc" as string]: meta.color, ["--rg" as string]: meta.color }}
+              style={{ ["--rc" as string]: meta.color, ["--rg" as string]: meta.color } as React.CSSProperties}
               data-rarity={skin.rarity}
               onMouseEnter={onCardEnter}
               onMouseLeave={onCardLeave}
+              onClick={() => openPreview(skin)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") openPreview(skin); }}
+              aria-label={`Превью ${skin.name} — ${meta.label} ${meta.price}`}
             >
               <div className={styles.cardGlow} aria-hidden />
               <div className={styles.cardFace} style={{ background: skin.bg }}>
-                <span className={styles.cardEmoji}>{skin.emoji}</span>
+                <span className={styles.cardEmoji} style={{ fontSize: "48px" }}>{skin.emoji}</span>
               </div>
               <div className={styles.cardBody}>
                 <div className={styles.cardTop}>
                   <span className={styles.cardName}>{skin.name}</span>
                   <span
                     className={styles.rarityTag}
-                    style={{ color: meta.color, borderColor: meta.color }}
+                    style={badgeStyle}
                   >
                     {meta.label}
                   </span>
@@ -901,11 +969,11 @@ export function ShopPage() {
                 <p className={styles.cardTag}>{skin.tagline}</p>
                 {isOwned ? (
                   equipped === skin.id ? (
-                    <button type="button" className={styles.btnWear} onClick={unequip}>
+                    <button type="button" className={styles.btnWear} onClick={(e) => { e.stopPropagation(); unequip(); }}>
                       ✅ Надет — снять
                     </button>
                   ) : (
-                    <button type="button" className={styles.btnWear} onClick={() => equip(skin)}>
+                    <button type="button" className={styles.btnWear} onClick={(e) => { e.stopPropagation(); equip(skin); }}>
                       Надеть
                     </button>
                   )
@@ -913,7 +981,7 @@ export function ShopPage() {
                   <button
                     type="button"
                     className={`${styles.btnBuy} ${canAfford ? "" : styles.btnLocked}`}
-                    onClick={() => buy(skin)}
+                    onClick={(e) => { e.stopPropagation(); buy(skin); }}
                   >
                     🪙 {meta.price}
                   </button>
@@ -924,14 +992,64 @@ export function ShopPage() {
         })}
       </section>
 
-      {/* косметика 92 — рамки/баннеры/титулы */}
+      {/* SHOP PREVIEW 42 — модалка 200px: превью скина + InventoryBar скролл */}
+      {previewOpen && previewSkin && (
+        <div className={styles.modalOverlay} onClick={closePreview} role="dialog" aria-modal="true" aria-label={`Превью ${previewSkin.name}`}>
+          <div className={styles.modalContent} ref={previewRef} onClick={(e) => e.stopPropagation()} data-testid="shop-preview-modal">
+            <button type="button" className={styles.modalClose} onClick={closePreview} aria-label="Закрыть превью">×</button>
+            <div className={styles.previewFace} style={{ background: previewSkin.bg, width: "200px", height: "200px" }} data-rarity={previewSkin.rarity}>
+              <span style={{ fontSize: "48px", filter: "drop-shadow(0 8px 16px rgba(0,0,0,0.55))" }}>{previewSkin.emoji}</span>
+            </div>
+            <div className={styles.previewMeta}>
+              <div className={styles.previewName}>{previewSkin.name}</div>
+              <span className={styles.rarityTag} style={previewSkin.rarity === "rare" ? { background: "rgba(145,71,255,0.18)", color: "#9147ff", borderColor: "#9147ff" } : previewSkin.rarity === "epic" || previewSkin.rarity === "legendary" ? { background: "rgba(255,204,0,0.18)", color: "#ffcc00", borderColor: "#ffcc00" } : { background: "rgba(154,164,178,0.18)", color: RARITY_META[previewSkin.rarity].color, borderColor: RARITY_META[previewSkin.rarity].color }}>{RARITY_META[previewSkin.rarity].label}</span>
+              <p className={styles.previewTagline}>{previewSkin.tagline}</p>
+              <div className={styles.previewPrice}>🪙 {RARITY_META[previewSkin.rarity].price}</div>
+              {inventory.includes(previewSkin.id) ? (
+                equipped === previewSkin.id ? (
+                  <button type="button" className={styles.btnWear} onClick={() => { unequip(); }}>✅ Надет — снять</button>
+                ) : (
+                  <button type="button" className={styles.btnWear} onClick={() => equip(previewSkin)}>Надеть</button>
+                )
+              ) : (
+                <button type="button" className={`${styles.btnBuy} ${coins >= RARITY_META[previewSkin.rarity].price ? "" : styles.btnLocked}`} onClick={() => buy(previewSkin)}>🪙 {RARITY_META[previewSkin.rarity].price} — купить</button>
+              )}
+            </div>
+            {/* InventoryBar скролл внутри модалки */}
+            <div className={styles.modalInventoryBarWrap}>
+              <div className={styles.modalInventoryLabel}>Инвентарь — скролл {inventory.length}/{SKINS.length}</div>
+              <div className={styles.inventoryBar} role="list">
+                {SKINS.filter(s => inventory.includes(s.id)).length === 0 ? (
+                  <span className={styles.invEmpty} style={{ fontSize: "12px" }}>Пусто — купи первый скин</span>
+                ) : (
+                  SKINS.filter(s => inventory.includes(s.id)).map(s => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      role="listitem"
+                      className={`${styles.invItem} ${equipped === s.id ? styles.invItemActive : ""} ${equipped === s.id ? styles.equippedGlow : ""}`}
+                      style={{ ["--rc" as string]: RARITY_META[s.rarity].color } as React.CSSProperties}
+                      onClick={() => setPreviewSkin(s)}
+                    >
+                      <span className={styles.invEmoji} style={{ fontSize: "32px" }}>{s.emoji}</span>
+                      <span className={styles.invName}>{s.name}</span>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* косметика 104 — рамки/баннеры/титулы */}
       <section className={styles.cosmetics} aria-label="Косметика 42">
         <div className={styles.cosHead}>
-          <h2 className={styles.cosTitle}>КОСМЕТИКА 42 — рамки · баннеры · титулы</h2>
-          <p className={styles.cosSub}>92 предмета (32 + 12 PRISM + 12 GLACIER + 12 CRYSTAL + 12 VOLCANO + 12 OBSIDIAN) · пыль {dust} · Neon · без localStorage</p>
+          <h2 className={styles.cosTitle}>2. КОСМЕТИКА 42 — рамки · баннеры · титулы</h2>
+          <p className={styles.cosSub}>104 предмета (32 + 12 PRISM + 12 GLACIER + 12 CRYSTAL + 12 VOLCANO + 12 OBSIDIAN + 12 FORGE) · пыль {dust} · Neon · без localStorage</p>
           <div className={styles.cosTabs} role="tablist">
-            {(["all","frame","banner","title","prism","glacier","crystal","volcano","obsidian"] as const).map(t => (
-              <button key={t} type="button" role="tab" aria-selected={cosTab===t} className={`${styles.cosTab} ${cosTab===t?styles.cosTabOn:""}`} onClick={()=>setCosTab(t)}>{t==="all"?"Все":t==="frame"?"Рамки":t==="banner"?"Баннеры":t==="prism"?"PRISM 12":t==="glacier"?"GLACIER 12":t==="crystal"?"CRYSTAL 12":t==="volcano"?"VOLCANO 12 🌋":t==="obsidian"?"OBSIDIAN 12 ⛏️":"Титулы"}</button>
+            {(["all","frame","banner","title","prism","glacier","crystal","volcano","obsidian","forge"] as const).map(t => (
+              <button key={t} type="button" role="tab" aria-selected={cosTab===t} className={`${styles.cosTab} ${cosTab===t?styles.cosTabOn:""}`} onClick={()=>setCosTab(t)}>{t==="all"?"Все":t==="frame"?"Рамки":t==="banner"?"Баннеры":t==="prism"?"PRISM 12":t==="glacier"?"GLACIER 12":t==="crystal"?"CRYSTAL 12":t==="volcano"?"VOLCANO 12 🌋":t==="obsidian"?"OBSIDIAN 12 ⛏️":t==="forge"?"FORGE 12 🔨":"Титулы"}</button>
             ))}
           </div>
         </div>
@@ -944,31 +1062,34 @@ export function ShopPage() {
             const isCrystal = CRYSTAL_IDS_SET.has(co.id);
             const isVolcano = VOLCANO_IDS_SET.has(co.id);
             const isObsidian = OBSIDIAN_IDS_SET.has(co.id);
+            const isForge = FORGE_IDS_SET.has(co.id);
             const can = coins >= co.price;
             const isCrystalEpic = isCrystal && co.rarity==="legendary";
             const isVolcanoGold = isVolcano && co.rarity==="legendary";
             const isObsidianGold = isObsidian && co.rarity==="legendary";
+            const isForgeGold = isForge && co.rarity==="legendary";
+            const isForgeHolo = isForge && co.rarity==="epic";
             return (
-              <div key={co.id} className={`${styles.cosCard} ${isEq?styles.cosCardEq:""} ${isPrism?styles.cosCardPrism||"":""} ${isGlacier?styles.cosCardGlacier||"":""} ${isGlacier && co.rarity==="legendary"?styles.cosCardFrost||"":""} ${isCrystal?styles.cosCardCrystal||"":""} ${isCrystalEpic?styles.cosCardCrystalSpin||"":""} ${isVolcano?styles.cosCardVolcano||"":""} ${isVolcanoGold?styles.cosCardVolcanoGold||"":""} ${isObsidian?styles.cosCardObsidian||"":""} ${isObsidianGold?styles.cosCardObsidianGold||"":""}`} data-rarity={co.rarity} data-crystal={isCrystal?1:0} data-volcano={isVolcano?1:0} data-obsidian={isObsidian?1:0} onMouseEnter={onCardEnter} onMouseLeave={onCardLeave}>
-                <div className={styles.cosPreview} style={co.slot==="banner"?{background:co.style}:{border:co.style, background:"rgba(255,255,255,0.04)", boxShadow: isEq && isCrystal ? "0 0 24px #38bdf8" : isEq && isVolcano ? "0 0 16px #ff5722, 0 0 28px rgba(255,87,34,0.35)" : isEq && isObsidian ? "0 0 16px #ff4500, 0 0 28px rgba(255,69,0,0.35)" : isVolcanoGold ? "0 0 16px #ff5722" : isObsidianGold ? "0 0 16px #ff4500" : undefined, backdropFilter: (isEq && isCrystal) || (isEq && isVolcano) || (isEq && isObsidian) ? "blur(6px)" : undefined} as any}>
-                  <span className={styles.cosName}>{co.name}{isPrism?"":isGlacier?" ❄️":isCrystal?" 💎":isVolcano?" 🌋":isObsidian?" ⛏️":""}</span>
-                  <span className={styles.cosSlot}>{co.slot}{isPrism?" · prism":isGlacier?" · glacier":isCrystal?" · crystal":isVolcano?" · volcano":isObsidian?" · obsidian":""}</span>
+              <div key={co.id} className={`${styles.cosCard} ${isEq?styles.cosCardEq:""} ${isPrism?styles.cosCardPrism||"":""} ${isGlacier?styles.cosCardGlacier||"":""} ${isGlacier && co.rarity==="legendary"?styles.cosCardFrost||"":""} ${isCrystal?styles.cosCardCrystal||"":""} ${isCrystalEpic?styles.cosCardCrystalSpin||"":""} ${isVolcano?styles.cosCardVolcano||"":""} ${isVolcanoGold?styles.cosCardVolcanoGold||"":""} ${isObsidian?styles.cosCardObsidian||"":""} ${isObsidianGold?styles.cosCardObsidianGold||"":""} ${isForge?styles.cosCardForge||"":""} ${isForgeGold?styles.cosCardForgeGold||"":""}`} data-rarity={co.rarity} data-crystal={isCrystal?1:0} data-volcano={isVolcano?1:0} data-obsidian={isObsidian?1:0} data-forge={isForge?1:0} onMouseEnter={onCardEnter} onMouseLeave={onCardLeave}>
+                <div className={styles.cosPreview} style={co.slot==="banner"?{background:co.style}:{border:co.style, background:"rgba(255,255,255,0.04)", boxShadow: isEq && isCrystal ? "0 0 24px #38bdf8" : isEq && isVolcano ? "0 0 16px #ff5722, 0 0 28px rgba(255,87,34,0.35)" : isEq && isObsidian ? "0 0 16px #ff4500, 0 0 28px rgba(255,69,0,0.35)" : isEq && isForge ? "0 0 16px #9147ff, 0 0 28px rgba(145,71,255,0.35)" : isVolcanoGold ? "0 0 16px #ff5722" : isObsidianGold ? "0 0 16px #ff4500" : isForgeGold ? "0 0 16px #9147ff" : isForgeHolo ? "0 0 12px #9147ff" : undefined, backdropFilter: (isEq && isCrystal) || (isEq && isVolcano) || (isEq && isObsidian) || (isEq && isForge) ? "blur(6px)" : undefined, animation: isForgeGold ? "forgeSpin 3s linear infinite" : isForgeHolo ? "forgeHoloShimmer 2s ease-in-out infinite" : undefined} as any}>
+                  <span className={styles.cosName}>{co.name}{isPrism?"":isGlacier?" ❄️":isCrystal?" 💎":isVolcano?" 🌋":isObsidian?" ⛏️":isForge?" 🔨":""}</span>
+                  <span className={styles.cosSlot}>{co.slot}{isPrism?" · prism":isGlacier?" · glacier":isCrystal?" · crystal":isVolcano?" · volcano":isObsidian?" · obsidian":isForge?" · forge":""}</span>
                 </div>
-                <div className={styles.cosMeta}><span className={styles.cosRarity} style={{color:RARITY_META[co.rarity].color}}>{RARITY_META[co.rarity].label}</span><span className={styles.cosPrice}>🪙 {co.price}{isPrism?" · пыль":isGlacier && co.rarity==="legendary"?" · frost ❄️":isCrystal && co.rarity==="legendary"?" · crystal 3s":isVolcano && co.rarity==="legendary"?" · volcano 3s 🌋":isObsidian && co.rarity==="legendary"?" · molten 3s ⛏️":isObsidian?" · obsidian":isVolcano?" · volcano":""}</span></div>
+                <div className={styles.cosMeta}><span className={styles.cosRarity} style={{color:RARITY_META[co.rarity].color}}>{RARITY_META[co.rarity].label}</span><span className={styles.cosPrice}>🪙 {co.price}{isPrism?" · пыль":isGlacier && co.rarity==="legendary"?" · frost ❄️":isCrystal && co.rarity==="legendary"?" · crystal 3s":isVolcano && co.rarity==="legendary"?" · volcano 3s 🌋":isObsidian && co.rarity==="legendary"?" · molten 3s ⛏️":isForge && co.rarity==="legendary"?" · holo 3s 🔨":isForge && co.rarity==="epic"?" · holo 🔨":isForge?" · forge":isObsidian?" · obsidian":isVolcano?" · volcano":""}</span></div>
                 {isOwned ? (
                   <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                     {isEq ? <button type="button" className={styles.btnWear} onClick={()=>equipCosmetic(co)}>✅ Надет</button> : <button type="button" className={styles.btnWear} onClick={()=>equipCosmetic(co)}>Надеть</button>}
-                    <button type="button" className={styles.btnGhost} onClick={()=>dismantle(co)} title="Разобрать → пыль">♻️ +{OBSIDIAN_IDS_SET.has(co.id) ? (co.rarity==="legendary"?420:co.rarity==="epic"?100:co.rarity==="rare"?42:14) : CRYSTAL_IDS_SET.has(co.id) ? (co.rarity==="legendary"?420:co.rarity==="epic"?100:co.rarity==="rare"?42:14) : GLACIER_IDS_SET.has(co.id) ? (co.rarity==="legendary"?420:co.rarity==="epic"?100:co.rarity==="rare"?42:14) : VOLCANO_IDS_SET.has(co.id) ? (co.rarity==="legendary"?420:co.rarity==="epic"?100:co.rarity==="rare"?42:14) : co.rarity==="legendary"?420:co.rarity==="epic"?142:co.rarity==="rare"?42:14}✨</button>
+                    <button type="button" className={styles.btnGhost} onClick={()=>dismantle(co)} title="Разобрать → пыль">♻️ +{FORGE_IDS_SET.has(co.id) ? 100 : OBSIDIAN_IDS_SET.has(co.id) ? (co.rarity==="legendary"?420:co.rarity==="epic"?100:co.rarity==="rare"?42:14) : CRYSTAL_IDS_SET.has(co.id) ? (co.rarity==="legendary"?420:co.rarity==="epic"?100:co.rarity==="rare"?42:14) : GLACIER_IDS_SET.has(co.id) ? (co.rarity==="legendary"?420:co.rarity==="epic"?100:co.rarity==="rare"?42:14) : VOLCANO_IDS_SET.has(co.id) ? (co.rarity==="legendary"?420:co.rarity==="epic"?100:co.rarity==="rare"?42:14) : co.rarity==="legendary"?420:co.rarity==="epic"?142:co.rarity==="rare"?42:14}✨</button>
                   </div>
-                ) : isPrism ? <button type="button" className={`${styles.btnBuy} ${dust>=co.price?"":styles.btnLocked}`} onClick={()=>craftPrism(co)}>✨ {co.price} пыль</button> : isGlacier ? <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>craftGlacier(co)}>❄️ {co.price} {co.rarity==="rare"?"· крафт 3×common 42":""}</button> : isCrystal ? <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>craftCrystal(co)}>💎 {co.price} {co.rarity==="rare"?"· крафт 3×common 42":co.rarity==="epic"?"· крафт 3×uncommon 142":""}</button> : isVolcano ? <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>craftVolcano(co)}>🌋 {co.price}{co.rarity==="rare"?" · крафт 3×common 42 🌋":""}</button> : isObsidian ? <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>craftObsidian(co)}>⛏️ {co.price}{co.rarity==="rare"?" · крафт 3×common 42 ⛏️":""}</button> : <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>buyCosmetic(co)}>🪙 {co.price}</button>}
+                ) : isPrism ? <button type="button" className={`${styles.btnBuy} ${dust>=co.price?"":styles.btnLocked}`} onClick={()=>craftPrism(co)}>✨ {co.price} пыль</button> : isGlacier ? <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>craftGlacier(co)}>❄️ {co.price} {co.rarity==="rare"?"· крафт 3×common 42":""}</button> : isCrystal ? <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>craftCrystal(co)}>💎 {co.price} {co.rarity==="rare"?"· крафт 3×common 42":co.rarity==="epic"?"· крафт 3×uncommon 142":""}</button> : isVolcano ? <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>craftVolcano(co)}>🌋 {co.price}{co.rarity==="rare"?" · крафт 3×common 42 🌋":""}</button> : isObsidian ? <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>craftObsidian(co)}>⛏️ {co.price}{co.rarity==="rare"?" · крафт 3×common 42 ⛏️":""}</button> : isForge ? <button type="button" className={`${styles.btnBuy} ${dust>=42?"":styles.btnLocked}`} onClick={()=>craftForge(co)}>🔨 42 пыль</button> : <button type="button" className={`${styles.btnBuy} ${can?"":styles.btnLocked}`} onClick={()=>buyCosmetic(co)}>🪙 {co.price}</button>}
               </div>
             );
           })}
         </div>
-        {cosOwned.length>0 && <p className={styles.cosHint}>В инвентаре: {cosOwned.length}/92 · пыль: {dust} · разбор: common 14 / rare 42 / epic 100(142 PRISM)/420 · крафт PRISM за пыль · GLACIER 3×common→uncommon 42 · CRYSTAL 3×common→uncommon 42 / 3×uncommon→rare 142 · VOLCANO 3×common→uncommon 42 🌋 · OBSIDIAN 3×common→uncommon 42 ⛏️ · verified -42/нед 💎</p>}
+        {cosOwned.length>0 && <p className={styles.cosHint}>В инвентаре: {cosOwned.length}/104 · пыль: {dust} · разбор: FORGE 100 ✨ / common 14 / rare 42 / epic 100(142 PRISM)/420 · крафт FORGE 42 пыль 🔨 · PRISM за пыль · GLACIER 3×common→uncommon 42 · CRYSTAL 3×common→uncommon 42 / 3×uncommon→rare 142 · VOLCANO 3×common→uncommon 42 🌋 · OBSIDIAN 3×common→uncommon 42 ⛏️ · verified -42/нед 💎</p>}
       </section>
 
-      {/* бандлы 8 — со скидкой, Neon-покупка */}
+      {}
       <section className={styles.bundles} aria-label="Наборы 42 — выгодно">
         <div className={styles.cosHead}>
           <h2 className={styles.cosTitle}>НАБОРЫ 42 — 8 бандлов со скидкой</h2>

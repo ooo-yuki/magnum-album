@@ -14,13 +14,16 @@ import { PromoPopup } from "./PromoPopup";
 import { VipActivatedPopup } from "./VipActivatedPopup";
 import { DailyStreakPopup } from "./DailyStreakPopup";
 import { FunnelActivationNudge } from "./FunnelActivationNudge";
+import { StreakReviveBanner } from "./StreakReviveBanner";
 import { usePresaveTracker } from "../lib/presaveTracker";
 import { StickyPresaveBar } from "./StickyPresaveBar";
 import { ExitIntentPresave } from "./ExitIntentPresave";
+import { PostPresaveBridge } from "./PostPresaveBridge";
 import styles from "./Layout.module.css";
 
 const NAV_ITEMS = [
   { to: "/magnum", label: "Главная" },
+  { to: "/magnum/clip-battle", label: "Клип-баттл 42" },
   { to: "/magnum/board", label: "Доска 42" },
   { to: "/magnum/recaps", label: "Пересказы" },
   { to: "/magnum/squad", label: "Батальон 42" },
@@ -30,6 +33,7 @@ const NAV_ITEMS = [
   { to: "/magnum/tour", label: "Тур 42" },
   { to: "/magnum/eco", label: "Эко-рейтинг" },
   { to: "/magnum/gallery", label: "Галерея 42" },
+  { to: "/magnum/radio", label: "Радио 42" },
   { to: "/magnum/mining", label: "Майнинг" },
   { to: "/magnum/presave-rating", label: "Рейтинг пресейва" },
   { to: "/magnum/ideas", label: "Идеи 42" },
@@ -47,7 +51,6 @@ export function Layout() {
 
   const openAiBot = () => window.dispatchEvent(new CustomEvent("open-aibot"));
 
-  // close on route change + nav-indicator-gsap pulse (gsap.context + reduced-motion gate)
   useEffect(() => {
     setMenuOpen(false);
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -75,7 +78,6 @@ export function Layout() {
     return () => window.removeEventListener("keydown", onKey);
   }, [menuOpen]);
 
-  // drawer animation — gsap.context + reduced-motion + set()/to() (white-screen safe)
   useEffect(() => {
     if (!drawerRef.current || !backdropRef.current) return;
     if (!menuOpen) return;
@@ -199,6 +201,7 @@ export function Layout() {
               </button>
               <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
                 <AuthStatus />
+                <div style={{ marginTop: 12 }}><StreakReviveBanner surface="Drawer" /></div>
               </div>
             </div>
             <a
@@ -223,6 +226,7 @@ export function Layout() {
       <ScrollToTop />
       <Footer />
       <AiBot />
+      <PostPresaveBridge />
       <PromoPopup />
       <VipActivatedPopup />
       <DailyStreakPopup />

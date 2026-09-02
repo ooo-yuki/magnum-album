@@ -33,7 +33,6 @@ export function Hero({ variant: variantProp }: { variant?: ABVariant }) {
     setVariant(getABVariant());
   }, [variantProp]);
 
-  // live presave counter — visible without scroll on mobile (Neon-backed, not LS)
   useEffect(() => {
     let cancelled = false;
     fetch("/magnum/api/presave/stats", { credentials: "include" })
@@ -48,6 +47,8 @@ export function Hero({ variant: variantProp }: { variant?: ABVariant }) {
 
   const handlePresave = () => {
     try { localStorage.setItem("presave_done", "1"); } catch {}
+    try { sessionStorage.setItem("magnum:post-presave-bridge-at", String(Date.now())); } catch {}
+    try { window.dispatchEvent(new CustomEvent("magnum:presave")); } catch {}
     fetch("/magnum/api/presave/click", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: PRESAVE_URL, ts: Date.now(), variant }) }).catch(() => {});
   };
 
@@ -92,7 +93,6 @@ export function Hero({ variant: variantProp }: { variant?: ABVariant }) {
         return;
       }
 
-      // GSAP entrance y24 stagger 0.12 — task spec
       gsap.set(entranceEls, { y: 24, opacity: 0 });
       gsap.to(entranceEls, {
         y: 0,
@@ -137,7 +137,6 @@ export function Hero({ variant: variantProp }: { variant?: ABVariant }) {
         }
       }
 
-      // hover RGB — GSAP textShadow / filter split on buttons
       const hoverEls: HTMLElement[] = [];
       if (ctaRef.current) {
         ctaRef.current.querySelectorAll<HTMLElement>(`a`).forEach((el) => hoverEls.push(el));
@@ -262,7 +261,6 @@ export function Hero({ variant: variantProp }: { variant?: ABVariant }) {
     }, sectionRef);
 
     return () => {
-      // cleanup hover listeners + gsap context
       (sectionRef.current as unknown as { _heroHoverCleanup?: () => void })?._heroHoverCleanup?.();
       ctx.revert();
     };
@@ -293,7 +291,7 @@ export function Hero({ variant: variantProp }: { variant?: ABVariant }) {
 
       <p className={styles.tagline} ref={taglineRef}>{isB ? `${shownCount} пресейвов · стань частью 42` : "Мультижанровый захват — от сада до чартов"}</p>
 
-      {/* visible counter without scroll — mobile-first, Neon-backed */}
+      {}
       <div
         data-testid="hero-presave-counter"
         aria-live="polite"
@@ -316,6 +314,45 @@ export function Hero({ variant: variantProp }: { variant?: ABVariant }) {
       >
         <span aria-hidden>🔥</span> {shownCount}/42 пресейвов · {shownCount >= 42 ? "дроп готов!" : `осталось ${42 - shownCount} мест`}
         <span style={{ background: "#ffcc00", color: "#111", padding: "0.1rem 0.38rem", borderRadius: 999, fontSize: "0.68rem", fontWeight: 900 }}>+42</span>
+      </div>
+
+      {/* chat-тизер: соц-воронка мертва 22 live → 0 чатов/фолловов → CTA без скролла */}
+      <div
+        data-testid="hero-chat-teaser"
+        style={{
+          marginTop: "0.85rem",
+          display: "flex",
+          alignItems: "center",
+          gap: "0.65rem",
+          flexWrap: "wrap",
+          justifyContent: "center",
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
+        <a
+          href="/magnum/presave-rating?chat=1#chat"
+          data-testid="hero-chat-link"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "0.5rem 0.9rem",
+            borderRadius: 999,
+            background: "rgba(255,204,0,0.12)",
+            border: "1px solid rgba(255,204,0,0.28)",
+            color: "#ffcc00",
+            fontWeight: 800,
+            fontSize: "0.78rem",
+            textDecoration: "none",
+            boxShadow: "0 0 16px rgba(255,204,0,0.14)",
+          }}
+        >
+          💬 Чат 42 — {shownCount >= 7 ? "братухи онлайн" : "22 онлайн"} · напиши первым →
+        </a>
+        <span style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.42)", fontWeight: 700 }}>
+          1 клик в чат = +взаимка · фоллови прямо из сообщения
+        </span>
       </div>
 
       <div className={styles.cta} ref={ctaRef}>
