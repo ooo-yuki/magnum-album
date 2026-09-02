@@ -1,4 +1,5 @@
-// ws.ts — WebSocket helper with ABCD lobby, heartbeat 25s, reconnect + hot-seat fallback (volcano x11)
+// ws.ts — WebSocket helper: ABCD-лобби, heartbeat 25с, реконнект.
+// Хот-сита нет: без соединения матча нет, локального счёта не существует.
 export type WSMsg =
   | { type: "lobby:create"; wager: number }
   | { type: "join"; code: string }
@@ -18,32 +19,32 @@ export function wsUrl(): string {
 export class DuelSocket {
   ws: WebSocket | null = null;
   onMsg: ((m: unknown) => void) | null = null;
-  /** Уведомление UI о переходе в hot-seat: соперника нет, счёт локальный. */
-  onHotSeat: ((on: boolean) => void) | null = null;
+  /** Соединение с сервером потеряно: матч невозможен, UI обязан это показать. */
+  onOffline: ((on: boolean) => void) | null = null;
   heartbeat: number | null = null;
   reconnectTries = 0;
   code: string | null = null;
-  hotSeat = false;
-  constructor(onMsg: (m: unknown) => void, onHotSeat?: (on: boolean) => void) {
+  offline = false;
+  constructor(onMsg: (m: unknown) => void, onOffline?: (on: boolean) => void) {
     this.onMsg = onMsg;
-    this.onHotSeat = onHotSeat ?? null;
+    this.onOffline = onOffline ?? null;
   }
-  private setHotSeat(on: boolean) {
-    if (this.hotSeat === on) return;
-    this.hotSeat = on;
-    try { this.onHotSeat?.(on); } catch { /* слушатель упал — не роняем сокет */ }
+  private setOffline(on: boolean) {
+    if (this.offline === on) return;
+    this.offline = on;
+    try { this.onOffline?.(on); } catch { /* слушатель упал — не роняем сокет */ }
   }
   connect(code?: string) {
     if (code) this.code = code;
     try {
       this.ws = new WebSocket(wsUrl());
     } catch {
-      this.setHotSeat(true);
+      this.setOffline(true);
       return;
     }
     this.ws.onopen = () => {
       this.reconnectTries = 0;
-      this.setHotSeat(false);
+      this.setOffline(false);
       if (this.heartbeat) window.clearInterval(this.heartbeat);
       this.heartbeat = window.setInterval(() => {
         if (this.ws?.readyState === WebSocket.OPEN) {
@@ -70,15 +71,14 @@ export class DuelSocket {
         this.reconnectTries++;
         window.setTimeout(() => this.connect(this.code ?? undefined), 800 * this.reconnectTries);
       } else {
-        this.setHotSeat(true);
+        this.setOffline(true);
       }
     };
-    this.ws.onerror = () => { this.setHotSeat(true); };
+    this.ws.onerror = () => { this.setOffline(true); };
   }
   send(m: WSMsg) {
-    // hot-seat: эхо своего же сообщения. Это НЕ игра с соперником —
-    // UI обязан показать демо-режим (см. onHotSeat), иначе создаётся иллюзия PvP.
-    if (this.hotSeat) { this.onMsg?.(m); return; }
+    // Без открытого сокета сообщение просто теряется. Эха своих же ходов нет:
+    // иначе игрок соревновался бы сам с собой, считая это PvP.
     if (this.ws?.readyState === WebSocket.OPEN) {
       try { this.ws.send(JSON.stringify(m)); } catch {}
     }

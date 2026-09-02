@@ -21,8 +21,8 @@ export function DuelMagma(){
   const [lb,setLb]=useState<Array<{player:string;score:number}>>([]);
   const [msg,setMsg]=useState<string|null>(null);
   const [me,setMe]=useState<{id:number;username:string}|null>(null);
-  // hot-seat: WS не поднялся — играем сами с собой, это не PvP и UI обязан это показать
-  const [demoMode,setDemoMode]=useState(false);
+  // Соединения нет — матча нет. Локального счёта не существует, играть не даём.
+  const [offline,setOffline]=useState(false);
   const wsRef=useRef<DuelSocket|null>(null);
   const pageRef=useRef<HTMLDivElement>(null);
   const stageRef=useRef<HTMLDivElement>(null);
@@ -79,7 +79,7 @@ export function DuelMagma(){
       if(m.type==="overheat"){ setOverheat(true); setTimeout(()=>setOverheat(false),1200); }
       if(m.type==="wager"){ if(m.wager!=null) setRoom(r=> r?{...r,wager:Number(m.wager)}:r); }
     });
-    ds.onHotSeat=(on)=>{ setDemoMode(on); if(on) setMsg("ДЕМО: соперник не подключился — счёт локальный, в рейтинг не идёт"); };
+    ds.onOffline=(on)=>{ setOffline(on); if(on) setMsg("Нет связи с сервером — матч недоступен"); };
     wsRef.current=ds; ds.connect(joinCode);
   },[fetchLb,wager,me]);
 
@@ -153,9 +153,9 @@ export function DuelMagma(){
       <h1 className={styles.title}>Магма-дуэль 2-4 • x10 • lava-spike 2x</h1>
       <p style={{color:"rgba(255,255,255,.6)",marginTop:6}}>10с кликер • интервал &lt;0.15с +8% капа x10 • удержание x10 3.5с → overheat 1.2с -60% • wager 0/42/142/420 → win +wager*2 +42 ELO • сезон 7дн</p>
     </div>
-    {demoMode && (
+    {offline && (
       <div role="status" style={{margin:"10px 0",padding:"10px 12px",borderRadius:12,background:"rgba(255,87,34,.12)",border:"1px solid rgba(255,87,34,.42)",color:"#ffb599",fontSize:13,fontWeight:700}}>
-        ДЕМО-РЕЖИМ — соединение с соперником не установлено. Ты играешь сам с собой: счёт локальный, ELO и ставки не начисляются.
+        НЕТ СВЯЗИ С СЕРВЕРОМ — матч не идёт. Дуэль возможна только с реальным соперником: восстанови соединение и зайди заново.
       </div>
     )}
     <div className={styles.grid}>
