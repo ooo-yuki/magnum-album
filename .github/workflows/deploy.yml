@@ -39,6 +39,17 @@ jobs:
           target: /srv/magnum
           strip_components: 1
 
+      - name: Update server source & restart bun (server.ts + миграции)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_KEY }}
+          port: 22
+          script: |
+            cd /root/magnum-album && git fetch --all && git reset --hard origin/master || true
+            systemctl restart magnum-bun || true
+
       - name: Restart Caddy (cache clear)
         uses: appleboy/ssh-action@v1.0.3
         with:
