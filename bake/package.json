@@ -1,0 +1,11 @@
+{
+  "name": "zavri-bake",
+  "private": true,
+  "type": "module",
+  "description": "Запекание портретов 42-завров для баннеров гачи. НЕ входит в основной бандл.",
+  "dependencies": {
+    "gl": "8.1.6",
+    "pngjs": "7.0.0",
+    "three": "0.152.2"
+  }
+}

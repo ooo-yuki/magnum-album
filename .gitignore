@@ -39,3 +39,4 @@ reports/
 !reports/watchdog-*.md
 !reports/auth-*.md
 
+bake/zavri-core.mjs

@@ -17,7 +17,8 @@
     "gsap": "^3.15.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-router-dom": "^7.18.3"
+    "react-router-dom": "^7.18.3",
+    "three": "^0.185.1"
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "^20.12.2",
@@ -26,6 +27,7 @@
     "@types/bun": "^1.4.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/three": "0.185",
     "drizzle-kit": "^0.31.10",
     "typescript": "^7.0.2"
   }
