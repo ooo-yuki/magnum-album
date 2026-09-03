@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import gsap from "gsap";
 import { useMe } from "../components/GuestGate";
+import { WorkshopWritingRobot } from "../components/WorkshopWritingRobot";
 
 type EventItem = { type: string; text: string; meta?: Record<string, unknown>; created_at: string };
 type Project = {
@@ -119,6 +120,8 @@ export function WorkshopProjectPage() {
     if (!items.length) return;
     gsap.set(items, { y: 8, opacity: 0 });
     gsap.to(items, { y: 0, opacity: 1, duration: 0.28, stagger: 0.03, ease: "power2.out", overwrite: true });
+    const safety = window.setTimeout(() => gsap.set(items, { clearProps: "opacity,transform" }), 900);
+    return () => window.clearTimeout(safety);
   }, [events.length]);
 
   async function submitEdit() {
@@ -221,6 +224,12 @@ export function WorkshopProjectPage() {
           >
             ❤️ {likes ?? project.likes}
           </button>
+        </div>
+      )}
+
+      {status === "generating" && (
+        <div style={{ marginTop: 18 }}>
+          <WorkshopWritingRobot />
         </div>
       )}
 

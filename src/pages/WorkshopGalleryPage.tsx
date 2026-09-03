@@ -33,7 +33,11 @@ export function WorkshopGalleryPage() {
       gsap.set(cards, { y: 16, opacity: 0 });
       gsap.to(cards, { y: 0, opacity: 1, duration: 0.38, stagger: 0.05, ease: "power2.out", overwrite: true });
     }, wrapRef);
-    return () => ctx.revert();
+    const safety = window.setTimeout(() => {
+      const cards = wrapRef.current?.querySelectorAll("[data-gallery-card]");
+      if (cards?.length) gsap.set(cards, { clearProps: "opacity,transform" });
+    }, 1200);
+    return () => { window.clearTimeout(safety); ctx.revert(); };
   }, [projects]);
 
   async function like(id: number) {

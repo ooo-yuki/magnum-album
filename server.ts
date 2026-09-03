@@ -18,7 +18,7 @@ import { TOUR_STOPS as TOUR_STOPS_CANON, type TourStop as TourStopCanon, getTour
 import { QUEST_DEFS, WEEKLY_DEF, weekId as gachaWeekId, dayId as gachaDayId, eligibleComeback, COMEBACK_REWARD_ROLLS, COMEBACK_COINS } from "./src/lib/gachaQuests.ts";
 import { ZAVRI_ROSTER, ZAVRI_BY_ID, ZAVRI_ROTATION_MS, zavriBannerIndex, zavriBannerSlotStart, zavriBannerDef, RARITY_COLOR as ZAVRI_RARITY_COLOR } from "./src/lib/zavri/catalog.ts";
 import { ZAVRI_PRICE, ZAVRI_SHARDS_DUPE, ZAVRI_ASCEND_COST, ZAVRI_MAX_ASCENSION, ZAVRI_BEG_MAX_PER_DAY, ZAVRI_BEG_CHANCE, ZAVRI_BEG_PITY_ASK, zavriPrice, rollZavri, zavriBuffPct, breedChildSpecies, breedChildGender, isBegIntent, begRollGranted } from "./src/lib/zavri/gacha.ts";
-import { WORKSHOP_COST, createProjectSandbox, resumeSandbox, deployAndStartRun, tailNewLogLines, startApp, summarizeRunnerLine } from "./src/lib/workshop.ts";
+import { WORKSHOP_COST, WORKSHOP_SKILLS, ULTRA_MODE_INSTRUCTION, createProjectSandbox, resumeSandbox, deployAndStartRun, tailNewLogLines, startApp, summarizeRunnerLine } from "./src/lib/workshop.ts";
 import type { WorkshopLogEvent } from "./src/lib/workshop.ts";
 try { (neonConfig as unknown as { webSocketConstructor?: unknown }).webSocketConstructor = ws; } catch {}
 
@@ -1368,9 +1368,9 @@ async function handleForgeCraft(req: Request): Promise<Response> {
 // ---- GACHA CORE 42 — pity 90/180 + 50/50 + soft-pity 65 + magnum_pity ----
 async function handleGachaRoll(req: Request): Promise<Response> {
   const token = extractToken(req);
-  if (!token) return Response.json({ error: "unauthorized" }, { status: 401, headers: { "magnum:need-auth": "1" } });
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
   const user = await getUserByToken(token);
-  if (!user) return Response.json({ error: "unauthorized" }, { status: 401, headers: { "magnum:need-auth": "1" } });
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
   const ip = getClientIp(req);
   if (!checkRateLimit(`gacha:roll:${user.id}:${ip}`, 10, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
   let body: { banner?: string; banner_type?: string; count?: number };
@@ -1608,9 +1608,9 @@ async function bumpQuest(userId: number, questId: string, inc = 1): Promise<void
 
 async function handleGachaQuestsStatus(req: Request): Promise<Response> {
   const token = extractToken(req);
-  if (!token) return Response.json({ error: "unauthorized" }, { status: 401, headers: { "magnum:need-auth": "1" } });
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
   const user = await getUserByToken(token);
-  if (!user) return Response.json({ error: "unauthorized" }, { status: 401, headers: { "magnum:need-auth": "1" } });
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
   const ip = getClientIp(req);
   if (!checkRateLimit(`gacha:quests:status:${user.id}:${ip}`, 20, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
   await ensureGachaQuestsTable();
@@ -1656,9 +1656,9 @@ async function handleGachaQuestsStatus(req: Request): Promise<Response> {
 
 async function handleGachaQuestProgress(req: Request): Promise<Response> {
   const token = extractToken(req);
-  if (!token) return Response.json({ error: "unauthorized" }, { status: 401, headers: { "magnum:need-auth": "1" } });
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
   const user = await getUserByToken(token);
-  if (!user) return Response.json({ error: "unauthorized" }, { status: 401, headers: { "magnum:need-auth": "1" } });
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
   const ip = getClientIp(req);
   if (!checkRateLimit(`gacha:quests:progress:${user.id}:${ip}`, 20, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
   let body: { questId?:string; quest_id?:string; id?:string; inc?:number };
@@ -1682,9 +1682,9 @@ async function handleGachaQuestProgress(req: Request): Promise<Response> {
 
 async function handleGachaQuestClaim(req: Request): Promise<Response> {
   const token = extractToken(req);
-  if (!token) return Response.json({ error: "unauthorized" }, { status: 401, headers: { "magnum:need-auth": "1" } });
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
   const user = await getUserByToken(token);
-  if (!user) return Response.json({ error: "unauthorized" }, { status: 401, headers: { "magnum:need-auth": "1" } });
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
   const ip = getClientIp(req);
   if (!checkRateLimit(`gacha:quests:claim:${user.id}:${ip}`, 20, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
   let body: { questId?:string; quest_id?:string; id?:string };
@@ -1874,9 +1874,9 @@ async function handleSpinStatus(req: Request): Promise<Response> {
 
 async function handleSpin(req: Request): Promise<Response> {
   const token = extractToken(req);
-  if (!token) return Response.json({ error: "unauthorized" }, { status: 401, headers: { "magnum:need-auth": "1" } });
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
   const user = await getUserByToken(token);
-  if (!user) return Response.json({ error: "unauthorized" }, { status: 401, headers: { "magnum:need-auth": "1" } });
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
   const ip = getClientIp(req);
   if (!checkRateLimit(`spin:${user.id}:${ip}`, 6, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
   await ensureSpinTable();
@@ -2020,6 +2020,144 @@ async function handleSpinReferral(req: Request): Promise<Response> {
   const freeSpins = myRow.length ? Number((myRow[0] as { free_spins: number }).free_spins) : 1;
   try { await ensureNotification(inviterId, "Колесо 42 — QR!", "Братуха "+user.username+" сканировал твой спин-QR +1 спин обоим", "referral"); } catch {}
   return Response.json({ ok: true, rewardSpins: 1, freeSpins, inviterId, code: raw });
+}
+
+// ---- CASINO 42 — слоты + рулетка в клип-баттле ----
+const CASINO_MIN_BET = 10;
+const CASINO_MAX_BET = 1000;
+type CasinoSlotDef = { symbols: string[] };
+const CASINO_SLOTS: Record<string, CasinoSlotDef> = {
+  bonanza: { symbols: ["💎", "⛏️", "💰", "🔥", "🧨", "7️⃣"] },
+  pirots2: { symbols: ["🦜", "🏴‍☠️", "💣", "💎", "⚓", "🚀"] },
+  candy:   { symbols: ["🍬", "🍭", "🍫", "🧁", "🍩", "⭐"] },
+};
+// Выплаты: 3 линии (full) ×25, 2 линии ×14, 1 линия ×8, пара ×2
+// Частоты: full 0.8%, 1-2 линии ~4.2%, пара ~14% → RTP ≈ 97% (дом ~3%)
+const CASINO_ROULETTE_ORDER = [0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
+const CASINO_ROULETTE_REDS = new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
+
+type CasinoGrid = string[][]; // [reel 0..2][row 0..2] top→bottom
+
+function casinoCountLines(grid: CasinoGrid): { lines: number; pairs: number } {
+  let lines = 0, pairs = 0;
+  for (let r = 0; r < 3; r++) {
+    const a = grid[0]![r]!, b = grid[1]![r]!, c = grid[2]![r]!;
+    if (a === b && b === c) lines++;
+    else if (a === b || b === c || a === c) pairs++;
+  }
+  return { lines, pairs };
+}
+
+function casinoSlotPayout(grid: CasinoGrid, bet: number): { payout: number; tier: "big" | "win" | "small" | "loss"; lines: number; pairs: number } {
+  const { lines, pairs } = casinoCountLines(grid);
+  if (lines >= 3) return { payout: bet * 25, tier: "big", lines, pairs };
+  if (lines === 2) return { payout: bet * 14, tier: "win", lines, pairs };
+  if (lines === 1) return { payout: bet * 8, tier: "win", lines, pairs };
+  if (pairs >= 1) return { payout: bet * 2, tier: "small", lines, pairs };
+  return { payout: 0, tier: "loss", lines, pairs };
+}
+
+function casinoGenSlotGrid(game: string): CasinoGrid {
+  const def = CASINO_SLOTS[game];
+  if (!def) return [];
+  const s = def.symbols;
+  const rnd = () => s[Math.floor(Math.random() * s.length)]!;
+  const grid: CasinoGrid = [[rnd(), rnd(), rnd()], [rnd(), rnd(), rnd()], [rnd(), rnd(), rnd()]];
+  const roll = Math.random();
+  const sym = rnd();
+  if (roll < 0.008) {
+    // BIG WIN: вся сетка одним символом — 3 линии
+    for (let c = 0; c < 3; c++) for (let r = 0; r < 3; r++) grid[c]![r] = sym;
+  } else if (roll < 0.05) {
+    // 1-2 линии тройных
+    const rows = Math.random() < 0.35 ? [0, 2] : [Math.floor(Math.random() * 3)];
+    for (const r of rows) { grid[0]![r] = sym; grid[1]![r] = sym; grid[2]![r] = sym; }
+  } else if (roll < 0.19) {
+    // пара на одной строке (третий символ гарантированно другой — не превратится в линию)
+    const others = s.filter((x) => x !== sym);
+    const r3 = others[Math.floor(Math.random() * others.length)]!;
+    const r = Math.floor(Math.random() * 3);
+    const side = Math.random() < 0.5 ? 0 : 1; // 0: [0]=[1], 1: [1]=[2]
+    if (side === 0) { grid[0]![r] = sym; grid[1]![r] = sym; grid[2]![r] = r3; }
+    else { grid[0]![r] = r3; grid[1]![r] = sym; grid[2]![r] = sym; }
+  } else {
+    // loss: каждая строка — 3 РАЗНЫХ символа → пар и линий гарантированно нет
+    for (let r = 0; r < 3; r++) {
+      const pool = [...s].sort(() => Math.random() - 0.5);
+      for (let c = 0; c < 3; c++) grid[c]![r] = pool[c]!;
+    }
+  }
+  return grid;
+}
+
+async function handleCasinoStatus(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const sql = getSql();
+  await sql`INSERT INTO magnum_coins (user_id, balance) VALUES (${user.id}, 1000) ON CONFLICT (user_id) DO NOTHING`;
+  const rows = await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+  return Response.json({ balance: rows.length ? Number((rows[0] as { balance: number }).balance) : 1000 });
+}
+
+async function handleCasinoSpin(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`casino:${user.id}:${ip}`, 15, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
+  let body: { game?: string; bet?: number; betKind?: string; betValue?: number };
+  try { body = (await req.json()) as typeof body; } catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
+  const game = String(body.game ?? "");
+  const bet = Number(body.bet);
+  if (!Number.isInteger(bet) || bet < CASINO_MIN_BET || bet > CASINO_MAX_BET) return Response.json({ error: `bet ${CASINO_MIN_BET}..${CASINO_MAX_BET}`, min: CASINO_MIN_BET, max: CASINO_MAX_BET }, { status: 400 });
+  const isRoulette = game === "roulette";
+  if (!isRoulette && !CASINO_SLOTS[game]) return Response.json({ error: "unknown game" }, { status: 400 });
+
+  let betKind = "", betValue = -1;
+  if (isRoulette) {
+    betKind = String(body.betKind ?? "");
+    if (betKind !== "red" && betKind !== "black" && betKind !== "number") return Response.json({ error: "betKind red|black|number" }, { status: 400 });
+    if (betKind === "number") {
+      betValue = Number(body.betValue);
+      if (!Number.isInteger(betValue) || betValue < 0 || betValue > 36) return Response.json({ error: "betValue 0..36" }, { status: 400 });
+    }
+  }
+
+  const sql = getSql();
+  // атомарное списание: двойной клик не уйдёт в минус
+  await sql`INSERT INTO magnum_coins (user_id, balance) VALUES (${user.id}, 1000) ON CONFLICT (user_id) DO NOTHING`;
+  const spent = await sql`UPDATE magnum_coins SET balance = balance - ${bet} WHERE user_id=${user.id} AND balance >= ${bet} RETURNING balance`;
+  if (!spent.length) {
+    const balRows = await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+    const bal = balRows.length ? Number((balRows[0] as { balance: number }).balance) : 0;
+    return Response.json({ error: "not enough coins", balance: bal, required: bet }, { status: 402 });
+  }
+  await sql`INSERT INTO magnum_transactions (user_id, amount, reason, meta) VALUES (${user.id}, ${-bet}, 'casino_bet', ${JSON.stringify({ game, betKind, betValue })}::jsonb)`;
+
+  let payout = 0, tier: string | null = null, grid: CasinoGrid | null = null, lines = 0, pairs = 0, number = -1, color = "";
+  if (isRoulette) {
+    number = Math.floor(Math.random() * 37);
+    color = number === 0 ? "green" : CASINO_ROULETTE_REDS.has(number) ? "red" : "black";
+    if (betKind === "red" && color === "red") payout = bet * 2;
+    else if (betKind === "black" && color === "black") payout = bet * 2;
+    else if (betKind === "number" && number === betValue) payout = bet * 36;
+    tier = payout > 0 ? (betKind === "number" ? "big" : "win") : "loss";
+  } else {
+    grid = casinoGenSlotGrid(game);
+    const res = casinoSlotPayout(grid, bet);
+    payout = res.payout; tier = res.tier; lines = res.lines; pairs = res.pairs;
+  }
+
+  if (payout > 0) {
+    await sql`UPDATE magnum_coins SET balance = balance + ${payout} WHERE user_id=${user.id}`;
+    await sql`INSERT INTO magnum_transactions (user_id, amount, reason, meta) VALUES (${user.id}, ${payout}, 'casino_win', ${JSON.stringify({ game, tier, bet, payout })}::jsonb)`;
+  }
+  const balRows = await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+  const balance = balRows.length ? Number((balRows[0] as { balance: number }).balance) : 0;
+  return Response.json({ ok: true, game, bet, tier, payout, win: payout > 0, balance, grid, lines, pairs, number, color, betKind, betValue: betKind === "number" ? betValue : undefined });
 }
 
 // ---- Shop Bundles — 8 наборов со скидкой 10-18% vs сумма ---- 
@@ -4770,8 +4908,8 @@ async function handleZavriBanner(req: Request): Promise<Response> {
   return Response.json({ slot, idx, cycle, featured: { ...roster[idx]!, slotStart, slotEnd, remainingMs: Math.max(0, slotEnd - now) }, next: { ...roster[(idx + 1) % roster.length]!, }, remainingMs: Math.max(0, slotEnd - now), endsAt: new Date(slotEnd).toISOString(), slotStart: new Date(slotStart).toISOString(), roster, pity, beg: begState, balance, rotationMs: ZAVRI_ROTATION_MS });
 }
 async function handleZavriRoll(req: Request): Promise<Response> {
-  const token = extractToken(req); if (!token) return Response.json({ error: "unauthorized" }, { status: 401, headers: { "magnum:need-auth": "1" } });
-  const user = await getUserByToken(token); if (!user) return Response.json({ error: "unauthorized" }, { status: 401, headers: { "magnum:need-auth": "1" } });
+  const token = extractToken(req); if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token); if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
   const ip = getClientIp(req); if (!checkRateLimit(`zavri:roll:${user.id}:${ip}`, 10, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
   let body: { count?: number; source?: string; useGrant?: boolean };
   try { body = (await req.json()) as typeof body; } catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
@@ -6602,6 +6740,7 @@ async function ensureWorkshopTables(): Promise<void> {
   await sql`CREATE TABLE IF NOT EXISTS magnum_workshop_projects (id serial PRIMARY KEY, user_id integer NOT NULL REFERENCES magnum_users(id) ON DELETE CASCADE, prompt text NOT NULL, title text, sandbox_id text, preview_url text, status text NOT NULL DEFAULT 'pending', error_message text, is_public boolean NOT NULL DEFAULT true, likes integer NOT NULL DEFAULT 0, created_at timestamp DEFAULT now() NOT NULL, updated_at timestamp DEFAULT now() NOT NULL)`;
   await sql`CREATE TABLE IF NOT EXISTS magnum_workshop_events (id serial PRIMARY KEY, project_id integer NOT NULL REFERENCES magnum_workshop_projects(id) ON DELETE CASCADE, type text NOT NULL, text text NOT NULL, meta jsonb DEFAULT '{}'::jsonb, created_at timestamp DEFAULT now() NOT NULL)`;
   await sql`CREATE TABLE IF NOT EXISTS magnum_workshop_likes (id serial PRIMARY KEY, project_id integer REFERENCES magnum_workshop_projects(id) ON DELETE CASCADE NOT NULL, user_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, created_at timestamp DEFAULT now() NOT NULL, UNIQUE(project_id, user_id))`;
+  await sql`CREATE TABLE IF NOT EXISTS magnum_workshop_skills (id serial PRIMARY KEY, user_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, skill_id text NOT NULL, purchased_at timestamp DEFAULT now() NOT NULL, UNIQUE(user_id, skill_id))`;
   await sql`CREATE INDEX IF NOT EXISTS magnum_workshop_projects_user_idx ON magnum_workshop_projects(user_id)`;
   await sql`CREATE INDEX IF NOT EXISTS magnum_workshop_projects_public_idx ON magnum_workshop_projects(is_public, created_at DESC)`;
   await sql`CREATE INDEX IF NOT EXISTS magnum_workshop_events_project_idx ON magnum_workshop_events(project_id, created_at)`;
@@ -6686,12 +6825,25 @@ async function pollWorkshopLog(projectId: number, sandboxId: string, isEdit: boo
   broadcastWorkshop(projectId, { type: "workshop:status", status: "ready", previewUrl: started.previewUrl });
 }
 
-async function runWorkshopGeneration(projectId: number, sandboxId: string, prompt: string, isEdit: boolean): Promise<void> {
+/** Купленные "скиллы" пользователя из витрины мастерской → их инструкции для агента. */
+async function getOwnedSkillInstructions(userId: number): Promise<string[]> {
+  try {
+    const sql = getSql();
+    const rows = await sql`SELECT skill_id FROM magnum_workshop_skills WHERE user_id=${userId}`;
+    const owned = new Set(rows.map((r: unknown) => (r as { skill_id: string }).skill_id));
+    return WORKSHOP_SKILLS.filter((s) => owned.has(s.id)).map((s) => s.instruction);
+  } catch (e) {
+    console.error("[workshop] skills lookup failed", e);
+    return [];
+  }
+}
+
+async function runWorkshopGeneration(projectId: number, sandboxId: string, prompt: string, isEdit: boolean, extraInstructions: string[] = []): Promise<void> {
   const sql = getSql();
   try {
     await sql`UPDATE magnum_workshop_projects SET status='generating', updated_at=now() WHERE id=${projectId}`;
     broadcastWorkshop(projectId, { type: "workshop:status", status: "generating" });
-    await deployAndStartRun(sandboxId, prompt, isEdit);
+    await deployAndStartRun(sandboxId, prompt, isEdit, extraInstructions);
     await pollWorkshopLog(projectId, sandboxId, isEdit);
   } catch (e) {
     console.error("[workshop] generation failed", e);
@@ -6707,9 +6859,10 @@ async function handleWorkshopCreate(req: Request): Promise<Response> {
   const ip = getClientIp(req);
   if (!checkRateLimit(`workshop:create:${user.id}:${ip}`, 5, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
   if (!process.env.DAYTONA_API_KEY || !process.env.OPENCODE_ZEN_API_KEY) return Response.json({ error: "мастерская временно недоступна" }, { status: 500 });
-  let body: { prompt?: string };
+  let body: { prompt?: string; ultraMode?: boolean };
   try { body = (await req.json()) as typeof body; } catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
   const prompt = typeof body.prompt === "string" ? body.prompt.trim().slice(0, 1000) : "";
+  const ultraMode = body.ultraMode === true;
   if (prompt.length < 5) return Response.json({ error: "опиши идею подробнее (минимум 5 символов)" }, { status: 400 });
 
   await ensureWorkshopTables();
@@ -6738,7 +6891,9 @@ async function handleWorkshopCreate(req: Request): Promise<Response> {
     try {
       const sandboxId = await createProjectSandbox();
       await sql`UPDATE magnum_workshop_projects SET sandbox_id=${sandboxId} WHERE id=${projectId}`;
-      await runWorkshopGeneration(projectId, sandboxId, prompt, false);
+      const extraInstructions = await getOwnedSkillInstructions(user.id);
+      if (ultraMode) extraInstructions.push(ULTRA_MODE_INSTRUCTION);
+      await runWorkshopGeneration(projectId, sandboxId, prompt, false, extraInstructions);
     } catch (e) {
       console.error("[workshop] sandbox creation failed", e);
       await failWorkshopProject(projectId, e instanceof Error ? e.message : String(e), { refund: true });
@@ -6808,9 +6963,10 @@ async function handleWorkshopPromptEdit(req: Request, idStr: string): Promise<Re
   if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
   const ip = getClientIp(req);
   if (!checkRateLimit(`workshop:prompt:${user.id}:${ip}`, 5, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
-  let body: { prompt?: string };
+  let body: { prompt?: string; ultraMode?: boolean };
   try { body = (await req.json()) as typeof body; } catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
   const prompt = typeof body.prompt === "string" ? body.prompt.trim().slice(0, 1000) : "";
+  const ultraMode = body.ultraMode === true;
   if (prompt.length < 3) return Response.json({ error: "опиши правку подробнее" }, { status: 400 });
 
   await ensureWorkshopTables();
@@ -6822,8 +6978,65 @@ async function handleWorkshopPromptEdit(req: Request, idStr: string): Promise<Re
   if (!p.sandbox_id) return Response.json({ error: "проект ещё не готов" }, { status: 409 });
   if (p.status === "generating") return Response.json({ error: "уже идёт генерация" }, { status: 409 });
 
-  void runWorkshopGeneration(id, p.sandbox_id, prompt, true);
+  const extraInstructions = await getOwnedSkillInstructions(user.id);
+  if (ultraMode) extraInstructions.push(ULTRA_MODE_INSTRUCTION);
+  void runWorkshopGeneration(id, p.sandbox_id, prompt, true, extraInstructions);
   return Response.json({ ok: true });
+}
+
+async function handleWorkshopSkillsList(req: Request): Promise<Response> {
+  await ensureWorkshopTables();
+  const token = extractToken(req);
+  let ownedIds = new Set<string>();
+  if (token) {
+    try {
+      const user = await getUserByToken(token);
+      if (user) {
+        const sql = getSql();
+        const rows = await sql`SELECT skill_id FROM magnum_workshop_skills WHERE user_id=${user.id}`;
+        ownedIds = new Set(rows.map((r: unknown) => (r as { skill_id: string }).skill_id));
+      }
+    } catch (e) { console.error("[workshop skills list] failed", e); }
+  }
+  return Response.json({
+    skills: WORKSHOP_SKILLS.map((s) => ({ id: s.id, name: s.name, desc: s.desc, price: s.price, icon: s.icon, owned: ownedIds.has(s.id) })),
+  });
+}
+
+async function handleWorkshopSkillsBuy(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized", needAuth: true }, { status: 401, headers: { "magnum:need-auth": "1" } });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized", needAuth: true }, { status: 401, headers: { "magnum:need-auth": "1" } });
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`workshop:skills:buy:${user.id}:${ip}`, 10, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
+  let body: { skillId?: string };
+  try { body = (await req.json()) as typeof body; } catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
+  const skill = WORKSHOP_SKILLS.find((s) => s.id === body.skillId);
+  if (!skill) return Response.json({ error: "неизвестный скилл" }, { status: 400 });
+
+  await ensureWorkshopTables();
+  const sql = getSql();
+  const dup = await sql`SELECT id FROM magnum_workshop_skills WHERE user_id=${user.id} AND skill_id=${skill.id} LIMIT 1`;
+  if (dup.length > 0) return Response.json({ error: "уже куплено" }, { status: 409 });
+
+  await sql`BEGIN`;
+  try {
+    const coinsRows = await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} FOR UPDATE`;
+    const bal = coinsRows.length ? Number((coinsRows[0] as { balance: number }).balance) : 0;
+    if (bal < skill.price) { await sql`ROLLBACK`; return Response.json({ error: "not enough coins", price: skill.price, balance: bal, required: skill.price }, { status: 402 }); }
+    await sql`UPDATE magnum_coins SET balance = balance - ${skill.price} WHERE user_id=${user.id}`;
+    await sql`INSERT INTO magnum_transactions (user_id, amount, reason, meta) VALUES (${user.id}, ${-skill.price}, 'workshop_skill_buy', ${JSON.stringify({ skillId: skill.id })}::jsonb)`;
+    await sql`INSERT INTO magnum_workshop_skills (user_id, skill_id) VALUES (${user.id}, ${skill.id})`;
+    await sql`COMMIT`;
+  } catch (e) {
+    try { await sql`ROLLBACK`; } catch {}
+    console.error("[workshop skill buy] tx failed", e);
+    return Response.json({ error: "db error" }, { status: 500 });
+  }
+  const balAfter = await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+  const newBal = balAfter.length ? Number((balAfter[0] as { balance: number }).balance) : 0;
+  return Response.json({ ok: true, skillId: skill.id, balance: newBal });
 }
 
 async function handleWorkshopLike(req: Request, idStr: string): Promise<Response> {
@@ -7028,6 +7241,10 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/spin" && req.method === "GET") return handleSpinStatus(req);
     if (url.pathname === "/magnum/api/spin/referral" && req.method === "POST") return handleSpinReferral(req);
 
+    // CASINO 42 — слоты + рулетка (клип-баттл)
+    if (url.pathname === "/magnum/api/casino/status" && req.method === "GET") return handleCasinoStatus(req);
+    if (url.pathname === "/magnum/api/casino/spin" && req.method === "POST") return handleCasinoSpin(req);
+
     // PASS 42
     if (url.pathname === "/magnum/api/pass/progress" && req.method === "GET") return handlePassProgress(req);
     if (url.pathname === "/magnum/api/pass/claim" && req.method === "POST") return handlePassClaim(req);
@@ -7169,6 +7386,8 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/workshop/create" && req.method === "POST") return handleWorkshopCreate(req);
     if (url.pathname === "/magnum/api/workshop/list" && req.method === "GET") return handleWorkshopList(req);
     if (url.pathname === "/magnum/api/workshop/gallery" && req.method === "GET") return handleWorkshopGallery(req);
+    if (url.pathname === "/magnum/api/workshop/skills" && req.method === "GET") return handleWorkshopSkillsList(req);
+    if (url.pathname === "/magnum/api/workshop/skills/buy" && req.method === "POST") return handleWorkshopSkillsBuy(req);
     if (url.pathname.startsWith("/magnum/api/workshop/") && url.pathname.endsWith("/prompt") && req.method === "POST") {
       const parts = url.pathname.split("/"); return handleWorkshopPromptEdit(req, parts[4] ?? "");
     }

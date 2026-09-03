@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import gsap from "gsap";
+import { Casino42 } from "../components/Casino42";
 import { CLIP_TRACKS, CLIP_TRACK_LABELS, CLIP_MAX_SECONDS, type ClipTrack } from "../lib/clip42";
 
 type Clip = { id:number; userId:number; username:string; trackSlug:string; mediaUrl:string; likes:number; created_at:string };
@@ -306,6 +307,9 @@ export function ClipBattlePage(){
         <button onClick={()=> setPage(p=>p+1)} disabled={clips.length<20} style={{padding:"7px 12px",borderRadius:8,opacity: clips.length<20?0.4:1}}>Вперёд ›</button>
         {msg && <span style={{marginLeft:8,color:"#ffcc00",fontSize:12}}>{msg}</span>}
       </div>
+
+      {/* казино 42 — слоты + рулетка */}
+      <Casino42 />
 
       <canvas ref={canvasRef} width={1080} height={1080} style={{display:"none"}} />
       <style>{`@keyframes conicSpin{to{transform:rotate(360deg)}}`}</style>

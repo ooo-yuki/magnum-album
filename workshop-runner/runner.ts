@@ -8,7 +8,7 @@ const INPUT_PATH = `${RUNNER_DIR}/input.json`;
 const APP_DIR = "/home/daytona/app";
 const APP_PORT = 3000;
 
-type Input = { prompt: string; apiKey: string; isEdit?: boolean };
+type Input = { prompt: string; apiKey: string; isEdit?: boolean; extraInstructions?: string[] };
 
 function emit(type: string, extra: Record<string, unknown> = {}) {
   console.log("EVT:" + JSON.stringify({ type, at: Date.now(), ...extra }));
@@ -69,8 +69,13 @@ async function main() {
         "Не спрашивай уточнений — сделай разумные предположения и сразу пиши код.",
       ].join(" ");
 
+  // "скиллы" агента, купленные пользователем в мастерской — постоянные доп. инструкции
+  const skillsBlock = Array.isArray(input.extraInstructions) && input.extraInstructions.length
+    ? "\n\nДополнительно (прокачанные навыки агента): " + input.extraInstructions.join(" ")
+    : "";
+
   try {
-    await session.prompt(`${systemInstruction}\n\nЗадача пользователя: ${input.prompt}`);
+    await session.prompt(`${systemInstruction}${skillsBlock}\n\nЗадача пользователя: ${input.prompt}`);
   } catch (e) {
     emit("runner_error", { message: e instanceof Error ? e.message : String(e) });
     process.exit(1);
