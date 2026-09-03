@@ -439,3 +439,27 @@ export const magnumComebackClaims = pgTable("magnum_comeback_claims", {
   claims: integer("claims").default(0).notNull(),
 });
 
+// вайбкодинг-мастерская — миграция 0038
+export const magnumWorkshopProjects = pgTable("magnum_workshop_projects", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => magnumUsers.id, { onDelete: "cascade" }).notNull(),
+  prompt: text("prompt").notNull(),
+  title: text("title"),
+  sandboxId: text("sandbox_id"),
+  previewUrl: text("preview_url"),
+  status: text("status").notNull().default("pending"), // pending|generating|ready|failed|stopped
+  errorMessage: text("error_message"),
+  isPublic: boolean("is_public").notNull().default(true),
+  likes: integer("likes").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+export const magnumWorkshopEvents = pgTable("magnum_workshop_events", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").references(() => magnumWorkshopProjects.id, { onDelete: "cascade" }).notNull(),
+  type: text("type").notNull(), // status | tool | message
+  text: text("text").notNull(),
+  meta: jsonb("meta").default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+

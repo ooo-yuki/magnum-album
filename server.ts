@@ -18,6 +18,8 @@ import { TOUR_STOPS as TOUR_STOPS_CANON, type TourStop as TourStopCanon, getTour
 import { QUEST_DEFS, WEEKLY_DEF, weekId as gachaWeekId, dayId as gachaDayId, eligibleComeback, COMEBACK_REWARD_ROLLS, COMEBACK_COINS } from "./src/lib/gachaQuests.ts";
 import { ZAVRI_ROSTER, ZAVRI_BY_ID, ZAVRI_ROTATION_MS, zavriBannerIndex, zavriBannerSlotStart, zavriBannerDef, RARITY_COLOR as ZAVRI_RARITY_COLOR } from "./src/lib/zavri/catalog.ts";
 import { ZAVRI_PRICE, ZAVRI_SHARDS_DUPE, ZAVRI_ASCEND_COST, ZAVRI_MAX_ASCENSION, ZAVRI_BEG_MAX_PER_DAY, ZAVRI_BEG_CHANCE, ZAVRI_BEG_PITY_ASK, zavriPrice, rollZavri, zavriBuffPct, breedChildSpecies, breedChildGender, isBegIntent, begRollGranted } from "./src/lib/zavri/gacha.ts";
+import { WORKSHOP_COST, createProjectSandbox, resumeSandbox, deployAndStartRun, tailNewLogLines, startApp, summarizeRunnerLine } from "./src/lib/workshop.ts";
+import type { WorkshopLogEvent } from "./src/lib/workshop.ts";
 try { (neonConfig as unknown as { webSocketConstructor?: unknown }).webSocketConstructor = ws; } catch {}
 
 const MIMO_BASE = process.env.MIMO_BASE_URL || "https://token-plan-sgp.xiaomimimo.com/v1";
@@ -6594,6 +6596,258 @@ async function handleCoinsSet(req: Request): Promise<Response> {
   }
 }
 
+// ---- МАСТЕРСКАЯ (workshop) — вайбкодинг мини-приложений в песочнице Daytona ----
+async function ensureWorkshopTables(): Promise<void> {
+  const sql = getSql();
+  await sql`CREATE TABLE IF NOT EXISTS magnum_workshop_projects (id serial PRIMARY KEY, user_id integer NOT NULL REFERENCES magnum_users(id) ON DELETE CASCADE, prompt text NOT NULL, title text, sandbox_id text, preview_url text, status text NOT NULL DEFAULT 'pending', error_message text, is_public boolean NOT NULL DEFAULT true, likes integer NOT NULL DEFAULT 0, created_at timestamp DEFAULT now() NOT NULL, updated_at timestamp DEFAULT now() NOT NULL)`;
+  await sql`CREATE TABLE IF NOT EXISTS magnum_workshop_events (id serial PRIMARY KEY, project_id integer NOT NULL REFERENCES magnum_workshop_projects(id) ON DELETE CASCADE, type text NOT NULL, text text NOT NULL, meta jsonb DEFAULT '{}'::jsonb, created_at timestamp DEFAULT now() NOT NULL)`;
+  await sql`CREATE TABLE IF NOT EXISTS magnum_workshop_likes (id serial PRIMARY KEY, project_id integer REFERENCES magnum_workshop_projects(id) ON DELETE CASCADE NOT NULL, user_id integer REFERENCES magnum_users(id) ON DELETE CASCADE NOT NULL, created_at timestamp DEFAULT now() NOT NULL, UNIQUE(project_id, user_id))`;
+  await sql`CREATE INDEX IF NOT EXISTS magnum_workshop_projects_user_idx ON magnum_workshop_projects(user_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS magnum_workshop_projects_public_idx ON magnum_workshop_projects(is_public, created_at DESC)`;
+  await sql`CREATE INDEX IF NOT EXISTS magnum_workshop_events_project_idx ON magnum_workshop_events(project_id, created_at)`;
+}
+void ensureWorkshopTables().then(() => console.log("[startup] magnum_workshop tables ensured")).catch((e) => console.error("[startup] workshop tables failed", e));
+
+// сервер публикует прогресс через нативный Bun WS pub/sub — топик "workshop:<id>",
+// клиент подписывается сообщением {type:"workshop:subscribe", projectId} (см. websocket.message ниже)
+function broadcastWorkshop(projectId: number, payload: Record<string, unknown>): void {
+  try { server.publish(`workshop:${projectId}`, JSON.stringify({ projectId, ...payload })); } catch (e) { console.error("[workshop publish] failed", e); }
+}
+
+// байтовые оффсеты лога — только на время активной генерации, in-memory (переживать рестарт сервера не обязано)
+const workshopLogOffsets = new Map<number, number>();
+
+async function failWorkshopProject(projectId: number, errorMessage: string, opts: { refund: boolean; revertToReady?: boolean }): Promise<void> {
+  const sql = getSql();
+  const finalStatus = opts.revertToReady ? "ready" : "failed";
+  try {
+    const rows = await sql`SELECT user_id FROM magnum_workshop_projects WHERE id=${projectId} LIMIT 1`;
+    const row = rows[0] as { user_id: number } | undefined;
+    await sql`UPDATE magnum_workshop_projects SET status=${finalStatus}, error_message=${errorMessage.slice(0, 500)}, updated_at=now() WHERE id=${projectId}`;
+    if (opts.refund && row) {
+      await sql`BEGIN`;
+      try {
+        await sql`UPDATE magnum_coins SET balance = balance + ${WORKSHOP_COST} WHERE user_id=${row.user_id}`;
+        await sql`INSERT INTO magnum_transactions (user_id, amount, reason, meta) VALUES (${row.user_id}, ${WORKSHOP_COST}, 'workshop_refund', ${JSON.stringify({ projectId, errorMessage })}::jsonb)`;
+        await sql`COMMIT`;
+      } catch (e) { try { await sql`ROLLBACK`; } catch {} console.error("[workshop refund] tx failed", e); }
+    }
+  } catch (e) { console.error("[workshop] fail-update failed", e); }
+  broadcastWorkshop(projectId, { type: "workshop:status", status: finalStatus, errorMessage });
+}
+
+async function pollWorkshopLog(projectId: number, sandboxId: string, isEdit: boolean): Promise<void> {
+  const sql = getSql();
+  const POLL_MS = 1500;
+  const MAX_MS = 8 * 60_000; // защита от зависшего раннера/агента
+  const startedAt = Date.now();
+  workshopLogOffsets.set(projectId, 0);
+  while (true) {
+    if (Date.now() - startedAt > MAX_MS) {
+      workshopLogOffsets.delete(projectId);
+      await failWorkshopProject(projectId, "превышено время генерации (8 мин)", { refund: !isEdit, revertToReady: isEdit });
+      return;
+    }
+    await new Promise((r) => setTimeout(r, POLL_MS));
+    const offset = workshopLogOffsets.get(projectId) ?? 0;
+    let lines: string[] = [];
+    let newOffset = offset;
+    try { ({ lines, newOffset } = await tailNewLogLines(sandboxId, offset)); }
+    catch (e) { console.error("[workshop] tail failed", e); continue; }
+    workshopLogOffsets.set(projectId, newOffset);
+
+    let done = false;
+    let runnerErrored = false;
+    let runnerErrorMsg = "";
+    for (const raw of lines) {
+      const evt: WorkshopLogEvent | null = summarizeRunnerLine(raw);
+      if (!evt) continue;
+      try { await sql`INSERT INTO magnum_workshop_events (project_id, type, text, meta) VALUES (${projectId}, ${evt.type}, ${evt.text}, ${JSON.stringify(evt.meta ?? {})}::jsonb)`; }
+      catch (e) { console.error("[workshop] event insert failed", e); }
+      broadcastWorkshop(projectId, { type: "workshop:event", event: evt });
+      if (evt.type === "error") { runnerErrored = true; runnerErrorMsg = evt.text; }
+      if (evt.type === "status" && evt.text === "Агент закончил работу над кодом") done = true;
+    }
+    if (runnerErrored) {
+      workshopLogOffsets.delete(projectId);
+      await failWorkshopProject(projectId, runnerErrorMsg, { refund: !isEdit, revertToReady: isEdit });
+      return;
+    }
+    if (done) break;
+  }
+  workshopLogOffsets.delete(projectId);
+
+  const started = await startApp(sandboxId);
+  if (!started.ok) {
+    await failWorkshopProject(projectId, started.error, { refund: !isEdit, revertToReady: isEdit });
+    return;
+  }
+  await sql`UPDATE magnum_workshop_projects SET status='ready', preview_url=${started.previewUrl}, error_message=NULL, updated_at=now() WHERE id=${projectId}`;
+  broadcastWorkshop(projectId, { type: "workshop:status", status: "ready", previewUrl: started.previewUrl });
+}
+
+async function runWorkshopGeneration(projectId: number, sandboxId: string, prompt: string, isEdit: boolean): Promise<void> {
+  const sql = getSql();
+  try {
+    await sql`UPDATE magnum_workshop_projects SET status='generating', updated_at=now() WHERE id=${projectId}`;
+    broadcastWorkshop(projectId, { type: "workshop:status", status: "generating" });
+    await deployAndStartRun(sandboxId, prompt, isEdit);
+    await pollWorkshopLog(projectId, sandboxId, isEdit);
+  } catch (e) {
+    console.error("[workshop] generation failed", e);
+    await failWorkshopProject(projectId, e instanceof Error ? e.message : String(e), { refund: !isEdit, revertToReady: isEdit });
+  }
+}
+
+async function handleWorkshopCreate(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized", needAuth: true }, { status: 401, headers: { "magnum:need-auth": "1" } });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized", needAuth: true }, { status: 401, headers: { "magnum:need-auth": "1" } });
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`workshop:create:${user.id}:${ip}`, 5, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
+  if (!process.env.DAYTONA_API_KEY || !process.env.OPENCODE_ZEN_API_KEY) return Response.json({ error: "мастерская временно недоступна" }, { status: 500 });
+  let body: { prompt?: string };
+  try { body = (await req.json()) as typeof body; } catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
+  const prompt = typeof body.prompt === "string" ? body.prompt.trim().slice(0, 1000) : "";
+  if (prompt.length < 5) return Response.json({ error: "опиши идею подробнее (минимум 5 символов)" }, { status: 400 });
+
+  await ensureWorkshopTables();
+  const sql = getSql();
+  let projectId: number;
+  await sql`BEGIN`;
+  try {
+    const coinsRows = await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} FOR UPDATE`;
+    const bal = coinsRows.length ? Number((coinsRows[0] as { balance: number }).balance) : 0;
+    if (bal < WORKSHOP_COST) { await sql`ROLLBACK`; return Response.json({ error: "not enough coins", price: WORKSHOP_COST, balance: bal, required: WORKSHOP_COST }, { status: 402 }); }
+    await sql`UPDATE magnum_coins SET balance = balance - ${WORKSHOP_COST} WHERE user_id=${user.id}`;
+    await sql`INSERT INTO magnum_transactions (user_id, amount, reason, meta) VALUES (${user.id}, ${-WORKSHOP_COST}, 'workshop_generate', ${JSON.stringify({ prompt })}::jsonb)`;
+    const rows = await sql`INSERT INTO magnum_workshop_projects (user_id, prompt, status) VALUES (${user.id}, ${prompt}, 'pending') RETURNING id`;
+    projectId = Number((rows[0] as { id: number }).id);
+    await sql`COMMIT`;
+  } catch (e) {
+    try { await sql`ROLLBACK`; } catch {}
+    console.error("[workshop create] tx failed", e);
+    return Response.json({ error: "db error" }, { status: 500 });
+  }
+
+  const balAfter = await sql`SELECT balance FROM magnum_coins WHERE user_id=${user.id} LIMIT 1`;
+  const newBal = balAfter.length ? Number((balAfter[0] as { balance: number }).balance) : 0;
+
+  void (async () => {
+    try {
+      const sandboxId = await createProjectSandbox();
+      await sql`UPDATE magnum_workshop_projects SET sandbox_id=${sandboxId} WHERE id=${projectId}`;
+      await runWorkshopGeneration(projectId, sandboxId, prompt, false);
+    } catch (e) {
+      console.error("[workshop] sandbox creation failed", e);
+      await failWorkshopProject(projectId, e instanceof Error ? e.message : String(e), { refund: true });
+    }
+  })();
+
+  return Response.json({ ok: true, projectId, balance: newBal }, { status: 201 });
+}
+
+async function handleWorkshopGet(req: Request, idStr: string): Promise<Response> {
+  const id = Number(idStr);
+  if (!Number.isInteger(id) || id <= 0) return Response.json({ error: "bad id" }, { status: 400 });
+  await ensureWorkshopTables();
+  const sql = getSql();
+  const rows = await sql`SELECT p.*, u.username FROM magnum_workshop_projects p JOIN magnum_users u ON u.id=p.user_id WHERE p.id=${id} LIMIT 1`;
+  if (rows.length === 0) return Response.json({ error: "not found" }, { status: 404 });
+  const p = rows[0] as Record<string, unknown>;
+  if (p.status === "ready" && p.sandbox_id) {
+    try { await resumeSandbox(String(p.sandbox_id)); } catch (e) { console.error("[workshop get] resume failed", e); }
+  }
+  const events = await sql`SELECT type, text, meta, created_at FROM magnum_workshop_events WHERE project_id=${id} ORDER BY created_at ASC LIMIT 300`;
+  return Response.json({
+    project: {
+      id: Number(p.id), userId: Number(p.user_id), username: String(p.username), prompt: String(p.prompt),
+      title: p.title ?? null, status: String(p.status), previewUrl: p.preview_url ?? null, errorMessage: p.error_message ?? null,
+      isPublic: Boolean(p.is_public), likes: Number(p.likes), createdAt: p.created_at, updatedAt: p.updated_at,
+    },
+    events,
+  });
+}
+
+async function handleWorkshopList(req: Request): Promise<Response> {
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  await ensureWorkshopTables();
+  const sql = getSql();
+  const rows = await sql`SELECT id, prompt, title, status, preview_url, likes, created_at FROM magnum_workshop_projects WHERE user_id=${user.id} ORDER BY created_at DESC LIMIT 50`;
+  return Response.json({
+    projects: rows.map((r: unknown) => {
+      const x = r as Record<string, unknown>;
+      return { id: Number(x.id), prompt: x.prompt, title: x.title ?? null, status: x.status, previewUrl: x.preview_url ?? null, likes: Number(x.likes), createdAt: x.created_at };
+    }),
+  });
+}
+
+async function handleWorkshopGallery(req: Request): Promise<Response> {
+  await ensureWorkshopTables();
+  const sql = getSql();
+  const offset = Math.max(0, Number(new URL(req.url).searchParams.get("offset")) || 0);
+  const rows = await sql`SELECT p.id, p.prompt, p.title, p.preview_url, p.likes, p.created_at, u.username FROM magnum_workshop_projects p JOIN magnum_users u ON u.hidden=false AND u.id=p.user_id WHERE p.is_public AND p.status='ready' ORDER BY p.created_at DESC LIMIT 24 OFFSET ${offset}`;
+  return Response.json({
+    projects: rows.map((r: unknown) => {
+      const x = r as Record<string, unknown>;
+      return { id: Number(x.id), prompt: x.prompt, title: x.title ?? null, previewUrl: x.preview_url, likes: Number(x.likes), createdAt: x.created_at, username: x.username };
+    }),
+  });
+}
+
+async function handleWorkshopPromptEdit(req: Request, idStr: string): Promise<Response> {
+  const id = Number(idStr);
+  if (!Number.isInteger(id) || id <= 0) return Response.json({ error: "bad id" }, { status: 400 });
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`workshop:prompt:${user.id}:${ip}`, 5, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
+  let body: { prompt?: string };
+  try { body = (await req.json()) as typeof body; } catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
+  const prompt = typeof body.prompt === "string" ? body.prompt.trim().slice(0, 1000) : "";
+  if (prompt.length < 3) return Response.json({ error: "опиши правку подробнее" }, { status: 400 });
+
+  await ensureWorkshopTables();
+  const sql = getSql();
+  const rows = await sql`SELECT user_id, sandbox_id, status FROM magnum_workshop_projects WHERE id=${id} LIMIT 1`;
+  if (rows.length === 0) return Response.json({ error: "not found" }, { status: 404 });
+  const p = rows[0] as { user_id: number; sandbox_id: string | null; status: string };
+  if (p.user_id !== user.id) return Response.json({ error: "forbidden" }, { status: 403 });
+  if (!p.sandbox_id) return Response.json({ error: "проект ещё не готов" }, { status: 409 });
+  if (p.status === "generating") return Response.json({ error: "уже идёт генерация" }, { status: 409 });
+
+  void runWorkshopGeneration(id, p.sandbox_id, prompt, true);
+  return Response.json({ ok: true });
+}
+
+async function handleWorkshopLike(req: Request, idStr: string): Promise<Response> {
+  const id = Number(idStr);
+  if (!Number.isInteger(id) || id <= 0) return Response.json({ error: "bad id" }, { status: 400 });
+  const token = extractToken(req);
+  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const user = await getUserByToken(token);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`workshop:like:${user.id}:${ip}`, 20, 60_000)) return Response.json({ error: "rate limited" }, { status: 429 });
+  await ensureWorkshopTables();
+  const sql = getSql();
+  const ex = await sql`SELECT id FROM magnum_workshop_projects WHERE id=${id} LIMIT 1`;
+  if (ex.length === 0) return Response.json({ error: "not found" }, { status: 404 });
+  const dup = await sql`SELECT id FROM magnum_workshop_likes WHERE project_id=${id} AND user_id=${user.id} LIMIT 1`;
+  if (dup.length > 0) return Response.json({ error: "already liked" }, { status: 409 });
+  try {
+    await sql`INSERT INTO magnum_workshop_likes (project_id, user_id) VALUES (${id}, ${user.id})`;
+    const upd = await sql`UPDATE magnum_workshop_projects SET likes = likes + 1 WHERE id=${id} RETURNING likes`;
+    return Response.json({ ok: true, likes: Number((upd[0] as { likes: number }).likes) });
+  } catch (e) { console.error("[workshop like] failed", e); return Response.json({ error: "db error" }, { status: 500 }); }
+}
+
 const server = Bun.serve<WSData>({
   port: Number(process.env.PORT) || 3000,
   development: process.env.NODE_ENV !== "production",
@@ -6632,7 +6886,10 @@ const server = Bun.serve<WSData>({
       let user: { id: number; username: string } | null = null;
       try { user = await getUserByToken(token); } catch (e) { console.error("[ws] getUserByToken failed", e); }
       if (!user) return Response.json({ error: "unauthorized — войди, братуха" }, { status: 401 });
-      const ok = server.upgrade(req, { data: { id: String(user.id), username: user.username, roomId: null } });
+      // ?role=workshop — соединение только за прогрессом генерации, без авто-матчмейка в дуэльную комнату
+      const wsRole = url.searchParams.get("role");
+      const initialRoomId = wsRole === "workshop" ? "none:workshop" : null;
+      const ok = server.upgrade(req, { data: { id: String(user.id), username: user.username, roomId: initialRoomId } });
       if (ok) return undefined as unknown as Response;
       return Response.json({ error: "Upgrade failed" }, { status: 426 });
     }
@@ -6908,6 +7165,19 @@ const server = Bun.serve<WSData>({
     if (url.pathname === "/magnum/api/chain/feed" && req.method === "GET") return handleChainFeed();
     if (url.pathname === "/magnum/api/chain/share" && req.method === "POST") return handleChainShare(req);
     if (url.pathname === "/magnum/api/chain/og" && req.method === "GET") return handleChainOg(req);
+    // МАСТЕРСКАЯ — вайбкодинг мини-приложений
+    if (url.pathname === "/magnum/api/workshop/create" && req.method === "POST") return handleWorkshopCreate(req);
+    if (url.pathname === "/magnum/api/workshop/list" && req.method === "GET") return handleWorkshopList(req);
+    if (url.pathname === "/magnum/api/workshop/gallery" && req.method === "GET") return handleWorkshopGallery(req);
+    if (url.pathname.startsWith("/magnum/api/workshop/") && url.pathname.endsWith("/prompt") && req.method === "POST") {
+      const parts = url.pathname.split("/"); return handleWorkshopPromptEdit(req, parts[4] ?? "");
+    }
+    if (url.pathname.startsWith("/magnum/api/workshop/") && url.pathname.endsWith("/like") && req.method === "POST") {
+      const parts = url.pathname.split("/"); return handleWorkshopLike(req, parts[4] ?? "");
+    }
+    if (url.pathname.startsWith("/magnum/api/workshop/") && req.method === "GET") {
+      const parts = url.pathname.split("/"); return handleWorkshopGet(req, parts[4] ?? "");
+    }
     // SPEC-42: unknown /magnum/api/* → 404 JSON (не отдавать index.html — SPA fallback только для страниц)
     if (url.pathname.startsWith("/magnum/api/")) {
       return Response.json({ error: "not found" }, { status: 404 });
@@ -6935,6 +7205,8 @@ const server = Bun.serve<WSData>({
   websocket: {
     open(ws) {
       const preRoomId=(ws.data as WSData).roomId;
+      // воркшоп-соединение (?role=workshop) — только подписка на топики workshop:<id>, без дуэльной матчмейки
+      if (preRoomId === "none:workshop") return;
       let room: DuelRoom;
       if(preRoomId && preRoomId.startsWith("squad:") && rooms.has(preRoomId)){
         room=rooms.get(preRoomId)!;
@@ -6968,7 +7240,16 @@ const server = Bun.serve<WSData>({
       // allow lobby:create before room assigned
       let parsed: unknown;
       try { parsed = JSON.parse(String(message)); } catch { return; }
-      const msg = parsed as { type?: string; username?: string; text?: string; message?: string; code?: string; wager?: unknown; magma?: unknown };
+      const msg = parsed as { type?: string; username?: string; text?: string; message?: string; code?: string; wager?: unknown; magma?: unknown; projectId?: unknown };
+      // МАСТЕРСКАЯ — подписка на прогресс генерации через нативный Bun WS pub/sub, вне duel-комнат
+      if (msg.type === "workshop:subscribe" || msg.type === "workshop:unsubscribe") {
+        const pid = Number(msg.projectId);
+        if (Number.isInteger(pid) && pid > 0) {
+          if (msg.type === "workshop:subscribe") ws.subscribe(`workshop:${pid}`);
+          else ws.unsubscribe(`workshop:${pid}`);
+        }
+        return;
+      }
       // lobby:create → ABCD
       if (msg.type === "lobby:create") {
         const w = [0,42,142,420].includes(Number(msg.wager)) ? Number(msg.wager) : 0;

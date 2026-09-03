@@ -29,6 +29,7 @@ const NAV_ITEMS = [
   { to: "/magnum/squad", label: "Батальон 42" },
   { to: "/magnum/conveyor", label: "Конвейер 42" },
   { to: "/magnum/shop", label: "Магазин" },
+  { to: "/magnum/workshop", label: "Мастерская" },
   { to: "/magnum/map", label: "Завры 42" },
   { to: "/magnum/tour", label: "Тур 42" },
   { to: "/magnum/eco", label: "Эко-рейтинг" },

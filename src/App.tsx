@@ -39,6 +39,9 @@ const GamesHub = lazy(() => import("./pages/GamesHub").then(m => ({ default: m.G
 const Studio42Page = lazy(() => import("./pages/Studio42Page").then(m => ({ default: m.Studio42Page })));
 const Radio42Page = lazy(() => import("./pages/Radio42Page").then(m => ({ default: m.Radio42Page })));
 const ClipBattlePage = lazy(() => import("./pages/ClipBattlePage").then(m => ({ default: m.ClipBattlePage })));
+const WorkshopPage = lazy(() => import("./pages/WorkshopPage").then(m => ({ default: m.WorkshopPage })));
+const WorkshopProjectPage = lazy(() => import("./pages/WorkshopProjectPage").then(m => ({ default: m.WorkshopProjectPage })));
+const WorkshopGalleryPage = lazy(() => import("./pages/WorkshopGalleryPage").then(m => ({ default: m.WorkshopGalleryPage })));
 const ShareCardPage = lazy(() => import("./components/ShareCard").then(m => ({ default: m.ShareCardPage })));
 
 function PageFallback() {
@@ -124,6 +127,9 @@ export default function App() {
           <Route path="radio" element={<Suspense fallback={<PageFallback />}><Radio42Page /></Suspense>} />
           <Route path="crash" element={<Suspense fallback={<PageFallback />}><Crash42Page /></Suspense>} />
           <Route path="clip-battle" element={<Suspense fallback={<PageFallback />}><ClipBattlePage /></Suspense>} />
+          <Route path="workshop" element={<Suspense fallback={<PageFallback />}><WorkshopPage /></Suspense>} />
+          <Route path="workshop/:id" element={<Suspense fallback={<PageFallback />}><WorkshopProjectPage /></Suspense>} />
+          <Route path="workshop-gallery" element={<Suspense fallback={<PageFallback />}><WorkshopGalleryPage /></Suspense>} />
         </Route>
       </Routes>
     </BrowserRouter>
